@@ -24,7 +24,11 @@ The release process, including version bumps, README author crediting, batch-fil
 
 ## Build, test, and release handoff
 
-For code changes, ALWAYS finish work in this repository by refreshing the local release build - `build\release\patchy.exe` must be freshly built from the final working tree at handoff, never stale. If the change is documentation-only or otherwise cannot affect compiled/runtime behavior, do not run the full release build/test handoff; report that it was skipped because the change is non-code.
+Lienzo publishes `lienzo-gnome` on Linux. The Patchy engine stays, including its Windows and macOS branches, so upstream commits still apply. `src/ui` and `src/app` stay until the GNOME controls in [docs/gnome-architecture.md](docs/gnome-architecture.md) replace them. Do not delete that tree, and do not strip engine platform branches, to make the checkout look Linux-only.
+
+On this checkout the handoff binary is `build/linux-dev/lienzo-gnome`, built with `ninja -C build/linux-dev lienzo_gnome`. `build/release/patchy.exe` is the upstream Qt application. Skip that Windows build when the machine has no Windows toolchain, and say so. If the change is documentation-only or otherwise cannot affect compiled/runtime behavior, do not run a build; report that it was skipped because the change is non-code.
+
+For a Windows engine build, when one is actually required, refresh `build\release\patchy.exe` from the final working tree:
 
 Required release handoff steps:
 
@@ -160,3 +164,4 @@ Read the linked document before working on the feature. The document, not this i
 - **Performance and the stress harness:** [docs/performance.md](docs/performance.md); the Move/Free Transform drag-preview machinery is in [docs/interactive-previews.md](docs/interactive-previews.md).
 - **Testy PSD benchmark:** [docs/testy.md](docs/testy.md).
 - **Refactor and cleanup work:** [docs/refactor-backlog.md](docs/refactor-backlog.md) and [docs/code-organization.md](docs/code-organization.md).
+- **Nodalix suite, owned engines, and upstream tracking:** [docs/creative-suite-architecture.md](docs/creative-suite-architecture.md). Do not replace the C++ engine with PhotoCraft, and do not rename `patchy_*` targets, to look like that migration has finished.

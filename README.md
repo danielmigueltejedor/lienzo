@@ -4,8 +4,8 @@
   <p><strong>A modern, native image editor for layered creative work, PSD compatibility and local-first automation.</strong></p>
 
   <p>
-    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-5E81AC" alt="Windows, macOS and Linux">
-    <img src="https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white" alt="Qt 6">
+    <img src="https://img.shields.io/badge/platform-Linux-5E81AC" alt="Linux">
+    <img src="https://img.shields.io/badge/GTK-4-41CD52?logo=gtk&logoColor=white" alt="GTK 4">
     <img src="https://img.shields.io/badge/C%2B%2B-native-00599C?logo=cplusplus&logoColor=white" alt="Native C++">
     <a href="./LICENSE"><img src="https://img.shields.io/github/license/danielmigueltejedor/Lienzo" alt="MIT license"></a>
     <img src="https://img.shields.io/github/last-commit/danielmigueltejedor/Lienzo?label=updated" alt="Last commit">
@@ -27,9 +27,11 @@
 
 ## Overview
 
-**Lienzo** is a native C++/Qt image editor built for serious layered raster and vector workflows. It focuses on editable documents, strong PSD/PSB interoperability, precise local processing and a desktop experience that remains fast, private and fully under the user’s control.
+**Lienzo** is a native GNOME image editor, GTK 4 and libadwaita, for layered raster and vector work on Linux. It focuses on editable documents, strong PSD/PSB interoperability, precise local processing, and a desktop experience that stays on the machine.
 
 Lienzo builds on the open-source **Patchy** codebase originally created by Seth A. Robinson. The fork introduces its own identity, packaging, application ID (`com.nodalix.lienzo`), visual language and ongoing interface redesign while preserving the mature editing engine, compatibility work and regression coverage inherited from upstream.
+
+The document engine that ships is that C++ code. `engine/lienzo-engine` is the owned Rust crate and does not replace it. PhotoCraft is a separate Rust upstream used for comparison, not as the application. The suite rules and the audited commits are in [docs/creative-suite-architecture.md](docs/creative-suite-architecture.md).
 
 > [!IMPORTANT]
 > **Lienzo is under active development.** The editing engine already covers a wide surface, but the project is not a complete replacement for every Photoshop workflow. See [Project status](#project-status) for the main limitations.
@@ -38,10 +40,10 @@ Lienzo builds on the open-source **Patchy** codebase originally created by Seth 
 
 | Design | Editing | Automation |
 |---|---|---|
-| Native Qt desktop interface | Layered PSD/PSB workflows | Built-in JavaScript scripting |
-| Cohesive dark visual language | Raster, vector and text editing | Native MCP connector for local AI tools |
-| Responsive desktop-first controls | Smart Objects and Smart Filters | Headless and command-line workflows |
-| Cross-platform packaging | Non-destructive adjustments | Scriptable documents, layers and exports |
+| Native GNOME interface | Layered PSD/PSB workflows | Built-in JavaScript scripting |
+| libadwaita layout | Raster, vector and text editing | Native MCP connector for local AI tools |
+| Linux desktop controls | Smart Objects and Smart Filters | Headless and command-line workflows |
+| One published frontend | Non-destructive adjustments | Scriptable documents, layers and exports |
 | Local-first, no telemetry | Photoshop-oriented round trips | Preview, inspect, edit and save locally |
 
 Lienzo is designed as a real desktop creative tool rather than a remote service. Documents stay on the machine, editing happens locally and the application does not require an account or cloud backend.
@@ -110,7 +112,7 @@ Additional workflows include:
 - HEIC/HEIF through available platform codecs.
 - PDF import on supported desktop builds and PDF export.
 - Printing, scanner import and camera import where the platform provides the required APIs.
-- Classic Photoshop `.8bf` filter plug-ins on Windows through isolated helper processes.
+- Classic Photoshop `.8bf` filter plug-ins are not part of the Linux application.
 
 ## PSD and PSB compatibility
 
@@ -163,10 +165,9 @@ Packaged builds are distributed through [GitHub Releases](https://github.com/dan
 
 | Platform | Package | Stable asset name |
 |---|---|---|
-| Windows 10/11 x64 | Installer | `LienzoWindowsInstaller.exe` |
-| Windows 10/11 x64 | Portable ZIP | `LienzoWindowsNoInstaller.zip` |
-| macOS | DMG | `LienzoMacOS.dmg` |
 | Linux | Flatpak bundle | `LienzoLinux.flatpak` |
+
+Lienzo publishes Linux only. The application to run from a local build is `lienzo-gnome`.
 
 > [!NOTE]
 > If no Lienzo-branded release has been published yet, build the current source tree using the instructions below. Historical releases inherited from the upstream repository may still use Patchy-era asset names.
@@ -212,14 +213,14 @@ cmake --preset qt-local
 cmake --build --preset qt-local
 ```
 
-### macOS and Linux release builds
+### GNOME application
 
 ```bash
-cmake --preset mac-release
-cmake --build --preset mac-release
+cmake -S . -B build/linux-dev -G Ninja -DCMAKE_BUILD_TYPE=Debug -DPATCHY_BUILD_APP=ON -DPATCHY_BUILD_TESTS=ON
+ninja -C build/linux-dev lienzo_gnome
 ```
 
-or:
+The binary is `build/linux-dev/lienzo-gnome`. A Linux release preset for the engine still exists:
 
 ```bash
 cmake --preset linux-release
@@ -237,12 +238,13 @@ Lienzo includes UI catalogues for English, German, Spanish, French, Italian, Jap
 
 | Path | Contents |
 |---|---|
-| `src/app/` | Application entry points, MCP executable and platform resources |
-| `src/ui/` | Qt interface, panels, dialogs, tools and visual system |
+| `src/ui-gnome/` | Published GNOME interface |
+| `src/app/` | Qt process entry kept while controls are still being ported |
+| `src/ui/` | Qt interface kept as the reference for controls not yet in GNOME |
 | `src/core/` | Editing and image-processing engine |
 | `src/formats/` | File-format readers and writers |
 | `scripts/` | Bundled scripts, tests and release automation |
-| `packaging/` | Windows, macOS, Linux and web packaging |
+| `packaging/` | Linux packaging. Other platform folders stay so upstream commits can still apply |
 | `translations/` | Application translation catalogues |
 | `tests/` | Regression, UI, format and compatibility tests |
 | `docs/` | Architecture, compatibility, workflow and developer documentation |
@@ -258,7 +260,7 @@ Current limitations include:
 - layered PSB writing is not yet complete across the full Photoshop feature surface;
 - some Affinity features import approximately or as preserved placeholders;
 - no GPU-accelerated rendering pipeline yet;
-- classic `.8bf` plug-ins are Windows-only;
+- classic `.8bf` plug-ins are not part of the Linux application;
 - Photoshop Actions, UXP/JSX panels and Photoshop-specific scripts are not directly compatible.
 
 Unsupported Photoshop data is preserved where practical so opening and resaving a document does not unnecessarily destroy information Lienzo cannot yet edit.

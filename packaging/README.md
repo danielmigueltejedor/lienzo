@@ -1,10 +1,9 @@
 # Packaging
 
-Patchy should ship as signed native binaries:
+Lienzo publishes a Linux build. The GNOME application is `lienzo-gnome`.
 
-- Windows: local signed/unsigned zip package and per-user installer first, signed/published installer later.
-- macOS: signed and notarized DMG or PKG.
-- Linux: AppImage and Flatpak.
+- Linux: Flatpak. The current manifest still launches the Qt `patchy` binary.
+- Windows, macOS, and browser packaging files stay in this directory so upstream commits that touch them can still be read. They are not Lienzo release artifacts.
 
 Release packaging must include:
 

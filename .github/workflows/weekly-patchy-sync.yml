@@ -81,8 +81,8 @@ jobs:
 
           protected_re='^(.github/|README\.md$|AGENTS\.md$|LICENSE$|NOTICE-THIRD-PARTY\.md$|latest_version\.json$|packaging/|scripts/release/|scripts/remote/|docs/release-process\.md$)'
 
-          # Path tags are report-only. Apply rules stay as they are while src/ui
-          # is still the shipping interface. See docs/gnome-architecture.md.
+          # Path tags are report-only. src/ui still applies: it is the reference
+          # for controls lienzo-gnome does not have yet. See docs/gnome-architecture.md.
           classify_commit_paths() {
             local files="$1"
             local engine=0
@@ -178,7 +178,7 @@ jobs:
             echo "- Manual review: **$manual**"
             echo "- Cherry-pick conflicts: **$conflicts**"
             echo
-            echo "Path tags (\`engine\`, \`ui\`, \`mixed\`, \`review\`) describe the commit. They do not change apply rules while \`src/ui\` is still the shipping interface. Policy: \`docs/gnome-architecture.md\`."
+            echo "Path tags (\`engine\`, \`ui\`, \`mixed\`, \`review\`) describe the commit. They do not change apply rules. \`src/ui\` stays as the reference for controls \`lienzo-gnome\` does not have yet. Policy: \`docs/gnome-architecture.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Python
