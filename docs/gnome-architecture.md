@@ -1,8 +1,10 @@
 # Lienzo GNOME architecture
 
-Lienzo on this branch is Patchy plus a second executable. `lienzo-gnome` (`cmake/LienzoGnome.cmake`) is a GTK 4 / libadwaita frontend. It links `patchy_core`, `patchy_render`, `patchy_psd`, and `patchy_formats`. It does not link `patchy_ui`. The Qt application in `src/ui` and `src/app` is still the shipping interface, the test surface, and the packaging source. Deleting it before the parity rows below are replaced, or explicitly waived, is not allowed.
+Lienzo publishes one application: `lienzo-gnome` (`cmake/LienzoGnome.cmake`), a GTK 4 / libadwaita frontend, on Linux. It links `patchy_core`, `patchy_render`, `patchy_psd`, and `patchy_formats`. It does not link `patchy_ui`. The backend is that Patchy engine. Upstream commits that touch the engine still apply. Windows and macOS branches inside the engine stay, because deleting them would drop those upstream fixes. Lienzo does not publish Windows, macOS, or browser builds.
 
-The product id is `com.nodalix.lienzo` (desktop file, Flatpak, `QGuiApplication::setDesktopFileName`). The GNOME application id uses that same id.
+`src/ui` and `src/app` are the Qt editor that Patchy ships. They are not a second Lienzo frontend. They stay in the tree until every control in the matrix below has a GNOME equivalent. Deleting them now would erase the reference for that migration and the tests that pin it. Do not treat them as unused.
+
+The suite contract, including PhotoCraft as a Rust upstream and the rule that it does not replace this tree, is [creative-suite-architecture.md](creative-suite-architecture.md). The product id is `com.nodalix.lienzo`. The GNOME application id uses that same id. The Flatpak manifest in `packaging/linux` still launches the Qt `patchy` binary. Switching that package to `lienzo-gnome` is a later packaging change, not a reason to delete the engine.
 
 ## Dependency direction
 
@@ -26,7 +28,7 @@ A new document, pixel, PSD, or compositor behavior goes in the existing engine d
 
 The GNOME interface calls that function. A gesture belongs in `canvas_input.cpp` or in `src/ui-gnome/tools/` when the tool already has a controller. A panel belongs in `inspector.cpp` or a new panel file next to it. A dialog belongs next to `new_document_dialog.cpp`. None of those files own a second copy of the pixel algorithm.
 
-`src/ui` is the Qt application that still ships. New Lienzo product behavior does not start there.
+`src/ui` is the Qt reference for controls that GNOME does not have yet. New Lienzo product behavior does not start there. It starts in `src/ui-gnome` and calls the engine.
 
 Engine changes that already exist on this branch, and the rule for each:
 
@@ -49,7 +51,7 @@ Known piles:
 - Selection state: `CanvasWidget` stores `QImage` masks (`canvas_widget.hpp`). Algorithms that already exist in core are `quick_select_segment`, `LiveWireEngine`, `color_within_tolerance`, and `trace_mask_outlines`. The GNOME `SelectionController` keeps its own mask. Quick Select stamps a footprint and calls `quick_select_segment` once on release, the same call Patchy makes. Magic Wand uses `color_within_tolerance`; the contiguous flood itself is still the controller's, because Patchy keeps that flood in `CanvasWidget` rather than in `src/core`.
 - History policy: `MainWindow::DocumentSession` stores document snapshots, selection snapshots, labels, coalescing, and the memory budget. Whole-`Document` copies are already cheap for shared payloads (`document_memory.hpp`). The policy is UI. The GNOME canvas keeps a private `undo_stack` of bare `Document` values and does not restore selection.
 - Text layout and the Photoshop text pipeline: `src/ui/text_layout.cpp` and the text code in `main_window.cpp`. Calibration lives in `docs/text-tool.md` and `docs/txt2.md`. The GNOME `TextController` shapes with Pango and writes its own layer metadata. That is a second text engine. Do not ship it as the document text model.
-- Retouch: clone, healing, blur, sharpen, dodge, burn, and sponge share `src/core/retouch_brush.cpp`. Both canvases call it. GNOME's opacity slider is the adjustment strength and the clone opacity. The options bar sets tone range, protect tones, sponge mode, and healing diffusion. Clone and healing sample a full-resolution document flatten taken at stroke start, never the downscaled canvas preview. Defaults stay midtones, protect tones, desaturate with vibrance, and diffusion 5. Spot healing and the patch tool still live in `CanvasWidget` (`docs/healing.md`). The GNOME controller does not expose those two.
+- Retouch: clone, healing, blur, sharpen, dodge, burn, and sponge share `src/core/retouch_brush.cpp`. Both canvases call it. GNOME's opacity slider is the adjustment strength and the clone opacity. The options bar sets tone range, protect tones, sponge mode, and healing diffusion. Clone and healing sample a full-resolution document flatten taken at stroke start, never the downscaled canvas preview. Defaults stay midtones, protect tones, desaturate with vibrance, and diffusion 5. Spot healing and the patch tool still live in `CanvasWidget` (`docs/healing.md`). The GNOME controller does not expose those two. The mixer brush calls `mixer_brush_dab_color`. Its pickup is a 9x9 average of the active layer as it was when the stroke started, the same canvas-only feed the Qt canvas uses.
 - File dialogs, scripting, and MCP are product/UI. Scripting and MCP stay required (class B in the matrix) but their implementation is Qt. Do not reimplement the script API in the GNOME layer.
 
 ### C. Shared infrastructure
@@ -58,7 +60,7 @@ Root `CMakeLists.txt`, presets, `tests/core`, translation catalogs, and `scripts
 
 ### D. Qt UI
 
-`src/ui` (about 189 `.cpp` files), `src/app`, `tests/ui`. This includes `MainWindow`, `CanvasWidget`, dialogs, theme, scripting host, and MCP session UI. It remains until the parity table says otherwise.
+`src/ui` (about 189 `.cpp` files), `src/app`, `tests/ui`. This includes `MainWindow`, `CanvasWidget`, dialogs, theme, scripting host, and MCP session UI. It is the migration reference, not the published app. Remove a file from it only after the GNOME control that replaces it is in the matrix and its tests have a new home.
 
 ### E. GNOME UI
 
@@ -66,17 +68,17 @@ Root `CMakeLists.txt`, presets, `tests/core`, translation catalogs, and `scripts
 
 `CanvasState` and the functions shared across canvas translation units live in `canvas_internal.hpp`. Only `src/ui-gnome/canvas*.cpp` may include it. The split is by responsibility: `canvas.cpp` builds the widget, `canvas_input.cpp` dispatches gestures, `canvas_render.cpp` owns the composite cache, `canvas_overlay.cpp` draws overlays, `canvas_brush.cpp` strokes through `patchy::paint_brush_*`, `canvas_move.cpp` previews a move, `canvas_selection.cpp` syncs the selection and runs the magnetic lasso, `canvas_view.cpp` converts coordinates, and `canvas_session.cpp` owns history, clipboard, and crop commit. A new tool's pixel work goes through an existing `patchy::` function. Its gesture goes in `canvas_input.cpp` or a controller under `tools/`, not into a new copy of the brush loop. Controllers that already exist: selection, text, path, retouch.
 
-`inspector.cpp` is the layers, channels, and paths panel, plus a history page that shows a single static row. Layer and channel thumbnails sample a 40px grid. They do not copy or flatten the document. A stroke ends by scheduling that panel refresh, so a tool change is not stuck behind it. `main_window.cpp` owns the welcome page, tabs, open/save/export, and autosave. The welcome page lists documents opened or saved in Lienzo, newest first, and skips paths that are no longer on disk. Each row carries one small thumbnail. A double click, or Enter, opens that file. Thumbnails are 128px PNGs in the user cache, named from a stable path hash plus the file's modification time and size. An unchanged file loads that PNG on the UI thread. A miss is built one at a time off the main thread, then written atomically. The cache keeps only the identities of the rows currently shown. Open and save go through the desktop portal (`file_portal.cpp`), which is the GNOME Files chooser. Opening a file reads it and builds the canvas preview on a worker, then presents the tab on the main thread. Export as opens `export_dialog.cpp` for the format and its settings, then the same chooser. Strings in this layer are hardcoded Spanish. New user-visible strings follow `docs/localization.md` once a surface is stable enough to extract. Do not add another catalog pass over prototype copy.
+`inspector.cpp` is the layers, channels, and paths panel. Historia lists each undo step by the action that produced it and restores that document when the row is clicked. Propiedades writes the active layer's opacity and fill, and opens a scale and flip dialog. The dialog scales a pixel layer with `scale_pixels_resampled` and flips with `flip_layer_horizontal` / `flip_layer_vertical`. It is not the interactive free-transform box, and it does not warp. Layer and channel thumbnails sample a 40px grid. They do not copy or flatten the document. A stroke ends by scheduling that panel refresh, so a tool change is not stuck behind it. `main_window.cpp` owns the welcome page, tabs, open/save/export, and autosave. The welcome page lists documents opened or saved in Lienzo, newest first, and skips paths that are no longer on disk. Each row carries one small thumbnail. A double click, or Enter, opens that file. Thumbnails are 128px PNGs in the user cache, named from a stable path hash plus the file's modification time and size. An unchanged file loads that PNG on the UI thread. A miss is built one at a time off the main thread, then written atomically. The cache keeps only the identities of the rows currently shown. Open and save go through the desktop portal (`file_portal.cpp`), which is the GNOME Files chooser. Opening a file reads it and builds the canvas preview on a worker, then presents the tab on the main thread. Export as opens `export_dialog.cpp` for the format and its settings, then the same chooser. Strings in this layer are hardcoded Spanish. New user-visible strings follow `docs/localization.md` once a surface is stable enough to extract. Do not add another catalog pass over prototype copy.
 
 Documents wider than 4096 pixels, or over 12 megapixels, keep a downscaled canvas preview. The full pixels stay in the document. The preview is one composite when the document is at most 24 megapixels, otherwise strips of 128 source rows, then a downsample. A later stroke updates the dirty preview pixels from one region composite. Undo on a large document keeps fewer snapshots so a long edit does not retain dozens of full copies. Every tool hides the system cursor and draws its own pointer with the same dark halo and light stroke. Brush-like tools, including dodge, burn, sponge, blur, sharpen, clone, and healing, draw the footprint from brush size, roundness, angle, and square or round shape, plus a small mark for that tool. The eyedropper draws a pipette and, over pixels, a ring split between the sampled color and the foreground. Other tools use a short crosshair, an arrow, or a small solid glyph, with the hotspot at the tip. The gradient tool previews the blend while dragging, then paints from the foreground color to the background color. Its options are linear or radial, opacity, and reverse. Fill and the magic wand expose tolerance and contiguous. Folder rows in the layers panel collapse and expand. A double-click on a pixel layer opens its settings as an Adwaita preferences page. General is an open group. Blend options and each effect are collapsed expander rows, with the effect switch on the row itself. Numbers are spin rows. Choices stay menu buttons so the dialog never builds a GtkDropDown. A double-click on an adjustment layer opens the same kind of page. Curves and levels use the shared LUT, a gradient strip, and channel toggles. Curve points are draggable. The other kinds use spin rows and the same transfer graph when a LUT exists. Apply writes through `configure_adjustment_layer`. Cancel discards the dialog state. Closing the window or a document tab asks before discarding edits.
 
-### F. Temporary compatibility
+### F. One frontend
 
-Two executables are the current compatibility state, not the end state. There is no adapter framework. `flatten_rgb8_region` is a real engine API, not an adapter.
+`lienzo-gnome` is the Lienzo application. There is no adapter framework. `flatten_rgb8_region` is a real engine API, not an adapter. Windows packaging, macOS packaging, and the browser shell remain in the tree so an upstream commit that touches them can still be read. They are not release artifacts for Lienzo.
 
 ### G. Dead code
 
-Nothing in `src/ui` is dead while that executable still ships. The GNOME history page is a stub, not a second implementation to delete yet.
+Do not delete `src/ui` as unused while a matrix row still says the GNOME column lacks that control. The GNOME history page is a stub, not a second implementation to delete yet. Engine files guarded by `WIN32` or `APPLE` are upstream code, not Lienzo chrome.
 
 ## Feature matrix
 
@@ -95,16 +97,16 @@ Class: A parity required, B Lienzo keeps it, C not decided and not a GNOME block
 | Blend-mode editing | yes | yes, layer settings dialog | yes | core | A |
 | Channels and quick mask | yes | partial | yes | ui | A |
 | Paths panel | yes | list only | yes | ui | A |
-| History (labels, selection, budget) | yes | document copies only, panel stub | snapshots are cheap; policy is UI | ui | A |
+| History (labels, selection, budget) | yes | labeled document steps, click restores | snapshots are cheap; policy is UI | ui | A |
 | Marquee, ellipse, lasso | yes | yes, local mask | outlines in core | ui | A |
 | Magic wand | yes | flood in the controller, metric is `color_within_tolerance` | metric in core; the mask flood still lives in `CanvasWidget` | core | A |
 | Quick select | yes | seed during the drag, `quick_select_segment` once on release | yes | core | A |
 | Magnetic lasso | yes | uses `LiveWireEngine` | yes | core | A |
 | Move | yes | preview in canvas | layer bounds | ui | A |
-| Free transform and warp | yes | no | yes | core/ui | D |
+| Free transform and warp | yes | scale and flip dialog | yes | core/ui | D |
 | Crop | yes | yes, calls `crop_document` | yes | ui | A |
 | Brush, flow, airbrush, tips | yes | partial, calls `paint_brush_*` | yes | core canary | A |
-| Mixer brush | yes | tool id only | yes | core | D |
+| Mixer brush | yes | calls `mixer_brush_dab_color` | yes | core | A |
 | Fill and gradient | yes | calls core draw helpers | yes | core | A |
 | Clone, heal, spot heal, patch | yes | clone and healing call `retouch_brush`; spot heal and patch are absent | yes | core | A |
 | Blur, sharpen, dodge, burn, sponge, smudge | yes | yes, calls `retouch_brush` and `smudge_brush_segment` | yes | core | A |
@@ -120,22 +122,16 @@ Class: A parity required, B Lienzo keeps it, C not decided and not a GNOME block
 | Scripting | yes | no | host is Qt | ui | B |
 | MCP | yes | no | host is Qt | python | B |
 | Print, scanner, 8BF plugins | yes, platform-specific | no | partial | partial | C |
-| Guides, alignment, palette mode | yes | no | partial | ui | D |
+| Guides, alignment, palette mode | yes | guides and align-to-canvas | partial | ui | D |
 | Localization catalogs | yes | hardcoded Spanish | n/a | translation tests | A for shipping strings |
 
 No feature in this table is class C because Lienzo has decided to drop it. Class C means the capability is platform tooling around the Qt app, and the GNOME editor does not need a copy of it to be the document editor. Revisit before deleting `src/ui`.
 
 ## Upstream sync
 
-`.github/workflows/weekly-patchy-sync.yml` still cherry-picks every non-protected commit and keeps it when the Linux build and tests do not regress against Lienzo main. Path tags on the report (`engine`, `ui`, `mixed`, `review`) do not change that apply rule.
+`.github/workflows/weekly-patchy-sync.yml` cherry-picks every non-protected commit and keeps it when the Linux build and tests do not regress against Lienzo main. Path tags on the report (`engine`, `ui`, `mixed`, `review`) do not change that apply rule.
 
-While `src/ui` ships, upstream Qt commits can still carry editor fixes (text, filters, tools) and must remain eligible. Ignoring all of `src/ui` now would drop those fixes.
-
-When `lienzo-gnome` is the only interface, change the apply rule to:
-
-- Auto: commits whose files are only under `src/core`, `src/render`, `src/psd`, `src/formats`, `src/filters`, `src/color`, `src/support`, `tests/core`.
-- Manual: `mixed` commits, CMake structure, and anything that changes a public engine signature.
-- Manual port or skip: commits that only touch `src/ui`, `src/app`, `tests/ui`, Patchy packaging, or Patchy branding.
+`lienzo-gnome` is the only published interface. Commits that only touch `src/ui` still apply. That tree is the reference for controls GNOME does not have yet, so freezing it would stall the migration. After a control is ported, leave the Qt file until its tests have a core or GNOME home. Do not delete it in the same step as the port.
 
 Lienzo-owned paths (`src/ui-gnome`, `cmake/LienzoGnome.cmake`, this document) are not in Patchy. A cherry-pick does not overwrite them unless a Patchy commit touches the same path, which it does not.
 
@@ -143,7 +139,7 @@ Protected identity paths stay protected: packaging, README, `AGENTS.md`, release
 
 ## What not to do next
 
-- Do not `rm -rf src/ui`.
+- Do not `rm -rf src/ui`, `src/app`, or engine platform branches. The Qt tree is the unfinished control migration. The platform branches are how upstream improvements arrive.
 - Do not rename engine files, reformat them, or retarget `patchy_*` libraries.
 - Do not put GTK or `QWidget` types into `src/core`.
 - Do not add a parallel selection, healing, or text algorithm in `src/ui-gnome` when `src/core` or the calibrated Qt text pipeline already has one.

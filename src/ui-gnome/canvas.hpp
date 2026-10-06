@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/document.hpp"
+#include "core/layer_alignment.hpp"
 #include "core/pixel_tools.hpp"
 #include "core/retouch_brush.hpp"
 #include "ui-gnome/tool_palette.hpp"
@@ -14,6 +15,11 @@
 #include <vector>
 
 namespace lienzo::gnome {
+
+struct HistoryEntry {
+  std::string label;
+  bool current{false};
+};
 
 struct CanvasView {
   GtkWidget* widget{};
@@ -56,8 +62,18 @@ struct CanvasView {
   std::function<void()> publish_composite;
 
   std::function<void()> checkpoint;
+  std::function<void(const char*)> checkpoint_labeled;
   std::function<void()> undo;
   std::function<void()> redo;
+  std::function<std::vector<HistoryEntry>()> history_entries;
+  std::function<void(int)> restore_history;
+  std::function<void(patchy::AlignEdge)> align_active_to_canvas;
+  std::function<void(patchy::GuideOrientation)> add_centered_guide;
+  std::function<bool(int, int)> scale_active_layer;
+  std::function<void(bool)> flip_active_layer;
+  std::function<void(int)> set_mixer_wet;
+  std::function<void(int)> set_mixer_load;
+  std::function<void(int)> set_mixer_mix;
   std::function<void()> copy_active;
   std::function<void()> cut_active;
   std::function<void()> paste;

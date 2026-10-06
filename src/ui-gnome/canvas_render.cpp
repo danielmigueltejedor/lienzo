@@ -1416,6 +1416,10 @@ void draw_canvas(
       state,
       cr);
 
+  draw_guides(
+      state,
+      cr);
+
   draw_selection_overlay(
       state,
       cr);

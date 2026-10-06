@@ -724,6 +724,11 @@ CanvasView create_canvas_view(
         push_history(state);
       };
 
+  result.checkpoint_labeled =
+      [state](const char* label) {
+        push_history(state, label);
+      };
+
   result.undo =
       [state] {
         undo_document(state);
@@ -732,6 +737,57 @@ CanvasView create_canvas_view(
   result.redo =
       [state] {
         redo_document(state);
+      };
+
+  result.history_entries =
+      [state] {
+        return history_rows(state);
+      };
+
+  result.restore_history =
+      [state](int index) {
+        restore_history(state, index);
+      };
+
+  result.align_active_to_canvas =
+      [state](patchy::AlignEdge edge) {
+        align_active_to_canvas(state, edge);
+      };
+
+  result.add_centered_guide =
+      [state](patchy::GuideOrientation orientation) {
+        add_centered_guide(state, orientation);
+      };
+
+  result.scale_active_layer =
+      [state](int width_percent, int height_percent) {
+        return scale_active_layer(
+            state,
+            width_percent,
+            height_percent);
+      };
+
+  result.flip_active_layer =
+      [state](bool horizontal) {
+        flip_active_layer(state, horizontal);
+      };
+
+  result.set_mixer_wet =
+      [state](int value) {
+        state->mixer_wet =
+            std::clamp(value, 0, 100);
+      };
+
+  result.set_mixer_load =
+      [state](int value) {
+        state->mixer_load =
+            std::clamp(value, 1, 100);
+      };
+
+  result.set_mixer_mix =
+      [state](int value) {
+        state->mixer_mix =
+            std::clamp(value, 0, 100);
       };
 
   result.copy_active =

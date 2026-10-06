@@ -1,6 +1,7 @@
 #include "ui-gnome/inspector.hpp"
 #include "ui-gnome/adjustment_dialog.hpp"
 #include "ui-gnome/layer_style_dialog.hpp"
+#include "ui-gnome/transform_dialog.hpp"
 #include "ui-gnome/layer_thumbnail.hpp"
 #include "core/adjustment_layer.hpp"
 
@@ -8,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -22,6 +24,11 @@ struct InspectorState {
   GtkListBox* layers{};
   GtkListBox* channels{};
   GtkListBox* paths{};
+  GtkListBox* history{};
+  AdwSpinRow* opacity{};
+  AdwSpinRow* fill_opacity{};
+  bool syncing_properties{false};
+  std::optional<patchy::LayerId> property_edit_layer{};
 
   std::vector<std::uint8_t> composite_sample;
   bool has_composite_sample{false};
@@ -1186,6 +1193,171 @@ void remove_layer_clicked(
   }
 }
 
+void sync_layer_properties(
+    InspectorState* state) {
+  const auto active =
+      state->document->active_layer_id();
+
+  if (
+      state->property_edit_layer.has_value() &&
+      state->property_edit_layer == active) {
+    return;
+  }
+
+  state->property_edit_layer.reset();
+  state->syncing_properties = true;
+
+  const auto* layer =
+      active.has_value()
+          ? std::as_const(*state->document)
+                .find_layer(*active)
+          : nullptr;
+
+  if (layer == nullptr) {
+    gtk_widget_set_sensitive(
+        GTK_WIDGET(state->opacity),
+        FALSE);
+
+    gtk_widget_set_sensitive(
+        GTK_WIDGET(state->fill_opacity),
+        FALSE);
+  } else {
+    gtk_widget_set_sensitive(
+        GTK_WIDGET(state->opacity),
+        TRUE);
+
+    gtk_widget_set_sensitive(
+        GTK_WIDGET(state->fill_opacity),
+        TRUE);
+
+    adw_spin_row_set_value(
+        state->opacity,
+        layer->opacity() * 100.0);
+
+    adw_spin_row_set_value(
+        state->fill_opacity,
+        layer->fill_opacity() * 100.0);
+  }
+
+  state->syncing_properties = false;
+}
+
+void rebuild_history(
+    InspectorState* state) {
+  if (
+      state->history == nullptr ||
+      !state->canvas.history_entries) {
+    return;
+  }
+
+  clear_list(state->history);
+
+  const auto rows =
+      state->canvas.history_entries();
+
+  for (int index = 0;
+       index < static_cast<int>(rows.size());
+       ++index) {
+    GtkWidget* label =
+        gtk_label_new(rows[static_cast<std::size_t>(index)].label.c_str());
+
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0F);
+    gtk_widget_set_margin_start(label, 12);
+    gtk_widget_set_margin_end(label, 12);
+    gtk_widget_set_margin_top(label, 6);
+    gtk_widget_set_margin_bottom(label, 6);
+
+    GtkWidget* row = gtk_list_box_row_new();
+    gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row), label);
+    g_object_set_data(
+        G_OBJECT(row),
+        "lienzo-history-index",
+        GINT_TO_POINTER(index));
+
+    if (rows[static_cast<std::size_t>(index)].current) {
+      gtk_widget_add_css_class(row, "suggested-action");
+    }
+
+    gtk_list_box_append(state->history, row);
+  }
+}
+
+void history_activated(
+    GtkListBox*,
+    GtkListBoxRow* row,
+    gpointer data) {
+  auto* state = static_cast<InspectorState*>(data);
+
+  if (
+      row == nullptr ||
+      !state->canvas.restore_history) {
+    return;
+  }
+
+  state->canvas.restore_history(
+      GPOINTER_TO_INT(
+          g_object_get_data(
+              G_OBJECT(row),
+              "lienzo-history-index")));
+}
+
+void layer_property_changed(
+    AdwSpinRow*,
+    GParamSpec*,
+    gpointer data) {
+  auto* state = static_cast<InspectorState*>(data);
+
+  if (state->syncing_properties) {
+    return;
+  }
+
+  const auto active =
+      state->document->active_layer_id();
+
+  if (!active.has_value()) {
+    return;
+  }
+
+  auto* layer =
+      state->document->find_layer(*active);
+
+  if (layer == nullptr) {
+    return;
+  }
+
+  if (state->property_edit_layer != active) {
+    if (state->canvas.checkpoint_labeled) {
+      state->canvas.checkpoint_labeled("Opacidad");
+    }
+
+    state->property_edit_layer = active;
+  }
+
+  layer->set_opacity(
+      static_cast<float>(
+          adw_spin_row_get_value(state->opacity) /
+          100.0));
+
+  layer->set_fill_opacity(
+      static_cast<float>(
+          adw_spin_row_get_value(state->fill_opacity) /
+          100.0));
+
+  if (state->canvas.refresh) {
+    state->canvas.refresh();
+  }
+}
+
+void transform_clicked(
+    GtkButton* button,
+    gpointer data) {
+  auto* state = static_cast<InspectorState*>(data);
+
+  present_layer_transform(
+      GTK_WIDGET(button),
+      state->canvas);
+}
+
 gboolean flush_inspector_refresh(
     gpointer data) {
   auto* state =
@@ -1194,6 +1366,8 @@ gboolean flush_inspector_refresh(
   state->refresh_idle = 0;
   rebuild_layers(state);
   rebuild_paths(state);
+  rebuild_history(state);
+  sync_layer_properties(state);
 
   return G_SOURCE_REMOVE;
 }
@@ -1617,21 +1791,12 @@ GtkWidget* create_inspector(
   GtkWidget* history_page =
       gtk_list_box_new();
 
-  GtkWidget* history_initial =
-      gtk_label_new(
-          "Documento abierto");
+  state->history =
+      GTK_LIST_BOX(history_page);
 
-  gtk_widget_set_margin_top(
-      history_initial,
-      10);
-
-  gtk_widget_set_margin_bottom(
-      history_initial,
-      10);
-
-  gtk_list_box_append(
-      GTK_LIST_BOX(history_page),
-      history_initial);
+  gtk_list_box_set_activate_on_single_click(
+      state->history,
+      TRUE);
 
   GtkWidget* properties_page =
       adw_preferences_group_new();
@@ -1640,33 +1805,43 @@ GtkWidget* create_inspector(
       ADW_PREFERENCES_GROUP(properties_page),
       "Propiedades de la capa activa");
 
-  GtkWidget* opacity =
-      adw_spin_row_new_with_range(
-          0,
-          100,
-          1);
+  state->opacity =
+      ADW_SPIN_ROW(
+          adw_spin_row_new_with_range(
+              0,
+              100,
+              1));
 
   adw_preferences_row_set_title(
-      ADW_PREFERENCES_ROW(opacity),
+      ADW_PREFERENCES_ROW(state->opacity),
       "Opacidad");
 
   adw_preferences_group_add(
       ADW_PREFERENCES_GROUP(properties_page),
-      opacity);
+      GTK_WIDGET(state->opacity));
 
-  GtkWidget* fill_opacity =
-      adw_spin_row_new_with_range(
-          0,
-          100,
-          1);
+  state->fill_opacity =
+      ADW_SPIN_ROW(
+          adw_spin_row_new_with_range(
+              0,
+              100,
+              1));
 
   adw_preferences_row_set_title(
-      ADW_PREFERENCES_ROW(fill_opacity),
+      ADW_PREFERENCES_ROW(state->fill_opacity),
       "Opacidad de relleno");
 
   adw_preferences_group_add(
       ADW_PREFERENCES_GROUP(properties_page),
-      fill_opacity);
+      GTK_WIDGET(state->fill_opacity));
+
+  GtkWidget* transform =
+      gtk_button_new_with_label(
+          "Transformar capa");
+
+  adw_preferences_group_add(
+      ADW_PREFERENCES_GROUP(properties_page),
+      transform);
 
   GtkWidget* info_page =
       gtk_box_new(
@@ -1862,6 +2037,30 @@ GtkWidget* create_inspector(
       sections);
 
   g_signal_connect(
+      state->history,
+      "row-activated",
+      G_CALLBACK(history_activated),
+      state);
+
+  g_signal_connect(
+      state->opacity,
+      "notify::value",
+      G_CALLBACK(layer_property_changed),
+      state);
+
+  g_signal_connect(
+      state->fill_opacity,
+      "notify::value",
+      G_CALLBACK(layer_property_changed),
+      state);
+
+  g_signal_connect(
+      transform,
+      "clicked",
+      G_CALLBACK(transform_clicked),
+      state);
+
+  g_signal_connect(
       rename,
       "clicked",
       G_CALLBACK(rename_layer_clicked),
@@ -1924,6 +2123,8 @@ GtkWidget* create_inspector(
   rebuild_layers(state);
   rebuild_channels(state);
   rebuild_paths(state);
+  rebuild_history(state);
+  sync_layer_properties(state);
 
   return root;
 }

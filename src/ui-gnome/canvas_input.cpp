@@ -323,6 +323,126 @@ RetouchMode retouch_mode_for(
   }
 }
 
+int hit_guide(
+    CanvasState* state,
+    double document_x,
+    double document_y) {
+  const double slack =
+      6.0 / std::max(state->zoom, 0.05);
+
+  const auto& guides =
+      std::as_const(*state->document).guides();
+
+  int best = -1;
+  double best_distance = slack;
+
+  for (int index = 0;
+       index < static_cast<int>(guides.size());
+       ++index) {
+    const double position =
+        static_cast<double>(
+            guides[static_cast<std::size_t>(index)]
+                .position_32) /
+        32.0;
+
+    const double distance =
+        guides[static_cast<std::size_t>(index)]
+                    .orientation ==
+                patchy::GuideOrientation::Vertical
+            ? std::abs(document_x - position)
+            : std::abs(document_y - position);
+
+    if (distance <= best_distance) {
+      best_distance = distance;
+      best = index;
+    }
+  }
+
+  return best;
+}
+
+void update_guide_drag(
+    CanvasState* state,
+    double document_x,
+    double document_y) {
+  auto& guides = state->document->guides();
+
+  if (
+      state->guide_index < 0 ||
+      state->guide_index >=
+          static_cast<int>(guides.size())) {
+    return;
+  }
+
+  if (!state->guide_moved) {
+    push_history(state, "Guía");
+    state->guide_moved = true;
+  }
+
+  auto& guide =
+      guides[static_cast<std::size_t>(
+          state->guide_index)];
+
+  const bool vertical =
+      guide.orientation ==
+      patchy::GuideOrientation::Vertical;
+
+  const double position =
+      vertical ? document_x : document_y;
+
+  const std::int32_t limit =
+      vertical
+          ? state->document->width()
+          : state->document->height();
+
+  guide.position_32 =
+      std::clamp(
+          static_cast<std::int32_t>(
+              std::lround(position * 32.0)),
+          0,
+          std::max(limit, 1) * 32);
+
+  gtk_widget_queue_draw(
+      GTK_WIDGET(state->area));
+}
+
+void finish_guide_drag(
+    CanvasState* state,
+    double document_x,
+    double document_y) {
+  auto& guides = state->document->guides();
+
+  const bool outside =
+      document_x < 0.0 ||
+      document_y < 0.0 ||
+      document_x >= state->document->width() ||
+      document_y >= state->document->height();
+
+  if (
+      state->guide_moved &&
+      outside &&
+      state->guide_index >= 0 &&
+      state->guide_index <
+          static_cast<int>(guides.size())) {
+    guides.erase(
+        guides.begin() + state->guide_index);
+  } else if (state->guide_moved) {
+    update_guide_drag(
+        state,
+        document_x,
+        document_y);
+  }
+
+  state->guide_drag = false;
+  state->guide_moved = false;
+  state->guide_index = -1;
+
+  notify_document_changed(state);
+
+  gtk_widget_queue_draw(
+      GTK_WIDGET(state->area));
+}
+
 void drag_begin(
     GtkGestureDrag* gesture,
     double x,
@@ -540,6 +660,16 @@ void drag_begin(
   }
 
   if (state->tool == Tool::Move) {
+    const int guide =
+        hit_guide(state, dx, dy);
+
+    if (guide >= 0) {
+      state->guide_drag = true;
+      state->guide_moved = false;
+      state->guide_index = guide;
+      return;
+    }
+
     begin_move_preview(
         state,
         dx,
@@ -548,6 +678,7 @@ void drag_begin(
 
   if (
       state->tool == Tool::Brush ||
+      state->tool == Tool::MixerBrush ||
       state->tool == Tool::Eraser ||
       state->tool == Tool::Smudge ||
       state->tool == Tool::Gradient ||
@@ -593,7 +724,12 @@ void drag_begin(
 
   if (
       state->tool == Tool::Brush ||
+      state->tool == Tool::MixerBrush ||
       state->tool == Tool::Eraser) {
+    if (state->tool == Tool::MixerBrush) {
+      install_mixer_provider(state);
+    }
+
     begin_smoothed_brush(
         state,
         dx,
@@ -637,6 +773,25 @@ void drag_update(
     gtk_widget_queue_draw(
         GTK_WIDGET(
             state->area));
+
+    return;
+  }
+
+  if (state->guide_drag) {
+    double document_x = 0.0;
+    double document_y = 0.0;
+
+    widget_to_document(
+        state,
+        x,
+        y,
+        &document_x,
+        &document_y);
+
+    update_guide_drag(
+        state,
+        document_x,
+        document_y);
 
     return;
   }
@@ -797,6 +952,7 @@ void drag_update(
 
     } else if (
         state->tool == Tool::Brush ||
+        state->tool == Tool::MixerBrush ||
         state->tool == Tool::Eraser) {
       advance_smoothed_brush(
           state,
@@ -928,6 +1084,25 @@ void drag_end(
       static_cast<CanvasState*>(data);
 
   stop_airbrush_timer(state);
+
+  if (state->guide_drag) {
+    double document_x = 0.0;
+    double document_y = 0.0;
+
+    widget_to_document(
+        state,
+        state->drag_start_x + offset_x,
+        state->drag_start_y + offset_y,
+        &document_x,
+        &document_y);
+
+    finish_guide_drag(
+        state,
+        document_x,
+        document_y);
+
+    return;
+  }
 
   if (
       is_retouch_tool(
@@ -1204,6 +1379,7 @@ void drag_end(
 
   if (
       state->tool == Tool::Brush ||
+      state->tool == Tool::MixerBrush ||
       state->tool == Tool::Eraser) {
     finish_smoothed_brush(
         state,

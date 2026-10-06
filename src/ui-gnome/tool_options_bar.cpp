@@ -57,6 +57,11 @@ struct State {
   GtkCheckButton* protect_tones{};
   GtkDropDown* sponge_mode{};
   GtkSpinButton* healing_diffusion{};
+  GtkWidget* mixer_options{};
+  GtkWidget* move_options{};
+  GtkSpinButton* mixer_wet{};
+  GtkSpinButton* mixer_load{};
+  GtkSpinButton* mixer_mix{};
 };
 
 GtkWidget* label(
@@ -1714,6 +1719,100 @@ ToolOptionsBar create_tool_options_bar(
       G_CALLBACK(healing_diffusion_changed),
       state);
 
+  GtkWidget* mixer =
+      gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  state->mixer_options = mixer;
+  gtk_box_append(GTK_BOX(mixer), label("Humedad"));
+  state->mixer_wet = GTK_SPIN_BUTTON(spin(0, 100, 50));
+  gtk_box_append(GTK_BOX(mixer), GTK_WIDGET(state->mixer_wet));
+  gtk_box_append(GTK_BOX(mixer), label("Carga"));
+  state->mixer_load = GTK_SPIN_BUTTON(spin(1, 100, 50));
+  gtk_box_append(GTK_BOX(mixer), GTK_WIDGET(state->mixer_load));
+  gtk_box_append(GTK_BOX(mixer), label("Mezcla"));
+  state->mixer_mix = GTK_SPIN_BUTTON(spin(0, 100, 50));
+  gtk_box_append(GTK_BOX(mixer), GTK_WIDGET(state->mixer_mix));
+  gtk_box_append(GTK_BOX(root), mixer);
+  gtk_widget_set_visible(mixer, FALSE);
+
+  const auto mixer_changed =
+      [](GtkSpinButton*, gpointer data) {
+        auto* options = static_cast<State*>(data);
+        if (options->canvas.set_mixer_wet) {
+          options->canvas.set_mixer_wet(
+              static_cast<int>(gtk_spin_button_get_value(options->mixer_wet)));
+        }
+        if (options->canvas.set_mixer_load) {
+          options->canvas.set_mixer_load(
+              static_cast<int>(gtk_spin_button_get_value(options->mixer_load)));
+        }
+        if (options->canvas.set_mixer_mix) {
+          options->canvas.set_mixer_mix(
+              static_cast<int>(gtk_spin_button_get_value(options->mixer_mix)));
+        }
+      };
+
+  g_signal_connect(state->mixer_wet, "value-changed", G_CALLBACK(+mixer_changed), state);
+  g_signal_connect(state->mixer_load, "value-changed", G_CALLBACK(+mixer_changed), state);
+  g_signal_connect(state->mixer_mix, "value-changed", G_CALLBACK(+mixer_changed), state);
+
+  GtkWidget* move =
+      gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+  state->move_options = move;
+
+  const auto align_clicked =
+      +[](GtkButton* button, gpointer data) {
+        auto* options = static_cast<State*>(data);
+        const auto edge = static_cast<patchy::AlignEdge>(
+            GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "lienzo-align")));
+        if (options->canvas.align_active_to_canvas) {
+          options->canvas.align_active_to_canvas(edge);
+        }
+      };
+
+  const auto align_button =
+      [state, move, align_clicked](const char* title, patchy::AlignEdge edge) {
+        GtkWidget* button = gtk_button_new_with_label(title);
+        g_object_set_data(
+            G_OBJECT(button),
+            "lienzo-align",
+            GINT_TO_POINTER(static_cast<int>(edge)));
+        gtk_box_append(GTK_BOX(move), button);
+        g_signal_connect(button, "clicked", G_CALLBACK(align_clicked), state);
+      };
+
+  align_button("Izquierda", patchy::AlignEdge::Left);
+  align_button("Centro", patchy::AlignEdge::HorizontalCenter);
+  align_button("Derecha", patchy::AlignEdge::Right);
+  align_button("Arriba", patchy::AlignEdge::Top);
+  align_button("Medio", patchy::AlignEdge::VerticalCenter);
+  align_button("Abajo", patchy::AlignEdge::Bottom);
+
+  const auto guide_clicked =
+      +[](GtkButton* button, gpointer data) {
+        auto* options = static_cast<State*>(data);
+        const auto orientation = static_cast<patchy::GuideOrientation>(
+            GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "lienzo-guide")));
+        if (options->canvas.add_centered_guide) {
+          options->canvas.add_centered_guide(orientation);
+        }
+      };
+
+  const auto guide_button =
+      [state, move, guide_clicked](const char* title, patchy::GuideOrientation orientation) {
+        GtkWidget* button = gtk_button_new_with_label(title);
+        g_object_set_data(
+            G_OBJECT(button),
+            "lienzo-guide",
+            GINT_TO_POINTER(static_cast<int>(orientation)));
+        gtk_box_append(GTK_BOX(move), button);
+        g_signal_connect(button, "clicked", G_CALLBACK(guide_clicked), state);
+      };
+
+  guide_button("Guía vertical", patchy::GuideOrientation::Vertical);
+  guide_button("Guía horizontal", patchy::GuideOrientation::Horizontal);
+  gtk_box_append(GTK_BOX(root), move);
+  gtk_widget_set_visible(move, FALSE);
+
   ToolOptionsBar result;
 
   result.widget = root;
@@ -1735,7 +1834,8 @@ ToolOptionsBar create_tool_options_bar(
             tool == Tool::BlurBrush ||
             tool == Tool::SharpenBrush ||
             tool == Tool::Burn ||
-            tool == Tool::Sponge;
+            tool == Tool::Sponge ||
+            tool == Tool::MixerBrush;
 
         const bool shape_tool =
             tool == Tool::Line ||
@@ -1839,6 +1939,14 @@ ToolOptionsBar create_tool_options_bar(
             tool == Tool::Healing);
 
         gtk_widget_set_visible(
+            state->mixer_options,
+            tool == Tool::MixerBrush);
+
+        gtk_widget_set_visible(
+            state->move_options,
+            tool == Tool::Move);
+
+        gtk_widget_set_visible(
             state->root,
             paint ||
             crop ||
@@ -1847,7 +1955,9 @@ ToolOptionsBar create_tool_options_bar(
             zoom ||
             gradient ||
             fill ||
-            wand);
+            wand ||
+            tool == Tool::Move ||
+            tool == Tool::MixerBrush);
       };
 
   result.set_tool(

@@ -2131,4 +2131,54 @@ void draw_zoom_marquee_overlay(
   cairo_restore(cr);
 }
 
+void draw_guides(
+    CanvasState* state,
+    cairo_t* cr) {
+  const auto view = geometry(state);
+  const auto& guides =
+      std::as_const(*state->document).guides();
+
+  if (guides.empty()) {
+    return;
+  }
+
+  cairo_save(cr);
+  cairo_set_line_width(cr, 1.0);
+
+  const double width =
+      state->document->width() * view.zoom;
+
+  const double height =
+      state->document->height() * view.zoom;
+
+  for (const auto& guide : guides) {
+    const double position =
+        static_cast<double>(guide.position_32) /
+            32.0 *
+        view.zoom;
+
+    cairo_set_source_rgba(cr, 0.0, 0.75, 0.85, 0.9);
+
+    if (
+        guide.orientation ==
+        patchy::GuideOrientation::Vertical) {
+      cairo_move_to(cr, view.x + position, view.y);
+      cairo_line_to(
+          cr,
+          view.x + position,
+          view.y + height);
+    } else {
+      cairo_move_to(cr, view.x, view.y + position);
+      cairo_line_to(
+          cr,
+          view.x + width,
+          view.y + position);
+    }
+
+    cairo_stroke(cr);
+  }
+
+  cairo_restore(cr);
+}
+
 }  // namespace lienzo::gnome

@@ -35,6 +35,11 @@
 
 namespace lienzo::gnome {
 
+struct HistorySnapshot {
+  patchy::Document document;
+  std::string label;
+};
+
 struct CanvasState {
   patchy::Document* document{};
   GtkDrawingArea* area{};
@@ -197,11 +202,28 @@ struct CanvasState {
       int)>>
       composite_slot;
 
-  std::vector<patchy::Document>
+  std::vector<HistorySnapshot>
       undo_stack;
 
-  std::vector<patchy::Document>
+  std::vector<HistorySnapshot>
       redo_stack;
+
+  std::string current_label{
+      "Documento abierto"};
+
+  patchy::MixerBrushState mixer_state{};
+  int mixer_wet{50};
+  int mixer_load{50};
+  int mixer_mix{50};
+  std::vector<std::uint8_t> mixer_snapshot;
+  std::int32_t mixer_origin_x{0};
+  std::int32_t mixer_origin_y{0};
+  std::int32_t mixer_width{0};
+  std::int32_t mixer_height{0};
+
+  bool guide_drag{false};
+  bool guide_moved{false};
+  int guide_index{-1};
 
   struct ClipboardLayer {
     patchy::PixelBuffer pixels;
@@ -364,6 +386,40 @@ void notify_document_changed(
     CanvasState* state);
 
 void push_history(
+    CanvasState* state,
+    const char* label = nullptr);
+
+void restore_history(
+    CanvasState* state,
+    int index);
+
+std::vector<HistoryEntry> history_rows(
+    const CanvasState* state);
+
+void align_active_to_canvas(
+    CanvasState* state,
+    patchy::AlignEdge edge);
+
+void add_centered_guide(
+    CanvasState* state,
+    patchy::GuideOrientation orientation);
+
+bool scale_active_layer(
+    CanvasState* state,
+    int width_percent,
+    int height_percent);
+
+void flip_active_layer(
+    CanvasState* state,
+    bool horizontal);
+
+void capture_mixer_snapshot(
+    CanvasState* state);
+
+void install_mixer_provider(
+    CanvasState* state);
+
+void clear_mixer_provider(
     CanvasState* state);
 
 void move_active_layer(
@@ -507,6 +563,10 @@ void draw_pixel_grid_overlay(
     cairo_t* cr);
 
 void draw_brush_cursor_overlay(
+    CanvasState* state,
+    cairo_t* cr);
+
+void draw_guides(
     CanvasState* state,
     cairo_t* cr);
 

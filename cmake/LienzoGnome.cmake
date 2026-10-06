@@ -59,6 +59,7 @@ if(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
         src/ui-gnome/inspector.cpp
         src/ui-gnome/layer_style_dialog.cpp
         src/ui-gnome/adjustment_dialog.cpp
+        src/ui-gnome/transform_dialog.cpp
         src/ui-gnome/layer_thumbnail.cpp
         src/ui-gnome/preferences_dialog.cpp
       )

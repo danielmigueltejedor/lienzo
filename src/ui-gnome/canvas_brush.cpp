@@ -506,6 +506,7 @@ void finish_smoothed_brush(
   }
 
   state->brush_smoothing_active = false;
+  clear_mixer_provider(state);
 
   // Every rendered segment already schedules its own dirty-region
   // refresh. A full-document refresh here defeats that optimization.
