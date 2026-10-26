@@ -7,6 +7,7 @@
 #include "formats/pdf_png_writer.hpp"
 #include "formats/stb/stb_image.h"
 #include "support/path_utils.hpp"
+#include "support/translate_noop.hpp"
 
 #include "lcms2.h"
 
@@ -663,7 +664,7 @@ std::vector<std::uint8_t> database_bytes(const Document& document, std::vector<T
     unsigned char* serialized = sqlite3_serialize(db, "main", &size, 0);
     if (serialized == nullptr || size <= 0) {
       sqlite3_close(db);
-      throw std::runtime_error("Could not write PXD file: sqlite serialize failed");
+      throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not write PXD file: sqlite serialize failed"));
     }
     std::vector<std::uint8_t> bytes(serialized, serialized + size);
     sqlite3_free(serialized);
@@ -678,11 +679,11 @@ std::vector<std::uint8_t> database_bytes(const Document& document, std::vector<T
 std::vector<std::uint8_t> zip_bytes(const std::vector<std::uint8_t>& database, const std::vector<TileFile>& tiles) {
   mz_zip_archive zip{};
   if (mz_zip_writer_init_heap(&zip, 0, database.size() + 64) == MZ_FALSE) {
-    throw std::runtime_error("Could not write PXD file");
+    throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not write PXD file"));
   }
   auto fail = [&]() {
     mz_zip_writer_end(&zip);
-    throw std::runtime_error("Could not write PXD file");
+    throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not write PXD file"));
   };
   if (mz_zip_writer_add_mem(&zip, "metadata.info", database.data(), database.size(), MZ_NO_COMPRESSION) == MZ_FALSE) {
     fail();
@@ -713,7 +714,7 @@ struct PackageFiles {
 PackageFiles read_zip_package(std::span<const std::uint8_t> bytes) {
   mz_zip_archive zip{};
   if (mz_zip_reader_init_mem(&zip, bytes.data(), bytes.size(), 0) == MZ_FALSE) {
-    throw std::runtime_error("Could not open PXD file");
+    throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not open PXD file"));
   }
   PackageFiles package;
   const int count = static_cast<int>(mz_zip_reader_get_num_files(&zip));
@@ -743,7 +744,7 @@ PackageFiles read_zip_package(std::span<const std::uint8_t> bytes) {
   }
   mz_zip_reader_end(&zip);
   if (package.database.empty()) {
-    throw std::runtime_error("Could not open PXD file: missing metadata.info");
+    throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not open PXD file: missing metadata.info"));
   }
   return package;
 }
@@ -936,7 +937,7 @@ Document document_from_package(const PackageFiles& package, std::vector<std::str
     }
     sqlite3_finalize(size_stmt);
     if (width <= 0 || height <= 0) {
-      throw std::runtime_error("Could not open PXD file: missing document size");
+      throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not open PXD file: missing document size"));
     }
 
     std::map<int, RawLayer> layers;
@@ -1193,7 +1194,7 @@ void write_directory_package(const Document& document, const std::filesystem::pa
 #else
 
 [[noreturn]] void sqlite_missing() {
-  throw std::runtime_error("Could not open PXD file: this build has no sqlite3");
+  throw std::runtime_error(PATCHY_TRANSLATE_NOOP("QObject", "Could not open PXD file: this build has no sqlite3"));
 }
 
 #endif

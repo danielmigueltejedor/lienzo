@@ -1,0 +1,33 @@
+name: Deterministic Quality Gates
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch integrity
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}" HEAD
+          else
+            git show --format= --check HEAD
+          fi
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++
+      - name: Configure headless test build
+        run: cmake -S . -B build-quality -G Ninja -DPATCHY_BUILD_APP=OFF -DPATCHY_BUILD_TESTS=ON
+      - name: Compile headless tests
+        run: cmake --build build-quality --parallel 2
+      - name: CTest
+        run: ctest --test-dir build-quality --output-on-failure
