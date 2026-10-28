@@ -160,3 +160,13 @@ Read the linked document before working on the feature. The document, not this i
 - **Performance and the stress harness:** [docs/performance.md](docs/performance.md); the Move/Free Transform drag-preview machinery is in [docs/interactive-previews.md](docs/interactive-previews.md).
 - **Testy PSD benchmark:** [docs/testy.md](docs/testy.md).
 - **Refactor and cleanup work:** [docs/refactor-backlog.md](docs/refactor-backlog.md) and [docs/code-organization.md](docs/code-organization.md).
+
+## Repository-specific deterministic quality contract (2026-10-26)
+
+**Project:** CMake/C++ native image editor with PSD decoding and Qt frontend.
+
+**Engineering requirements:** Protect color correctness, PSD layer round trips, ICC conversion, file integrity and undo invariants; compile headless unit-test targets before UI-dependent tests.
+
+**Verification commands:** cmake -S . -B build-quality -G Ninja -DPATCHY_BUILD_APP=OFF -DPATCHY_BUILD_TESTS=ON && cmake --build build-quality && ctest --test-dir build-quality --output-on-failure.
+
+Execute applicable checks before claiming completion and report the output honestly. Tests must cover behavior, edge cases and failures. Never delete, skip or weaken tests, quality thresholds or CI for a green result. Review changes to policies, `AGENTS.md`, `QUALITY_GATES.md` and workflows. Make `quality` required in protected branches. Report missing dependencies and failing legacy tests, never hide them. These instructions extend (do not replace) existing rules.
