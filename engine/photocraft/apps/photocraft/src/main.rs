@@ -25,6 +25,8 @@ mod control_server;
 mod crash_guard;
 mod gpu_startup;
 // Pure logic is tested on every platform; only Linux runs the check.
+#[cfg(all(feature = "gnome-captions", target_os = "linux"))]
+mod gnome_caption;
 #[cfg(any(target_os = "linux", test))]
 mod linux_libs;
 mod monitor_profile;
@@ -60,6 +62,23 @@ fn main() -> eframe::Result {
             "--version" => {
                 println!("photocraft {}", photocraft_engine::build_info::long_version());
                 return Ok(());
+            }
+            // Child process: snapshot the shell's caption buttons and exit. The editor itself
+            // never initializes GTK, so winit keeps the only display connection.
+            "--gnome-captions" => {
+                #[cfg(all(feature = "gnome-captions", target_os = "linux"))]
+                {
+                    if let Err(e) = gnome_caption::render_to_stdout() {
+                        eprintln!("lienzo: gnome captions: {e}");
+                        std::process::exit(1);
+                    }
+                    return Ok(());
+                }
+                #[cfg(not(all(feature = "gnome-captions", target_os = "linux")))]
+                {
+                    eprintln!("lienzo: this build has no GNOME caption capture");
+                    std::process::exit(1);
+                }
             }
             // Old macOS passes a process serial number when launched from Finder.
             _ if a.starts_with("-psn_") => {}
@@ -120,19 +139,28 @@ fn main() -> eframe::Result {
     let monitor = monitor_profile::detect_async();
     // Brush presets load in the background; the app attaches them when they arrive.
     let presets = services::presets_dir().map(photocraft_engine::preset_store::open_dir_async);
-    let mut options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_icon(app_icon::window_icon())
-            .with_app_id(APP_ID)
-            .with_title("PhotoCraft")
-            .with_inner_size([1440.0, 900.0])
-            .with_min_inner_size([760.0, 480.0])
-            .with_drag_and_drop(true)
-            .with_fullsize_content_view(true)
-            .with_titlebar_shown(false)
-            .with_title_shown(false),
-        ..Default::default()
-    };
+    // The helper exits before the window exists, so GTK never shares the display with winit.
+    #[cfg(all(feature = "gnome-captions", target_os = "linux"))]
+    let gnome_captions = gnome_caption::capture_for_session();
+    #[cfg(not(all(feature = "gnome-captions", target_os = "linux")))]
+    let gnome_captions: Option<photocraft_ui_egui::window_chrome::GnomeCaptions> = None;
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_icon(app_icon::window_icon())
+        .with_app_id(APP_ID)
+        .with_title("PhotoCraft")
+        .with_inner_size([1440.0, 900.0])
+        .with_min_inner_size([760.0, 480.0])
+        .with_drag_and_drop(true)
+        .with_fullsize_content_view(true)
+        .with_titlebar_shown(false)
+        .with_title_shown(false);
+    // Hide the desktop frame only when the shell buttons were captured, so the first frame does
+    // not flash a second title bar and a failed capture keeps the system frame.
+    #[cfg(target_os = "linux")]
+    {
+        viewport = viewport.with_decorations(gnome_captions.is_none());
+    }
+    let mut options = eframe::NativeOptions { viewport, ..Default::default() };
     // Crash-safe GPU startup (#4): pick the backend (a marker left by a start that died in the
     // driver moves to a safer one), and lock this start's marker until the first frames render.
     let t_sentinel = std::time::Instant::now();
@@ -173,6 +201,18 @@ fn main() -> eframe::Result {
             services.preset_store = presets;
             let mut app = PhotocraftApp::new(Session::new(), services);
             app.integrated_titlebar = cfg!(target_os = "macos");
+            app.gnome_captions = gnome_captions;
+            // The display handle is the window's real backend. Desktop environment variables are
+            // only a hint inside `detect_host`, and only for how the buttons look.
+            #[cfg(target_os = "linux")]
+            {
+                let backend = match tablet::DisplayKind::of(cc) {
+                    Some(tablet::DisplayKind::Wayland) => photocraft_ui_egui::window_chrome::WindowBackend::Wayland,
+                    Some(tablet::DisplayKind::X11) => photocraft_ui_egui::window_chrome::WindowBackend::X11,
+                    _ => photocraft_ui_egui::window_chrome::WindowBackend::Other,
+                };
+                app.window_host = photocraft_ui_egui::window_chrome::detect_host(backend);
+            }
             // Long commands and file opens run as background jobs with progress and Cancel (#210).
             app.background_jobs = std::env::var_os("PHOTOCRAFT_INLINE_JOBS").is_none();
             if let Ok(Some(icc)) = monitor.recv_timeout(std::time::Duration::from_secs(2)) {
