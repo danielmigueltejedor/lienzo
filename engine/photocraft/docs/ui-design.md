@@ -34,6 +34,10 @@ curl -sfL -o assets/icons/<name>.svg https://raw.githubusercontent.com/lucide-ic
   > crates/ui-egui/src/icon_data.rs
 ```
 
+## Window frame
+
+On Linux, `--features gnome-captions` snapshots the shell's caption buttons (libadwaita on GNOME, the session GTK theme elsewhere) and paints them in the existing header, hiding the desktop frame. Button order comes from `gsettings` or `kwinrc`. Without the feature, or if the snapshot fails, the desktop frame stays. macOS and Windows are unchanged.
+
 ## Interaction models (match Photoshop CC)
 
 | Feature | Module | Behaviour |

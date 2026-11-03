@@ -283,29 +283,52 @@ fn color_chips(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
+    let frame = app.window_frame_plan();
     let left = if cfg!(target_os = "macos") && app.integrated_titlebar { 78 } else { 10 };
     egui::Panel::top("title_bar")
         .exact_size(if t.pro { 32.0 } else { 38.0 })
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin { left, right: 10, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             let full = ui.max_rect();
-            let drag = ui.interact(full, ui.id().with("titledrag"), Sense::click_and_drag());
+            // Leave the top band to the resize border when this header owns the frame.
+            let edge = if frame.draws_controls() { crate::window_chrome::RESIZE_BAND } else { 0.0 };
+            let drag = ui.interact(crate::window_chrome::title_drag_rect(full, edge), ui.id().with("titledrag"), Sense::click_and_drag());
             if drag.drag_started() {
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
             }
             if drag.double_clicked() {
-                let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!max));
+                let live = crate::window_chrome::LiveWindow::from_ctx(ui.ctx());
+                if let Some(cmd) = crate::window_chrome::caption_command(crate::window_chrome::CaptionButton::Maximize, &live) {
+                    ui.ctx().send_viewport_cmd(cmd);
+                }
             }
             let title = app.session.active().map(|d| format!("{}{}", d.doc.name, if d.is_dirty() { "  •" } else { "" })).unwrap_or_else(|| "PhotoCraft".into());
             // The menus and the right-hand controls are laid out first; the title is centred in
             // whatever room is left between them, shortened or dropped rather than drawn over them.
             let (mut menus_right, mut controls_left) = (full.left(), full.right());
+            let buttons = frame.buttons();
+            let live = crate::window_chrome::LiveWindow::from_ctx(ui.ctx());
+            if frame.draws_controls()
+                && app.gnome_textures.is_none()
+                && let Some(captions) = &app.gnome_captions
+            {
+                app.gnome_textures = Some(crate::window_chrome::GnomeCaptionTextures::load(ui.ctx(), captions));
+            }
             ui.horizontal_centered(|ui| {
+                if frame.draws_controls()
+                    && let (Some(captions), Some(textures)) = (app.gnome_captions.as_ref(), app.gnome_textures.as_ref())
+                {
+                    crate::window_chrome::paint_caption_buttons(ui, &buttons.left, &live, false, captions, textures);
+                }
                 menus_right = crate::menus::menu_bar(app, ui);
                 controls_left = ui
                     .with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
+                        if frame.draws_controls()
+                            && let (Some(captions), Some(textures)) = (app.gnome_captions.as_ref(), app.gnome_textures.as_ref())
+                        {
+                            crate::window_chrome::paint_caption_buttons(ui, &buttons.right, &live, true, captions, textures);
+                        }
                         let mut ws = app.ui.workspace.clone();
                         let opts = [
                             // Keys stay English (`apply_workspace` matches them); the dropdown

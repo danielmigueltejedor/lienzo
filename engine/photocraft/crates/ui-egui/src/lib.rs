@@ -115,6 +115,7 @@ pub mod vector_ui;
 pub mod view_cmds;
 pub mod wide_angle_ui;
 pub mod widgets;
+pub mod window_chrome;
 pub mod work_area;
 pub mod workspace_ui;
 pub mod zoom_tool;
@@ -256,6 +257,15 @@ pub struct PhotocraftApp {
     styled: bool,
     /// Whether the window uses an integrated (transparent) macOS title bar.
     pub integrated_titlebar: bool,
+    /// Linux window backend and desktop button layout. Other platforms leave the default, which
+    /// keeps the system frame. Set by the desktop app once the real display handle is known.
+    pub window_host: window_chrome::WindowHost,
+    /// Caption images captured from this session's shell. Empty when the capture did not run.
+    pub gnome_captions: Option<window_chrome::GnomeCaptions>,
+    /// GPU copies of [`Self::gnome_captions`], filled on the first header paint.
+    pub(crate) gnome_textures: Option<window_chrome::GnomeCaptionTextures>,
+    /// Last frame visibility sent to the window, so the command is not repeated every frame.
+    frame_hidden: Option<bool>,
     fonts_ready: bool,
     /// Screen rect of the main canvas last frame (for overlays and the navigator).
     pub last_canvas_rect: egui::Rect,
@@ -374,6 +384,10 @@ impl PhotocraftApp {
             frame: 0,
             styled: false,
             integrated_titlebar: false,
+            window_host: window_chrome::WindowHost::default(),
+            gnome_captions: None,
+            gnome_textures: None,
+            frame_hidden: None,
             fonts_ready: false,
             last_canvas_rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0)),
             fps: 0.0,
@@ -779,6 +793,24 @@ impl PhotocraftApp {
             }
         }
     }
+
+    /// Header window controls. The frame is hidden only when a shell snapshot was captured.
+    pub(crate) fn window_frame_plan(&self) -> window_chrome::FramePlan {
+        window_chrome::plan(&self.window_host, self.gnome_captions.is_some())
+    }
+
+    /// Ask winit to show or hide the system frame when the Linux plan changes. The first call
+    /// applies the plan even if the window was created with the other setting.
+    fn sync_window_frame(&mut self, ctx: &egui::Context) {
+        if !cfg!(target_os = "linux") {
+            return;
+        }
+        let hide = self.window_frame_plan().hide_system_frame();
+        if self.frame_hidden != Some(hide) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(!hide));
+            self.frame_hidden = Some(hide);
+        }
+    }
 }
 
 impl eframe::App for PhotocraftApp {
@@ -822,6 +854,7 @@ impl eframe::App for PhotocraftApp {
         // A window bigger than its display (1440 × 900 on 1366 × 768) runs under the taskbar:
         // maximize it into the work area once (#315).
         work_area::fit_window(ctx);
+        self.sync_window_frame(ctx);
         discard_ui::guard_window_close(self, ctx);
         // Background jobs: apply finished ones, keep frames coming, Esc cancels (before the
         // shortcuts see Esc).
@@ -864,6 +897,11 @@ impl eframe::App for PhotocraftApp {
         if !chrome && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             let _ = menus::invoke(self, &ctx, "view.screenMode.standard", serde_json::json!({}));
         }
+        // Resize edges go down first. The header and its buttons are painted later, so they keep
+        // the clicks the edges would otherwise steal.
+        let live = window_chrome::LiveWindow::from_ctx(&ctx);
+        let resize = chrome && self.window_frame_plan().draws_controls() && !live.maximized && !live.fullscreen;
+        window_chrome::resize_borders(ui, resize);
         if chrome {
             panels::title_bar(self, ui);
         }

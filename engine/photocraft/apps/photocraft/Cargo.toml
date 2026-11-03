@@ -40,6 +40,17 @@ rfd = { workspace = true }
 arboard = { version = "3", features = ["wayland-data-control"] }
 open = "5"
 
+[features]
+# Real GNOME caption buttons, rendered by GTK/libadwaita (the shell's own widgets).
+# Off by default so builds without the GTK 4 / libadwaita headers still succeed.
+gnome-captions = ["dep:gtk4", "dep:libadwaita"]
+
+[target.'cfg(all(target_os = "linux", not(target_arch = "wasm32")))'.dependencies]
+# 0.9/0.7 match a consistent gtk4-sys. Newer gtk4 0.11.5 does not compile against the
+# gtk4-sys it resolves (missing GTK_EDITABLE_PROP_INPUT_INTERCEPTOR).
+gtk4 = { version = "=0.9.7", optional = true }
+libadwaita = { version = "=0.7.2", optional = true, features = ["v1_4"] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 # Finder double-click / Open With / Dock drops arrive as Apple events; this small audited crate
 # registers the handler (Objective-C interop needs unsafe, which our workspace forbids) behind a
