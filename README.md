@@ -1,5 +1,12 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/main/src/ui/icons/lienzo-app.png" width="176" height="176" alt="Lienzo">
+  <a href="https://getnodalia.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-web/main/assets/brand/nodalia-wordmark-white.svg">
+      <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-web/main/assets/brand/nodalia-wordmark-black.svg" width="150" alt="Nodalia">
+    </picture>
+  </a>
+  <br><br>
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/main/src/ui/icons/lienzo-app.png" width="200" alt="Lienzo">
   <h1>Lienzo</h1>
   <p><strong>A modern, native image editor for layered creative work, PSD compatibility and local-first automation.</strong></p>
 
