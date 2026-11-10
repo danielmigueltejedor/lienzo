@@ -1,29 +1,16 @@
-# PhotoCraft app icon
+# Lienzo app icon
 
-A **nine-tailed kitsune with a brow diamond**: an engraving portrait, seated, looking back at the
-viewer, in the Crafting Apps' owl-template framing (full-bleed field, head and body filling the
-tile, tails running off the edges).
+**Figure:** Diego Velázquez. The painter, for an image editor.
 
-## Palette
+**Style:** a black-and-white portrait cut out over a full-bleed colour field, head and shoulders, in
+the Nodalia icon family (one historical figure per app, one colour per app).
 
-Exactly three colours:
+**Tile:** 512 × 512 viewBox, rounded square `rx=112`, clipped; no border or roundel.
 
-| Colour | Hex | Used for |
-|---|---|---|
-| Ink | `#0b0b0c` | line work and contours |
-| Paper | `#efe9dc` | the figure |
-| PhotoCraft blue (app colour) | `#2f7bf5` | the full-bleed field |
-
-## Geometry
-
-A 512-unit tile (`viewBox="0 0 512 512"`), rounded square with `rx=112`, no border. The macOS
-renders pad it onto Apple's 824/1024 icon grid; the Windows and Linux renders use the whole tile,
-as the other Crafting Apps do.
-
-## Provenance
-
-The owner's original drawing, made in ArtCraft (2880 px, engraving style, keyed to the palette),
-vectorised. License: see `LICENSE.txt`.
+**Provenance:** the portrait is "Velázquez Self-portrait.jpg" from
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Velázquez_Self-portrait.jpg) (public domain). The figure was separated from its
+background, converted to black and white and placed over the app colour.
+Licence: see [LICENSE.txt](LICENSE.txt).
 
 ## Files
 
@@ -42,5 +29,7 @@ details and tests the `.ico` sizes and the WiX icon references.
 
 ## Regenerate
 
-Replace `photocraft.svg` (and `photocraft-small.svg`), then run `packaging/icons.sh`. It needs
-`resvg`, plus `iconutil` on macOS; the `.ico` is packed by `cargo xtask ico`.
+The icon is a raster portrait, so the SVG files embed an image instead of traced paths. The
+derived files in this directory were rendered directly from the portrait. `packaging/icons.sh`
+still works on `photocraft.svg` (resvg renders embedded images), but its output will differ slightly
+from the committed files in resampling.
