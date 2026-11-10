@@ -6,7 +6,7 @@
     </picture>
   </a>
   <br><br>
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/ai.storyteller.photocraft.png" width="176" height="176" alt="Lienzo">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/ai.storyteller.photocraft.png" width="160" alt="Lienzo">
   <h1>Lienzo</h1>
   <p><strong>An image editor for the Nodalia suite, built on the PhotoCraft engine.</strong></p>
 
