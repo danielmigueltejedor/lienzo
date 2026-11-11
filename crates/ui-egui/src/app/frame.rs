@@ -350,7 +350,9 @@ impl PhotocraftApp {
             let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                 canvas::document_area(self, ui);
             });
-            theme::round_island_corners(ui, shown.response.rect);
+            if chrome {
+                theme::round_island_corners(ui, shown.response.rect);
+            }
         } else {
             if toolbar_shown {
                 panels::toolbar(self, ui);
@@ -363,7 +365,10 @@ impl PhotocraftApp {
                 let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                     canvas::document_area(self, ui);
                 });
-                theme::round_island_corners(ui, shown.response.rect);
+                // Full Screen Mode shows the canvas edge to edge: no island to round.
+                if chrome {
+                    theme::round_island_corners(ui, shown.response.rect);
+                }
                 if !home {
                     panels::properties_window(self, &ctx);
                 }

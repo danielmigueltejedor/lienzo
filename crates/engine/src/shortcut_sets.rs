@@ -19,6 +19,8 @@ use crate::prefs::{Preferences, alternate_keys, normalize_shortcut};
 
 /// The built-in set's name: the default bindings.
 pub const DEFAULTS_NAME: &str = "Lienzo Defaults";
+/// The built-in set's name before the app was called Lienzo; calls and scripts may still use it.
+const LEGACY_DEFAULTS_NAME: &str = "PhotoCraft Defaults";
 /// Saved sets are small; the cap keeps a hostile settings file or call bounded.
 pub const MAX_SETS: usize = 64;
 /// Longest set name, in characters.
@@ -99,6 +101,12 @@ pub fn set_name(name: &str) -> Result<String, String> {
     Ok(n.to_string())
 }
 
+/// Does `name` mean the built-in set? "" or its name, current or former, unless a saved set
+/// already has that name (one saved before the rename keeps loading as itself).
+fn means_defaults(name: &str, sets: &BTreeMap<String, ShortcutSet>) -> bool {
+    name.is_empty() || ((name.eq_ignore_ascii_case(DEFAULTS_NAME) || name.eq_ignore_ascii_case(LEGACY_DEFAULTS_NAME)) && !sets.contains_key(name))
+}
+
 /// The saved copy of the set in use: `None` for the defaults (or a set that no longer exists).
 fn saved(p: &Preferences) -> Option<&ShortcutSet> {
     p.shortcut_sets.get(&p.shortcut_set)
@@ -125,7 +133,7 @@ pub fn modified(p: &Preferences) -> bool {
 pub fn load(next: &mut Preferences, p: &Value) -> Result<bool, String> {
     let Some(v) = p.get("useSet") else { return Ok(false) };
     let name = v.as_str().ok_or("`useSet` is a set name")?.trim();
-    if name.is_empty() || name.eq_ignore_ascii_case(DEFAULTS_NAME) {
+    if means_defaults(name, &next.shortcut_sets) {
         ShortcutSet::default().load_into(next);
         next.shortcut_set = String::new();
     } else {
@@ -178,7 +186,7 @@ pub fn store(next: &mut Preferences, p: &Value) -> Result<bool, String> {
     }
     if let Some(v) = p.get("activeSet") {
         let name = v.as_str().ok_or("`activeSet` is a set name")?.trim();
-        if name.is_empty() || name.eq_ignore_ascii_case(DEFAULTS_NAME) {
+        if means_defaults(name, &next.shortcut_sets) {
             next.shortcut_set = String::new();
         } else if next.shortcut_sets.contains_key(name) {
             next.shortcut_set = name.to_string();
@@ -319,6 +327,23 @@ mod tests {
         assert!(p.shortcut_sets.is_empty() && p.shortcut_set.is_empty());
         assert_eq!(describe(&p)["activeSet"], "");
         assert!(modified(&p), "F9 differs from the defaults");
+    }
+
+    #[test]
+    fn the_former_defaults_name_still_means_the_defaults_unless_a_set_has_it() {
+        let mut p = prefs();
+        store(&mut p, &json!({"saveSet": "Mine"})).unwrap();
+        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap();
+        assert!(p.shortcut_set.is_empty(), "the former built-in name loads the defaults");
+        store(&mut p, &json!({"activeSet": "Mine"})).unwrap();
+        store(&mut p, &json!({"activeSet": "photocraft defaults"})).unwrap();
+        assert!(p.shortcut_set.is_empty());
+        // A set saved under that name keeps loading as itself.
+        p.shortcuts.insert("edit.copy".into(), "F9".into());
+        store(&mut p, &json!({"saveSet": "PhotoCraft Defaults"})).unwrap();
+        load(&mut p, &json!({"useSet": ""})).unwrap();
+        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap();
+        assert_eq!((p.shortcut_set.as_str(), p.shortcuts.get("edit.copy").map(String::as_str)), ("PhotoCraft Defaults", Some("F9")));
     }
 
     #[test]

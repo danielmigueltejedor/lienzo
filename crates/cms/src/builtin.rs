@@ -114,7 +114,12 @@ impl Builtin {
             "cmyk" | "coatedcmyk" | "defaultcmyk" | "photocraftcoatedcmyk" => Some(Builtin::CoatedCmyk),
             _ => None,
         };
-        alias.or_else(|| Builtin::ALL.into_iter().find(|b| b.description().eq_ignore_ascii_case(s)))
+        // The descriptions named the app PhotoCraft before it was Lienzo; scripts may still pass those.
+        alias.or_else(|| {
+            Builtin::ALL
+                .into_iter()
+                .find(|b| b.description().eq_ignore_ascii_case(s) || b.description().replace("Lienzo", "PhotoCraft").eq_ignore_ascii_case(s))
+        })
     }
 
     /// The profile (built once per process).
@@ -340,6 +345,14 @@ fn build(b: Builtin) -> Profile {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn former_descriptions_still_name_their_builtins() {
+        assert_eq!(Builtin::from_id("Linear sRGB (PhotoCraft)"), Some(Builtin::LinearSrgb));
+        assert_eq!(Builtin::from_id("ACEScg (AP1, linear, PhotoCraft)"), Some(Builtin::AcesCg));
+        assert_eq!(Builtin::from_id("Linear sRGB (Lienzo)"), Some(Builtin::LinearSrgb));
+        assert_eq!(Builtin::from_id("Linear sRGB (Elsewhere)"), None);
+    }
 
     #[test]
     fn cicp_maps_onto_the_builtins_and_linear_bt2020() {
