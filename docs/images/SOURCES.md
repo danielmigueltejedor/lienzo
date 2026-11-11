@@ -11,6 +11,7 @@
 | `lienzo-transform.jpg` | Lienzo UI screenshot (offscreen snapshot) with *The Tetons and the Snake River*, Ansel Adams, 1942 (U.S. National Archives) | Artwork: public domain, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Adams_The_Tetons_and_the_Snake_River.jpg). UI: this project. |
 | `lienzo-type.jpg` | Lienzo UI screenshot (offscreen snapshot) with *Among the Sierra Nevada, California*, Albert Bierstadt, 1868 | Artwork: public domain, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg). UI: this project. |
 | `lienzo-export-light.jpg` | Lienzo UI screenshot (offscreen snapshot) with *The Kiss*, Gustav Klimt, 1907–1908 | Artwork: public domain, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Gustav_Klimt_016.jpg). UI: this project. |
+| `lienzo-light.jpg` | Lienzo UI screenshot (offscreen snapshot, light theme) with *Impression, Sunrise*, Claude Monet, 1872 | Artwork: public domain, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Monet_-_Impression,_Sunrise.jpg). UI: this project. |
 
 Screenshots must use famous public-domain artwork (or content made in the app), never personal photos.
 

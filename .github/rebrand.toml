@@ -8,7 +8,8 @@
 # Left as they are wherever they appear.
 keep = [
     # Links: upstream's issues and pull requests, other people's forks, the shared test corpus.
-    "https?://[^\\s)\\]\"'<>`]+",
+    # Not this app's own repository, whose paths use its own names.
+    "https?://(?!(?:raw\\.githubusercontent|github)\\.com/danielmigueltejedor/)[^\\s)\\]\"'<>`]+",
     # Upstream's repository, named without a link (the sync workflow, docs/upstream.md).
     'storytold/photocraft[\w.-]*',
     # The shared test corpus repository and its checkout directory.
