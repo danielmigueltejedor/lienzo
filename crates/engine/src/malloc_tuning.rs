@@ -53,7 +53,7 @@ pub fn apply() {
     }
     // `exec` replaces the process and only returns on failure.
     let err = cmd.args(args).env(TRIM_THRESHOLD_VAR, TRIM_THRESHOLD).exec();
-    eprintln!("PhotoCraft: could not restart with {TRIM_THRESHOLD_VAR} set ({err}); memory of closed documents may not be returned to the system");
+    eprintln!("Lienzo: could not restart with {TRIM_THRESHOLD_VAR} set ({err}); memory of closed documents may not be returned to the system");
 }
 
 /// Nothing to tune off glibc.

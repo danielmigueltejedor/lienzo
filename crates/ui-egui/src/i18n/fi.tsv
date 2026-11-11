@@ -16,7 +16,7 @@
 # taivutus, edustaväri, tasoasetelma, heittovarjo …). Clean-room: written from the plain meaning of
 # the English labels; no proprietary localisation resource was consulted or copied.
 # Labels use sentence case, commands are imperatives, and pointer hints say what an action does
-# ("Lisää piste napsauttamalla"). Product, format and technology names (PhotoCraft, ArtCraft,
+# ("Lisää piste napsauttamalla"). Product, format and technology names (Lienzo, ArtCraft,
 # OpenType, CMYK, Lab …) and key caps keep their spelling; the trailing "…" of dialog commands is
 # kept. Numbers follow Finnish style (decimal comma, a space before %). Plural rule: one|other
 # (n != 1 -> other); the other form takes the partitive singular ("1 taso", "2 tasoa").
@@ -553,9 +553,9 @@
 	Hide All	Piilota kaikki
 
 # Help
-	About PhotoCraft	Tietoja PhotoCraftista
-	PhotoCraft Website	PhotoCraft-verkkosivusto
-	PhotoCraft on GitHub	PhotoCraft GitHubissa
+	About Lienzo	Tietoja Lienzoista
+	Lienzo Website	Lienzo-verkkosivusto
+	Lienzo on GitHub	Lienzo GitHubissa
 	Report an Issue…	Ilmoita ongelmasta…
 	ArtCraft Website	ArtCraft-verkkosivusto
 	Join the ArtCraft Discord…	Liity ArtCraftin Discordiin…
@@ -636,11 +636,11 @@
 	Import Shortcuts…	Tuo pikanäppäimet…
 	Load a keyboard shortcut set saved as .kys	Lataa .kys-muodossa tallennettu pikanäppäinsarja
 	Imported {n} shortcuts from {file}. Click OK to keep them.	Tuotiin {n} pikanäppäintä tiedostosta {file}. Säilytä ne napsauttamalla OK.
-	{n} commands are not in PhotoCraft.	{n} komentoa ei ole PhotoCraftissa.
+	{n} commands are not in Lienzo.	{n} komentoa ei ole Lienzoissa.
 	Keyboard shortcuts imported	Pikanäppäimet tuotu
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	Pikanäppäinsarjasi {set} on käytössä: {n} pikanäppäintä poikkeaa oletuksista. Muokkaa › Pikanäppäimet näyttää ne; Palauta kaikki oletuksiin kumoaa tämän.
 	Import keyboard shortcuts?	Tuodaanko pikanäppäimet?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft löysi tältä tietokoneelta toisen kuvankäsittelyohjelman pikanäppäinsarjan {set}: {n} sen pikanäppäintä poikkeaa PhotoCraftin pikanäppäimistä. Tuodaanko se?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo löysi tältä tietokoneelta toisen kuvankäsittelyohjelman pikanäppäinsarjan {set}: {n} sen pikanäppäintä poikkeaa Lienzoin pikanäppäimistä. Tuodaanko se?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	Muokkaa › Pikanäppäimet › Palauta kaikki oletuksiin kumoaa tuonnin.
 	Don't Import	Älä tuo
 	The keyboard shortcut set was not imported: {error}	Pikanäppäinsarjaa ei tuotu: {error}
@@ -945,7 +945,7 @@
 	Embed Color Profile	Upota väriprofiili
 	Assign Profile…	Määritä profiili…
 	Convert to Profile…	Muunna profiiliksi…
-	PhotoCraft Manages Colors	PhotoCraft hallitsee värejä
+	Lienzo Manages Colors	Lienzo hallitsee värejä
 	Printer Manages Colors	Tulostin hallitsee värejä
 	(print to the printer)	(tulosta tulostimelle)
 	Absolute Colorimetric	Absoluuttinen kolorimetrinen
@@ -1547,15 +1547,15 @@
 	Use File › Open, or paste a copied image with {paste}.	Käytä komentoa Tiedosto › Avaa tai liitä kopioitu kuva komennolla {paste}.
 	Native file drag-and-drop is unavailable	Tiedostojen vetäminen ja pudottaminen ei ole käytettävissä
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Tiedostojen vetämistä ja pudottamista ei vielä tueta Waylandissa. Käytä komentoa Tiedosto › Avaa tai kopioi kuva tiedostonhallinnassa ja liitä se komennolla {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	Jos haluat pudottaa tiedostoja, käynnistä PhotoCraft XWaylandissa: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	Tai aseta Asetukset › Suorituskyky › Linux-näyttöpalvelin arvoksi X11: PhotoCraft käynnistyy tällöin aina XWaylandissa.
+	To drop files, start Lienzo under XWayland: `{command}`	Jos haluat pudottaa tiedostoja, käynnistä Lienzo XWaylandissa: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	Tai aseta Asetukset › Suorituskyky › Linux-näyttöpalvelin arvoksi X11: Lienzo käynnistyy tällöin aina XWaylandissa.
 	Edit › Paste	Muokkaa › Liitä
 	Photo	Valokuva
 	Print	Tulosta
 	Art & Illustration	Taide ja kuvitus
 	Mobile	Mobiili
 	Film & Video	Elokuva ja video
-	Default PhotoCraft Size	PhotoCraftin oletuskoko
+	Default Lienzo Size	Lienzoin oletuskoko
 	Clipboard	Leikepöytä
 	Photo (2 × 3 in)	Valokuva (2 × 3 in)
 	Photo (4 × 6 in)	Valokuva (4 × 6 in)
@@ -1708,7 +1708,7 @@
 	Reverse	Käännä järjestys
 	Align with layer	Tasaa tason kanssa
 	Join us on Discord	Liity Discordiin
-	PhotoCraft website	PhotoCraft-verkkosivusto
+	Lienzo website	Lienzo-verkkosivusto
 	ArtCraft	ArtCraft
 	GitHub	GitHub
 	No character style	Ei merkkityyliä
@@ -1734,9 +1734,9 @@
 	Don't Save	Älä tallenna
 	No	Ei
 	Yes	Kyllä
-	These settings aren't available in PhotoCraft yet.	Nämä asetukset eivät ole vielä käytettävissä PhotoCraftissa.
+	These settings aren't available in Lienzo yet.	Nämä asetukset eivät ole vielä käytettävissä Lienzoissa.
 	Shortcut removed.	Pikanäppäin poistettu.
-	All shortcuts reset to PhotoCraft defaults.	Kaikki pikanäppäimet palautettu PhotoCraftin oletusasetuksiin.
+	All shortcuts reset to Lienzo defaults.	Kaikki pikanäppäimet palautettu Lienzoin oletusasetuksiin.
 	Add Shortcut	Lisää pikanäppäin
 	Delete Shortcut	Poista pikanäppäin
 	Press keys…	Paina näppäimiä…
@@ -2223,8 +2223,8 @@
 	Output:	Lähtö:
 	Paint Overlay	Maalipeite
 	Pattern Size	Kuvion koko
-	PhotoCraft	PhotoCraft
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — avoimen lähdekoodin natiivi kuvankäsittelyohjelma, joka on kirjoitettu Rustilla.
+	Lienzo	Lienzo
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — avoimen lähdekoodin natiivi kuvankäsittelyohjelma, joka on kirjoitettu Rustilla.
 	Position and Size	Sijainti ja koko
 	Preserve Details	Säilytä yksityiskohdat
 	Preserve Luminosity	Säilytä luminanssi
@@ -2559,7 +2559,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automaattinen käyttää GPU-kiihdytystä, kun se on käytettävissä, ja siirtyy virhetilanteissa CPU-renderöintiin.
 	Switched to CPU rendering	Siirryttiin CPU-renderöintiin
 	GPU acceleration could not continue. Your documents are unchanged.	GPU-kiihdytystä ei voitu jatkaa. Asiakirjasi ovat ennallaan.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft käyttää CPU-kuvankoostinta. Ikkuna voi silti käyttää näytönohjainta.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo käyttää CPU-kuvankoostinta. Ikkuna voi silti käyttää näytönohjainta.
 	Retry GPU requires a restart. Save your work first.	GPU:n uudelleenyritys vaatii uudelleenkäynnistyksen. Tallenna työsi ensin.
 	Retry GPU tries the graphics processor again now.	Yritä GPU:ta uudelleen -toiminto kokeilee grafiikkasuoritinta heti uudelleen.
 	GPU acceleration resumed.	GPU-kiihdytys on taas käytössä.
@@ -2812,7 +2812,7 @@ fontWeight	Italic	Kursivoitu
 	Color to Alpha…	Väri alfaksi…
 	Transparency Threshold	Läpinäkyvyyskynnys
 	Opacity Threshold	Peittävyyskynnys
-	PhotoCraft — Screen Color Picker	PhotoCraft — näytön värinvalitsin
+	Lienzo — Screen Color Picker	Lienzo — näytön värinvalitsin
 
 	Rasterize svg groups deeper than	Rasteroi SVG-ryhmät, joiden syvyys on yli
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 poistaa tämän kynnyksen käytöstä; yli 100 tason syvyyteen sisäkkäiset SVG-ryhmät rasteroidaan aina.
@@ -3196,7 +3196,7 @@ curves	Smooth	Tasoita
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	Ladattu {n} toiminto tiedostosta {file}|Ladattu {n} toimintoa tiedostosta {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} vaiheella ei ole vielä vastaavuutta PhotoCraftissa|{n} vaiheella ei ole vielä vastaavuutta PhotoCraftissa
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} vaiheella ei ole vielä vastaavuutta Lienzoissa|{n} vaiheella ei ole vielä vastaavuutta Lienzoissa
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	Tallennettu {n} toiminto tiedostoon {file}|Tallennettu {n} toimintoa tiedostoon {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} vaihe jätettiin pois, koska sillä ei ole Photoshop-vastinetta|{n} vaihetta jätettiin pois, koska niillä ei ole Photoshop-vastinetta
 @plural	{n} action file loaded|{n} action files loaded	Ladattu {n} toimintotiedosto|Ladattu {n} toimintotiedostoa
@@ -3298,7 +3298,7 @@ curves	Smooth	Tasoita
 	Shadow Mode	Varjon sekoitustila
 	Shadow Color	Varjon väri
 	Shadow Opacity	Varjon peittävyys
-# PhotoCraft release checks.
+# Lienzo release checks.
 	Check for Updates…	Tarkista päivitykset…
 	Open the release page to choose an installer for your system.	Avaa julkaisusivu ja valitse järjestelmällesi sopiva asennusohjelma.
 	Automatically Check for Updates	Tarkista päivitykset automaattisesti
@@ -3327,12 +3327,12 @@ curves	Smooth	Tasoita
 	Bicubic Smoother	Bikubinen pehmeämpi
 	Bicubic Sharper	Bikubinen terävämpi
 	Pasting from other apps is unavailable	Liittäminen muista sovelluksista ei ole käytettävissä
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft ei pääse järjestelmän leikepöydälle tässä istunnossa. Waylandissa Flatpak-hiekkalaatikko piilottaa protokollan, jonka kautta muiden sovellusten kuvat luetaan.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Jos haluat liittää muista sovelluksista, käynnistä PhotoCraft XWaylandin alla: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	Ei liitettävää: PhotoCraft ei pysty lukemaan järjestelmän leikepöytää täällä
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo ei pääse järjestelmän leikepöydälle tässä istunnossa. Waylandissa Flatpak-hiekkalaatikko piilottaa protokollan, jonka kautta muiden sovellusten kuvat luetaan.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	Jos haluat liittää muista sovelluksista, käynnistä Lienzo XWaylandin alla: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	Ei liitettävää: Lienzo ei pysty lukemaan järjestelmän leikepöytää täällä
 	Delete this set	Poista tämä sarja
 	New Set…	Uusi sarja…
-	PhotoCraft Defaults	PhotoCraft-oletukset
+	Lienzo Defaults	Lienzo-oletukset
 	Save a list of these shortcuts as a web page	Tallenna luettelo näistä pikanäppäimistä verkkosivuna
 	Save the changes to this set	Tallenna muutokset tähän sarjaan
 	Save these shortcuts as a .kys file	Tallenna nämä pikanäppäimet .kys-tiedostona
@@ -4095,7 +4095,7 @@ curves	Smooth	Tasoita
 	Multiple Flames Path Directions	Useita liekkejä polun suuntiin
 	Multiple Flames Various Length	Useita eripituisia liekkejä
 	My Brushes	Omat siveltimet
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tiedostojen natiivia vedä ja pudota -toimintoa ei vielä tueta Waylandissa. Käytä komentoa Tiedosto › Avaa tai suorita PhotoCraft XWaylandissa komennolla `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tiedostojen natiivia vedä ja pudota -toimintoa ei vielä tueta Waylandissa. Käytä komentoa Tiedosto › Avaa tai suorita Lienzo XWaylandissa komennolla `WAYLAND_DISPLAY= photocraft`.
 	Nearest	Lähin
 	Neon Glow	Neonhehku
 	Neutralize	Neutraloi
@@ -4182,7 +4182,7 @@ curves	Smooth	Tasoita
 	Pentagon	Viisikulmio
 	Percentage	Prosenttiosuus
 	Permission denied	Käyttöoikeus evätty
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft yrittää uudelleen; ennen onnistunutta tallennusta tehdyt asetusmuutokset menetetään, kun sovellus suljetaan.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo yrittää uudelleen; ennen onnistunutta tallennusta tehdyt asetusmuutokset menetetään, kun sovellus suljetaan.
 	Photomerge	Photomerge
 	Pick Color From Image	Poimi väri kuvasta
 	Picture Frame	Kuvakehys
@@ -4239,7 +4239,7 @@ curves	Smooth	Tasoita
 	Pyramids	Pyramidit
 	Quick Actions	Pikatoiminnot
 	Quit	Lopeta
-	Quit PhotoCraft	Lopeta PhotoCraft
+	Quit Lienzo	Lopeta Lienzo
 	Quit {app}	Lopeta {app}
 	R G B	R G B
 	R g b	R g b
@@ -4315,7 +4315,7 @@ curves	Smooth	Tasoita
 	Save a Copy	Tallenna kopio
 	Save before closing?	Tallennetaanko ennen sulkemista?
 	Save for Web (Legacy)	Tallenna verkkoa varten (vanha)
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	Tallenna työsi ja käynnistä PhotoCraft uudelleen, niin GPU-kiihdytystä yritetään uudelleen. CPU-renderöinti pysyy käytössä tämän istunnon ajan.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	Tallenna työsi ja käynnistä Lienzo uudelleen, niin GPU-kiihdytystä yritetään uudelleen. CPU-renderöinti pysyy käytössä tämän istunnon ajan.
 	Saved a copy as {path}	Kopio tallennettu nimellä {path}
 	Saved {path}; image assets: {n} in {dir}	Tallennettu {path}; kuvaresurssit: {n} kansiossa {dir}
 	Saving…	Tallennetaan…

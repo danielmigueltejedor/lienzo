@@ -10,7 +10,7 @@
 # Romanian computing and photo-editing vocabulary (strat, pensulă, selecție, pânză/canvas ...). No
 # proprietary localisation resource, string table or product UI was consulted or copied; add
 # entries the same way.
-# Product and technology names (PhotoCraft, ArtCraft, OpenType, CMYK, Lab ...) stay in Latin
+# Product and technology names (Lienzo, ArtCraft, OpenType, CMYK, Lab ...) stay in Latin
 # letters; the trailing "…" of dialog commands is kept.
 # Machine-translated with Claude (Anthropic) for @tronicum; not yet reviewed by a native speaker.
 # Layer Mask Display Options (the layer mask rubylith's colour and opacity)
@@ -843,9 +843,9 @@
 	Timeline	Cronologie
 	Tool Presets	Presetări instrument
 	Tools	Instrumente
-	About PhotoCraft	Despre PhotoCraft
-	PhotoCraft Website	Site-ul PhotoCraft
-	PhotoCraft on GitHub	PhotoCraft pe GitHub
+	About Lienzo	Despre Lienzo
+	Lienzo Website	Site-ul Lienzo
+	Lienzo on GitHub	Lienzo pe GitHub
 	ArtCraft Website	Site-ul ArtCraft
 	Join the ArtCraft Discord…	Alăturați-vă Discord-ului ArtCraft…
 	Report an Issue…	Raportare problemă…
@@ -902,7 +902,7 @@
 	All Caps	Toate majuscule
 	All Slices	Toate feliile
 	All User Slices	Toate feliile utilizatorului
-	All shortcuts reset to PhotoCraft defaults.	Toate comenzile rapide au fost resetate la valorile implicite ale PhotoCraft.
+	All shortcuts reset to Lienzo defaults.	Toate comenzile rapide au fost resetate la valorile implicite ale Lienzo.
 	Alt	Alt
 	Always use pressure for opacity	Utilizare permanentă a presiunii pentru opacitate
 	Always use pressure for size	Utilizare permanentă a presiunii pentru dimensiune
@@ -1152,8 +1152,8 @@
 	Drop an image or PSD anywhere to open it.	Plasați o imagine sau un PSD oriunde pentru a-l deschide.
 	Native file drag-and-drop is unavailable	Tragerea și plasarea nativă a fișierelor nu este disponibilă pe Wayland
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Tragerea și plasarea nativă a fișierelor nu este încă suportată pe Wayland. Utilizați Fișier › Deschidere, sau copiați imaginea din gestionarul de fișiere și inserați-o cu {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	Pentru a plasa fișiere, porniți PhotoCraft sub XWayland: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	Sau setați Preferințe › Performanță › Server de afișare Linux la X11: PhotoCraft va porni mereu sub XWayland.
+	To drop files, start Lienzo under XWayland: `{command}`	Pentru a plasa fișiere, porniți Lienzo sub XWayland: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	Sau setați Preferințe › Performanță › Server de afișare Linux la X11: Lienzo va porni mereu sub XWayland.
 	Edit › Paste	Editare › Inserare
 	Duplicate Layers…	Duplicare straturi…
 	Duplicate style	Duplicare stil
@@ -1403,9 +1403,9 @@
 	Perspective Warp is not active	Deformarea de perspectivă nu este activă
 	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Deformare de perspectivă: desenați planuri de-a lungul perspectivei imaginii, apoi comutați la Deformare
 	Photo Filter	Filtru foto
-	PhotoCraft	PhotoCraft
-	PhotoCraft Manages Colors	PhotoCraft gestionează culorile
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — un editor de imagini nativ, open-source, scris în Rust.
+	Lienzo	Lienzo
+	Lienzo Manages Colors	Lienzo gestionează culorile
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — un editor de imagini nativ, open-source, scris în Rust.
 	Pin Depth:	Profunzime pin:
 	Pixel Length:	Lungime în pixeli:
 	Pixels/Centimeter	Pixeli/centimetru
@@ -1481,11 +1481,11 @@
 	Import Shortcuts…	Import comenzi rapide…
 	Load a keyboard shortcut set saved as .kys	Încărcare un set de comenzi rapide de la tastatură salvat ca .kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	S-au importat {n} comenzi rapide din {file}. Faceți clic pe OK pentru a le păstra.
-	{n} commands are not in PhotoCraft.	{n} comenzi nu există în PhotoCraft.
+	{n} commands are not in Lienzo.	{n} comenzi nu există în Lienzo.
 	Keyboard shortcuts imported	Comenzi rapide de la tastatură importate
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	Setul dvs. de comenzi rapide de la tastatură {set} este în uz aici: {n} comenzi rapide diferă de valorile implicite. Editare › Comenzi rapide de la tastatură le afișează; Resetare tot la valorile implicite anulează acest lucru.
 	Import keyboard shortcuts?	Importați comenzile rapide de la tastatură?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft a găsit pe acest computer setul dvs. de comenzi rapide de la tastatură {set} dintr-un alt editor de imagini: {n} dintre comenzile sale rapide diferă de cele ale PhotoCraft. Doriți să îl importați?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo a găsit pe acest computer setul dvs. de comenzi rapide de la tastatură {set} dintr-un alt editor de imagini: {n} dintre comenzile sale rapide diferă de cele ale Lienzo. Doriți să îl importați?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	Editare › Comenzi rapide de la tastatură › Resetare tot la valorile implicite anulează un import.
 	Don't Import	Nu importați
 	The keyboard shortcut set was not imported: {error}	Setul de comenzi rapide de la tastatură nu a fost importat: {error}
@@ -1711,7 +1711,7 @@
 	Current Tool	Instrument curent
 	Custom Shape Tool	Instrument Formă personalizată
 	Cyans	Cianuri
-	Default PhotoCraft Size	Dimensiune implicită PhotoCraft
+	Default Lienzo Size	Dimensiune implicită Lienzo
 	Delete Workspace	Ștergere spațiu de lucru
 	Diamond	Diamant
 	Dimensions:	Dimensiuni:
@@ -1822,7 +1822,7 @@
 	Pen Tool	Instrument Pană
 	Convert Point Tool	Instrument Conversie punct
 	Photo	Fotografie
-	PhotoCraft website	Site-ul web PhotoCraft
+	Lienzo website	Site-ul web Lienzo
 	Picas	Pica
 	Pillow Emboss	Relief tip pernă
 	Pixel Replacement	Înlocuire pixeli
@@ -2153,7 +2153,7 @@
 	System Info	Informații sistem
 	More panels	Mai multe panouri
 	More documents	Mai multe documente
-	These settings aren't available in PhotoCraft yet.	Aceste setări nu sunt încă disponibile în PhotoCraft.
+	These settings aren't available in Lienzo yet.	Aceste setări nu sunt încă disponibile în Lienzo.
 	Graphics	Grafică
 	Reset GPU Backend	Resetare backend GPU
 	Applies at next launch.	Se aplică la următoarea pornire.
@@ -2366,7 +2366,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automat utilizează accelerarea GPU atunci când este disponibilă și trece la randare pe CPU în caz de erori.
 	Switched to CPU rendering	S-a comutat la randare pe CPU
 	GPU acceleration could not continue. Your documents are unchanged.	Accelerarea GPU nu a putut continua. Documentele dvs. sunt neschimbate.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft compune imaginile pe CPU. Fereastra poate utiliza totuși adaptorul grafic.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo compune imaginile pe CPU. Fereastra poate utiliza totuși adaptorul grafic.
 	Retry GPU requires a restart. Save your work first.	Reîncercarea GPU necesită o repornire. Salvați mai întâi munca dvs.
 	Retry GPU tries the graphics processor again now.	Reîncercarea GPU încearcă din nou procesorul grafic acum.
 	GPU acceleration resumed.	Accelerarea GPU a fost reluată.
@@ -2586,7 +2586,7 @@ fontWeight	Italic	Cursivă
 	Color to Alpha…	Culoare la alfa…
 	Transparency Threshold	Prag transparență
 	Opacity Threshold	Prag opacitate
-	PhotoCraft — Screen Color Picker	PhotoCraft — Selector de culoare de pe ecran
+	Lienzo — Screen Color Picker	Lienzo — Selector de culoare de pe ecran
 	Rasterize svg groups deeper than	Rasterizare grupuri SVG mai profunde decât
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 dezactivează acest prag; grupurile SVG imbricate la mai mult de 100 de niveluri sunt întotdeauna rasterizate.
 	Rule of Thirds	Regula terților
@@ -3372,7 +3372,7 @@ layerLabel	No Color	Fără culoare
 	Restart Required	Este necesară repornirea
 	Restart	Repornire
 	Quit	Ieșire
-	Quit PhotoCraft	Ieșire din PhotoCraft
+	Quit Lienzo	Ieșire din Lienzo
 	Close Window	Închidere fereastră
 	New Window	Fereastră nouă
 	Open Image	Deschidere imagine
@@ -3865,7 +3865,7 @@ layerLabel	No Color	Fără culoare
 	Mezzotint	Mezzotintă
 	Mosaic	Mozaic
 	Motion Blur	Neclaritate mișcare
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tragerea și plasarea nativă a fișierelor nu este încă suportată pe Wayland. Utilizați Fișier › Deschidere, sau porniți PhotoCraft prin XWayland cu `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tragerea și plasarea nativă a fișierelor nu este încă suportată pe Wayland. Utilizați Fișier › Deschidere, sau porniți Lienzo prin XWayland cu `WAYLAND_DISPLAY= photocraft`.
 	Neon Glow	Strălucire neon
 	New Guide Layout	Aranjament nou de ghidaje
 	New Video Layer from File	Strat video nou din fișier
@@ -4037,9 +4037,9 @@ layerLabel	No Color	Fără culoare
 	Saved {path}; image assets: {n} in {dir}	S-a salvat {path}; resurse imagine: {n} în {dir}
 	{message} (notes: {n}; {warning})	{message} (note: {n}; {warning})
 	Preferences can't be saved	Preferințele nu pot fi salvate
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft va continua să încerce; până când o salvare are succes, modificările preferințelor se vor pierde la închidere.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo va continua să încerce; până când o salvare are succes, modificările preferințelor se vor pierde la închidere.
 	GPU retry scheduled	Reîncercare GPU programată
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	Salvați-vă munca și reporniți PhotoCraft pentru a reîncerca accelerarea GPU. Randarea pe CPU rămâne activă pentru această sesiune.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	Salvați-vă munca și reporniți Lienzo pentru a reîncerca accelerarea GPU. Randarea pe CPU rămâne activă pentru această sesiune.
 	GPU device was lost; using the CPU renderer.	Dispozitivul GPU s-a pierdut; se va folosi randorul CPU.
 	GPU error; using the CPU renderer.	Eroare GPU; se va folosi randorul CPU.
 	Couldn't open {name}: {error}	Nu s-a putut deschide {name}: {error}
@@ -4151,7 +4151,7 @@ navigator	Zoom	Zoom
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	S-a încărcat {n} acțiune din {file}|S-au încărcat {n} acțiuni din {file}|S-au încărcat {n} de acțiuni din {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} pas nu are încă echivalent în PhotoCraft|{n} pași nu au încă echivalent în PhotoCraft|{n} de pași nu au încă echivalent în PhotoCraft
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} pas nu are încă echivalent în Lienzo|{n} pași nu au încă echivalent în Lienzo|{n} de pași nu au încă echivalent în Lienzo
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	S-a salvat {n} acțiune în {file}|S-au salvat {n} acțiuni în {file}|S-au salvat {n} de acțiuni în {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} pas fără echivalent în Photoshop a fost omis|{n} pași fără echivalent în Photoshop au fost omiși|{n} de pași fără echivalent în Photoshop au fost omiși
 	Starting serial	Număr de serie inițial
@@ -4212,17 +4212,17 @@ navigator	Zoom	Zoom
 	Kept {name}: written by another application	S-a păstrat {name}: a fost scris de altă aplicație
 	Shadow Tint	Tentă umbre
 	Check for Updates…	Căutare actualizări…
-	PhotoCraft Updates	Actualizări PhotoCraft
+	Lienzo Updates	Actualizări Lienzo
 	Checking for updates…	Se caută actualizări…
 	Open the release page to choose an installer for your system.	Deschideți pagina versiunii pentru a alege un instalator pentru sistemul dvs.
 	Open Download Page	Deschidere pagină de descărcare
-	PhotoCraft is up to date.	PhotoCraft este actualizat.
+	Lienzo is up to date.	Lienzo este actualizat.
 	Could not check for updates.	Nu s-au putut căuta actualizări.
 	Updates have not been checked yet.	Actualizările nu au fost încă căutate.
 	Check Again	Căutare din nou
 	Automatically Check for Updates	Căutare automată a actualizărilor
 	Installed version: {version}	Versiune instalată: {version}
-	PhotoCraft {version} is available.	PhotoCraft {version} este disponibil.
+	Lienzo {version} is available.	Lienzo {version} este disponibil.
 	Paints from the History panel's source state	Pictează pe baza stării sursă din panoul Istoric
 	Sets the source for the history brush	Stabilește sursa pentru pensula istoric
 	Highlight Mode	Mod luminile
@@ -4250,12 +4250,12 @@ navigator	Zoom	Zoom
 	Bicubic Smoother	Bicubică mai netedă
 	Bicubic Sharper	Bicubică mai clară
 	Pasting from other apps is unavailable	Inserarea din alte aplicații nu este disponibilă
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft nu poate accesa clipboard-ul sistemului în această sesiune. Pe Wayland, un sandbox Flatpak ascunde protocolul prin care se citesc imaginile din alte aplicații.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Pentru a insera din alte aplicații, porniți PhotoCraft sub XWayland: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	Nimic de inserat: PhotoCraft nu poate citi aici clipboard-ul sistemului
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo nu poate accesa clipboard-ul sistemului în această sesiune. Pe Wayland, un sandbox Flatpak ascunde protocolul prin care se citesc imaginile din alte aplicații.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	Pentru a insera din alte aplicații, porniți Lienzo sub XWayland: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	Nimic de inserat: Lienzo nu poate citi aici clipboard-ul sistemului
 	Delete this set	Ștergere acest set
 	New Set…	Set nou…
-	PhotoCraft Defaults	Valori implicite PhotoCraft
+	Lienzo Defaults	Valori implicite Lienzo
 	Save a list of these shortcuts as a web page	Salvare o listă a acestor comenzi rapide ca pagină web
 	Save the changes to this set	Salvare modificările în acest set
 	Save these shortcuts as a .kys file	Salvare aceste comenzi rapide ca fișier .kys

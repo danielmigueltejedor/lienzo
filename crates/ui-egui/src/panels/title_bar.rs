@@ -22,8 +22,19 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     };
     let right = if caption_right > 0.0 { 0 } else { 10 };
     let bar = egui::Panel::top("title_bar")
-        .exact_size(crate::titlebar::bar_height(app, ui.ctx(), if t.pro { 32.0 } else { 38.0 }))
-        .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin { left, right, top: 0, bottom: 0 }))
+        .exact_size(crate::titlebar::bar_height(
+            app,
+            ui.ctx(),
+            if t.pro {
+                32.0
+            } else if t.islands() {
+                44.0
+            } else {
+                38.0
+            },
+        ))
+        .show_separator_line(!t.islands())
+        .frame(egui::Frame::NONE.fill(if t.islands() { t.frame() } else { t.chrome }).inner_margin(egui::Margin { left, right, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             let full = ui.max_rect();
             // Only the free gap between the menus and the far-end controls drags the window: a
@@ -47,8 +58,8 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             let title = app
                 .session
                 .active()
-                .map(|d| format!("{}{}", if show_name { d.doc.name.as_str() } else { "PhotoCraft" }, if d.is_dirty() { "  •" } else { "" }))
-                .unwrap_or_else(|| "PhotoCraft".into());
+                .map(|d| format!("{}{}", if show_name { d.doc.name.as_str() } else { "Lienzo" }, if d.is_dirty() { "  •" } else { "" }))
+                .unwrap_or_else(|| "Lienzo".into());
             // The menus and the far-end controls are laid out first; the title is centred in
             // whatever room is left between them (`free`, left to right: menus then controls, or
             // controls then menus in a right-to-left UI), shortened or dropped rather than drawn
@@ -61,7 +72,12 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                 if lead > 0.0 {
                     ui.add_space(lead + 4.0);
                 }
-                if !system {
+                if t.islands() {
+                    // Nodalia: the app's own menu (About, Preferences, Keyboard Shortcuts, Quit)
+                    // opens from a hamburger at the start of the header.
+                    main_menu(app, ui);
+                    ui.add_space(4.0);
+                } else if !system {
                     let side = if t.pro { 18.0 } else { 20.0 };
                     let (mark, _) = ui.allocate_exact_size(vec2(side, side), Sense::hover());
                     crate::brand::paint_mark(ui, mark);
@@ -154,6 +170,40 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
 }
 
+/// Nodalia's main menu: a 28 pt hamburger with the app's own entries, each with its icon and
+/// shortcut. The work menus (File, Edit, Image…) stay in the menu bar beside it.
+fn main_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    let t = Tokens::get(ui.ctx());
+    let button = icons::button_with_icon_size_tip(ui, "ndl-menu", 28.0, 18.0, false, "Main Menu", false);
+    let entries: [(&str, &str, &str); 4] = [
+        ("ndl-info", "About Lienzo", "help.about"),
+        ("settings", "Preferences", "edit.preferences.general"),
+        ("ndl-keyboard", "Keyboard Shortcuts", "edit.keyboardShortcuts"),
+        ("ndl-log-out", "Quit", "file.exit"),
+    ];
+    let mut chosen = None;
+    egui::Popup::menu(&button).show(|ui| {
+        ui.set_min_width(220.0);
+        for (i, (icon, label, id)) in entries.iter().enumerate() {
+            if i == 3 {
+                ui.separator();
+            }
+            let shortcut = crate::shortcuts::shortcut_label(app, id).unwrap_or_default();
+            let row = egui::Button::image_and_text(icons::image(icon, 16.0, t.icon), tl!(label)).shortcut_text(shortcut);
+            if ui.add(row).clicked() {
+                chosen = Some(*id);
+                ui.close();
+            }
+        }
+    });
+    if let Some(id) = chosen {
+        let ctx = ui.ctx().clone();
+        if let Err(e) = crate::menus::invoke(app, &ctx, id, serde_json::json!({})) {
+            app.ui.status = e;
+        }
+    }
+}
+
 /// Whether the window shows the system's title bar instead of the app drawing its own: Windows
 /// and Linux with Preferences › Interface › System Title Bar. macOS always has system decorations,
 /// but keeps the in-app brand mark and centred title, so it never counts as system mode here; nor
@@ -169,9 +219,9 @@ pub fn system_title_bar(app: &PhotocraftApp) -> bool {
 /// drops out and only the app name (and the `*`) remains (#5037).
 pub fn window_title(app: &PhotocraftApp) -> String {
     if !app.session.prefs().interface.show_file_name_in_title {
-        return format!("{}PhotoCraft", if app.session.active().is_some_and(|d| d.is_dirty()) { "*" } else { "" });
+        return format!("{}Lienzo", if app.session.active().is_some_and(|d| d.is_dirty()) { "*" } else { "" });
     }
-    app.session.active().map(|d| format!("{}{} \u{2014} PhotoCraft", if d.is_dirty() { "*" } else { "" }, d.doc.name)).unwrap_or_else(|| "PhotoCraft".into())
+    app.session.active().map(|d| format!("{}{} \u{2014} Lienzo", if d.is_dirty() { "*" } else { "" }, d.doc.name)).unwrap_or_else(|| "Lienzo".into())
 }
 
 /// Keep the OS window title (and the taskbar / Alt-Tab entry) on the active file. Sends

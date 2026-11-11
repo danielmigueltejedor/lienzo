@@ -58,7 +58,7 @@ fn run_with(args: &[&str], vars: &[(&str, &str)]) -> Run {
     let output = child.wait_with_output().unwrap();
     let gpu_started = dir.join("gpu-starting.json").exists();
     std::fs::remove_dir_all(&dir).ok();
-    assert!(!timed_out, "PhotoCraft did not exit: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(!timed_out, "Lienzo did not exit: {}", String::from_utf8_lossy(&output.stderr));
     assert!(!gpu_started, "control setup errors must exit before GPU startup");
     Run { status: output.status, stderr: String::from_utf8_lossy(&output.stderr).into_owned() }
 }

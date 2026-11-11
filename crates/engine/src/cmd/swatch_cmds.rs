@@ -497,9 +497,8 @@ pub fn read_file(bytes: &[u8], format: Format, group: &str) -> std::result::Resu
             let f = photocraft_psd::aco::parse(bytes).map_err(|e| format!("not a readable .aco swatch file: {e}"))?;
             let books = f.swatches.iter().filter(|s| matches!(s.color, AcoColor::Other { .. })).count();
             if books > 0 {
-                warnings.push(format!(
-                    "{books} swatches use a colour book or colour space PhotoCraft can't show; they are kept (shown gray) and saved back unchanged"
-                ));
+                warnings
+                    .push(format!("{books} swatches use a colour book or colour space Lienzo can't show; they are kept (shown gray) and saved back unchanged"));
             }
             let items = f
                 .swatches

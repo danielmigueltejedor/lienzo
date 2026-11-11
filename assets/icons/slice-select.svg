@@ -12,5 +12,5 @@
   <!-- PhotoCraft's own Slice Select tool glyph (not from an icon set): the Slice knife with a pointer. -->
   <path d="M10 14l4-4" />
   <path d="M14 10l5.6-5.6a2 2 0 0 1 2.8 2.8L16.5 12.5z" />
-  <path d="M4 12v9l2.5-2.5 2 3.5 1.7-1-2-3.5H12z" />
+  <path d="M3 3v9l2.5-2.5 2 3.5 1.7-1-2-3.5H11z" />
 </svg>

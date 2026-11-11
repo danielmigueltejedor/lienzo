@@ -86,7 +86,7 @@ pub fn import_text(app: &mut PhotocraftApp, file_name: &str, text: &str) -> Resu
     if !plan.unknown.is_empty() || !unknown_tools.is_empty() {
         let u = (plan.unknown.len() + unknown_tools.len()).to_string();
         message.push(' ');
-        message.push_str(&crate::i18n::fmt(tl!("{n} commands are not in PhotoCraft."), &[("n", &u)]));
+        message.push_str(&crate::i18n::fmt(tl!("{n} commands are not in Lienzo."), &[("n", &u)]));
     }
     f.insert("tab".into(), json!(0));
     f.insert("overrides".into(), json!(overrides));
@@ -215,9 +215,7 @@ pub fn show_offer(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let Some(offer) = &app.ui.kys_offer else { return };
     let n = offer.changes.to_string();
     let line = crate::i18n::fmt(
-        tl!(
-            "PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?"
-        ),
+        tl!("Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?"),
         &[("set", &offer.set), ("n", &n)],
     );
     let mut answer = None;

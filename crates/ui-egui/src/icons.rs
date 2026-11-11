@@ -16,7 +16,7 @@ use crate::theme::Tokens;
 
 fn white_icons() -> &'static SvgIconSet {
     static MAP: OnceLock<SvgIconSet> = OnceLock::new();
-    MAP.get_or_init(|| SvgIconSet::new(ICONS, SvgStyle { current_color: "#ffffff", stroke_width: Some("1.75") }, "bytes://icons/", "square"))
+    MAP.get_or_init(|| SvgIconSet::new(ICONS, SvgStyle { current_color: "#ffffff", stroke_width: Some("2.25") }, "bytes://icons/", "square"))
 }
 
 pub fn exists(name: &str) -> bool {
@@ -369,7 +369,7 @@ mod tests {
         // stroke weight and cache keys must survive shared-crate upgrades unchanged.
         assert!(ICONS.len() >= 60);
         for (name, original) in ICONS {
-            let expected = String::from_utf8_lossy(original).replace("currentColor", "#ffffff").replace("stroke-width=\"2\"", "stroke-width=\"1.75\"");
+            let expected = String::from_utf8_lossy(original).replace("currentColor", "#ffffff").replace("stroke-width=\"2\"", "stroke-width=\"2.25\"");
             let egui::ImageSource::Bytes { uri, bytes } = white_icons().source(name) else { panic!("expected SVG bytes") };
             assert_eq!(uri.as_ref(), format!("bytes://icons/{name}.svg"));
             assert_eq!(bytes.as_ref(), expected.as_bytes(), "{name}");

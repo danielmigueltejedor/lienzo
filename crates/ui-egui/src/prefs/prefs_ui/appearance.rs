@@ -39,6 +39,7 @@ pub(super) fn selected_theme(interface: &prefs::Interface, system: Option<egui::
     };
     if light {
         match interface.light_theme {
+            LightTheme::NodaliaLight => ThemeKind::NodaliaLight,
             LightTheme::StudioLight => ThemeKind::StudioLight,
             LightTheme::ProLightGray => ThemeKind::ProLightGray,
             LightTheme::ProLight => ThemeKind::ProLight,
@@ -49,6 +50,7 @@ pub(super) fn selected_theme(interface: &prefs::Interface, system: Option<egui::
         }
     } else {
         match interface.dark_theme {
+            DarkTheme::Nodalia => ThemeKind::Nodalia,
             DarkTheme::Pro => ThemeKind::Pro,
             DarkTheme::ProMedium => ThemeKind::ProMedium,
             DarkTheme::Studio => ThemeKind::Studio,
@@ -97,6 +99,7 @@ pub(crate) fn step_brightness(app: &mut PhotocraftApp, ctx: &egui::Context, ligh
 }
 
 pub(super) const LIGHT_THEME_OPTIONS: &[(&str, ThemeKind)] = &[
+    ("nodaliaLight", ThemeKind::NodaliaLight),
     ("proLight", ThemeKind::ProLight),
     ("proLightGray", ThemeKind::ProLightGray),
     ("studioLight", ThemeKind::StudioLight),
@@ -107,6 +110,7 @@ pub(super) const LIGHT_THEME_OPTIONS: &[(&str, ThemeKind)] = &[
 ];
 
 pub(super) const DARK_THEME_OPTIONS: &[(&str, ThemeKind)] = &[
+    ("nodalia", ThemeKind::Nodalia),
     ("proMedium", ThemeKind::ProMedium),
     ("pro", ThemeKind::Pro),
     ("studio", ThemeKind::Studio),

@@ -486,7 +486,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else {
         println!("=================================================================================================================================");
-        println!("PhotoCraft Issue #9122 Native Pen Cursor Benchmark Results");
+        println!("Lienzo Issue #9122 Native Pen Cursor Benchmark Results");
         println!("Harness: {} pointer moves across {} repetitions per scale/variant", moves, reps);
         println!("=================================================================================================================================");
         println!(

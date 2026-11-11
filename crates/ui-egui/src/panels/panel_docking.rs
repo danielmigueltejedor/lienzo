@@ -807,6 +807,11 @@ fn show_layout(app: &mut PhotocraftApp, ui: &mut egui::Ui, dock_only: bool) {
     let mut style = craft_ui::docking::DockStyle::from_ui(ui);
     style.tab_height = if t.pro { 28.0 } else { 40.0 };
     style.min_pane = 0.0;
+    if t.islands() {
+        // Nodalia: the canvas and every panel group stand apart on the window frame.
+        style.gap = crate::theme::ISLAND_GAP;
+        style.dock_gap = Some(crate::theme::ISLAND_GAP);
+    }
     style.background = t.card;
     // Studio themes leave the strip transparent over the dock's card; a floating group has no
     // card behind it, so the canvas showed through its titles (#4509).

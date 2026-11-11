@@ -49,6 +49,9 @@ pub enum CaptionFamily {
     Breeze,
     /// Other Linux desktops: libadwaita's buttons without the disc at rest.
     Generic,
+    /// Nodalia: 28 pt discs with bold glyphs; under the pointer minimize takes the accent tint,
+    /// maximize an amber one, and close turns coral.
+    Nodalia,
 }
 
 /// The title bar's unused gap, saved by `panels::title_bar` for drags that begin while a modal
@@ -85,6 +88,7 @@ impl CaptionFamily {
             "adwaita" => Some(Self::Adwaita),
             "breeze" => Some(Self::Breeze),
             "generic" => Some(Self::Generic),
+            "nodalia" => Some(Self::Nodalia),
             _ => None,
         }
     }
@@ -98,6 +102,8 @@ impl CaptionFamily {
             Self::Windows => (BUTTON_WIDTH, 0.0, 0.0),
             Self::Adwaita | Self::Generic => (24.0, 6.5, 10.0),
             Self::Breeze => (18.0, 4.5, 8.0),
+            // NDL: 28 pt circles, `space.xs` (4 pt) apart, 8 pt from the window's edge.
+            Self::Nodalia => (28.0, 2.0, 8.0),
         }
     }
 }
@@ -185,9 +191,16 @@ impl CaptionStyle {
     }
 }
 
-/// The caption style the platform reports, or Windows' when it reports none.
+/// The caption style the platform reports, or Windows' when it reports none. Preferences ›
+/// Interface › Window Controls › Nodalia (the default) keeps the desktop's placement of the
+/// buttons but draws Nodalia's round ones.
 fn style(app: &PhotocraftApp, ctx: &egui::Context) -> CaptionStyle {
-    app.services.caption_style.as_ref().map(|read| read(ctx)).unwrap_or_default()
+    let mut s: CaptionStyle = app.services.caption_style.as_ref().map(|read| read(ctx)).unwrap_or_default();
+    if app.session.prefs().interface.window_controls == photocraft_engine::prefs::WindowControls::Nodalia {
+        s.family = CaptionFamily::Nodalia;
+        s.icons = None;
+    }
+    s
 }
 
 /// The title bar's height: `base`, or with GNOME's buttons at least libadwaita's header bar
@@ -281,6 +294,8 @@ pub fn caption_buttons(app: &mut PhotocraftApp, ui: &mut Ui, bar: Rect) {
             ui.painter().rect_filled(r, 0.0, fill);
             let ink = if close && resp.hovered() { t.caption_close_text } else { t.icon };
             paint_windows_glyph(ui, c, max, r.center(), Stroke::new(1.0, ink));
+        } else if s.family == CaptionFamily::Nodalia {
+            paint_nodalia(ui, &t, c, max, centre, resp.hovered(), pressed);
         } else {
             paint_round(ui, &t, &s, c, max, centre, resp.hovered(), pressed);
         }
@@ -291,7 +306,9 @@ pub fn caption_buttons(app: &mut PhotocraftApp, ui: &mut Ui, bar: Rect) {
             Caption::Close => tl!("Close"),
         };
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tip));
-        if resp.on_hover_text(tip).clicked() {
+        // Nodalia's buttons say what they do by their glyphs: no tooltip repeats it.
+        let resp = if s.family == CaptionFamily::Nodalia { resp } else { resp.on_hover_text(tip) };
+        if resp.clicked() {
             clicked = Some(c);
         }
     }
@@ -420,6 +437,58 @@ fn paint_round(ui: &Ui, t: &Tokens, s: &CaptionStyle, c: Caption, maximized: boo
                 p.line_segment([at(4.5, 4.5), at(11.5, 11.5)], s);
                 p.line_segment([at(11.5, 4.5), at(4.5, 11.5)], s);
             }
+        }
+    }
+}
+
+/// A Nodalia window button centred at `centre`: a raised disc at rest, then the hover tint of its
+/// kind, and NDL's window glyph (`window-minimize`, `-maximize`, `-restore`, `-close`) drawn on
+/// its 24 pt grid with 2 pt strokes on whole pixels.
+fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2, hovered: bool, pressed: bool) {
+    let p = if t.dark() { nodalia_theme::Mode::Dark } else { nodalia_theme::Mode::Light }.palette_with(crate::theme::LIENZO);
+    let c32 = crate::theme::ndl;
+    let ppp = ui.ctx().pixels_per_point();
+    let centre = pos2((centre.x * ppp).round() / ppp, (centre.y * ppp).round() / ppp);
+    let (mut fill, ink) = match (c, hovered || pressed) {
+        (Caption::Close, true) => (t.caption_close, t.caption_close_text),
+        (Caption::Maximize, true) => (c32(p.status_warning_bg), c32(p.status_warning_fg)),
+        (Caption::Minimize, true) => (c32(p.accent_subtle), c32(p.accent_text)),
+        _ => (c32(p.control_bg), c32(p.text_secondary)),
+    };
+    if pressed {
+        fill = fill.gamma_multiply(0.82).to_opaque();
+    }
+    let painter = ui.painter();
+    painter.circle_filled(centre, 14.0, fill);
+    let at = |x: f32, y: f32| centre + vec2(x - 12.0, y - 12.0);
+    let s = Stroke::new(2.0, ink);
+    let round = |q: Pos2| painter.circle_filled(q, 1.0, ink);
+    let path = |points: Vec<Pos2>| {
+        if let (Some(&a), Some(&b)) = (points.first(), points.last()) {
+            round(a);
+            round(b);
+        }
+        for w in points.windows(2) {
+            if let [a, b] = w {
+                round(*a);
+                painter.line_segment([*a, *b], s);
+            }
+        }
+    };
+    match c {
+        Caption::Minimize => path(vec![at(8.0, 12.0), at(16.0, 12.0)]),
+        // Two corners on the diagonal: open outwards to maximize, turned to the centre to restore.
+        Caption::Maximize if maximized => {
+            path(vec![at(14.0, 7.0), at(14.0, 10.0), at(17.0, 10.0)]);
+            path(vec![at(10.0, 17.0), at(10.0, 14.0), at(7.0, 14.0)]);
+        }
+        Caption::Maximize => {
+            path(vec![at(12.0, 7.0), at(17.0, 7.0), at(17.0, 12.0)]);
+            path(vec![at(12.0, 17.0), at(7.0, 17.0), at(7.0, 12.0)]);
+        }
+        Caption::Close => {
+            path(vec![at(8.0, 8.0), at(16.0, 16.0)]);
+            path(vec![at(16.0, 8.0), at(8.0, 16.0)]);
         }
     }
 }

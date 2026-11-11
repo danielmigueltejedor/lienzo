@@ -246,7 +246,7 @@ impl MemoryBudget {
 pub fn low_memory_advice(free_memory: &Option<u64>) -> String {
     match free_memory {
         None => String::new(),
-        Some(0) => ". PhotoCraft measured no free memory, or could not read this system's memory limit. Close other apps and try again".to_string(),
+        Some(0) => ". Lienzo measured no free memory, or could not read this system's memory limit. Close other apps and try again".to_string(),
         Some(n) => format!(". About {} of memory is free. Close other apps and try again", size_text(*n)),
     }
 }
@@ -1357,7 +1357,7 @@ mod tests {
         assert_eq!(low_memory_advice(&None), "");
         assert_eq!(
             low_memory_advice(&Some(0)),
-            ". PhotoCraft measured no free memory, or could not read this system's memory limit. Close other apps and try again"
+            ". Lienzo measured no free memory, or could not read this system's memory limit. Close other apps and try again"
         );
         assert_eq!(low_memory_advice(&Some(900 << 20)), ". About 900 MiB of memory is free. Close other apps and try again");
         assert_eq!(low_memory_advice(&Some(3 << 30)), ". About 3.0 GiB of memory is free. Close other apps and try again");

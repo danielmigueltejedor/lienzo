@@ -14,7 +14,7 @@
 # localisation resource, string table or product UI was consulted or copied; add entries the same
 # way. Urdu shares much Perso-Arabic vocabulary with Farsi; where a shared term fit naturally the
 # choice was cross-checked against fa.tsv, but phrasing and grammar follow Urdu usage throughout,
-# not Farsi's. Product and technology names (PhotoCraft, ArtCraft, OpenType, CMYK, Lab ...) stay in
+# not Farsi's. Product and technology names (Lienzo, ArtCraft, OpenType, CMYK, Lab ...) stay in
 # Latin letters, as do key names and placeholders; the trailing "…" of dialog commands is kept.
 # Urdu plural rule (as used in casual software UI): one|other.
 # Machine-translated with Claude (Anthropic) for @tronicum; not yet reviewed by a native speaker.
@@ -801,9 +801,9 @@
 	Timeline	ٹائم لائن
 	Tool Presets	ٹول پری سیٹس
 	Tools	ٹولز
-	About PhotoCraft	PhotoCraft کے بارے میں
-	PhotoCraft Website	PhotoCraft ویب سائٹ
-	PhotoCraft on GitHub	PhotoCraft GitHub پر
+	About Lienzo	Lienzo کے بارے میں
+	Lienzo Website	Lienzo ویب سائٹ
+	Lienzo on GitHub	Lienzo GitHub پر
 	ArtCraft Website	ArtCraft ویب سائٹ
 	Join the ArtCraft Discord…	ArtCraft ڈسکارڈ میں شامل ہوں…
 	Report an Issue…	مسئلہ رپورٹ کریں…
@@ -860,7 +860,7 @@
 	All Caps	تمام بڑے حروف
 	All Slices	تمام سلائسز
 	All User Slices	تمام صارف سلائسز
-	All shortcuts reset to PhotoCraft defaults.	تمام شارٹ کٹس PhotoCraft کی ڈیفالٹ ترتیب پر ری سیٹ ہو گئے۔
+	All shortcuts reset to Lienzo defaults.	تمام شارٹ کٹس Lienzo کی ڈیفالٹ ترتیب پر ری سیٹ ہو گئے۔
 	Alt	Alt
 	Always use pressure for opacity	ہمیشہ دھندلاپن کے لیے دباؤ استعمال کریں
 	Always use pressure for size	ہمیشہ حجم کے لیے دباؤ استعمال کریں
@@ -1110,8 +1110,8 @@
 	Drop an image or PSD anywhere to open it.	تصویر یا PSD کو کہیں بھی گھسیٹ کر چھوڑیں تاکہ اسے کھولا جا سکے۔
 	Native file drag-and-drop is unavailable	نیٹو فائل ڈریگ اینڈ ڈراپ دستیاب نہیں
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	نیٹو فائل ڈریگ اینڈ ڈراپ ابھی تک Wayland پر سپورٹ نہیں ہے۔ فائل > کھولیں استعمال کریں، یا اپنے فائل مینیجر میں تصویر کاپی کریں اور {paste} کے ساتھ چسپاں کریں۔
-	To drop files, start PhotoCraft under XWayland: `{command}`	فائلیں چھوڑنے کے لیے، PhotoCraft کو XWayland کے تحت شروع کریں: {command}
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	یا ترجیحات > کارکردگی > لینکس ڈسپلے سرور کو X11 پر مقرر کریں: PhotoCraft پھر ہمیشہ XWayland کے تحت شروع ہوتا ہے۔
+	To drop files, start Lienzo under XWayland: `{command}`	فائلیں چھوڑنے کے لیے، Lienzo کو XWayland کے تحت شروع کریں: {command}
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	یا ترجیحات > کارکردگی > لینکس ڈسپلے سرور کو X11 پر مقرر کریں: Lienzo پھر ہمیشہ XWayland کے تحت شروع ہوتا ہے۔
 	Edit › Paste	ترمیم > چسپاں کریں
 	Duplicate Layers…	تہیں کی نقل بنائیں…
 	Duplicate style	اسٹائل کی نقل بنائیں
@@ -1361,9 +1361,9 @@
 	Perspective Warp is not active	تناظری وارپ فعال نہیں ہے
 	Perspective Warp: draw planes along the image's perspective, then switch to Warp	تناظری وارپ: تصویر کے تناظر کے ساتھ ہموار سطحیں کھینچیں، پھر وارپ پر سوئچ کریں
 	Photo Filter	فوٹو فلٹر
-	PhotoCraft	PhotoCraft
-	PhotoCraft Manages Colors	PhotoCraft رنگوں کا نظم کرتا ہے
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — ایک اوپن سورس، نیٹو امیج ایڈیٹر جو Rust میں لکھا گیا ہے۔
+	Lienzo	Lienzo
+	Lienzo Manages Colors	Lienzo رنگوں کا نظم کرتا ہے
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — ایک اوپن سورس، نیٹو امیج ایڈیٹر جو Rust میں لکھا گیا ہے۔
 	Pin Depth:	پن کی گہرائی:
 	Pixel Length:	پکسل لمبائی:
 	Pixels/Centimeter	پکسلز/سینٹی میٹر
@@ -1439,11 +1439,11 @@
 	Import Shortcuts…	شارٹ کٹس درآمد کریں…
 	Load a keyboard shortcut set saved as .kys	.kys کے طور پر محفوظ کردہ کی بورڈ شارٹ کٹ سیٹ لوڈ کریں
 	Imported {n} shortcuts from {file}. Click OK to keep them.	{file} سے {n} شارٹ کٹس درآمد ہو گئے۔ انہیں رکھنے کے لیے OK پر کلک کریں۔
-	{n} commands are not in PhotoCraft.	{n} کمانڈز PhotoCraft میں موجود نہیں ہیں۔
+	{n} commands are not in Lienzo.	{n} کمانڈز Lienzo میں موجود نہیں ہیں۔
 	Keyboard shortcuts imported	کی بورڈ شارٹ کٹس درآمد ہو گئے
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	آپ کا کی بورڈ شارٹ کٹ سیٹ {set} یہاں استعمال ہو رہا ہے: {n} شارٹ کٹس ڈیفالٹس سے مختلف ہیں۔ ترمیم > کی بورڈ شارٹ کٹس انہیں دکھاتا ہے؛ سب کو ڈیفالٹ پر ری سیٹ کریں اسے واپس لیتا ہے۔
 	Import keyboard shortcuts?	کی بورڈ شارٹ کٹس درآمد کریں؟
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft نے اس کمپیوٹر پر ایک اور امیج ایڈیٹر سے آپ کا کی بورڈ شارٹ کٹ سیٹ {set} پایا: اس کے {n} شارٹ کٹس PhotoCraft سے مختلف ہیں۔ اسے درآمد کریں؟
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo نے اس کمپیوٹر پر ایک اور امیج ایڈیٹر سے آپ کا کی بورڈ شارٹ کٹ سیٹ {set} پایا: اس کے {n} شارٹ کٹس Lienzo سے مختلف ہیں۔ اسے درآمد کریں؟
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	ترمیم > کی بورڈ شارٹ کٹس > سب کو ڈیفالٹ پر ری سیٹ کریں ایک درآمد کو واپس لیتا ہے۔
 	Don't Import	درآمد نہ کریں
 	The keyboard shortcut set was not imported: {error}	کی بورڈ شارٹ کٹ سیٹ درآمد نہیں ہوئی: {error}
@@ -1669,7 +1669,7 @@
 	Current Tool	موجودہ ٹول
 	Custom Shape Tool	مخصوص شکل ٹول
 	Cyans	سیان رنگ
-	Default PhotoCraft Size	ڈیفالٹ PhotoCraft حجم
+	Default Lienzo Size	ڈیفالٹ Lienzo حجم
 	Delete Workspace	ورک اسپیس حذف کریں
 	Diamond	ڈائمنڈ
 	Dimensions:	طول و عرض:
@@ -1780,7 +1780,7 @@
 	Pen Tool	پین ٹول
 	Convert Point Tool	پوائنٹ تبدیل کرنے کا ٹول
 	Photo	تصویر
-	PhotoCraft website	PhotoCraft ویب سائٹ
+	Lienzo website	Lienzo ویب سائٹ
 	Picas	پیکاس
 	Pillow Emboss	تکیہ ایمبوس
 	Pixel Replacement	پکسل متبادل
@@ -2111,7 +2111,7 @@
 	System Info	سسٹم کی معلومات
 	More panels	مزید پینلز
 	More documents	مزید دستاویزات
-	These settings aren't available in PhotoCraft yet.	یہ ترتیبات ابھی PhotoCraft میں دستیاب نہیں ہیں۔
+	These settings aren't available in Lienzo yet.	یہ ترتیبات ابھی Lienzo میں دستیاب نہیں ہیں۔
 	Graphics	گرافکس
 	Reset GPU Backend	GPU بیک اینڈ ری سیٹ کریں
 	Applies at next launch.	اگلی بار شروع ہونے پر لاگو ہوتا ہے۔
@@ -2324,7 +2324,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	خودکار دستیاب ہونے پر GPU ایکسیلریشن استعمال کرتا ہے اور خرابیوں پر CPU رینڈرنگ پر واپس آ جاتا ہے۔
 	Switched to CPU rendering	CPU رینڈرنگ پر تبدیل ہو گیا
 	GPU acceleration could not continue. Your documents are unchanged.	GPU ایکسیلریشن جاری نہیں رہ سکا۔ آپ کی دستاویزات تبدیل نہیں ہوئیں۔
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft CPU تصویری کمپوزیٹر استعمال کر رہا ہے۔ ونڈو پھر بھی آپ کا گرافکس ایڈاپٹر استعمال کر سکتی ہے۔
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo CPU تصویری کمپوزیٹر استعمال کر رہا ہے۔ ونڈو پھر بھی آپ کا گرافکس ایڈاپٹر استعمال کر سکتی ہے۔
 	Retry GPU requires a restart. Save your work first.	GPU دوبارہ کوشش کے لیے دوبارہ آغاز درکار ہے۔ پہلے اپنا کام محفوظ کریں۔
 	Retry GPU tries the graphics processor again now.	GPU دوبارہ کوشش ابھی گرافکس پروسیسر کو دوبارہ آزماتی ہے۔
 	GPU acceleration resumed.	GPU ایکسیلریشن بحال ہو گیا۔
@@ -2544,7 +2544,7 @@ fontWeight	Italic	ترچھا
 	Color to Alpha…	رنگ کو الفا میں…
 	Transparency Threshold	شفافیت کی حد
 	Opacity Threshold	دھندلاپن کی حد
-	PhotoCraft — Screen Color Picker	PhotoCraft — اسکرین رنگ چنندہ
+	Lienzo — Screen Color Picker	Lienzo — اسکرین رنگ چنندہ
 	Rasterize svg groups deeper than	SVG گروپس کو اس سے گہرے ریسٹرائز کریں
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 اس حد کو بند کر دیتا ہے؛ 100 سطحوں سے گہرے نیسٹڈ SVG گروپس ہمیشہ ریسٹرائز ہوتے ہیں۔
 	Rule of Thirds	ایک تہائی کا اصول
@@ -3330,7 +3330,7 @@ layerLabel	No Color	بلا رنگ
 	Restart Required	دوبارہ آغاز درکار ہے
 	Restart	دوبارہ آغاز کریں
 	Quit	چھوڑیں
-	Quit PhotoCraft	PhotoCraft چھوڑیں
+	Quit Lienzo	Lienzo چھوڑیں
 	Close Window	ونڈو بند کریں
 	New Window	نئی ونڈو
 	Open Image	تصویر کھولیں
@@ -3823,7 +3823,7 @@ layerLabel	No Color	بلا رنگ
 	Mezzotint	میزوٹنٹ
 	Mosaic	موزیک
 	Motion Blur	حرکت دھندلاپن
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	نیٹو فائل ڈریگ اینڈ ڈراپ ابھی تک Wayland پر سپورٹ نہیں ہے۔ فائل > کھولیں استعمال کریں، یا PhotoCraft کو XWayland کے تحت `WAYLAND_DISPLAY= photocraft` کے ساتھ چلائیں۔
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	نیٹو فائل ڈریگ اینڈ ڈراپ ابھی تک Wayland پر سپورٹ نہیں ہے۔ فائل > کھولیں استعمال کریں، یا Lienzo کو XWayland کے تحت `WAYLAND_DISPLAY= photocraft` کے ساتھ چلائیں۔
 	Neon Glow	نیون چمک
 	New Guide Layout	نیا رہنما خاکہ
 	New Video Layer from File	فائل سے نئی ویڈیو تہہ
@@ -3995,9 +3995,9 @@ layerLabel	No Color	بلا رنگ
 	Saved {path}; image assets: {n} in {dir}	{path} محفوظ ہوا؛ تصویری اثاثے: {n} بذریعہ {dir}
 	{message} (notes: {n}; {warning})	{message} (نوٹس: {n}; {warning})
 	Preferences can't be saved	ترجیحات محفوظ نہیں ہو سکتیں
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft دوبارہ کوشش جاری رکھتا ہے؛ جب تک محفوظ کرنا کامیاب نہ ہو، بند ہونے پر ترجیحی تبدیلیاں ضائع ہو جاتی ہیں۔
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo دوبارہ کوشش جاری رکھتا ہے؛ جب تک محفوظ کرنا کامیاب نہ ہو، بند ہونے پر ترجیحی تبدیلیاں ضائع ہو جاتی ہیں۔
 	GPU retry scheduled	GPU دوبارہ کوشش شیڈول ہو گئی
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	اپنا کام محفوظ کریں اور GPU ایکسیلریشن کی دوبارہ کوشش کے لیے PhotoCraft کو دوبارہ شروع کریں۔ CPU رینڈرنگ اس سیشن کے لیے فعال رہتی ہے۔
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	اپنا کام محفوظ کریں اور GPU ایکسیلریشن کی دوبارہ کوشش کے لیے Lienzo کو دوبارہ شروع کریں۔ CPU رینڈرنگ اس سیشن کے لیے فعال رہتی ہے۔
 	GPU device was lost; using the CPU renderer.	GPU ڈیوائس ضائع ہو گئی؛ CPU رینڈرر استعمال ہو رہا ہے۔
 	GPU error; using the CPU renderer.	GPU خرابی؛ CPU رینڈرر استعمال ہو رہا ہے۔
 	Couldn't open {name}: {error}	{name} کھل نہیں سکا: {error}
@@ -4109,7 +4109,7 @@ navigator	Zoom	زوم
 	{name} (Photoshop)	{name} (فوٹوشاپ)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	{file} سے {n} ایکشن لوڈ ہوا|{file} سے {n} ایکشنز لوڈ ہوئے
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} قدم کا ابھی PhotoCraft میں کوئی مساوی نہیں|{n} قدموں کا ابھی PhotoCraft میں کوئی مساوی نہیں
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} قدم کا ابھی Lienzo میں کوئی مساوی نہیں|{n} قدموں کا ابھی Lienzo میں کوئی مساوی نہیں
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	{n} ایکشن {file} میں محفوظ ہوا|{n} ایکشنز {file} میں محفوظ ہوئے
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} قدم جس کا فوٹوشاپ میں کوئی مساوی نہیں چھوڑ دیا گیا|{n} قدم جن کا فوٹوشاپ میں کوئی مساوی نہیں چھوڑ دیے گئے
 	Starting serial	ابتدائی سیریل
@@ -4170,17 +4170,17 @@ navigator	Zoom	زوم
 	Kept {name}: written by another application	{name} رکھا گیا: دوسری ایپلیکیشن نے لکھا تھا
 	Shadow Tint	سائے کا ٹنٹ
 	Check for Updates…	اپ ڈیٹس چیک کریں…
-	PhotoCraft Updates	PhotoCraft اپ ڈیٹس
+	Lienzo Updates	Lienzo اپ ڈیٹس
 	Checking for updates…	اپ ڈیٹس چیک ہو رہی ہیں…
 	Open the release page to choose an installer for your system.	اپنے سسٹم کے لیے انسٹالر چننے کے لیے ریلیز صفحہ کھولیں۔
 	Open Download Page	ڈاؤن لوڈ صفحہ کھولیں
-	PhotoCraft is up to date.	PhotoCraft اپ ٹو ڈیٹ ہے۔
+	Lienzo is up to date.	Lienzo اپ ٹو ڈیٹ ہے۔
 	Could not check for updates.	اپ ڈیٹس چیک نہیں ہو سکیں۔
 	Updates have not been checked yet.	اپ ڈیٹس ابھی تک چیک نہیں کی گئیں۔
 	Check Again	دوبارہ چیک کریں
 	Automatically Check for Updates	خودکار طور پر اپ ڈیٹس چیک کریں
 	Installed version: {version}	انسٹال شدہ ورژن: {version}
-	PhotoCraft {version} is available.	PhotoCraft {version} دستیاب ہے۔
+	Lienzo {version} is available.	Lienzo {version} دستیاب ہے۔
 	Paints from the History panel's source state	ہسٹری پینل کی ماخذ حالت سے پینٹ کرتا ہے
 	Sets the source for the history brush	ہسٹری برش کے لیے ماخذ مقرر کرتا ہے
 	Highlight Mode	نمایاں حصے کا موڈ
@@ -4208,12 +4208,12 @@ navigator	Zoom	زوم
 	Bicubic Smoother	بائی کیوبک اسموتھر
 	Bicubic Sharper	بائی کیوبک شارپر
 	Pasting from other apps is unavailable	دوسری ایپس سے چسپاں کرنا دستیاب نہیں
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft اس سیشن میں سسٹم کلپ بورڈ تک نہیں پہنچ سکا۔ Wayland پر، Flatpak سینڈ باکس وہ پروٹوکول چھپاتا ہے جس سے دوسری ایپس کی تصاویر پڑھی جاتی ہیں۔
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	دوسری ایپس سے چسپاں کرنے کے لیے، PhotoCraft کو XWayland کے تحت شروع کریں: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	چسپاں کرنے کے لیے کچھ نہیں: PhotoCraft یہاں سسٹم کلپ بورڈ نہیں پڑھ سکتا
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo اس سیشن میں سسٹم کلپ بورڈ تک نہیں پہنچ سکا۔ Wayland پر، Flatpak سینڈ باکس وہ پروٹوکول چھپاتا ہے جس سے دوسری ایپس کی تصاویر پڑھی جاتی ہیں۔
+	To paste from other apps, start Lienzo under XWayland: `{command}`	دوسری ایپس سے چسپاں کرنے کے لیے، Lienzo کو XWayland کے تحت شروع کریں: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	چسپاں کرنے کے لیے کچھ نہیں: Lienzo یہاں سسٹم کلپ بورڈ نہیں پڑھ سکتا
 	Delete this set	یہ سیٹ حذف کریں
 	New Set…	نیا سیٹ…
-	PhotoCraft Defaults	PhotoCraft ڈیفالٹس
+	Lienzo Defaults	Lienzo ڈیفالٹس
 	Save a list of these shortcuts as a web page	ان شارٹ کٹس کی فہرست ویب صفحے کے طور پر محفوظ کریں
 	Save the changes to this set	اس سیٹ میں تبدیلیاں محفوظ کریں
 	Save these shortcuts as a .kys file	یہ شارٹ کٹس .kys فائل کے طور پر محفوظ کریں

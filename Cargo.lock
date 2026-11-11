@@ -4380,6 +4380,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "nodalia-theme"
+version = "0.1.0-alpha.1"
+source = "git+https://github.com/danielmigueltejedor/nodalia-design?rev=2735df88232c065eaa5a5d01ef2c06aec6020d11#2735df88232c065eaa5a5d01ef2c06aec6020d11"
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5788,6 +5793,7 @@ dependencies = [
  "icu_casemap",
  "icu_locale_core",
  "log",
+ "nodalia-theme",
  "photocraft-algo",
  "photocraft-cms",
  "photocraft-codecs",

@@ -1,6 +1,10 @@
 //! Icons embedded and tinted at runtime; sources and licences are listed in `ATTRIBUTION.md`.
 
 pub static ICONS: &[(&str, &[u8])] = &[
+    ("ndl-info", include_bytes!("../../../assets/icons/ndl-info.svg")),
+    ("ndl-keyboard", include_bytes!("../../../assets/icons/ndl-keyboard.svg")),
+    ("ndl-log-out", include_bytes!("../../../assets/icons/ndl-log-out.svg")),
+    ("ndl-menu", include_bytes!("../../../assets/icons/ndl-menu.svg")),
     ("adjustment-layer", include_bytes!("../../../assets/icons/adjustment-layer.svg")),
     ("align-center", include_bytes!("../../../assets/icons/align-center.svg")),
     ("align-justify", include_bytes!("../../../assets/icons/align-justify.svg")),
