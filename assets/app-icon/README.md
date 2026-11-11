@@ -16,8 +16,9 @@ Licence: see [LICENSE.txt](LICENSE.txt).
 app grid, like the Colloid icons around it: a 224 px tile inside a 256 px canvas (16 px margin),
 a 51.5 px corner radius and a soft shadow. The scalable SVG is made by `tools/nodalia-app-icon.py`
 in [nodalix-icon-theme](https://github.com/danielmigueltejedor/nodalix-icon-theme) and
-`packaging/icons.sh` renders the PNG sizes from it. macOS, Windows and the 1024 px render keep the
-full-bleed tile.
+`packaging/icons.sh` renders the PNG sizes from it. macOS, the Windows `.ico` and the
+1024 px render keep the full-bleed tile. The window and taskbar icon on Windows is the 256 px
+hicolor PNG, so it has the Linux margin and shadow.
 
 ## Files
 
