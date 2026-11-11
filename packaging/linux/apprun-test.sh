@@ -9,7 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 APP_ID=dev.danielmiguelt.Lienzo
-ICON_NAME=dev.danielmiguelt.Lienzo
+ICON_NAME="$APP_ID"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -21,8 +21,6 @@ install -Dm755 "$HERE/AppRun" "$APPDIR/AppRun"
 install -Dm644 "$HERE/$APP_ID.desktop" "$APPDIR/usr/share/applications/$APP_ID.desktop"
 mkdir -p "$APPDIR/usr/share/icons"
 cp -R "$ROOT/assets/app-icon/hicolor" "$APPDIR/usr/share/icons/"
-# package.sh installs the icons under the .desktop's Nodalia name too.
-for f in "$APPDIR"/usr/share/icons/hicolor/*/apps/"$APP_ID".{png,svg}; do cp "$f" "${f%/*}/$ICON_NAME.${f##*.}"; done
 printf '#!/bin/sh\necho "stub: $*"\n' >"$APPDIR/usr/bin/lienzo"
 chmod +x "$APPDIR/usr/bin/lienzo"
 
