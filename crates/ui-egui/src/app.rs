@@ -36,6 +36,8 @@ impl PhotocraftApp {
     /// Creates a new application state managing the engine session and UI services.
     pub fn new(mut session: Session, mut services: Services) -> Self {
         session.updates.check = services.check_updates.take();
+        #[cfg(test)]
+        classic_look_for_tests(&mut session);
         let mut app = Self {
             session,
             ui: UiState::default(),
@@ -312,3 +314,32 @@ impl eframe::App for PhotocraftApp {
 
 #[cfg(test)]
 mod clipboard_tests;
+
+/// The unit tests below were written against the dense Pro look (its title bar, gaps and
+/// controls), and most of them place the pointer by its geometry. A session still on the
+/// default Nodalia look is moved to that layout so they keep testing behaviour; the Nodalia
+/// look has its own tests (`theme::tests`, `panels::nodalia_tests`).
+#[cfg(test)]
+fn classic_look_for_tests(session: &mut Session) {
+    use photocraft_engine::prefs::{AppearanceMode, DarkTheme, LightTheme, Theme, WindowControls};
+    let i = &session.prefs().interface;
+    let default = i.theme == Theme::Nodalia
+        && i.appearance_mode == AppearanceMode::Auto
+        && i.dark_theme == DarkTheme::Nodalia
+        && i.light_theme == LightTheme::NodaliaLight;
+    if default && !NODALIA_IN_TESTS.with(std::cell::Cell::get) {
+        session.edit_prefs(|p| {
+            p.interface.theme = Theme::ProMedium;
+            p.interface.appearance_mode = AppearanceMode::Dark;
+            p.interface.dark_theme = DarkTheme::ProMedium;
+            p.interface.light_theme = LightTheme::ProLight;
+            p.interface.window_controls = WindowControls::System;
+        });
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Set by a test that wants an app on the shipping (Nodalia) defaults.
+    pub(crate) static NODALIA_IN_TESTS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}

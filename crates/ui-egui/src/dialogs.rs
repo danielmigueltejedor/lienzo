@@ -831,16 +831,22 @@ fn about_tab_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, tab: &str) {
         "contributors" => crate::credits::contributors_ui(app, ui),
         "models" => crate::credits::models_ui(ui),
         _ => {
-            ui.label(tl!("PhotoCraft — an open-source, native image editor written in Rust."));
-            ui.label(crate::i18n::fmt(tl!("Version {version}"), &[("version", &photocraft_engine::build_info::long_version())]));
-            ui.add_space(12.0);
+            let t = crate::theme::Tokens::get(ui.ctx());
             ui.vertical_centered(|ui| {
-                crate::links::discord_button(app, ui, 220.0);
+                let (mark, _) = ui.allocate_exact_size(egui::vec2(96.0, 96.0), egui::Sense::hover());
+                crate::panels::brand::paint_mark(ui, mark);
+                ui.add_space(10.0);
+                ui.label(egui::RichText::new("Lienzo").font(crate::theme::display(26.0)).color(t.text));
+                ui.label(
+                    egui::RichText::new(crate::i18n::fmt(tl!("Version {version}"), &[("version", &photocraft_engine::build_info::long_version())]))
+                        .color(t.text_dim),
+                );
                 ui.add_space(8.0);
+                ui.label(tl!("A native image editor, layer by layer. No account, no cloud."));
+                ui.label(egui::RichText::new(tl!("by Nodalia")).color(t.text_dim));
+                ui.add_space(12.0);
                 crate::links::link_row(app, ui);
             });
-            ui.add_space(10.0);
-            ui.weak("egui · wgpu · photocraft-engine");
         }
     }
 }
@@ -871,7 +877,7 @@ pub fn title(d: &Dialog) -> String {
     match d.kind {
         DialogKind::NewDocument => "New Document".into(),
         DialogKind::About if d.fields.get("systemInfo").and_then(Value::as_bool) == Some(true) => "System Info".into(),
-        DialogKind::About => "About PhotoCraft".into(),
+        DialogKind::About => "About Lienzo".into(),
         DialogKind::LayerStyle => "Layer Style".into(),
         DialogKind::Command => d.fields.get("__label").and_then(Value::as_str).unwrap_or("Command").trim_end_matches('…').to_string(),
         DialogKind::Error => "Error".into(),

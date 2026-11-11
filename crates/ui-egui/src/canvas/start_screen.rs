@@ -55,9 +55,7 @@ fn render_start_actions_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, avail_w:
         let (new_rect, new_resp) = ui.allocate_exact_size(egui::vec2(btn_w, 32.0), Sense::click());
         new_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, new_label));
         let new_resp = new_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-        let new_bg = if new_resp.hovered() { egui::Color32::from_rgb(41, 131, 245) } else { egui::Color32::from_rgb(26, 115, 232) };
-        ui.painter().rect_filled(new_rect, 4.0, new_bg);
-        ui.painter().text(new_rect.center(), egui::Align2::CENTER_CENTER, new_label, crate::theme::semibold(13.0), egui::Color32::WHITE);
+        paint_new_button(ui, &t, new_rect, new_label, new_resp.hovered());
         if new_resp.clicked() {
             let fields = app.new_document_fields();
             app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
@@ -91,9 +89,7 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
     let (new_rect, new_resp) = ui.allocate_exact_size(egui::vec2(rail_w.min(130.0), 32.0), Sense::click());
     new_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, new_label));
     let new_resp = new_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-    let new_bg = if new_resp.hovered() { egui::Color32::from_rgb(41, 131, 245) } else { egui::Color32::from_rgb(26, 115, 232) };
-    ui.painter().rect_filled(new_rect, 4.0, new_bg);
-    ui.painter().text(new_rect.center(), egui::Align2::CENTER_CENTER, new_label, crate::theme::semibold(13.0), egui::Color32::WHITE);
+    paint_new_button(ui, &t, new_rect, new_label, new_resp.hovered());
     if new_resp.clicked() {
         let fields = app.new_document_fields();
         app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
@@ -134,11 +130,24 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
     } else if home_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
         app.ui.chrome.home = None;
     }
-    let active_bar = Rect::from_min_size(egui::pos2(home_rect.left(), home_rect.center().y - 7.0), egui::vec2(1.5, 14.0));
-    ui.painter().rect_filled(active_bar, 1.0, t.accent);
+    // Nodalia marks the active row by inverting it; the other themes keep a thin accent bar.
+    let home_ink = if t.islands() {
+        ui.painter().rect_filled(home_rect, t.radius, t.primary_bg);
+        t.primary_text
+    } else {
+        let active_bar = Rect::from_min_size(egui::pos2(home_rect.left(), home_rect.center().y - 7.0), egui::vec2(1.5, 14.0));
+        ui.painter().rect_filled(active_bar, 1.0, t.accent);
+        t.text
+    };
     let house_box = Rect::from_center_size(egui::pos2(home_rect.left() + 20.0, home_rect.center().y), egui::vec2(16.0, 16.0));
-    crate::icons::paint(ui, house_box, "house", 16.0, t.text);
-    ui.painter().text(egui::pos2(home_rect.left() + 34.0, home_rect.center().y), egui::Align2::LEFT_CENTER, tl!("Home"), crate::theme::semibold(13.5), t.text);
+    crate::icons::paint(ui, house_box, "house", 16.0, home_ink);
+    ui.painter().text(
+        egui::pos2(home_rect.left() + 34.0, home_rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        tl!("Home"),
+        crate::theme::semibold(13.5),
+        home_ink,
+    );
 
     ui.add_space(4.0);
 
@@ -175,7 +184,6 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
     ui.add_space(8.0);
 
     render_rail_link(app, ui, rail_w, tl!("Website"), "link", crate::links::APP_PAGE);
-    render_rail_link(app, ui, rail_w, tl!("Discord"), "message-square", crate::links::DISCORD);
     render_rail_link(app, ui, rail_w, tl!("GitHub"), "link-2", crate::links::GITHUB);
 }
 
@@ -199,16 +207,15 @@ fn render_start_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, recent: &[St
     let t = crate::theme::Tokens::get(ui.ctx());
     ui.add_space(8.0);
 
-    // Top Row: [01] PhotoCraft
+    // Top row: the app icon and its name
     ui.horizontal(|ui| {
-        let badge_size = egui::vec2(24.0, 19.0);
-        let (badge_rect, _) = ui.allocate_exact_size(badge_size, Sense::hover());
-        ui.painter().rect_filled(badge_rect, 3.0, egui::Color32::from_rgb(26, 115, 232));
-        ui.painter().text(badge_rect.center(), egui::Align2::CENTER_CENTER, "01", crate::theme::semibold(10.5), egui::Color32::WHITE);
+        let (mark_rect, _) = ui.allocate_exact_size(egui::vec2(28.0, 28.0), Sense::hover());
+        crate::panels::brand::paint_mark(ui, mark_rect);
 
         ui.add_space(10.0);
 
-        let title_galley = ui.painter().layout_no_wrap(tl!("PhotoCraft").into(), crate::theme::semibold(20.0), t.text);
+        let title_font = if t.islands() { crate::theme::display(22.0) } else { crate::theme::semibold(20.0) };
+        let title_galley = ui.painter().layout_no_wrap("Lienzo".into(), title_font, t.text);
         let (title_r, _) = ui.allocate_exact_size(title_galley.size(), Sense::hover());
         ui.painter().galley(title_r.min, title_galley, t.text);
     });
@@ -281,3 +288,16 @@ pub(crate) fn start_screen_drop_hint(_app: &PhotocraftApp) -> std::borrow::Cow<'
 
 /// Recent files listed on the Home screen.
 const HOME_RECENT: usize = 11;
+
+/// The view's main action: a solid pill in the text colour on Nodalia, the blue button elsewhere.
+fn paint_new_button(ui: &egui::Ui, t: &crate::theme::Tokens, rect: Rect, label: &str, hovered: bool) {
+    let (bg, ink, radius) = if t.islands() {
+        let bg = if hovered { t.primary_bg.gamma_multiply(0.88) } else { t.primary_bg };
+        (bg, t.primary_text, t.radius)
+    } else {
+        let bg = if hovered { egui::Color32::from_rgb(41, 131, 245) } else { egui::Color32::from_rgb(26, 115, 232) };
+        (bg, egui::Color32::WHITE, 4.0)
+    };
+    ui.painter().rect_filled(rect, radius, bg);
+    ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, crate::theme::semibold(13.0), ink);
+}

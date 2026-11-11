@@ -264,7 +264,7 @@ fn bulk_load_keeps_selection_order_and_earlier_warnings_and_errors() {
     {
         assert!(app.ui.status.contains(part), "{part}: {}", app.ui.status);
     }
-    assert!(!app.ui.status.contains("PhotoCraft equivalent"), "{}", app.ui.status);
+    assert!(!app.ui.status.contains("Lienzo equivalent"), "{}", app.ui.status);
 }
 
 /// Load `files` (name, bytes) in one Load Actions… selection and return the status bar text.
@@ -2938,7 +2938,7 @@ fn bulk_load_summary_counts_unsupported_steps_of_surviving_sets() {
     a.actions[0].items[0].event = photocraft_psd::atn::AtnEvent::Code(*b"Xxxx");
     let files = vec![("a.atn".into(), photocraft_psd::atn::write(&a).unwrap()), ("b.atn".into(), action_set_bytes("Set B", "B"))];
     let status = bulk_load_status(&mut app, files);
-    assert!(status.contains("1 step has no PhotoCraft equivalent yet"), "{status}");
+    assert!(status.contains("1 step has no Lienzo equivalent yet"), "{status}");
     assert!(!app.ui.status_error, "{status}");
     // Both sets stay loaded: the unsupported step is counted for one that is in the panel.
     let names: Vec<&str> = app.session.actions.list.iter().map(|a| a.name.as_str()).collect();

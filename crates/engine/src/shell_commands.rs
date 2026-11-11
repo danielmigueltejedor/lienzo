@@ -77,6 +77,7 @@ pub const SHELL_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("window.nextDocument", "Next Document", &[], Some("Ctrl+Tab")),
     ("window.previousDocument", "Previous Document", &[], Some("Ctrl+Shift+Tab")),
     ("window.theme.toggle", "Next Appearance Mode", &["Window"], None),
+    ("window.theme.nodalia", "Nodalia", &["Window", "Theme", "Dark Theme"], None),
     ("window.theme.pro", "Pro", &["Window", "Theme", "Dark Theme"], None),
     ("window.theme.proMedium", "Pro Medium Gray", &["Window", "Theme", "Dark Theme"], None),
     ("window.theme.studio", "Studio", &["Window", "Theme", "Dark Theme"], None),
@@ -84,6 +85,7 @@ pub const SHELL_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("window.theme.adwaitaDark", "Adwaita", &["Window", "Theme", "Dark Theme"], None),
     ("window.theme.breezeDark", "Breeze", &["Window", "Theme", "Dark Theme"], None),
     ("window.theme.softDark", "Soft", &["Window", "Theme", "Dark Theme"], None),
+    ("window.theme.nodaliaLight", "Nodalia", &["Window", "Theme", "Light Theme"], None),
     ("window.theme.proLightGray", "Pro Light Gray", &["Window", "Theme", "Light Theme"], None),
     ("window.theme.proLight", "Pro Light", &["Window", "Theme", "Light Theme"], None),
     ("window.theme.studioLight", "Studio", &["Window", "Theme", "Light Theme"], None),
@@ -93,13 +95,11 @@ pub const SHELL_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("window.theme.softLight", "Soft", &["Window", "Theme", "Light Theme"], None),
     ("window.theme.system", "Sync with system", &["Window", "Theme"], None),
     ("edit.search", "Search…", &["Edit"], Some("Cmd+F")),
-    ("help.discord", "Join the ArtCraft Discord…", &["Help"], None),
-    ("help.website", "PhotoCraft Website", &["Help"], None),
-    ("help.artcraftWebsite", "ArtCraft Website", &["Help"], None),
-    ("help.github", "PhotoCraft on GitHub", &["Help"], None),
+    ("help.website", "Lienzo Website", &["Help"], None),
+    ("help.github", "Lienzo on GitHub", &["Help"], None),
     ("help.reportIssue", "Report an Issue…", &["Help"], None),
     ("help.systemInfo", "System Info…", &["Help"], None),
-    ("help.about", "About PhotoCraft", &["Help"], None),
+    ("help.about", "About Lienzo", &["Help"], None),
 ];
 
 /// The tools, in toolbar order: shortcut id (`tools.select.<tool>`), Photoshop's name for it

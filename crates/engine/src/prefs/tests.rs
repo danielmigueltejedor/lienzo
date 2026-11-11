@@ -101,12 +101,12 @@ fn home_recent_files_preference_defaults_on_persists_and_resets() {
 #[test]
 fn appearance_defaults_and_legacy_theme_migrate() {
     let p = Preferences::default();
-    // New users keep Photoshop's default; following the system is opt-in.
-    assert_eq!(p.interface.appearance_mode, AppearanceMode::Dark);
-    assert_eq!(p.interface.dark_theme, DarkTheme::ProMedium);
-    assert_eq!(p.interface.light_theme, LightTheme::ProLight);
+    // New users get Nodalia, light or dark following the system.
+    assert_eq!(p.interface.appearance_mode, AppearanceMode::Auto);
+    assert_eq!(p.interface.dark_theme, DarkTheme::Nodalia);
+    assert_eq!(p.interface.light_theme, LightTheme::NodaliaLight);
     for (theme, mode, dark, light) in
-        [("pro", AppearanceMode::Dark, DarkTheme::Pro, LightTheme::ProLight), ("classic", AppearanceMode::Light, DarkTheme::ProMedium, LightTheme::Classic)]
+        [("pro", AppearanceMode::Dark, DarkTheme::Pro, LightTheme::NodaliaLight), ("classic", AppearanceMode::Light, DarkTheme::Nodalia, LightTheme::Classic)]
     {
         let mut s = Session::new();
         s.load_prefs_json(&json!({"interface": {"theme": theme}}).to_string()).unwrap();

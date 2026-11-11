@@ -226,7 +226,10 @@ pub(crate) fn canvas_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     if app.ui.panels.rail && t.pro {
         rail(app, ui, &t);
     }
-    egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| crate::canvas::document_area(app, ui));
+    let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| crate::canvas::document_area(app, ui));
+    if !app.ui.view.hides_chrome() {
+        crate::theme::round_island_corners(ui, shown.response.rect);
+    }
 }
 
 /// The icon rail's width and its buttons' size, in points.

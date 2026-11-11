@@ -18,7 +18,7 @@
 # Conventions: Bosnian Latin script, Ijekavian, standard Bosnian vocabulary where the neighbouring
 # languages differ (historija, sačuvaj, tačka, datoteka, postavke), sentence case. Commands are
 # imperatives (Otvori…, Sačuvaj kao…), tools read "Alat …" (Alat četkica). Quotation marks „…”
-# around names. Product and technology names (PhotoCraft, RAW Develop, OpenType, Lab ...) and
+# around names. Product and technology names (Lienzo, RAW Develop, OpenType, Lab ...) and
 # RGB/CMYK stay as they are; the trailing "…" of dialog commands is kept.
 
 	Rows	Redovi
@@ -783,9 +783,9 @@
 	Pin bar position	Zakači položaj trake
 	Move bar	Pomjeri traku
 	More options	Više opcija
-	About PhotoCraft	O PhotoCraftu
-	PhotoCraft Website	Web stranica PhotoCrafta
-	PhotoCraft on GitHub	PhotoCraft na GitHubu
+	About Lienzo	O Lienzou
+	Lienzo Website	Web stranica Lienzoa
+	Lienzo on GitHub	Lienzo na GitHubu
 	ArtCraft Website	Web stranica ArtCrafta
 	Join the ArtCraft Discord…	Pridružite se ArtCraft Discordu…
 	Report an Issue…	Prijavi problem…
@@ -842,7 +842,7 @@
 	All Caps	Sva velika slova
 	All Slices	Svi isječci
 	All User Slices	Svi korisnički isječci
-	All shortcuts reset to PhotoCraft defaults.	Sve prečice su vraćene na zadane vrijednosti PhotoCrafta.
+	All shortcuts reset to Lienzo defaults.	Sve prečice su vraćene na zadane vrijednosti Lienzoa.
 	Alt	Alt
 	Always use pressure for opacity	Uvijek koristi pritisak za neprozirnost
 	Always use pressure for size	Uvijek koristi pritisak za veličinu
@@ -1322,9 +1322,9 @@
 	Perspective Warp is not active	Iskrivljenje perspektive nije aktivno
 	Perspective Warp: draw planes along the image's perspective, then switch to Warp	Iskrivljenje perspektive: nacrtajte ravni duž perspektive slike, zatim se prebacite na Iskrivljenje
 	Photo Filter	Foto filter
-	PhotoCraft	PhotoCraft
-	PhotoCraft Manages Colors	PhotoCraft upravlja bojama
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — izvorni uređivač slika otvorenog koda, napisan u Rustu.
+	Lienzo	Lienzo
+	Lienzo Manages Colors	Lienzo upravlja bojama
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — izvorni uređivač slika otvorenog koda, napisan u Rustu.
 	Pin Depth:	Dubina pribadače:
 	Pixel Length:	Dužina u pikselima:
 	Pixels/Centimeter	Piksela/centimetar
@@ -1399,11 +1399,11 @@
 	Import Shortcuts…	Uvezi prečice…
 	Load a keyboard shortcut set saved as .kys	Učitaj skup prečica na tastaturi sačuvan kao .kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	Uvezeno prečica iz {file}: {n}. Kliknite U redu da ih zadržite.
-	{n} commands are not in PhotoCraft.	Naredbi kojih nema u PhotoCraftu: {n}.
+	{n} commands are not in Lienzo.	Naredbi kojih nema u Lienzou: {n}.
 	Keyboard shortcuts imported	Prečice na tastaturi uvezene
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	Vaš skup prečica na tastaturi {set} koristi se ovdje: {n} prečica razlikuje se od zadanih. Uredi › Prečice na tastaturi ih prikazuje; Vrati sve na zadano to poništava.
 	Import keyboard shortcuts?	Uvesti prečice na tastaturi?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft je pronašao vaš skup prečica na tastaturi {set} iz drugog uređivača slika na ovom računaru: {n} njegovih prečica razlikuje se od PhotoCraftovih. Uvesti ga?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo je pronašao vaš skup prečica na tastaturi {set} iz drugog uređivača slika na ovom računaru: {n} njegovih prečica razlikuje se od Lienzoovih. Uvesti ga?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	Uredi › Prečice na tastaturi › Vrati sve na zadano poništava uvoz.
 	Don't Import	Nemoj uvesti
 	The keyboard shortcut set was not imported: {error}	Skup prečica na tastaturi nije uvezen: {error}
@@ -1626,7 +1626,7 @@
 	Current Tool	Trenutni alat
 	Custom Shape Tool	Alat za prilagođeni oblik
 	Cyans	Cijan tonovi
-	Default PhotoCraft Size	Zadana veličina PhotoCrafta
+	Default Lienzo Size	Zadana veličina Lienzoa
 	Delete Workspace	Izbriši radni prostor
 	Diamond	Romb
 	Dimensions:	Dimenzije:
@@ -1740,7 +1740,7 @@
 	Pen Tool	Alat pero
 	Convert Point Tool	Alat za pretvaranje tačke
 	Photo	Fotografija
-	PhotoCraft website	Web stranica PhotoCrafta
+	Lienzo website	Web stranica Lienzoa
 	Picas	Pice
 	Pillow Emboss	Jastučasti reljef
 	Pixel Replacement	Zamjena piksela
@@ -2071,7 +2071,7 @@
 	System Info	Informacije o sistemu
 	More panels	Više panela
 	More documents	Više dokumenata
-	These settings aren't available in PhotoCraft yet.	Ove postavke još nisu dostupne u PhotoCraftu.
+	These settings aren't available in Lienzo yet.	Ove postavke još nisu dostupne u Lienzou.
 	Graphics	Grafika
 	Reset GPU Backend	Vrati GPU pozadinski sistem na početno
 	Applies at next launch.	Primjenjuje se pri sljedećem pokretanju.
@@ -2665,8 +2665,8 @@
 	Overprint	Pretisak
 	Native file drag-and-drop is unavailable	Izvorno prevlačenje i ispuštanje datoteka nije dostupno
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Izvorno prevlačenje i ispuštanje datoteka još nije podržano na Waylandu. Koristite Datoteka › Otvori ili kopirajte sliku u upravitelju datoteka i zalijepite je pomoću {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	Da ispuštate datoteke, pokrenite PhotoCraft pod XWaylandom: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	Ili postavite Postavke › Performanse › Linux server prikaza na X11: PhotoCraft se tada uvijek pokreće pod XWaylandom.
+	To drop files, start Lienzo under XWayland: `{command}`	Da ispuštate datoteke, pokrenite Lienzo pod XWaylandom: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	Ili postavite Postavke › Performanse › Linux server prikaza na X11: Lienzo se tada uvijek pokreće pod XWaylandom.
 	Edit › Paste	Uredi › Zalijepi
 	Use File › Open, or paste a copied image with {paste}.	Koristite Datoteka › Otvori ili zalijepite kopiranu sliku pomoću {paste}.
 	Mixer Brush Tool	Alat četkica za miješanje
@@ -2682,7 +2682,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatski koristi GPU ubrzanje kad je dostupno i vraća se na CPU iscrtavanje pri greškama.
 	Switched to CPU rendering	Prebačeno na CPU iscrtavanje
 	GPU acceleration could not continue. Your documents are unchanged.	GPU ubrzanje nije moglo nastaviti. Vaši dokumenti su nepromijenjeni.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft koristi CPU kompozitor slika. Prozor i dalje može koristiti vaš grafički adapter.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo koristi CPU kompozitor slika. Prozor i dalje može koristiti vaš grafički adapter.
 	Retry GPU requires a restart. Save your work first.	Ponovni pokušaj GPU-a zahtijeva ponovno pokretanje. Prvo sačuvajte svoj rad.
 	Retry GPU tries the graphics processor again now.	Ponovo pokušaj GPU odmah ponovo isprobava grafički procesor.
 	GPU acceleration resumed.	GPU ubrzanje je nastavljeno.
@@ -2892,7 +2892,7 @@ fontWeight	Italic	Kurziv
 	Color to Alpha…	Boja u alfu…
 	Transparency Threshold	Prag prozirnosti
 	Opacity Threshold	Prag neprozirnosti
-	PhotoCraft — Screen Color Picker	PhotoCraft — birač boja s ekrana
+	Lienzo — Screen Color Picker	Lienzo — birač boja s ekrana
 	Rasterize svg groups deeper than	Rasteriziraj SVG grupe dublje od
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 isključuje ovaj prag; SVG grupe ugniježđene dublje od 100 nivoa uvijek se rasteriziraju.
 	Rule of Thirds	Pravilo trećina
@@ -3291,7 +3291,7 @@ layerLabel	No Color	Bez boje
 	Restart Required	Potrebno ponovno pokretanje
 	Restart	Ponovo pokreni
 	Quit	Izlaz
-	Quit PhotoCraft	Zatvori PhotoCraft
+	Quit Lienzo	Zatvori Lienzo
 	Close Window	Zatvori prozor
 	New Window	Novi prozor
 	Open Image	Otvori sliku
@@ -3798,7 +3798,7 @@ layerLabel	No Color	Bez boje
 	Mezzotint	Mecotinta
 	Mosaic	Mozaik
 	Motion Blur	Zamućenje pokreta
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Izvorno prevlačenje i ispuštanje datoteka još nije podržano na Waylandu. Koristite Datoteka › Otvori ili pokrenite PhotoCraft pod XWaylandom s `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Izvorno prevlačenje i ispuštanje datoteka još nije podržano na Waylandu. Koristite Datoteka › Otvori ili pokrenite Lienzo pod XWaylandom s `WAYLAND_DISPLAY= photocraft`.
 	Neon Glow	Neonski sjaj
 	New Guide Layout	Novi raspored vodilica
 	New Video Layer from File	Novi video sloj iz datoteke
@@ -3977,9 +3977,9 @@ layerLabel	No Color	Bez boje
 	Saved {path}; image assets: {n} in {dir}	Sačuvano {path}; slikovni resursi: {n} u {dir}
 	{message} (notes: {n}; {warning})	{message} (bilješke: {n}; {warning})
 	Preferences can't be saved	Postavke se ne mogu sačuvati
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft nastavlja pokušavati; dok čuvanje ne uspije, promjene postavki se gube pri zatvaranju.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo nastavlja pokušavati; dok čuvanje ne uspije, promjene postavki se gube pri zatvaranju.
 	GPU retry scheduled	Zakazan ponovni pokušaj GPU-a
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	Sačuvajte svoj rad i ponovo pokrenite PhotoCraft da ponovo pokušate GPU ubrzanje. CPU iscrtavanje ostaje aktivno za ovu sesiju.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	Sačuvajte svoj rad i ponovo pokrenite Lienzo da ponovo pokušate GPU ubrzanje. CPU iscrtavanje ostaje aktivno za ovu sesiju.
 	GPU device was lost; using the CPU renderer.	GPU uređaj je izgubljen; koristi se CPU iscrtavanje.
 	GPU error; using the CPU renderer.	GPU greška; koristi se CPU iscrtavanje.
 	Couldn't open {name}: {error}	Nije moguće otvoriti {name}: {error}
@@ -4167,7 +4167,7 @@ shape	Appearance	Izgled
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	Učitana {n} akcija iz {file}|Učitane {n} akcije iz {file}|Učitano {n} akcija iz {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} korak još nema ekvivalent u PhotoCraftu|{n} koraka još nemaju ekvivalent u PhotoCraftu|{n} koraka još nema ekvivalent u PhotoCraftu
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} korak još nema ekvivalent u Lienzou|{n} koraka još nemaju ekvivalent u Lienzou|{n} koraka još nema ekvivalent u Lienzou
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	Sačuvana {n} akcija u {file}|Sačuvane {n} akcije u {file}|Sačuvano {n} akcija u {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	Izostavljen {n} korak bez ekvivalenta u Photoshopu|Izostavljena {n} koraka bez ekvivalenta u Photoshopu|Izostavljeno {n} koraka bez ekvivalenta u Photoshopu
 	Insert Stop…	Umetni tačku…
@@ -4278,12 +4278,12 @@ shape	Appearance	Izgled
 	Bicubic Smoother	Bikubično glađe
 	Bicubic Sharper	Bikubično oštrije
 	Pasting from other apps is unavailable	Lijepljenje iz drugih aplikacija nije dostupno
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft u ovoj sesiji ne može pristupiti sistemskom međuspremniku. Na Waylandu Flatpak okruženje skriva protokol preko kojeg se čitaju slike iz drugih aplikacija.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Da lijepite iz drugih aplikacija, pokrenite PhotoCraft pod XWaylandom: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	Nema šta zalijepiti: PhotoCraft ovdje ne može čitati sistemski međuspremnik
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo u ovoj sesiji ne može pristupiti sistemskom međuspremniku. Na Waylandu Flatpak okruženje skriva protokol preko kojeg se čitaju slike iz drugih aplikacija.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	Da lijepite iz drugih aplikacija, pokrenite Lienzo pod XWaylandom: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	Nema šta zalijepiti: Lienzo ovdje ne može čitati sistemski međuspremnik
 	Delete this set	Izbriši ovaj skup
 	New Set…	Novi skup…
-	PhotoCraft Defaults	Zadane postavke PhotoCrafta
+	Lienzo Defaults	Zadane postavke Lienzoa
 	Save a list of these shortcuts as a web page	Sačuvaj listu ovih prečica kao web stranicu
 	Save the changes to this set	Sačuvaj promjene u ovom skupu
 	Save these shortcuts as a .kys file	Sačuvaj ove prečice kao .kys datoteku
@@ -4418,17 +4418,17 @@ shape	Appearance	Izgled
 	Object Aware needs a segmentation model, which isn't available yet	Svjesno objekata zahtijeva model segmentacije, koji još nije dostupan
 	Refine Hair needs hair detection, which isn't available yet	Poboljšaj kosu zahtijeva otkrivanje kose, koje još nije dostupno
 	Check for Updates…	Provjeri ažuriranja…
-	PhotoCraft Updates	PhotoCraft ažuriranja
+	Lienzo Updates	Lienzo ažuriranja
 	Checking for updates…	Provjera ažuriranja…
 	Open the release page to choose an installer for your system.	Otvorite stranicu izdanja da odaberete instalacijski program za svoj sistem.
 	Open Download Page	Otvori stranicu za preuzimanje
-	PhotoCraft is up to date.	PhotoCraft je ažuran.
+	Lienzo is up to date.	Lienzo je ažuran.
 	Could not check for updates.	Nije moguće provjeriti ažuriranja.
 	Updates have not been checked yet.	Ažuriranja još nisu provjerena.
 	Check Again	Provjeri ponovo
 	Automatically Check for Updates	Automatski provjeravaj ažuriranja
 	Installed version: {version}	Instalirana verzija: {version}
-	PhotoCraft {version} is available.	Dostupan je PhotoCraft {version}.
+	Lienzo {version} is available.	Dostupan je Lienzo {version}.
 	Hue Cube	Kocka nijanse
 	Brightness Cube	Kocka svjetline
 	Color Wheel	Kotač boja
@@ -4602,9 +4602,9 @@ smartSvg	Choose executable…	Odaberi izvršnu datoteku…
 smartSvg	Choose the application used to edit this SVG:	Odaberite aplikaciju za uređivanje ovog SVG-a:
 smartSvg	Edit SVG Smart Object	Uredi SVG pametni objekat
 smartSvg	Other application	Druga aplikacija
-smartSvg	PhotoCraft (internal editor)	PhotoCraft (interni uređivač)
+smartSvg	Lienzo (internal editor)	Lienzo (interni uređivač)
 smartSvg	SVG editor opened. Save the SVG to update this Smart Object.	SVG uređivač je otvoren. Sačuvajte SVG da biste ažurirali ovaj pametni objekat.
-smartSvg	Save to the opened SVG file. Each saved change becomes one undo step in PhotoCraft.	Sačuvajte u otvorenu SVG datoteku. Svaka sačuvana izmjena postaje jedan korak poništavanja u PhotoCraftu.
+smartSvg	Save to the opened SVG file. Each saved change becomes one undo step in Lienzo.	Sačuvajte u otvorenu SVG datoteku. Svaka sačuvana izmjena postaje jedan korak poništavanja u Lienzou.
 smartSvg	Stop syncing this Smart Object	Zaustavi sinhronizaciju ovog pametnog objekta
 smartSvg	Updates wait while another document or an editing dialog is active.	Ažuriranja čekaju dok je aktivan drugi dokument ili dijalog za uređivanje.
 smartSvg	AI/PDF/EPS contents will be edited as SVG. Saving replaces the embedded source; format-specific features may change.	Sadržaj AI/PDF/EPS uređivat će se kao SVG. Čuvanje zamjenjuje ugrađeni izvor; svojstva specifična za format mogu se promijeniti.

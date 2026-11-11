@@ -160,7 +160,7 @@ fn adopt_legacy_recovery_waiting(legacy: &Path, dir: &Path, wait: std::time::Dur
             Err(std::fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => std::thread::sleep(std::time::Duration::from_millis(50)),
             Err(std::fs::TryLockError::WouldBlock) => {
                 // Another process is moving and may yet remove the old folder: never write there.
-                log::info!("another PhotoCraft is moving crash-recovery autosaves; using {}", dir.display());
+                log::info!("another Lienzo is moving crash-recovery autosaves; using {}", dir.display());
                 return dir.to_path_buf();
             }
             Err(std::fs::TryLockError::Error(e)) => {

@@ -132,7 +132,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
 
 /// The template item of `params`, checked to be a Puppet Warp filter.
 fn template(params: &J) -> Result<Descriptor, String> {
-    let raw = params.get(TEMPLATE_KEY).and_then(J::as_str).ok_or("a Puppet Warp made in PhotoCraft is not written to PSD")?;
+    let raw = params.get(TEMPLATE_KEY).and_then(J::as_str).ok_or("a Puppet Warp made in Lienzo is not written to PSD")?;
     let bytes = from_hex(raw).ok_or("the Puppet Warp PSD data is not valid hex")?;
     let item = Descriptor::from_bytes(&bytes).map_err(|e| format!("the Puppet Warp PSD data is unreadable ({e})"))?;
     if !item.class_id.is("filterFX") || !get_desc(&item, "Fltr").is_some_and(|f| f.class_id.is(CLASS)) {
@@ -146,11 +146,11 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
     let item = template(params)?;
     let imported = get_desc(&item, "Fltr").and_then(settings).ok_or("the Puppet Warp PSD data has no readable mesh")?;
     if params.get("pins") != imported.get("pins") {
-        return Err("Puppet Warp pins moved in PhotoCraft are not written to PSD".into());
+        return Err("Puppet Warp pins moved in Lienzo are not written to PSD".into());
     }
     // Imported params set no solver settings, so a set one is an edit the template doesn't hold.
     if let Some(k) = ["mode", "density", "expansion"].into_iter().find(|k| params.get(*k).is_some()) {
-        return Err(format!("the Puppet Warp `{k}` set in PhotoCraft is not written to PSD"));
+        return Err(format!("the Puppet Warp `{k}` set in Lienzo is not written to PSD"));
     }
     Ok(item)
 }

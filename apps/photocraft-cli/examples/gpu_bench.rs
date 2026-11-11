@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let layers = args.layers as usize;
     let warm_runs = args.warm_runs as usize;
 
-    println!("# PhotoCraft CLI Headless Rendering Benchmark");
+    println!("# Lienzo CLI Headless Rendering Benchmark");
     println!();
 
     const MAX_SYNTHETIC_PIXELS: u64 = 256 * 1024 * 1024;

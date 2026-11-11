@@ -81,7 +81,7 @@ fn saved_ui_font_size_survives_first_frame_install() {
     let mut width = 0.0;
     ctx.run_ui(Default::default(), |ui| {
         assert!(medium_bound(ui.ctx()), "the installed stack reaches the second pass");
-        width = ui.painter().layout_no_wrap("PhotoCraft".into(), medium(13.0), Color32::WHITE).size().x;
+        width = ui.painter().layout_no_wrap("Lienzo".into(), medium(13.0), Color32::WHITE).size().x;
     })
     .textures_delta
     .clear();
@@ -91,7 +91,7 @@ fn saved_ui_font_size_survives_first_frame_install() {
     let mut scaled = 0.0;
     ctx.run_ui(Default::default(), |ui| {
         assert!(medium_bound(ui.ctx()));
-        scaled = ui.painter().layout_no_wrap("PhotoCraft".into(), medium(13.0), Color32::WHITE).size().x;
+        scaled = ui.painter().layout_no_wrap("Lienzo".into(), medium(13.0), Color32::WHITE).size().x;
     })
     .textures_delta
     .clear();
@@ -101,7 +101,7 @@ fn saved_ui_font_size_survives_first_frame_install() {
     for _ in 0..2 {
         ctx.run_ui(Default::default(), |ui| {
             assert!(medium_bound(ui.ctx()));
-            let w = ui.painter().layout_no_wrap("PhotoCraft".into(), medium(13.0), Color32::WHITE).size().x;
+            let w = ui.painter().layout_no_wrap("Lienzo".into(), medium(13.0), Color32::WHITE).size().x;
             assert!((w - scaled).abs() < 1.0, "{w} vs {scaled}");
         })
         .textures_delta
@@ -361,4 +361,35 @@ fn breeze_themes_parse_and_meet_text_contrast() {
         }
         assert!(contrast(t.caption_close_text, t.caption_close) >= 4.5, "{kind:?}: close button glyph");
     }
+}
+
+#[test]
+fn nodalia_is_the_shipping_default_with_lienzo_islands() {
+    // Unit tests run on the Pro look (`ThemeKind::default` under cfg(test)); the app ships Nodalia.
+    assert_eq!(photocraft_engine::prefs::Preferences::default().interface.dark_theme, photocraft_engine::prefs::DarkTheme::Nodalia);
+    for (kind, mode) in [(ThemeKind::Nodalia, nodalia_theme::Mode::Dark), (ThemeKind::NodaliaLight, nodalia_theme::Mode::Light)] {
+        let t = Tokens::for_kind(kind);
+        assert!(t.islands(), "{kind:?}");
+        assert_eq!(t.accent, ndl(mode.palette_with(LIENZO).accent_default), "{kind:?}: Lienzo's accent");
+        assert_eq!(t.radius_lg, ISLAND_RADIUS);
+        assert_eq!(kind.is_dark(), kind == ThemeKind::Nodalia);
+        assert_eq!(ThemeKind::from_name(kind.id()), Some(kind));
+    }
+    assert!(!Tokens::for_kind(ThemeKind::ProMedium).islands());
+}
+
+#[test]
+fn nodalia_title_bar_has_the_main_menu_instead_of_the_mark() {
+    crate::app::NODALIA_IN_TESTS.with(|n| n.set(true));
+    let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    crate::app::NODALIA_IN_TESTS.with(|n| n.set(false));
+    app.custom_titlebar = true;
+    let ctx = egui::Context::default();
+    crate::PhotocraftApp::setup_context(&ctx, ThemeKind::Nodalia);
+    for _ in 0..2 {
+        ctx.run_ui(egui::RawInput::default(), |ui| crate::panels::title_bar(&mut app, ui)).textures_delta.clear();
+    }
+    assert!(Tokens::get(&ctx).islands());
+    assert_eq!(app.session.prefs().interface.window_controls, photocraft_engine::prefs::WindowControls::Nodalia);
+    assert!(crate::brand::mark_rect(&ctx).is_none(), "no brand mark: the hamburger leads the bar");
 }

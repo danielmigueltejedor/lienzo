@@ -235,7 +235,7 @@ fn assert_names(bytes: &[u8], format: &str) {
     let m = refusal(bytes);
     assert!(m.starts_with(NOT_WASM), "{m}");
     assert!(m.contains(format), "{m}");
-    assert!(m.contains("PhotoCraft plug-ins are WebAssembly modules"), "{m}");
+    assert!(m.contains("Lienzo plug-ins are WebAssembly modules"), "{m}");
     assert!(!m.contains('\n'), "{m}");
 }
 

@@ -83,15 +83,15 @@ impl Builtin {
         match self {
             Builtin::Srgb => "sRGB IEC61966-2.1",
             Builtin::DisplayP3 => "Display P3",
-            Builtin::AdobeRgbCompat => "Adobe RGB (1998)-compatible (PhotoCraft)",
-            Builtin::ProPhotoCompat => "ProPhoto RGB-compatible (ROMM primaries, PhotoCraft)",
-            Builtin::LinearSrgb => "Linear sRGB (PhotoCraft)",
-            Builtin::AcesCg => "ACEScg (AP1, linear, PhotoCraft)",
-            Builtin::Rec2020 => "Rec. ITU-R BT.2020 (PhotoCraft)",
-            Builtin::GrayGamma22 => "Gray Gamma 2.2 (PhotoCraft)",
-            Builtin::SGray => "sGray (sRGB tone curve, PhotoCraft)",
-            Builtin::DotGain20Compat => "Dot Gain 20%-compatible (gamma 1.732, PhotoCraft)",
-            Builtin::LabD50 => "Lab D50 identity (PhotoCraft)",
+            Builtin::AdobeRgbCompat => "Adobe RGB (1998)-compatible (Lienzo)",
+            Builtin::ProPhotoCompat => "ProPhoto RGB-compatible (ROMM primaries, Lienzo)",
+            Builtin::LinearSrgb => "Linear sRGB (Lienzo)",
+            Builtin::AcesCg => "ACEScg (AP1, linear, Lienzo)",
+            Builtin::Rec2020 => "Rec. ITU-R BT.2020 (Lienzo)",
+            Builtin::GrayGamma22 => "Gray Gamma 2.2 (Lienzo)",
+            Builtin::SGray => "sGray (sRGB tone curve, Lienzo)",
+            Builtin::DotGain20Compat => "Dot Gain 20%-compatible (gamma 1.732, Lienzo)",
+            Builtin::LabD50 => "Lab D50 identity (Lienzo)",
             Builtin::CoatedCmyk => crate::synth::DESCRIPTION,
         }
     }
@@ -114,7 +114,12 @@ impl Builtin {
             "cmyk" | "coatedcmyk" | "defaultcmyk" | "photocraftcoatedcmyk" => Some(Builtin::CoatedCmyk),
             _ => None,
         };
-        alias.or_else(|| Builtin::ALL.into_iter().find(|b| b.description().eq_ignore_ascii_case(s)))
+        // The descriptions named the app PhotoCraft before it was Lienzo; scripts may still pass those.
+        alias.or_else(|| {
+            Builtin::ALL
+                .into_iter()
+                .find(|b| b.description().eq_ignore_ascii_case(s) || b.description().replace("Lienzo", "PhotoCraft").eq_ignore_ascii_case(s))
+        })
     }
 
     /// The profile (built once per process).
@@ -146,7 +151,7 @@ pub fn srgb() -> &'static Profile {
 /// only assigned to such files, never offered as a working space.
 pub fn linear_gray() -> &'static Profile {
     static PROFILE: OnceLock<Profile> = OnceLock::new();
-    PROFILE.get_or_init(|| gray("Linear Gray (PhotoCraft)", Curve::Gamma(1.0)))
+    PROFILE.get_or_init(|| gray("Linear Gray (Lienzo)", Curve::Gamma(1.0)))
 }
 
 /// The ICC D65 used for the RGB spaces (chromaticity 0.3127, 0.3290).
@@ -305,7 +310,7 @@ pub fn cicp_rgb(primaries: u16, transfer: u16, linear: bool) -> Option<Profile> 
         5 => (Curve::Gamma(2.8), "gamma 2.8"),
         _ => return None,
     };
-    Some(rgb(&format!("{name} {curve} (PhotoCraft)"), prim, d65(), trc))
+    Some(rgb(&format!("{name} {curve} (Lienzo)"), prim, d65(), trc))
 }
 
 fn build(b: Builtin) -> Profile {
@@ -340,6 +345,14 @@ fn build(b: Builtin) -> Profile {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn former_descriptions_still_name_their_builtins() {
+        assert_eq!(Builtin::from_id("Linear sRGB (PhotoCraft)"), Some(Builtin::LinearSrgb));
+        assert_eq!(Builtin::from_id("ACEScg (AP1, linear, PhotoCraft)"), Some(Builtin::AcesCg));
+        assert_eq!(Builtin::from_id("Linear sRGB (Lienzo)"), Some(Builtin::LinearSrgb));
+        assert_eq!(Builtin::from_id("Linear sRGB (Elsewhere)"), None);
+    }
 
     #[test]
     fn cicp_maps_onto_the_builtins_and_linear_bt2020() {

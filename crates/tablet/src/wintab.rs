@@ -65,7 +65,7 @@ pub fn install(hwnd: isize, wake: Box<dyn Fn()>) -> Result<(), Error> {
     let device = wintab.device(0).ok_or_else(|| Error::Unsupported("no Wintab digitizer".into()))?;
     let pressure_axis = device.pressure.ok_or_else(|| Error::Unsupported("Wintab device has no pressure axis".into()))?;
     let hwnd = HWND(hwnd as *mut c_void);
-    let options = wintab::ContextOptions::new().system(true).name("PhotoCraft WinTab");
+    let options = wintab::ContextOptions::new().system(true).name("Lienzo WinTab");
     // Ask only for the fields the device reports: a pressure-only tablet never fills
     // orientation, and reading a zeroed orientation would invent a maximum tilt.
     let backend = match device.orientation {

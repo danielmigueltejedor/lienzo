@@ -36,13 +36,18 @@ pub static INTER_REGULAR: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bund
 pub static INTER_MEDIUM: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("Inter-Medium.ttf")));
 pub static INTER_SEMIBOLD: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("Inter-SemiBold.ttf")));
 pub static JETBRAINS_MONO_REGULAR: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("JetBrainsMono-Regular.ttf")));
+/// Nodalia's bold body weight and its display face (view titles, dialog names).
+pub static INTER_BOLD: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("Inter-Bold.ttf")));
+pub static SORA_EXTRABOLD: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("Sora-ExtraBold.ttf")));
 
-/// Fonts shipped with PhotoCraft (OFL; licences in `assets/fonts`).
-pub static BUNDLED: [(&str, &LazyLock<Vec<u8>>); 4] = [
+/// Fonts shipped with Lienzo (OFL; licences in `assets/fonts`).
+pub static BUNDLED: [(&str, &LazyLock<Vec<u8>>); 6] = [
     ("Inter-Regular.ttf", &INTER_REGULAR),
     ("Inter-Medium.ttf", &INTER_MEDIUM),
     ("Inter-SemiBold.ttf", &INTER_SEMIBOLD),
     ("JetBrainsMono-Regular.ttf", &JETBRAINS_MONO_REGULAR),
+    ("Inter-Bold.ttf", &INTER_BOLD),
+    ("Sora-ExtraBold.ttf", &SORA_EXTRABOLD),
 ];
 
 /// Inflated fonts are bounded (the largest is 0.42 MB), so corrupt data can't exhaust memory.

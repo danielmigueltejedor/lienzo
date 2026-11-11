@@ -56,10 +56,14 @@ choice!(TypeUnit { Points = "points", Pixels = "pixels", Millimeters = "mm" } de
 choice!(PointSize { PostScript = "postScript", Traditional = "traditional" } default PostScript);
 choice!(Interpolation { BicubicAutomatic = "bicubicAutomatic", Nearest = "nearestNeighbor", Bilinear = "bilinear", Bicubic = "bicubic", BicubicSmoother = "bicubicSmoother", BicubicSharper = "bicubicSharper", PreserveDetails = "preserveDetails" } default BicubicAutomatic);
 choice!(ColorPicker { Adobe = "adobe", System = "system" } default Adobe);
-choice!(Theme { Pro = "pro", ProMedium = "proMedium", ProLightGray = "proLightGray", ProLight = "proLight", Studio = "studio", StudioLight = "studioLight", Classic = "classic", SolarizedDark = "solarizedDark", Adwaita = "adwaita", AdwaitaDark = "adwaitaDark", BreezeLight = "breezeLight", BreezeDark = "breezeDark", SoftDark = "softDark", SoftLight = "softLight" } default ProMedium);
-choice!(AppearanceMode { Auto = "auto", Dark = "dark", Light = "light" } default Dark);
-choice!(DarkTheme { Pro = "pro", ProMedium = "proMedium", Studio = "studio", SolarizedDark = "solarizedDark", AdwaitaDark = "adwaitaDark", BreezeDark = "breezeDark", SoftDark = "softDark" } default ProMedium);
-choice!(LightTheme { ProLight = "proLight", ProLightGray = "proLightGray", StudioLight = "studioLight", Classic = "classic", Adwaita = "adwaita", BreezeLight = "breezeLight", SoftLight = "softLight" } default ProLight);
+choice!(Theme { Nodalia = "nodalia", NodaliaLight = "nodaliaLight", Pro = "pro", ProMedium = "proMedium", ProLightGray = "proLightGray", ProLight = "proLight", Studio = "studio", StudioLight = "studioLight", Classic = "classic", SolarizedDark = "solarizedDark", Adwaita = "adwaita", AdwaitaDark = "adwaitaDark", BreezeLight = "breezeLight", BreezeDark = "breezeDark", SoftDark = "softDark", SoftLight = "softLight" } default Nodalia);
+choice!(
+    /// The look of the window's own minimize, maximize and close buttons (Windows and Linux).
+    WindowControls { Nodalia = "nodalia", System = "system" } default Nodalia
+);
+choice!(AppearanceMode { Auto = "auto", Dark = "dark", Light = "light" } default Auto);
+choice!(DarkTheme { Nodalia = "nodalia", Pro = "pro", ProMedium = "proMedium", Studio = "studio", SolarizedDark = "solarizedDark", AdwaitaDark = "adwaitaDark", BreezeDark = "breezeDark", SoftDark = "softDark" } default Nodalia);
+choice!(LightTheme { NodaliaLight = "nodaliaLight", ProLight = "proLight", ProLightGray = "proLightGray", StudioLight = "studioLight", Classic = "classic", Adwaita = "adwaita", BreezeLight = "breezeLight", SoftLight = "softLight" } default NodaliaLight);
 choice!(CanvasColor { Default = "default", Black = "black", DarkGray = "darkGray", MediumGray = "mediumGray", LightGray = "lightGray", Custom = "custom" } default Default);
 choice!(CanvasBorder { DropShadow = "dropShadow", Line = "line", None = "none" } default DropShadow);
 choice!(UiScale { Auto = "auto", P75 = "75", P80 = "80", P85 = "85", P90 = "90", P95 = "95", P100 = "100", P105 = "105", P110 = "110", P115 = "115", P120 = "120", P125 = "125", P150 = "150", P175 = "175", P200 = "200", P250 = "250", P300 = "300" } default Auto);
@@ -377,6 +381,9 @@ pub struct Interface {
     /// #1271, #1316). The integrated title bar remains the default on Linux and Windows;
     /// the system frame is opt-in. Read when the app starts. macOS always uses the system's.
     pub system_title_bar: bool,
+    /// The window buttons of the app's own title bar: Nodalia's round ones (the default), or the
+    /// desktop's look (GNOME's, KDE's, Windows'). Not used with the system title bar.
+    pub window_controls: WindowControls,
     /// Show the active document's file name in the title bar and the OS window title. The tabs
     /// already name the file, so this can be turned off for a plain "PhotoCraft" title (#5037).
     /// The unsaved-changes mark stays either way.
@@ -391,10 +398,10 @@ pub struct Interface {
 impl Default for Interface {
     fn default() -> Self {
         Self {
-            theme: Theme::ProMedium,
-            appearance_mode: AppearanceMode::Dark,
-            dark_theme: DarkTheme::ProMedium,
-            light_theme: LightTheme::ProLight,
+            theme: Theme::Nodalia,
+            appearance_mode: AppearanceMode::Auto,
+            dark_theme: DarkTheme::Nodalia,
+            light_theme: LightTheme::NodaliaLight,
             favorite_themes: Vec::new(),
             canvas_color: CanvasColor::Default,
             canvas_custom_color: "#282828".into(),
@@ -411,6 +418,7 @@ impl Default for Interface {
             show_tooltips: true,
             show_bounding_box_when_dragging_layer: false,
             system_title_bar: false,
+            window_controls: WindowControls::Nodalia,
             show_file_name_in_title: true,
             notification_auto_hide: true,
             notification_duration_seconds: 6,
@@ -1626,12 +1634,22 @@ impl Session {
             && let Some(theme) = interface.get("theme").and_then(Value::as_str).and_then(Theme::parse)
         {
             let (mode, slot) = match theme {
-                Theme::Pro | Theme::ProMedium | Theme::Studio | Theme::SolarizedDark | Theme::AdwaitaDark | Theme::BreezeDark | Theme::SoftDark => {
-                    ("dark", "darkTheme")
-                }
-                Theme::StudioLight | Theme::ProLightGray | Theme::ProLight | Theme::Classic | Theme::Adwaita | Theme::BreezeLight | Theme::SoftLight => {
-                    ("light", "lightTheme")
-                }
+                Theme::Nodalia
+                | Theme::Pro
+                | Theme::ProMedium
+                | Theme::Studio
+                | Theme::SolarizedDark
+                | Theme::AdwaitaDark
+                | Theme::BreezeDark
+                | Theme::SoftDark => ("dark", "darkTheme"),
+                Theme::NodaliaLight
+                | Theme::StudioLight
+                | Theme::ProLightGray
+                | Theme::ProLight
+                | Theme::Classic
+                | Theme::Adwaita
+                | Theme::BreezeLight
+                | Theme::SoftLight => ("light", "lightTheme"),
             };
             interface.insert("appearanceMode".into(), json!(mode));
             // A partially migrated file may already contain a newer theme selection (#5139).
@@ -1724,6 +1742,14 @@ impl Session {
         // select a visible theme.
         if path == "interface.theme" || next.interface.theme != self.prefs().interface.theme {
             match next.interface.theme {
+                Theme::Nodalia => {
+                    next.interface.dark_theme = DarkTheme::Nodalia;
+                    next.interface.appearance_mode = AppearanceMode::Dark;
+                }
+                Theme::NodaliaLight => {
+                    next.interface.light_theme = LightTheme::NodaliaLight;
+                    next.interface.appearance_mode = AppearanceMode::Light;
+                }
                 Theme::Pro => {
                     next.interface.dark_theme = DarkTheme::Pro;
                     next.interface.appearance_mode = AppearanceMode::Dark;

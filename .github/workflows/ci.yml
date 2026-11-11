@@ -86,7 +86,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Git dependencies come from storytold
+      - name: Git dependencies come from storytold or Nodalia
         run: |
           set -euo pipefail
           test -f Cargo.lock || { echo "Cargo.lock is missing"; exit 1; }
@@ -110,11 +110,13 @@ jobs:
           python3 - <<'PY'
           import sys, tomllib
           lock = tomllib.load(open("Cargo.lock", "rb"))
+          # Nodalia's own design crates (nodalia-theme) come from danielmigueltejedor/nodalia-design.
+          trusted = ("git+https://github.com/storytold/", "git+https://github.com/danielmigueltejedor/nodalia-design?")
           bad = sorted({p["source"] for p in lock.get("package", [])
                         if p.get("source", "").startswith("git+")
-                        and not p["source"].startswith("git+https://github.com/storytold/")})
+                        and not p["source"].startswith(trusted)})
           if bad:
-              print("Git dependencies outside github.com/storytold:", *bad, sep="\n")
+              print("Git dependencies outside github.com/storytold and nodalia-design:", *bad, sep="\n")
               sys.exit(1)
           PY
       - id: pick

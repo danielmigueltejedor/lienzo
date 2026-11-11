@@ -76,9 +76,9 @@ fn build_limit_scope(limit: BuildMemoryLimit) -> String {
     match limit {
         BuildMemoryLimit::Measured => " on this machine".to_owned(),
         BuildMemoryLimit::Desktop32Bit => format!(
-            " on this machine. This 32-bit build of PhotoCraft can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
+            " on this machine. This 32-bit build of Lienzo can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
         ),
-        BuildMemoryLimit::FixedWeb => format!(" of the browser version of PhotoCraft. To open it, download the desktop app from {releases}"),
+        BuildMemoryLimit::FixedWeb => format!(" of the browser version of Lienzo. To open it, download the desktop app from {releases}"),
     }
 }
 
@@ -186,12 +186,12 @@ mod tests {
         assert_eq!(
             build_limit_scope(BuildMemoryLimit::Desktop32Bit),
             format!(
-                " on this machine. This 32-bit build of PhotoCraft can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
+                " on this machine. This 32-bit build of Lienzo can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
             )
         );
         assert_eq!(
             build_limit_scope(BuildMemoryLimit::FixedWeb),
-            format!(" of the browser version of PhotoCraft. To open it, download the desktop app from {releases}")
+            format!(" of the browser version of Lienzo. To open it, download the desktop app from {releases}")
         );
     }
 

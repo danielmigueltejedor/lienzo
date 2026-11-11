@@ -246,6 +246,11 @@ impl PhotocraftApp {
     /// wait modal took the frame (its input, IME and window check already handled).
     fn ui_body(&mut self, ui: &mut egui::Ui) -> bool {
         let ctx = ui.ctx().clone();
+        // Nodalia's window frame, under the islands and the gaps between them.
+        let tokens = theme::Tokens::get(&ctx);
+        if tokens.islands() && !self.ui.view.hides_chrome() {
+            ui.painter().rect_filled(ui.max_rect(), 0.0, tokens.frame());
+        }
         // A text field's right-click menu, before any field is drawn (text_field_menu.rs).
         text_field_menu::show(&ctx);
         // The wheel goes to a focused value field before the canvas or a panel sees it (#5473).
@@ -296,6 +301,21 @@ impl PhotocraftApp {
         if (chrome || tabbed_in) && self.ui.panels.menu_bar {
             panels::title_bar(self, ui);
         }
+        // Nodalia: below the title bar everything is an island on the window frame, kept a gap
+        // from the window's edges; the gaps between islands are their own (`theme::island`).
+        let islands = chrome && theme::Tokens::get(&ctx).islands();
+        let mut island_ui;
+        let ui = if islands {
+            let g = theme::ISLAND_GAP;
+            let mut rect = ui.available_rect_before_wrap();
+            rect.min.x += g;
+            rect.max.x -= g;
+            rect.max.y -= g;
+            island_ui = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(*ui.layout()));
+            &mut island_ui
+        } else {
+            ui
+        };
         // Home is only the menu bar and the Home content; the saved panel prefs are untouched.
         let home = self.home_screen_up();
         if ((chrome && self.ui.panels.options_bar) || tabbed_in) && !home {
@@ -327,9 +347,12 @@ impl PhotocraftApp {
             panels::toolbar(self, ui);
             let t = theme::Tokens::get(&ctx);
             let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
-            egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
+            let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                 canvas::document_area(self, ui);
             });
+            if chrome {
+                theme::round_island_corners(ui, shown.response.rect);
+            }
         } else {
             if toolbar_shown {
                 panels::toolbar(self, ui);
@@ -339,9 +362,13 @@ impl PhotocraftApp {
             } else {
                 let t = theme::Tokens::get(&ctx);
                 let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
-                egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
+                let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                     canvas::document_area(self, ui);
                 });
+                // Full Screen Mode shows the canvas edge to edge: no island to round.
+                if chrome {
+                    theme::round_island_corners(ui, shown.response.rect);
+                }
                 if !home {
                     panels::properties_window(self, &ctx);
                 }

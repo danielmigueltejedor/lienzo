@@ -3,7 +3,7 @@ use super::{
     AppearanceMode, Ask, CanvasBorder, CanvasColor, CheckerColors, CheckerSize, ColorPicker, DarkTheme, ExportLocation, ExportMetadata, FontPreview,
     GpuBackend, Interpolation, LightTheme, LineStyle, LinuxDisplayServer, LogDestination, LogDetail, OtherCursor, PaintingCursor, PlaybackPerformance,
     PointSize, PressureCurve, QuickExportFormat, RawColorSpace, RawDemosaic, RawDepth, RawSharpen, RenderingMode, RightClickPaint, TabletInput, TextEngine,
-    Theme, TypeUnit, UiFontSize, UiScale, Unit, Value,
+    Theme, TypeUnit, UiFontSize, UiScale, Unit, Value, WindowControls,
 };
 
 /// Preferences dialog sections in Photoshop's order: (id, title).
@@ -73,6 +73,7 @@ pub fn choices(path: &str) -> Option<&'static [&'static str]> {
         "general.imageInterpolation" => Interpolation::NAMES,
         "interface.theme" => Theme::NAMES,
         "interface.appearanceMode" => AppearanceMode::NAMES,
+        "interface.windowControls" => WindowControls::NAMES,
         "interface.darkTheme" => DarkTheme::NAMES,
         "interface.lightTheme" => LightTheme::NAMES,
         "interface.canvasColor" => CanvasColor::NAMES,

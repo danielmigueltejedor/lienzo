@@ -23,12 +23,15 @@ use photocraft_engine::prefs::UiFontSize;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeKind {
+    /// Nodalia Design Language, dark: flat `#15171E` islands on a `#0B0C10` window frame (default).
+    Nodalia,
+    /// Nodalia Design Language, light: white islands on a `#E4E6EB` window frame.
+    NodaliaLight,
     /// Photoshop-style Spectrum dark: flat charcoal panels, tab strips, blue accents (darkest brightness).
     Pro,
-    /// Photoshop's default (second) interface brightness: #535353 panels, #282828 canvas (default).
-    #[default]
+    /// Photoshop's default (second) interface brightness: #535353 panels, #282828 canvas.
     ProMedium,
     /// Photoshop's third interface brightness: #B8B8B8 panels (#2661).
     ProLightGray,
@@ -54,8 +57,16 @@ pub enum ThemeKind {
     SoftLight,
 }
 
+impl Default for ThemeKind {
+    /// Nodalia. Unit tests keep the dense Pro look their geometry was written against (see
+    /// `classic_look_for_tests` in `app.rs`).
+    fn default() -> Self {
+        if cfg!(test) { ThemeKind::ProMedium } else { ThemeKind::Nodalia }
+    }
+}
+
 impl ThemeKind {
-    pub const ALL: [ThemeKind; 14] = [
+    pub const ALL: [ThemeKind; 16] = [
         ThemeKind::Pro,
         ThemeKind::ProMedium,
         ThemeKind::ProLightGray,
@@ -70,9 +81,13 @@ impl ThemeKind {
         ThemeKind::BreezeDark,
         ThemeKind::SoftDark,
         ThemeKind::SoftLight,
+        ThemeKind::Nodalia,
+        ThemeKind::NodaliaLight,
     ];
     pub fn label(self) -> &'static str {
         match self {
+            ThemeKind::Nodalia => "Nodalia (Dark)",
+            ThemeKind::NodaliaLight => "Nodalia (Light)",
             ThemeKind::Pro => "Pro (Dark)",
             ThemeKind::ProMedium => "Pro (Medium Gray)",
             ThemeKind::ProLightGray => "Pro (Light Gray)",
@@ -93,6 +108,8 @@ impl ThemeKind {
     /// `window.theme.<id>`.
     pub fn id(self) -> &'static str {
         match self {
+            ThemeKind::Nodalia => "nodalia",
+            ThemeKind::NodaliaLight => "nodaliaLight",
             ThemeKind::Pro => "pro",
             ThemeKind::ProMedium => "proMedium",
             ThemeKind::ProLightGray => "proLightGray",
@@ -117,7 +134,8 @@ impl ThemeKind {
     pub fn is_dark(self) -> bool {
         matches!(
             self,
-            ThemeKind::Studio
+            ThemeKind::Nodalia
+                | ThemeKind::Studio
                 | ThemeKind::Pro
                 | ThemeKind::ProMedium
                 | ThemeKind::SolarizedDark
@@ -136,6 +154,8 @@ impl ThemeKind {
     }
     pub fn from_name(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().replace([' ', '_', '-', '(', ')'], "").as_str() {
+            "nodalia" | "nodaliadark" | "ndl" | "ndldark" => Some(ThemeKind::Nodalia),
+            "nodalialight" | "ndllight" => Some(ThemeKind::NodaliaLight),
             "pro" | "prodark" | "photoshop" | "dark" => Some(ThemeKind::Pro),
             "promedium" | "promediumgray" | "medium" | "mediumgray" => Some(ThemeKind::ProMedium),
             "prolightgray" | "lightgray" | "mediumlight" => Some(ThemeKind::ProLightGray),
@@ -221,6 +241,8 @@ impl Tokens {
 
     pub fn for_kind(kind: ThemeKind) -> Self {
         match kind {
+            ThemeKind::Nodalia => nodalia_tokens(kind, nodalia_theme::Mode::Dark),
+            ThemeKind::NodaliaLight => nodalia_tokens(kind, nodalia_theme::Mode::Light),
             // Sampled from Photoshop 2026's default brightness (raw display values).
             ThemeKind::ProMedium => Tokens {
                 kind,
@@ -843,7 +865,122 @@ impl Tokens {
     pub fn dark(&self) -> bool {
         self.kind.is_dark()
     }
+
+    /// Nodalia's islands: the toolbar, options bar, dock, canvas and status bar are rounded
+    /// surfaces standing apart on the window frame ([`Tokens::frame`]).
+    pub fn islands(&self) -> bool {
+        matches!(self.kind, ThemeKind::Nodalia | ThemeKind::NodaliaLight)
+    }
+
+    /// The window frame the islands stand on; the chrome colour in the other themes.
+    pub fn frame(&self) -> Color32 {
+        match self.kind {
+            ThemeKind::Nodalia => ndl(nodalia_theme::Mode::Dark.palette_with(LIENZO).surface_window),
+            ThemeKind::NodaliaLight => ndl(nodalia_theme::Mode::Light.palette_with(LIENZO).surface_window),
+            _ => self.chrome,
+        }
+    }
 }
+
+/// Which side of a bar or column faces the next island, and so keeps a gap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Gap {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+/// A bar's or column's frame: `fill` with `inner` padding and, in Nodalia, a rounded island kept
+/// [`ISLAND_GAP`] from its neighbour on side `gap`. Returns the frame and the extra size the gap
+/// adds along the panel's axis (add it to the panel's exact size).
+pub fn island(t: &Tokens, fill: Color32, inner: egui::Margin, gap: Gap) -> (egui::Frame, f32) {
+    let frame = egui::Frame::NONE.fill(fill).inner_margin(inner);
+    if !t.islands() {
+        return (frame, 0.0);
+    }
+    let g = ISLAND_GAP as i8;
+    let outer = match gap {
+        Gap::Top => egui::Margin { top: g, ..Default::default() },
+        Gap::Bottom => egui::Margin { bottom: g, ..Default::default() },
+        Gap::Left => egui::Margin { left: g, ..Default::default() },
+        Gap::Right => egui::Margin { right: g, ..Default::default() },
+    };
+    (frame.corner_radius(CornerRadius::same(ISLAND_RADIUS as u8)).outer_margin(outer), ISLAND_GAP)
+}
+
+/// Rounds the corners of an island whose contents paint edge to edge (the canvas): after the
+/// contents, a frame-coloured ring outside a rounded `rect` covers their square corners.
+pub fn round_island_corners(ui: &egui::Ui, rect: egui::Rect) {
+    let t = Tokens::get(ui.ctx());
+    if !t.islands() || !rect.is_positive() {
+        return;
+    }
+    let ring = ISLAND_RADIUS;
+    ui.painter().with_clip_rect(rect).rect_stroke(rect, CornerRadius::same(ISLAND_RADIUS as u8), Stroke::new(ring, t.frame()), egui::StrokeKind::Outside);
+}
+
+/// Lienzo's accent in the Nodalia palette.
+pub const LIENZO: nodalia_theme::Accent = nodalia_theme::Accent::Lienzo;
+/// The gap between two islands, and between an island and the window's edge.
+pub const ISLAND_GAP: f32 = nodalia_theme::component::WINDOW_GAP;
+/// An island's corner radius.
+pub const ISLAND_RADIUS: f32 = nodalia_theme::component::PANEL_RADIUS;
+
+pub(crate) fn ndl(c: nodalia_theme::Rgba) -> Color32 {
+    Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
+}
+
+/// Nodalia's tokens for one mode, with Lienzo's accent. Every colour comes from the NDL palette:
+/// islands are `surface.panel`, the frame between them `surface.window`, controls `control.*`.
+fn nodalia_tokens(kind: ThemeKind, mode: nodalia_theme::Mode) -> Tokens {
+    let p = mode.palette_with(LIENZO);
+    let dark = mode.is_dark();
+    Tokens {
+        kind,
+        chrome: ndl(p.surface_panel),
+        canvas: ndl(p.surface_sunken),
+        canvas_dot: ndl(p.surface_sunken),
+        dock: ndl(p.surface_window),
+        card: ndl(p.surface_panel),
+        card_border: ndl(p.surface_panel),
+        field: ndl(p.control_field_bg),
+        field_border: ndl(p.border_subtle),
+        hover: ndl(p.control_bg_hover),
+        pressed: ndl(p.control_bg_pressed),
+        text: ndl(p.text_primary),
+        text_dim: ndl(p.text_secondary),
+        text_faint: ndl(p.text_tertiary),
+        icon: ndl(p.text_primary),
+        accent: ndl(p.accent_default),
+        accent_soft: ndl(p.accent_subtle),
+        accent_border: ndl(p.border_focus),
+        accent_text: ndl(p.accent_text),
+        separator: ndl(p.border_subtle),
+        shadow: ndl(p.elevation_overlay.color),
+        // The main action of a view is a solid pill in the text colour, as Vinilo's play button.
+        primary_bg: ndl(p.text_primary),
+        primary_text: ndl(p.surface_window),
+        danger: ndl(p.status_danger_fg),
+        warning: ndl(p.status_warning_fg),
+        radius_sm: nodalia_theme::component::CONTROL_RADIUS,
+        radius: nodalia_theme::component::CONTROL_RADIUS,
+        radius_lg: ISLAND_RADIUS,
+        bevel: false,
+        pro: false,
+        round_chips: true,
+        tab_strip: Color32::TRANSPARENT,
+        row_selected: ndl(p.control_bg_pressed),
+        histogram_bg: ndl(p.surface_sunken),
+        histogram_level: if dark { 225 } else { 240 },
+        caption_close: ndl(WINDOW_CLOSE),
+        caption_close_text: Color32::WHITE,
+        scrim: ndl(p.scrim_default),
+    }
+}
+
+/// `component.window.close`: coral under the pointer, in every mode.
+const WINDOW_CLOSE: nodalia_theme::Rgba = nodalia_theme::Rgba::new(0xff, 0x5c, 0x4d, 0xff);
 
 /// Register Inter (UI) and JetBrains Mono (numbers) plus named weights.
 pub fn install_fonts(ctx: &egui::Context) {
@@ -868,6 +1005,8 @@ pub fn install_fonts_with(ctx: &egui::Context, cjk: crate::cjk_fonts::Sources) {
     let medium = add(&mut fonts, "Inter-Medium", photocraft_text::fonts::INTER_MEDIUM.as_slice());
     let semibold = add(&mut fonts, "Inter-SemiBold", photocraft_text::fonts::INTER_SEMIBOLD.as_slice());
     let mono = add(&mut fonts, "JetBrainsMono", photocraft_text::fonts::JETBRAINS_MONO_REGULAR.as_slice());
+    let bold = add(&mut fonts, "Inter-Bold", photocraft_text::fonts::INTER_BOLD.as_slice());
+    let display = add(&mut fonts, "Sora-ExtraBold", photocraft_text::fonts::SORA_EXTRABOLD.as_slice());
     if let Some(inter) = inter {
         fonts.families.entry(FontFamily::Proportional).or_default().insert(0, inter);
     }
@@ -889,7 +1028,7 @@ pub fn install_fonts_with(ctx: &egui::Context, cjk: crate::cjk_fonts::Sources) {
     }
     // Named weights fall back to the default stack for missing glyphs.
     let fallback: Vec<String> = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
-    for (fam, primary) in [("medium", medium), ("semibold", semibold)] {
+    for (fam, primary) in [("medium", medium), ("semibold", semibold), ("bold", bold), ("display", display)] {
         let mut stack: Vec<String> = primary.into_iter().collect();
         stack.extend(fallback.iter().cloned());
         fonts.families.insert(FontFamily::Name(fam.into()), stack);
@@ -1011,6 +1150,14 @@ pub fn medium(size: f32) -> FontId {
 pub fn semibold(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("semibold".into()))
 }
+/// Inter Bold: names in lists and the main labels of Nodalia's islands.
+pub fn bold(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("bold".into()))
+}
+/// Sora ExtraBold: Nodalia's display face, for view titles and the app's name.
+pub fn display(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("display".into()))
+}
 pub fn mono(size: f32) -> FontId {
     FontId::monospace(size)
 }
@@ -1067,8 +1214,9 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
         s.text_styles = [
             (TextStyle::Small, FontId::proportional(10.5)),
             (TextStyle::Body, FontId::proportional(if t.pro { 12.0 } else { 12.5 })),
-            (TextStyle::Button, FontId::proportional(if t.pro { 12.0 } else { 12.5 })),
-            (TextStyle::Heading, semibold(15.0)),
+            // Nodalia sets its controls' labels a step heavier than the body, and its titles in Sora.
+            (TextStyle::Button, if t.islands() { medium(12.5) } else { FontId::proportional(if t.pro { 12.0 } else { 12.5 }) }),
+            (TextStyle::Heading, if t.islands() { display(16.0) } else { semibold(15.0) }),
             (TextStyle::Monospace, FontId::monospace(12.0)),
         ]
         .into();

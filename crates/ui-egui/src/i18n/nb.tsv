@@ -15,7 +15,7 @@
 # pensel, justering, kanal, bane, historikk, alternativer, forvalg, strek, sløring, hurtigtaster …).
 # Clean-room: written from the plain meaning of the English labels; no proprietary localisation
 # resource was consulted or copied. Labels use sentence case, commands are imperatives and the
-# user is addressed as "du". Product, format and technology names (PhotoCraft, ArtCraft, OpenType,
+# user is addressed as "du". Product, format and technology names (Lienzo, ArtCraft, OpenType,
 # CMYK, Lab …) and key caps keep their spelling; the trailing "…" of dialog commands is kept.
 # Decimal commas and a space before % follow Norwegian typography. Plural rule: one|other
 # (n != 1 -> other); nouns like "lag" (layer) have the same form in singular and plural.
@@ -552,9 +552,9 @@
 	Hide All	Skjul alt
 
 # Help
-	About PhotoCraft	Om PhotoCraft
-	PhotoCraft Website	PhotoCrafts nettsted
-	PhotoCraft on GitHub	PhotoCraft på GitHub
+	About Lienzo	Om Lienzo
+	Lienzo Website	Lienzos nettsted
+	Lienzo on GitHub	Lienzo på GitHub
 	Report an Issue…	Rapporter et problem…
 	ArtCraft Website	ArtCraft-nettstedet
 	Join the ArtCraft Discord…	Bli med i ArtCraft-Discord…
@@ -635,11 +635,11 @@
 	Import Shortcuts…	Importer hurtigtaster…
 	Load a keyboard shortcut set saved as .kys	Last inn et hurtigtastsett lagret som .kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	Importerte {n} hurtigtaster fra {file}. Klikk OK for å beholde dem.
-	{n} commands are not in PhotoCraft.	{n} kommandoer finnes ikke i PhotoCraft.
+	{n} commands are not in Lienzo.	{n} kommandoer finnes ikke i Lienzo.
 	Keyboard shortcuts imported	Hurtigtaster importert
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	Hurtigtastsettet ditt {set} er i bruk her: {n} hurtigtaster avviker fra standard. Rediger › Hurtigtaster viser dem; Tilbakestill alle til standard angrer dette.
 	Import keyboard shortcuts?	Importere hurtigtaster?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft fant hurtigtastsettet {set} fra et annet bilderedigeringsprogram på denne datamaskinen: {n} av hurtigtastene avviker fra PhotoCrafts. Importere det?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo fant hurtigtastsettet {set} fra et annet bilderedigeringsprogram på denne datamaskinen: {n} av hurtigtastene avviker fra Lienzos. Importere det?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	Rediger › Hurtigtaster › Tilbakestill alle til standard angrer en import.
 	Don't Import	Ikke importer
 	The keyboard shortcut set was not imported: {error}	Hurtigtastsettet ble ikke importert: {error}
@@ -944,7 +944,7 @@
 	Embed Color Profile	Bygg inn fargeprofil
 	Assign Profile…	Tilordne profil…
 	Convert to Profile…	Konverter til profil…
-	PhotoCraft Manages Colors	PhotoCraft styrer farger
+	Lienzo Manages Colors	Lienzo styrer farger
 	Printer Manages Colors	Skriveren styrer farger
 	(print to the printer)	(skriv ut på skriveren)
 	Absolute Colorimetric	Absolutt kolorimetrisk
@@ -1546,15 +1546,15 @@
 	Use File › Open, or paste a copied image with {paste}.	Bruk Fil › Åpne, eller lim inn et kopiert bilde med {paste}.
 	Native file drag-and-drop is unavailable	Innebygd dra-og-slipp av filer er ikke tilgjengelig
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Innebygd dra-og-slipp av filer støttes ikke på Wayland ennå. Bruk Fil › Åpne, eller kopier bildet i filbehandleren og lim det inn med {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	For å slippe filer, start PhotoCraft under XWayland: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	Eller sett Innstillinger › Ytelse › Linux-skjermtjener til X11: da starter PhotoCraft alltid under XWayland.
+	To drop files, start Lienzo under XWayland: `{command}`	For å slippe filer, start Lienzo under XWayland: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	Eller sett Innstillinger › Ytelse › Linux-skjermtjener til X11: da starter Lienzo alltid under XWayland.
 	Edit › Paste	Rediger › Lim inn
 	Photo	Foto
 	Print	Skriv ut
 	Art & Illustration	Kunst og illustrasjon
 	Mobile	Mobil
 	Film & Video	Film og video
-	Default PhotoCraft Size	Standard PhotoCraft-størrelse
+	Default Lienzo Size	Standard Lienzo-størrelse
 	Clipboard	Utklippstavle
 	Photo (2 × 3 in)	Foto (2 × 3 tommer)
 	Photo (4 × 6 in)	Foto (4 × 6 tommer)
@@ -1707,7 +1707,7 @@
 	Reverse	Snu rekkefølgen
 	Align with layer	Juster etter lag
 	Join us on Discord	Bli med oss på Discord
-	PhotoCraft website	PhotoCrafts nettsted
+	Lienzo website	Lienzos nettsted
 	ArtCraft	ArtCraft
 	GitHub	GitHub
 	No character style	Ingen tegnstil
@@ -1733,9 +1733,9 @@
 	Don't Save	Ikke lagre
 	No	Nei
 	Yes	Ja
-	These settings aren't available in PhotoCraft yet.	Disse innstillingene er ikke tilgjengelige i PhotoCraft ennå.
+	These settings aren't available in Lienzo yet.	Disse innstillingene er ikke tilgjengelige i Lienzo ennå.
 	Shortcut removed.	Hurtigtasten er fjernet.
-	All shortcuts reset to PhotoCraft defaults.	Alle hurtigtaster er tilbakestilt til PhotoCraft-standard.
+	All shortcuts reset to Lienzo defaults.	Alle hurtigtaster er tilbakestilt til Lienzo-standard.
 	Add Shortcut	Legg til hurtigtast
 	Delete Shortcut	Slett hurtigtast
 	Press keys…	Trykk på taster…
@@ -2222,8 +2222,8 @@
 	Output:	Utdata:
 	Paint Overlay	Malingsoverlegg
 	Pattern Size	Mønsterstørrelse
-	PhotoCraft	PhotoCraft
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft: et bilderedigeringsprogram med åpen kildekode, skrevet i Rust.
+	Lienzo	Lienzo
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo: et bilderedigeringsprogram med åpen kildekode, skrevet i Rust.
 	Position and Size	Posisjon og størrelse
 	Preserve Details	Bevar detaljer
 	Preserve Luminosity	Bevar luminositet
@@ -2558,7 +2558,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Automatisk bruker GPU-akselerasjon når det er tilgjengelig, og faller tilbake til CPU-gjengivelse ved feil.
 	Switched to CPU rendering	Byttet til CPU-gjengivelse
 	GPU acceleration could not continue. Your documents are unchanged.	GPU-akselerasjonen kunne ikke fortsette. Dokumentene dine er uendret.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft bruker CPU-bildekomposisjon. Vinduet kan fortsatt bruke grafikkortet ditt.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo bruker CPU-bildekomposisjon. Vinduet kan fortsatt bruke grafikkortet ditt.
 	Retry GPU requires a restart. Save your work first.	Prøv GPU på nytt krever omstart. Lagre arbeidet ditt først.
 	Retry GPU tries the graphics processor again now.	Prøv GPU på nytt prøver grafikkprosessoren igjen nå.
 	GPU acceleration resumed.	GPU-akselerasjon gjenopptatt.
@@ -2811,7 +2811,7 @@ fontWeight	Italic	Kursiv
 	Color to Alpha…	Farge til alfa…
 	Transparency Threshold	Gjennomsiktighetsterskel
 	Opacity Threshold	Dekkevneterskel
-	PhotoCraft — Screen Color Picker	PhotoCraft: skjermfargevelger
+	Lienzo — Screen Color Picker	Lienzo: skjermfargevelger
 
 	Rasterize svg groups deeper than	Rasteriser SVG-grupper dypere enn
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 slår av denne terskelen. SVG-grupper nestet dypere enn 100 nivåer rasteriseres alltid.
@@ -3195,7 +3195,7 @@ curves	Smooth	Jevn ut
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	Lastet inn {n} handling fra {file}|Lastet inn {n} handlinger fra {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} trinn har ingen PhotoCraft-ekvivalent ennå|{n} trinn har ingen PhotoCraft-ekvivalent ennå
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} trinn har ingen Lienzo-ekvivalent ennå|{n} trinn har ingen Lienzo-ekvivalent ennå
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	Lagret {n} handling til {file}|Lagret {n} handlinger til {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} trinn uten Photoshop-ekvivalent ble utelatt|{n} trinn uten Photoshop-ekvivalent ble utelatt
 @plural	{n} action file loaded|{n} action files loaded	{n} handlingsfil lastet inn|{n} handlingsfiler lastet inn
@@ -3297,7 +3297,7 @@ curves	Smooth	Jevn ut
 	Shadow Mode	Skyggemodus
 	Shadow Color	Skyggefarge
 	Shadow Opacity	Skyggedekkevne
-# PhotoCraft release checks.
+# Lienzo release checks.
 	Check for Updates…	Se etter oppdateringer…
 	Open the release page to choose an installer for your system.	Åpne utgivelsessiden for å velge et installasjonsprogram for systemet ditt.
 	Automatically Check for Updates	Se etter oppdateringer automatisk
@@ -3326,12 +3326,12 @@ curves	Smooth	Jevn ut
 	Bicubic Smoother	Bikubisk jevnere
 	Bicubic Sharper	Bikubisk skarpere
 	Pasting from other apps is unavailable	Innliming fra andre programmer er utilgjengelig
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft får ikke tilgang til systemets utklippstavle i denne økten. På Wayland skjuler en Flatpak-sandkasse protokollen som bilder fra andre programmer leses gjennom.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	For å lime inn fra andre programmer, start PhotoCraft under XWayland: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	Ingenting å lime inn: PhotoCraft kan ikke lese systemets utklippstavle her
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo får ikke tilgang til systemets utklippstavle i denne økten. På Wayland skjuler en Flatpak-sandkasse protokollen som bilder fra andre programmer leses gjennom.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	For å lime inn fra andre programmer, start Lienzo under XWayland: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	Ingenting å lime inn: Lienzo kan ikke lese systemets utklippstavle her
 	Delete this set	Slett dette settet
 	New Set…	Nytt sett…
-	PhotoCraft Defaults	PhotoCraft-standarder
+	Lienzo Defaults	Lienzo-standarder
 	Save a list of these shortcuts as a web page	Lagre en liste over disse hurtigtastene som en nettside
 	Save the changes to this set	Lagre endringene i dette settet
 	Save these shortcuts as a .kys file	Lagre disse hurtigtastene som en .kys-fil
@@ -4094,7 +4094,7 @@ curves	Smooth	Jevn ut
 	Multiple Flames Path Directions	Flere flammer etter banens retning
 	Multiple Flames Various Length	Flere flammer med ulik lengde
 	My Brushes	Mine pensler
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Innebygd dra-og-slipp av filer støttes ikke på Wayland ennå. Bruk Fil › Åpne, eller kjør PhotoCraft under XWayland med `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Innebygd dra-og-slipp av filer støttes ikke på Wayland ennå. Bruk Fil › Åpne, eller kjør Lienzo under XWayland med `WAYLAND_DISPLAY= photocraft`.
 	Nearest	Nærmeste
 	Neon Glow	Neonglød
 	Neutralize	Nøytraliser
@@ -4181,7 +4181,7 @@ curves	Smooth	Jevn ut
 	Pentagon	Femkant
 	Percentage	Prosentdel
 	Permission denied	Tilgang nektet
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft prøver på nytt; til en lagring lykkes, går innstillingsendringer tapt når det lukkes.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo prøver på nytt; til en lagring lykkes, går innstillingsendringer tapt når det lukkes.
 	Photomerge	Photomerge
 	Pick Color From Image	Velg farge fra bilde
 	Picture Frame	Bilderamme
@@ -4238,7 +4238,7 @@ curves	Smooth	Jevn ut
 	Pyramids	Pyramider
 	Quick Actions	Hurtighandlinger
 	Quit	Avslutt
-	Quit PhotoCraft	Avslutt PhotoCraft
+	Quit Lienzo	Avslutt Lienzo
 	Quit {app}	Avslutt {app}
 	R G B	R G B
 	R g b	R G B
@@ -4314,7 +4314,7 @@ curves	Smooth	Jevn ut
 	Save a Copy	Lagre en kopi
 	Save before closing?	Lagre før lukking?
 	Save for Web (Legacy)	Lagre for web (eldre)
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	Lagre arbeidet og start PhotoCraft på nytt for å prøve GPU-akselerasjon igjen. CPU-gjengivelse er fortsatt aktiv i denne økten.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	Lagre arbeidet og start Lienzo på nytt for å prøve GPU-akselerasjon igjen. CPU-gjengivelse er fortsatt aktiv i denne økten.
 	Saved a copy as {path}	Lagret en kopi som {path}
 	Saved {path}; image assets: {n} in {dir}	Lagret {path}; bilderessurser: {n} i {dir}
 	Saving…	Lagrer…

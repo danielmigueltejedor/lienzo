@@ -174,7 +174,9 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let w = toolbar_width(t.pro, double);
     let side = app.ui.panels.toolbar_side.resolve();
     let panel = if side == ToolbarSide::Right { egui::Panel::right("toolbar") } else { egui::Panel::left("toolbar") };
-    panel.resizable(false).exact_size(w).frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(m, 8))).show(ui, |ui| {
+    let toward_canvas = if side == ToolbarSide::Right { crate::theme::Gap::Left } else { crate::theme::Gap::Right };
+    let (frame, gap) = crate::theme::island(&t, t.chrome, egui::Margin::symmetric(m, if t.islands() { 12 } else { 8 }), toward_canvas);
+    panel.resizable(false).show_separator_line(!t.islands()).exact_size(w + gap).frame(frame).show(ui, |ui| {
         // Toolbar width is a user preference, not a Pro-only feature. The two header buttons share
         // the narrow toolbar column (14-point targets in every theme, including RTL layouts), so
         // their tooltips carry the full names.
