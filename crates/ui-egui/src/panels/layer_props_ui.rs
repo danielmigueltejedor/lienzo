@@ -3,12 +3,12 @@
 //! `edit.transform`, `layer.translate`, `layer.align.*` and selection commands.
 
 use egui::{Rect, Sense, Stroke, pos2, vec2};
-use photocraft_doc::{Layer, LayerContent};
+use lienzo_doc::{Layer, LayerContent};
 use serde_json::{Value, json};
 
 use crate::props_layout::{LABEL_GAP, LABEL_W, quick_actions_ui, section, stacked_label};
 use crate::theme::{ROW_GAP, Tokens};
-use crate::{PhotocraftApp, widgets};
+use crate::{LienzoApp, widgets};
 
 /// `edit.transform` params that scale the content box `b` = [x0, y0, x1, y1] to `w` x `h`, keeping
 /// the top-left corner (Photoshop's Properties W/H fields), or `layer.translate` params for X/Y.
@@ -84,7 +84,7 @@ fn field(ui: &mut egui::Ui, id: (&str, u64), label: (&str, &str), name: &str, cu
     // a commit was read against is kept, for the next frame: egui reads the text once more the
     // frame after it commits, which against the new size would apply `50%` twice.
     let pct_key = key.with("pct");
-    let typed_extent = if u.unit == photocraft_engine::prefs::Unit::Percent { extent } else { ui.data(|d| d.get_temp(pct_key)).unwrap_or(typed_pct) };
+    let typed_extent = if u.unit == lienzo_engine::prefs::Unit::Percent { extent } else { ui.data(|d| d.get_temp(pct_key)).unwrap_or(typed_pct) };
     let units = widgets::FieldUnits { unit: u.unit, dpi: u.dpi, ppi: u.ppi };
     let resp = widgets::value_field_len(ui, &mut v, -300_000.0..=300_000.0, u.unit.suffix(), width, units, typed_extent).accessible_name(tl!(name));
     if resp.lost_focus() {
@@ -120,13 +120,13 @@ fn field(ui: &mut egui::Ui, id: (&str, u64), label: (&str, &str), name: &str, cu
 /// rulers are in centimeters): document px ↔ that unit at the document's resolution.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct LenUnit {
-    pub unit: photocraft_engine::prefs::Unit,
+    pub unit: lienzo_engine::prefs::Unit,
     pub dpi: f64,
     pub ppi: f64,
 }
 
 impl LenUnit {
-    pub(crate) fn of(app: &PhotocraftApp) -> Self {
+    pub(crate) fn of(app: &LienzoApp) -> Self {
         let ur = &app.session.prefs().units_and_rulers;
         let dpi = app.session.active().map_or(72.0, |s| f64::from(s.doc.resolution_dpi));
         LenUnit { unit: ur.rulers, dpi, ppi: ur.point_size.per_inch() }
@@ -183,7 +183,7 @@ fn align_glyph(ui: &egui::Ui, r: Rect, kind: &str, color: egui::Color32) {
 /// The box the Transform fields show and edit, [x0, y0, x1, y1]: the layer's pixel frame `px`,
 /// or for a shape its path's geometry, as Photoshop's Properties shows it, without the pixels its
 /// stroke adds around it; W/H then scale the path to exactly the typed size.
-fn frame(layer: &Layer, px: photocraft_geom::Rect) -> [f64; 4] {
+fn frame(layer: &Layer, px: lienzo_geom::Rect) -> [f64; 4] {
     let path = match &layer.content {
         LayerContent::Shape(sh) if !sh.path.inverted => sh.path.control_bounds().filter(|c| c.2 > c.0 && c.3 > c.1),
         _ => None,
@@ -197,7 +197,7 @@ const LINK_W: f32 = 20.0;
 /// Pro Properties body for a non-adjustment layer: Transform, Align and Distribute, the kind's own
 /// sections (Character/Paragraph/Type Options for type, Appearance/Shape for shapes), then Quick
 /// Actions, all with the same collapsible headers (#155).
-pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+pub fn properties(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     let mut run: Vec<(String, Value)> = Vec::new();
     if let Some(s) = layer.surface() {
         let bb = frame(layer, app.layer_frame_bounds(layer, s));
@@ -236,7 +236,7 @@ pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
         }
     }
     // Gradient fills: their gradient first, as in Photoshop's Properties panel.
-    let gradient = matches!(layer.content, LayerContent::Fill(photocraft_doc::Fill::Gradient { .. }));
+    let gradient = matches!(layer.content, LayerContent::Fill(lienzo_doc::Fill::Gradient { .. }));
     if gradient {
         crate::gradient_ui::properties(app, ui, layer);
     }
@@ -270,7 +270,7 @@ pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
 
 /// The Align and Distribute section: its buttons run `layer.align.*` and `layer.distribute.*` on
 /// the selected layers (pushed onto `run`), greyed where the engine says they can't.
-fn align_and_distribute(app: &PhotocraftApp, ui: &mut egui::Ui, run: &mut Vec<(String, Value)>) {
+fn align_and_distribute(app: &LienzoApp, ui: &mut egui::Ui, run: &mut Vec<(String, Value)>) {
     let t = Tokens::get(ui.ctx());
     if !section(ui, "align", tl!("Align and Distribute")) {
         return;
@@ -283,7 +283,7 @@ fn align_and_distribute(app: &PhotocraftApp, ui: &mut egui::Ui, run: &mut Vec<(S
             }
             let id = format!("layer.align.{kind}");
             let on = app.session.is_enabled(&id);
-            let label = photocraft_engine::commands::find(&id).map_or(kind, |c| c.label);
+            let label = lienzo_engine::commands::find(&id).map_or(kind, |c| c.label);
             let (r, resp) = ui.allocate_exact_size(vec2(24.0, 24.0), if on { Sense::click() } else { Sense::hover() });
             if resp.hovered() && on {
                 ui.painter().rect_filled(r, t.radius_sm, t.hover);
@@ -312,7 +312,7 @@ fn align_and_distribute(app: &PhotocraftApp, ui: &mut egui::Ui, run: &mut Vec<(S
 
 /// Several layers selected with the Background active: Photoshop's Properties keeps Align and
 /// Distribute for the selection there, above the Document properties (#4608).
-pub fn selection_align(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn selection_align(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let mut run = Vec::new();
     align_and_distribute(app, ui, &mut run);
     for (id, p) in run {
@@ -329,12 +329,12 @@ mod tests {
 
     #[test]
     fn switching_between_gradient_and_raster_keeps_alignment_on_raster_only() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 let state = app.session.active().unwrap();
@@ -361,15 +361,15 @@ mod tests {
     /// #7314: in the Transform section W sits over X and H over Y, and each pair shares a centre.
     #[test]
     fn transform_labels_are_centred_on_each_other() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 60})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": "#336699"})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 let state = app.session.active().unwrap();
@@ -398,16 +398,16 @@ mod tests {
     #[test]
     fn wheeling_the_width_is_one_transform_when_the_wheel_stops() {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 60})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": "#336699"})).unwrap();
         app.run("select.deselect", json!({})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -418,8 +418,8 @@ mod tests {
             app,
         );
         h.run_steps(3);
-        let history = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
-        let width = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+        let history = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
+        let width = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
             let st = h.state().session.active().unwrap();
             let layer = st.doc.layer(st.active_layer.unwrap()).unwrap().clone();
             h.state_mut().layer_frame_bounds(&layer, layer.surface().unwrap()).width()
@@ -451,7 +451,7 @@ mod tests {
     #[test]
     fn a_wheeled_width_is_not_applied_to_another_layer() {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         let mut layers = Vec::new();
         for (x, w) in [(10, 100), (120, 40)] {
@@ -463,9 +463,9 @@ mod tests {
         }
         app.run("layer.select", json!({"layer": layers[0].0})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -476,7 +476,7 @@ mod tests {
             app,
         );
         h.run_steps(3);
-        let widths = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+        let widths = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
             let doc = h.state().session.active().unwrap().doc.clone();
             layers
                 .iter()
@@ -512,16 +512,16 @@ mod tests {
     fn a_wheeled_width_left_undrawn_is_dropped() {
         use egui_kittest::kittest::Queryable;
         let hide = egui::Id::unique("test-hide-layer-props");
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 60})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": "#336699"})).unwrap();
         app.run("select.deselect", json!({})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            move |ui, app: &mut PhotocraftApp| {
+            move |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -535,7 +535,7 @@ mod tests {
             app,
         );
         h.run_steps(3);
-        let history = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+        let history = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
         let before = history(&h);
         let at = h.get_by_label("Width").rect().center();
         h.hover_at(at);
@@ -562,13 +562,13 @@ mod tests {
     #[test]
     fn a_wheeled_width_is_dropped_by_an_undo_during_the_gesture() {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 60})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": "#336699"})).unwrap();
         app.run("select.deselect", json!({})).unwrap();
-        let width = |app: &mut PhotocraftApp| {
+        let width = |app: &mut LienzoApp| {
             let st = app.session.active().unwrap();
             let layer = st.doc.layer(st.active_layer.unwrap()).unwrap().clone();
             app.layer_frame_bounds(&layer, layer.surface().unwrap()).width()
@@ -581,9 +581,9 @@ mod tests {
         app.run("edit.transform", p).unwrap();
         assert!(width(&mut app) > original);
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -619,7 +619,7 @@ mod tests {
     #[test]
     fn a_wheeled_width_is_dropped_by_a_moment_on_a_group() {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 60})).unwrap();
@@ -630,9 +630,9 @@ mod tests {
         let group = app.session.active().unwrap().active_layer.unwrap();
         app.run("layer.select", json!({"layer": layer.0})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -643,7 +643,7 @@ mod tests {
             app,
         );
         h.run_steps(3);
-        let history = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+        let history = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
         let at = h.get_by_label("Width").rect().center();
         h.hover_at(at);
         h.run_steps(1);
@@ -672,7 +672,7 @@ mod tests {
     fn wheeling_width_then_height_applies_each_once() {
         use egui_kittest::kittest::Queryable;
         let setup = || {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
             app.run("select.rect", json!({"x": 10, "y": 10, "width": 100, "height": 50})).unwrap();
@@ -682,9 +682,9 @@ mod tests {
         };
         let app = setup();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).with_step_dt(0.05).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 crate::field_wheel::begin_frame(ui.ctx());
@@ -695,15 +695,15 @@ mod tests {
             app,
         );
         h.run_steps(3);
-        let history = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
-        let size = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+        let history = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
+        let size = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
             let st = h.state().session.active().unwrap();
             let layer = st.doc.layer(st.active_layer.unwrap()).unwrap().clone();
             let r = h.state_mut().layer_frame_bounds(&layer, layer.surface().unwrap());
             (r.width(), r.height())
         };
         let before = history(&h);
-        let notch = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+        let notch = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
             h.event(egui::Event::MouseWheel {
                 source: egui::MouseWheelSource::Unknown,
                 unit: egui::MouseWheelUnit::Line,
@@ -761,22 +761,22 @@ mod tests {
     /// 80 × 40 px rectangle shape at (10, 10) in a 200 × 120 document, with the rulers in `unit`,
     /// and returns its path's [x, y, w, h] (a shape's path scales exactly, where resampled pixels
     /// would blur its edge). Each edit is committed with Enter.
-    fn type_into_transform_fields(unit: photocraft_engine::prefs::Unit, edits: &[(&str, &str)]) -> [f64; 4] {
+    fn type_into_transform_fields(unit: lienzo_engine::prefs::Unit, edits: &[(&str, &str)]) -> [f64; 4] {
         type_into_transform_fields_by(unit, edits, true)
     }
 
     /// [`type_into_transform_fields`], committing each edit with Enter when `enter`, or else by
     /// clicking into the next field (the last edit still with Enter).
-    fn type_into_transform_fields_by(unit: photocraft_engine::prefs::Unit, edits: &[(&str, &str)], enter: bool) -> [f64; 4] {
+    fn type_into_transform_fields_by(unit: lienzo_engine::prefs::Unit, edits: &[(&str, &str)], enter: bool) -> [f64; 4] {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.prefs.edit(|p| p.units_and_rulers.rulers = unit);
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run("shape.create", json!({"kind": "rect", "rect": [10, 10, 80, 40], "fill": "#336699"})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(280.0, 900.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().cumulative_pass_nr() == 0 {
-                    PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                     return;
                 }
                 let state = app.session.active().unwrap();
@@ -808,7 +808,7 @@ mod tests {
     /// size, and into X or Y that share of the document, as in Photoshop; never that many pixels.
     #[test]
     fn transform_fields_take_a_typed_percentage() {
-        use photocraft_engine::prefs::Unit;
+        use lienzo_engine::prefs::Unit;
         // Linked W/H: half the width halves the height too (typed live, `50` alone would be 50 px).
         assert_eq!(type_into_transform_fields(Unit::Pixels, &[("Width", "50%")]), [10.0, 10.0, 40.0, 20.0]);
         assert_eq!(type_into_transform_fields(Unit::Pixels, &[("Height", "150%")]), [10.0, 10.0, 120.0, 60.0]);
@@ -834,7 +834,7 @@ mod tests {
 
     #[test]
     fn transform_fields_show_and_take_the_ruler_unit() {
-        use photocraft_engine::prefs::Unit;
+        use lienzo_engine::prefs::Unit;
         // 72 dpi: 1644 px = 58 cm; typing 60 cm sets 1700.8 px
         let u = LenUnit { unit: Unit::Centimeters, dpi: 72.0, ppi: 72.0 };
         assert!((u.shown(1644.0, 1.0) - 58.0).abs() < 0.01);
@@ -859,7 +859,7 @@ mod tests {
 
     #[test]
     fn transform_params_resize_a_layer_in_the_engine() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 200, "height": 200, "background": "transparent"})).unwrap();
         s.execute("select.rect", json!({"x": 10, "y": 20, "width": 100, "height": 50})).unwrap();
         s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
@@ -891,7 +891,7 @@ mod tests {
     /// Properties, while its outline is transformed by the engine as usual.
     #[test]
     fn linked_properties_resize_keeps_diagonal_arrow_editable() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 1200, "height": 1200})).unwrap();
         s.execute(
             "shape.create",
@@ -913,8 +913,8 @@ mod tests {
             let id = st.active_layer.unwrap();
             let layer = st.doc.layer(id).unwrap();
             let LayerContent::Shape(shape) = &layer.content else { panic!("expected shape layer") };
-            assert!(matches!(shape.live.as_ref(), Some(photocraft_doc::vector::LiveShape::ArrowLine { .. })));
-            let px = photocraft_compose::bounds::content_bounds(layer.surface().unwrap());
+            assert!(matches!(shape.live.as_ref(), Some(lienzo_doc::vector::LiveShape::ArrowLine { .. })));
+            let px = lienzo_compose::bounds::content_bounds(layer.surface().unwrap());
             (id, frame(layer, px))
         };
         let p = transform_params(id.0, b, Some(600.0), None, true, 0.05).unwrap();
@@ -922,7 +922,7 @@ mod tests {
         let layer = s.active().unwrap().doc.layer(id).unwrap();
         let LayerContent::Shape(shape) = &layer.content else { panic!("expected shape layer") };
         assert!(
-            matches!(shape.live.as_ref(), Some(photocraft_doc::vector::LiveShape::ArrowLine { .. })),
+            matches!(shape.live.as_ref(), Some(lienzo_doc::vector::LiveShape::ArrowLine { .. })),
             "proportional Properties resize must preserve live arrow settings"
         );
 
@@ -930,21 +930,21 @@ mod tests {
         s.execute("shape.edit", json!({"layer": id.0, "arrowConcavity": 60.0})).unwrap();
         let layer = s.active().unwrap().doc.layer(id).unwrap();
         let LayerContent::Shape(shape) = &layer.content else { panic!("expected shape layer") };
-        assert!(matches!(shape.live.as_ref(), Some(photocraft_doc::vector::LiveShape::ArrowLine { concavity, .. }) if (*concavity - 60.0).abs() < 1e-9));
+        assert!(matches!(shape.live.as_ref(), Some(lienzo_doc::vector::LiveShape::ArrowLine { concavity, .. }) if (*concavity - 60.0).abs() < 1e-9));
     }
 
     /// A stroked shape's Transform fields show its path, not the stroke's pixels, and a W edit
     /// scales the path to that width, as in Photoshop.
     #[test]
     fn shape_fields_show_and_scale_the_path_without_its_stroke() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
         s.execute("shape.create", json!({"kind": "rect", "rect": [200, 150, 400, 300], "fill": "#3366cc", "stroke": {"width": 15, "color": "#000000"}}))
             .unwrap();
         let st = s.active().unwrap();
         let id = st.active_layer.unwrap();
         let layer = st.doc.layer(id).unwrap();
-        let px = photocraft_compose::bounds::content_bounds(layer.surface().unwrap());
+        let px = lienzo_compose::bounds::content_bounds(layer.surface().unwrap());
         assert!(px.width() > 400, "the stroke's pixels reach past the path: {px:?}");
         let bb = frame(layer, px);
         assert_eq!(bb, [200.0, 150.0, 600.0, 450.0]);
@@ -958,14 +958,14 @@ mod tests {
     /// px typed as 400), while a pixel layer still ignores sub-pixel noise.
     #[test]
     fn a_shape_path_takes_a_width_edit_under_half_a_pixel() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
         s.execute("shape.create", json!({"kind": "rect", "rect": [200, 150, 400.25, 100], "fill": "#3366cc"})).unwrap();
         let st = s.active().unwrap();
         let id = st.active_layer.unwrap();
         let layer = st.doc.layer(id).unwrap();
-        let u = LenUnit { unit: photocraft_engine::prefs::Unit::Pixels, dpi: 72.0, ppi: 72.0 };
-        let bb = frame(layer, photocraft_compose::bounds::content_bounds(layer.surface().unwrap()));
+        let u = LenUnit { unit: lienzo_engine::prefs::Unit::Pixels, dpi: 72.0, ppi: 72.0 };
+        let bb = frame(layer, lienzo_compose::bounds::content_bounds(layer.surface().unwrap()));
         assert_eq!(bb[2] - bb[0], 400.25);
         let tol = edit_tolerance(layer, u, 800.0);
         assert!(tol < 0.25, "{tol}");

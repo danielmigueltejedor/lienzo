@@ -2,7 +2,7 @@
 
 These seven tiny files are original synthetic test data. The four version-16 files were independently
 encoded field by field from the version-16 layout documented in `src/atn.rs`, without calling
-PhotoCraft's writer; the three version-12 files (`v12-*.atn`) encode the version-12 layout documented
+Lienzo's writer; the three version-12 files (`v12-*.atn`) encode the version-12 layout documented
 there (#10743). They are licensed MIT OR Apache-2.0 under the repository's licenses. They contain no
 user artwork, Photoshop program code or proprietary assets. They are not Photoshop-authored
 interoperability oracles.
@@ -18,7 +18,7 @@ interoperability oracles.
 | `v12-commands.atn` | 404 | Version 12: Gaussian Blur, Levels, Select All and Make Layer | `451958b686da9aab45e65ae902c86333b7149d72021c21904e3aae8e39eb77cb` |
 
 `tests/it/atn_contract.rs` checks the independently encoded version-16 bytes and expected public
-structures; `tests/it/atn_v12.rs` (and `photocraft-engine`'s `tests/it/atn_v12.rs`) check the
+structures; `tests/it/atn_v12.rs` (and `lienzo-engine`'s `tests/it/atn_v12.rs`) check the
 version-12 files. The version-12 files follow the version 12 layout in `src/atn.rs`, assembled from
 the measured grammar in #10603. Their `Idnt` reference follows the inferred index-like layout; no
 real version 12 identifier reference was available. Saving them produces version 16, so keep them

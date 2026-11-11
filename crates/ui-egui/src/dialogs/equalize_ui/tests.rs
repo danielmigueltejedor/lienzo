@@ -6,8 +6,8 @@ use crate::menus::invoke as menu;
 
 /// A 40 × 30 layer: the top half at 0.4 gray, the bottom half at 0.5, with the left half selected
 /// when `select`.
-fn setup(select: bool) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn setup(select: bool) -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 40, "height": 15})).unwrap();
@@ -22,7 +22,7 @@ fn setup(select: bool) -> (PhotocraftApp, egui::Context) {
     (app, egui::Context::default())
 }
 
-fn gray(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn gray(app: &LienzoApp, x: i32, y: i32) -> f32 {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().pixel(x, y)[0]
 }
@@ -155,7 +155,7 @@ fn the_dialog_shows_both_choices() {
     let (mut app, _) = setup(true);
     open(&mut app);
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::dialogs::show(app, &ctx);
@@ -163,7 +163,7 @@ fn the_dialog_shows_both_choices() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     assert!(h.query_by_label("Equalize Selected Area Only").is_some());
     h.get_by_label("Equalize Entire Image Based On Selected Area").click();

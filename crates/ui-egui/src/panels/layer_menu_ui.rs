@@ -2,7 +2,7 @@
 //! unavailable ones are greyed using the same enablement as the main menus. Items marked as menu
 //! invocations (`Value::Null` params) go through `menus::invoke`, so dialogs open like in the menu bar.
 
-use photocraft_doc::{LabelColor, Layer, LayerContent};
+use lienzo_doc::{LabelColor, Layer, LayerContent};
 use serde_json::{Value, json};
 
 /// One entry: label, command id. `None` = separator.
@@ -151,7 +151,7 @@ pub fn effects_entries() -> Vec<Entry> {
 
 /// Render the menu. Pushes `(command, params)` actions; `Value::Null` params mean "invoke like the
 /// menu item" (opens the command's dialog when it has one).
-pub fn show(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) -> bool {
+pub fn show(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) -> bool {
     crate::widgets::menu_scroll(ui, |ui| {
         ui.set_min_width(220.0);
         let mut rename = false;
@@ -169,7 +169,7 @@ pub fn show(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bo
 
 /// The menu of `l`'s layer-mask thumbnail (#4575), in Photoshop's order. It acts on `l`, which it
 /// selects first like the row menu.
-pub fn show_mask(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, actions: &mut Vec<(String, Value)>) {
+pub fn show_mask(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, actions: &mut Vec<(String, Value)>) {
     let Some(mask) = &l.mask else { return };
     crate::widgets::menu_scroll(ui, |ui| {
         ui.set_min_width(220.0);
@@ -210,7 +210,7 @@ pub fn show_mask(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, actio
 
 /// Render the layer style menu of `l`'s effect rows ([`effects_entries`]); the actions select `l`
 /// first when it isn't the active layer.
-pub fn show_effects(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, actions: &mut Vec<(String, Value)>) {
+pub fn show_effects(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, actions: &mut Vec<(String, Value)>) {
     crate::widgets::menu_scroll(ui, |ui| {
         ui.set_min_width(200.0);
         items(app, ui, l, false, effects_entries(), actions);
@@ -218,7 +218,7 @@ pub fn show_effects(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, ac
 }
 
 /// The command items of a layer menu, separators collapsed.
-fn items(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, entries: Vec<Entry>, actions: &mut Vec<(String, Value)>) {
+fn items(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, entries: Vec<Entry>, actions: &mut Vec<(String, Value)>) {
     let mut last_sep = true;
     for e in entries {
         match e {
@@ -230,7 +230,7 @@ fn items(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bool,
             }
             Some((label, id)) => {
                 // Skip commands this build doesn't have rather than showing dead items.
-                if photocraft_engine::commands::find(id).is_none() && !crate::menu_catalog::CATALOG.iter().any(|m| m.3 == id) {
+                if lienzo_engine::commands::find(id).is_none() && !crate::menu_catalog::CATALOG.iter().any(|m| m.3 == id) {
                     continue;
                 }
                 last_sep = false;
@@ -254,7 +254,7 @@ pub(crate) fn color_name(color: LabelColor) -> &'static str {
     crate::i18n::tr_ctx(crate::i18n::current(), "layerLabel", color.label())
 }
 
-fn common_color(app: &crate::PhotocraftApp, l: &Layer, on_set: bool) -> Option<LabelColor> {
+fn common_color(app: &crate::LienzoApp, l: &Layer, on_set: bool) -> Option<LabelColor> {
     if !on_set {
         return Some(l.label);
     }
@@ -265,14 +265,14 @@ fn common_color(app: &crate::PhotocraftApp, l: &Layer, on_set: bool) -> Option<L
     labels.all(|c| c == first).then_some(first)
 }
 
-fn color_menu(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) {
+fn color_menu(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) {
     ui.menu_button(tl!("Color"), |ui| {
         color_choices(app, ui, l, on_set, actions);
     });
 }
 
 /// The eye column opens the same color choices directly, without the row's full context menu.
-pub(crate) fn color_choices(app: &crate::PhotocraftApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) {
+pub(crate) fn color_choices(app: &crate::LienzoApp, ui: &mut egui::Ui, l: &Layer, on_set: bool, actions: &mut Vec<(String, Value)>) {
     let current = common_color(app, l, on_set);
     crate::widgets::menu_scroll(ui, |ui| {
         ui.set_min_width(170.0);

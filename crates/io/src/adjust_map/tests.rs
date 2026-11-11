@@ -82,7 +82,7 @@ fn ends(a: &Adjustment) -> ([f32; 3], [f32; 3]) {
 
 #[test]
 fn gradient_map_stops_in_every_colour_space() {
-    use photocraft_color::{Color, ColorMode};
+    use lienzo_color::{Color, ColorMode};
     let white_rgb = (0, [65535, 65535, 65535, 0]);
     // CMYK, stored inverted: 65535 = no ink. Full K only.
     let k_only = grdm_with((2, [65535, 65535, 65535, 0]), white_rgb);
@@ -218,8 +218,8 @@ fn roundtrips() {
     rt(Adjustment::PhotoFilter { color: [q(0), q(40000), q(65535)], density: 1.0, preserve_luminosity: false });
     rt(Adjustment::ChannelMixer { matrix: [[0.5, 0.3, 0.2, 0.0], [0.1, 0.8, 0.1, 0.05], [0.0, 0.2, 0.9, -0.05]], monochrome: false });
     rt(Adjustment::ChannelMixer { matrix: [[0.4, 0.4, 0.2, 0.1], [0.0, 1.0, 0.0, 0.0], [-2.0, 0.0, 2.0, 0.0]], monochrome: true });
-    let id = photocraft_cms::lutfile::LutFile::identity(5);
-    let cube = photocraft_cms::lutfile::write_cube(&id).into_bytes();
+    let id = lienzo_cms::lutfile::LutFile::identity(5);
+    let cube = lienzo_cms::lutfile::write_cube(&id).into_bytes();
     let source = Some(LutSource { format: LutFormat::Cube, bytes: std::sync::Arc::new(cube) });
     rt(Adjustment::ColorLookup { name: "Look.cube".into(), lut: Some(std::sync::Arc::new(id.data)), size: 5, tetrahedral: false, dither: true, source });
 }
@@ -263,14 +263,14 @@ fn inverting_3dl() -> Vec<u8> {
 
 /// A 2³ SpeedGrade `.look` holding the identity.
 fn identity_look() -> Vec<u8> {
-    let hex: String = photocraft_cms::lutfile::LutFile::identity(2).data.iter().flat_map(|v| v.to_le_bytes()).map(|b| format!("{b:02X}")).collect();
+    let hex: String = lienzo_cms::lutfile::LutFile::identity(2).data.iter().flat_map(|v| v.to_le_bytes()).map(|b| format!("{b:02X}")).collect();
     format!("<?xml version=\"1.0\"?>\n<look><LUT><size>\"2\"</size><data>\"{hex}\"</data></LUT></look>\n").into_bytes()
 }
 
 /// A `clrL` block as Photoshop writes one for a loaded LUT file.
 fn clrl_block(format: &str, bytes: &[u8], name: &str) -> Vec<u8> {
-    let en = |t: &str, val: &str| Value::Enumerated { type_id: photocraft_psd::descriptor::Id::new(t), value: photocraft_psd::descriptor::Id::new(val) };
-    let text = |t: &str| Value::Text(photocraft_psd::descriptor::UnicodeString::new_nul(t));
+    let en = |t: &str, val: &str| Value::Enumerated { type_id: lienzo_psd::descriptor::Id::new(t), value: lienzo_psd::descriptor::Id::new(val) };
+    let text = |t: &str| Value::Text(lienzo_psd::descriptor::UnicodeString::new_nul(t));
     let desc = Descriptor::new("null")
         .with("lookupType", en("colorLookupType", "3DLUT"))
         .with("NM  ", text(name))
@@ -318,14 +318,14 @@ fn color_lookup_keeps_a_3dl_or_look_file_as_loaded() {
 fn color_lookup_table_without_matching_file_is_saved_as_cube_named_to_match() {
     let a = parse(b"clrL", &clrl_block("LUTFormat3DL", &inverting_3dl(), "Invert.3DL"), None, Channels::Rgb);
     let Adjustment::ColorLookup { name, size, tetrahedral, dither, source, .. } = a else { panic!("{a:?}") };
-    // The table no longer matches the stored file (changed in PhotoCraft): the bytes are stale.
-    let id = photocraft_cms::lutfile::LutFile::identity(2).data;
+    // The table no longer matches the stored file (changed in Lienzo): the bytes are stale.
+    let id = lienzo_cms::lutfile::LutFile::identity(2).data;
     let edited = Adjustment::ColorLookup { name, lut: Some(std::sync::Arc::new(id.clone())), size, tetrahedral, dither, source };
     let d = written_clrl(&edited);
     assert_eq!(desc_enum(&d, "LUTFormat"), Some(&b"LUTFormatCUBE"[..]));
     assert_eq!(desc_text(&d, "LUT3DFileName").as_deref(), Some("Invert.cube"));
-    assert_eq!(photocraft_cms::lutfile::parse("x.cube", raw(&d, "LUT3DFileData")).unwrap().data, id);
-    // A table made in PhotoCraft (no file) named like another format is also renamed.
+    assert_eq!(lienzo_cms::lutfile::parse("x.cube", raw(&d, "LUT3DFileData")).unwrap().data, id);
+    // A table made in Lienzo (no file) named like another format is also renamed.
     let made =
         Adjustment::ColorLookup { name: "Grade.look".into(), lut: Some(std::sync::Arc::new(id)), size: 2, tetrahedral: false, dither: false, source: None };
     let d = written_clrl(&made);
@@ -335,7 +335,7 @@ fn color_lookup_table_without_matching_file_is_saved_as_cube_named_to_match() {
     // An unreadable stored file falls back the same way instead of failing the save.
     let junk = Adjustment::ColorLookup {
         name: "Junk.3dl".into(),
-        lut: Some(std::sync::Arc::new(photocraft_cms::lutfile::LutFile::identity(2).data)),
+        lut: Some(std::sync::Arc::new(lienzo_cms::lutfile::LutFile::identity(2).data)),
         size: 2,
         tetrahedral: false,
         dither: false,
@@ -350,10 +350,10 @@ fn color_lookup_table_without_matching_file_is_saved_as_cube_named_to_match() {
 #[test]
 fn color_lookup_synthetic_block() {
     let cube = b"TITLE \"t\"\nLUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n";
-    let en = |t: &str, val: &str| Value::Enumerated { type_id: photocraft_psd::descriptor::Id::new(t), value: photocraft_psd::descriptor::Id::new(val) };
+    let en = |t: &str, val: &str| Value::Enumerated { type_id: lienzo_psd::descriptor::Id::new(t), value: lienzo_psd::descriptor::Id::new(val) };
     let desc = Descriptor::new("null")
         .with("lookupType", en("colorLookupType", "3DLUT"))
-        .with("NM  ", Value::Text(photocraft_psd::descriptor::UnicodeString::new_nul("Id")))
+        .with("NM  ", Value::Text(lienzo_psd::descriptor::UnicodeString::new_nul("Id")))
         .with("Dthr", Value::Boolean(true))
         .with("LUTFormat", en("LUTFormatType", "LUTFormatCUBE"))
         .with("LUT3DFileData", Value::RawData(cube.to_vec()));
@@ -384,10 +384,10 @@ fn color_lookup_synthetic_block() {
 }
 
 fn cube_lookup_block(cube: &[u8]) -> Vec<u8> {
-    let en = |t: &str, val: &str| Value::Enumerated { type_id: photocraft_psd::descriptor::Id::new(t), value: photocraft_psd::descriptor::Id::new(val) };
+    let en = |t: &str, val: &str| Value::Enumerated { type_id: lienzo_psd::descriptor::Id::new(t), value: lienzo_psd::descriptor::Id::new(val) };
     let desc = Descriptor::new("null")
         .with("LUTFormat", en("LUTFormatType", "LUTFormatCUBE"))
-        .with("LUT3DFileName", Value::Text(photocraft_psd::descriptor::UnicodeString::new_nul("domain.cube")))
+        .with("LUT3DFileName", Value::Text(lienzo_psd::descriptor::UnicodeString::new_nul("domain.cube")))
         .with("LUT3DFileData", Value::RawData(cube.to_vec()));
     let mut block = vec![0, 1];
     block.extend(VersionedDescriptor::new(desc).to_bytes());
@@ -518,7 +518,7 @@ fn photo_filter_golden_blocks() {
     assert_eq!(color, [1.0, 32768.0 / 65535.0, 0.0]);
     assert_eq!(density, 0.4);
     assert_eq!(write(&a)[0].1, v2, "version 2 RGB is written back byte-exact");
-    // Older PhotoCraft files used only one padding byte (18 bytes); keep importing them,
+    // Older Lienzo files used only one padding byte (18 bytes); keep importing them,
     // but never produce that Photoshop-incompatible length again.
     assert_eq!(parse(b"phfl", &v2[..18], None, Channels::Rgb), a);
     for preserve_luminosity in [false, true] {
@@ -672,7 +672,7 @@ fn degenerate_adjustments_still_get_an_encoding() {
         let back = parse(&b[0].0, &b[0].1, None, Channels::Rgb);
         let Adjustment::ColorLookup { lut: Some(t), size: 2, dither: false, name, .. } = back else { panic!("{back:?}") };
         assert_eq!(name, "L");
-        assert_eq!(*t, photocraft_cms::lutfile::LutFile::identity(2).data);
+        assert_eq!(*t, lienzo_cms::lutfile::LutFile::identity(2).data);
     }
     // Every kind except a malformed Unsupported key has an encoding.
     assert!(write(&Adjustment::Unsupported { psd_key: "abc".into(), raw: Vec::new().into() }).is_empty());

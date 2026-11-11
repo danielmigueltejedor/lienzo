@@ -1,8 +1,8 @@
 use super::begin::{fold_made, moves_kind, moving_layers, rect_to_quad_affine, take_back_made, warps_type};
 use super::options_bar::{rotate_about_pivot, scale_about_pivot};
 use super::{
-    Arc, DocId, JobEvent, JobId, JobOutcome, LayerContent, LayerId, MadeLayer, PhotocraftApp, Several, Step, Steps, TransformPreview, TransformSession,
-    corners, json,
+    Arc, DocId, JobEvent, JobId, JobOutcome, LayerContent, LayerId, LienzoApp, MadeLayer, Several, Step, Steps, TransformPreview, TransformSession, corners,
+    json,
 };
 
 /// Undo and Redo while the commit runs in the background (Free Transform, or Warp).
@@ -10,7 +10,7 @@ const STILL_APPLYING: &str = "Free Transform is still being applied";
 
 const STILL_WARPING: &str = "Warp is still being applied";
 
-pub fn commit(app: &mut PhotocraftApp) {
+pub fn commit(app: &mut LienzoApp) {
     if committing(app).is_some() {
         return;
     }
@@ -113,7 +113,7 @@ pub fn commit(app: &mut PhotocraftApp) {
 
 /// After the transform landed or not: fold the layer the session made into its step, or take it
 /// back.
-fn finish(app: &mut PhotocraftApp, document: Option<DocId>, layer: LayerId, made: Option<MadeLayer>, landed: bool) {
+fn finish(app: &mut LienzoApp, document: Option<DocId>, layer: LayerId, made: Option<MadeLayer>, landed: bool) {
     let (Some(made), Some(document)) = (made, document) else { return };
     if landed {
         fold_made(app, document, layer, made);
@@ -123,13 +123,13 @@ fn finish(app: &mut PhotocraftApp, document: Option<DocId>, layer: LayerId, made
 }
 
 /// The job applying the transform, while it runs.
-pub(crate) fn committing(app: &PhotocraftApp) -> Option<JobId> {
+pub(crate) fn committing(app: &LienzoApp) -> Option<JobId> {
     app.transform_preview.as_ref().and_then(|pv| pv.committing)
 }
 
 /// A job ended (see [`crate::jobs_ui`]): when it was the commit, the session ends with it. Its
 /// status and errors are reported like any job's.
-pub fn on_job_event(app: &mut PhotocraftApp, e: &JobEvent) {
+pub fn on_job_event(app: &mut LienzoApp, e: &JobEvent) {
     if super::begin::on_prepared(app, e) {
         return;
     }
@@ -163,7 +163,7 @@ pub fn on_job_event(app: &mut PhotocraftApp, e: &JobEvent) {
 /// A commit the engine refused (a result over the pixel budget, #3773): the box stays open as it
 /// was, with the reason in the status bar, so the transform can be changed or cancelled. A copy or
 /// a placed layer it made goes only when it is cancelled.
-fn keep_open(app: &mut PhotocraftApp, t: TransformSession, preview: Option<TransformPreview>, e: String) {
+fn keep_open(app: &mut LienzoApp, t: TransformSession, preview: Option<TransformPreview>, e: String) {
     app.ui.transform = Some(t);
     app.transform_preview = preview;
     app.ui.status = e;
@@ -174,7 +174,7 @@ fn keep_open(app: &mut PhotocraftApp, t: TransformSession, preview: Option<Trans
 /// never stays on a layer that is no longer the active one (#1400). Checked every frame and before
 /// each pointer event, so a press with a tool chosen just before it (`ui.pointer`'s `tool`) goes to
 /// that tool.
-pub fn end_if_left(app: &mut PhotocraftApp) {
+pub fn end_if_left(app: &mut LienzoApp) {
     let Some(t) = &app.ui.transform else { return };
     if committing(app).is_some() {
         return;
@@ -210,7 +210,7 @@ pub fn end_if_left(app: &mut PhotocraftApp) {
 
 /// Another tool picked, or (outside Transform Selection) another layer selected or the selected
 /// layers changed, since the box opened: the session ends ([`end_if_left`], #1400, #11101).
-fn switched_away(app: &PhotocraftApp) -> bool {
+fn switched_away(app: &LienzoApp) -> bool {
     let (Some(t), Some(st)) = (&app.ui.transform, app.session.active()) else { return false };
     let opened = app.transform_preview.as_ref().and_then(|pv| pv.follow.as_ref()).and_then(|f| f.selected.as_deref());
     app.transform_preview.as_ref().is_some_and(|pv| pv.tool != app.ui.tool)
@@ -224,7 +224,7 @@ fn switched_away(app: &PhotocraftApp) -> bool {
 /// compared, not the layers the box moves: those also hold the layers linked to it (#11217) and
 /// leave out the children of a selected group. Boxes over a selection, a mask or channel, a path,
 /// a placed file or Content-Aware Scale don't follow the selection.
-fn selected_layers_changed(st: &photocraft_engine::DocState, t: &TransformSession, opened: Option<&[LayerId]>) -> bool {
+fn selected_layers_changed(st: &lienzo_engine::DocState, t: &TransformSession, opened: Option<&[LayerId]>) -> bool {
     if t.selection || t.target.is_some() || t.path.is_some() || t.made == Some(MadeLayer::Place) || t.content_aware.is_some() {
         return false;
     }
@@ -239,7 +239,7 @@ fn selected_layers_changed(st: &photocraft_engine::DocState, t: &TransformSessio
 /// document under them (other layers, and the part of the layer a selection leaves behind) is
 /// rebuilt from the current one. The moving pixels keep the session's. Called before the canvas
 /// reads the preview, so it never caches a revision with the old preview.
-pub fn follow_edits(app: &mut PhotocraftApp) {
+pub fn follow_edits(app: &mut LienzoApp) {
     let (Some(t), Some(pv)) = (&app.ui.transform, app.transform_preview.as_mut()) else { return };
     let Some(follow) = pv.follow.as_mut() else { return };
     let Some(st) = app.session.active().filter(|st| st.doc.id == pv.doc.id && st.revision != follow.revision) else { return };
@@ -274,7 +274,7 @@ pub fn follow_edits(app: &mut PhotocraftApp) {
     pv.doc = Arc::new(pd);
 }
 
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     if app.ui.transform.as_ref().is_some_and(crate::frame_tool::frame_transform) {
         app.frame_preview = None;
     }
@@ -295,7 +295,7 @@ pub fn cancel(app: &mut PhotocraftApp) {
 }
 
 /// The session's starting box: where Undo stops.
-pub(super) fn start_steps(app: &mut PhotocraftApp) {
+pub(super) fn start_steps(app: &mut LienzoApp) {
     if let (Some(t), Some(pv)) = (&app.ui.transform, app.transform_preview.as_mut()) {
         pv.steps = Steps { settled: Some(Step::of(t)), ..Steps::default() };
     }
@@ -303,7 +303,7 @@ pub(super) fn start_steps(app: &mut PhotocraftApp) {
 
 /// Record the box as an undo step whenever it comes to rest in a new state: once per drag (on
 /// release), nudge or option edit (once typing in its field ends). Call once per frame.
-pub fn track_steps(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn track_steps(app: &mut LienzoApp, ctx: &egui::Context) {
     let (Some(t), Some(pv)) = (&app.ui.transform, app.transform_preview.as_mut()) else { return };
     if pv.gesture.is_some() || pv.warp_drag.is_some() || ctx.input(|i| i.pointer.any_down()) || ctx.text_edit_focused() {
         // Whatever comes to rest after this is more than the nudge.
@@ -315,7 +315,7 @@ pub fn track_steps(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Arrow keys while Free Transform is active: move the box (and its pivot) by `(dx, dy)`.
 /// Nudges that follow each other closely are one Undo step of the session (`nudge_bundle`).
-pub(crate) fn nudge(app: &mut PhotocraftApp, dx: f64, dy: f64) {
+pub(crate) fn nudge(app: &mut LienzoApp, dx: f64, dy: f64) {
     let (pause, now) = (crate::nudge_bundle::pause(app), app.nudge_bundle.now);
     let Some(t) = app.ui.transform.as_mut().filter(|t| t.warp.is_none()) else { return };
     let before = Step::of(t);
@@ -330,11 +330,11 @@ pub(crate) fn nudge(app: &mut PhotocraftApp, dx: f64, dy: f64) {
 pub(crate) const SAVE_FOR_WEB: &str = "file.export.saveForWebLegacy";
 
 /// Layer › Copy CSS: refused under an open box too, as it would copy the bounds from before it.
-const COPY_CSS: &str = photocraft_engine::layer_css_cmds::ID;
+const COPY_CSS: &str = lienzo_engine::layer_css_cmds::ID;
 
 /// While transforming, Undo and Redo apply to the box: `Some(enabled)` for those commands (and
 /// Toggle Last State, which would change the document under the box), `None` for the rest.
-pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn is_enabled(app: &LienzoApp, id: &str) -> Option<bool> {
     if (matches!(id, "edit.freeTransform" | "edit.freeTransformCopy") || id.starts_with("edit.transform."))
         && crate::vector_ui::free_transform_path(app).is_none()
         && crate::canvas::multiple_color_target(app)
@@ -377,7 +377,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
 }
 
 /// Does the box move an editable type layer (not its selection outline, a lone mask or a path)?
-pub(super) fn moves_type(app: &PhotocraftApp, t: &TransformSession) -> bool {
+pub(super) fn moves_type(app: &LienzoApp, t: &TransformSession) -> bool {
     !t.selection && t.target.is_none() && t.path.is_none() && moves_kind(app, t, |c| matches!(c, LayerContent::Text(_)))
 }
 
@@ -408,7 +408,7 @@ fn box_command(id: &str) -> bool {
         || box_preset(id).is_some()
 }
 
-pub fn intercept(app: &mut PhotocraftApp, id: &str) -> Option<Result<serde_json::Value, String>> {
+pub fn intercept(app: &mut LienzoApp, id: &str) -> Option<Result<serde_json::Value, String>> {
     let warping = app.ui.transform.as_ref()?.warp.is_some();
     if committing(app).is_some() {
         return box_command(id).then(|| Err(if warping { STILL_WARPING } else { STILL_APPLYING }.into()));
@@ -432,7 +432,7 @@ pub fn intercept(app: &mut PhotocraftApp, id: &str) -> Option<Result<serde_json:
 }
 
 /// Undo (or redo) one step of the open session; nothing mid-drag or with no step to take.
-fn step(app: &mut PhotocraftApp, redo: bool) -> serde_json::Value {
+fn step(app: &mut LienzoApp, redo: bool) -> serde_json::Value {
     let Some(t) = app.ui.transform.as_mut() else { return serde_json::Value::Null };
     let Some(pv) = app.transform_preview.as_mut().filter(|pv| pv.gesture.is_none() && pv.warp_drag.is_none()) else {
         return serde_json::Value::Null;

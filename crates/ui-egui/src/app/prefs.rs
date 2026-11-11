@@ -1,6 +1,6 @@
-use super::{PhotocraftApp, dock, panel_docking, single_line_drag, text_field_menu, theme, tool_cursor, wheel_nav};
+use super::{LienzoApp, dock, panel_docking, single_line_drag, text_field_menu, theme, tool_cursor, wheel_nav};
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Records a picked type family for the font menu's Recent group, capped by
     /// Preferences ▸ Type ▸ Recent Fonts (0 keeps no list), most recent first, de-duplicated.
     pub fn note_recent_font(&mut self, family: &str) {
@@ -22,7 +22,7 @@ impl PhotocraftApp {
     }
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     pub fn set_theme(&mut self, ctx: &egui::Context, kind: theme::ThemeKind) {
         if let Err(e) = self.run("prefs.set", serde_json::json!({"path": "interface.theme", "value": kind.id()})) {
             self.ui.status = e;
@@ -45,7 +45,7 @@ impl PhotocraftApp {
     }
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Install fonts, image loaders and the theme. Call from the app creator (and again for a
     /// replacement Context) before the first `run_ui` so the very first frame renders and the
     /// Type reset begin/end pass markers exist; otherwise `logic` does it and the first frame is
@@ -59,7 +59,7 @@ impl PhotocraftApp {
         theme::apply(ctx, kind);
         // Right-click in any text field: its Cut / Copy / Paste menu (text_field_menu.rs).
         ctx.add_plugin(text_field_menu::TextFieldMenu);
-        // egui's own ⌘+ / ⌘- / ⌘0 scale the whole interface; PhotoCraft zooms the canvas instead
+        // egui's own ⌘+ / ⌘- / ⌘0 scale the whole interface; Lienzo zooms the canvas instead
         // (shortcuts.rs), like Photoshop.
         ctx.options_mut(|o| o.zoom_with_keyboard = false);
         // ⌘/Ctrl + wheel scrolls sideways, as in Photoshop; only a pinch zooms (wheel_nav.rs).

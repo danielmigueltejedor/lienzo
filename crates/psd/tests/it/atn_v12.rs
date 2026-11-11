@@ -1,6 +1,6 @@
-use photocraft_psd::PsdError;
-use photocraft_psd::atn;
-use photocraft_psd::descriptor::{Class, Descriptor, Id, MAX_DEPTH, ObjectArray, ReferenceItem as R, UnicodeString, Value as V};
+use lienzo_psd::PsdError;
+use lienzo_psd::atn;
+use lienzo_psd::descriptor::{Class, Descriptor, Id, MAX_DEPTH, ObjectArray, ReferenceItem as R, UnicodeString, Value as V};
 
 const STOP: &[u8] = include_bytes!("../fixtures/atn/v12-stop.atn");
 const VALUES: &[u8] = include_bytes!("../fixtures/atn/v12-values.atn");

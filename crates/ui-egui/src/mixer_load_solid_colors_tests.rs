@@ -8,7 +8,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
@@ -17,8 +17,8 @@ const GREEN: [f32; 4] = [30.0 / 255.0, 180.0 / 255.0, 60.0 / 255.0, 1.0];
 
 /// An 800 × 600 document whose pixel layer is red left of x 200 and green from there on, with the
 /// Mixer Brush active.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "white"})).unwrap();
     app.run("layer.new.layer", json!({"name": "Split"})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 200, "height": 600})).unwrap();
@@ -32,7 +32,7 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn alt_click(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn alt_click(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::ALT);
     tool_event(app, ToolEvent::Up { x, y }, Modifiers::ALT);
 }
@@ -44,7 +44,7 @@ fn level(c: [f32; 4]) -> [i32; 4] {
 #[test]
 fn the_load_menu_lists_load_solid_colors_only_after_a_separator() {
     let mut h = Harness::builder().with_size(vec2(1600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -52,13 +52,13 @@ fn the_load_menu_lists_load_solid_colors_only_after_a_separator() {
         },
         app(),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     if !h.ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
         return;
     }
     assert!(!h.state().session.tools.brush.mixer.solid_colors_only, "off by default");
-    let open = |h: &mut Harness<'static, PhotocraftApp>| {
+    let open = |h: &mut Harness<'static, LienzoApp>| {
         h.get_by_label("Current Brush Load").click();
         h.run_steps(3);
     };

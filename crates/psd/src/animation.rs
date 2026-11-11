@@ -8,7 +8,7 @@
 //!
 //! Raw records remain the source of truth: typed accessors do not rewrite them, discard unknown
 //! fields, interpret sparse layer-state inheritance, or assume a frame id is its sequence index.
-//! This module does **not** import an animation into PhotoCraft or evaluate timeline tracks.
+//! This module does **not** import an animation into Lienzo or evaluate timeline tracks.
 
 use crate::descriptor::{Descriptor, Value, VersionedDescriptor};
 use crate::error::{PsdError, Result};

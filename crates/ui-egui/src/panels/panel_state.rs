@@ -28,7 +28,7 @@ fn rect_key(state: egui::containers::panel::PanelState) -> [f32; 4] {
 }
 
 fn stamp_id(name: &str) -> egui::Id {
-    egui::Id::unique(format!("photocraft-panel-state-stamp:{name}"))
+    egui::Id::unique(format!("lienzo-panel-state-stamp:{name}"))
 }
 
 /// Copy 0.36 `PanelState` entries to their 0.37 parent-scoped keys.
@@ -41,7 +41,7 @@ fn stamp_id(name: &str) -> egui::Id {
 /// lost (documented in the plan's rollback section). Data-only: call it before any panel is shown.
 pub fn migrate_panel_state(ctx: &egui::Context) {
     use egui::containers::panel::PanelState;
-    let done = egui::Id::unique("photocraft-panel-state-migrated");
+    let done = egui::Id::unique("lienzo-panel-state-migrated");
     if ctx.data(|d| d.get_temp::<bool>(done).unwrap_or(false)) {
         return;
     }

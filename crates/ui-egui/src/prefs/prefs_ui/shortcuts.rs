@@ -1,9 +1,9 @@
 use super::dialogs::toolbar_tab;
-use super::{BTreeMap, Map, PhotocraftApp, RichText, Tokens, Value, default_shortcut, json, prefs, vec2};
+use super::{BTreeMap, LienzoApp, Map, RichText, Tokens, Value, default_shortcut, json, prefs, vec2};
 
 /// Every shortcut-bearing command (engine registry plus shell commands): (id, label, menu path,
 /// default shortcut), menu items first in Photoshop order.
-pub fn shortcut_items(app: &PhotocraftApp) -> Vec<(String, String, Vec<String>, Option<String>)> {
+pub fn shortcut_items(app: &LienzoApp) -> Vec<(String, String, Vec<String>, Option<String>)> {
     let mut out: Vec<(String, String, Vec<String>, Option<String>)> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for it in crate::menus::menu_items(app) {
@@ -16,10 +16,10 @@ pub fn shortcut_items(app: &PhotocraftApp) -> Vec<(String, String, Vec<String>, 
     // Commands without a menu item: the colour and fill keys (D, X, ⌥⌫…) sit under Tools, as
     // Photoshop lists its colour keys in the Tools shortcut set, after the rest; then the held
     // temporary tools (#249).
-    let tools_key = |id: &str| id.starts_with("tools.") || photocraft_engine::fill_key_cmds::IDS.contains(&id);
+    let tools_key = |id: &str| id.starts_with("tools.") || lienzo_engine::fill_key_cmds::IDS.contains(&id);
     let mut tools = Vec::new();
     let mut layer = Vec::new();
-    for c in photocraft_engine::command_specs() {
+    for c in lienzo_engine::command_specs() {
         if seen.insert(c.id.to_string()) && c.shortcut.is_some() {
             let item = (c.id.to_string(), c.label.to_string(), c.menu.iter().map(|s| s.to_string()).collect::<Vec<_>>(), c.shortcut.map(Into::into));
             if c.menu.is_empty() && tools_key(c.id) {
@@ -175,7 +175,7 @@ pub(crate) fn capture_key_press(capture_mods: egui::Modifiers, i: &egui::InputSt
 
 /// Keyboard Shortcuts and Menus: a searchable list of commands by menu with editable shortcuts
 /// (click a shortcut, press keys; ⌫ removes it), menu visibility and colours, toolbar tools.
-pub(super) fn shortcuts_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(super) fn shortcuts_body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let mut tab = f.get("tab").and_then(Value::as_u64).unwrap_or(0);
     ui.horizontal(|ui| {
@@ -404,7 +404,7 @@ pub(super) fn shortcuts_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut
                     });
                 } else {
                     // Edit › Menus, Keyboard Shortcuts, Preferences, Save and Exit always stay (#5096).
-                    let hideable = photocraft_engine::prefs::MenuCustomization::hideable(id);
+                    let hideable = lienzo_engine::prefs::MenuCustomization::hideable(id);
                     let mut visible = !hideable || !hidden.contains(id);
                     ui.add_enabled_ui(hideable, |ui| crate::widgets::checkbox(ui, &mut visible, tl!("Visible")));
                     if visible {
@@ -564,7 +564,7 @@ fn dialog_keys(overrides: &BTreeMap<String, String>, alternates: &BTreeMap<Strin
 /// OK, like the rest of the dialog.
 #[allow(clippy::too_many_arguments)]
 fn set_row(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ui: &mut egui::Ui,
     f: &mut Map<String, Value>,
     overrides: &mut BTreeMap<String, String>,
@@ -573,7 +573,7 @@ fn set_row(
     message: &mut String,
     warning: &mut bool,
 ) {
-    use photocraft_engine::shortcut_sets::{self, ShortcutSet};
+    use lienzo_engine::shortcut_sets::{self, ShortcutSet};
     let mut sets: BTreeMap<String, ShortcutSet> = f.get("sets").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
     let mut active = f.get("activeSet").and_then(Value::as_str).unwrap_or("").to_string();
     if !active.is_empty() && !sets.contains_key(&active) {
@@ -653,16 +653,16 @@ fn set_row(
     }
     if export || summarize {
         let result = if export {
-            let entries: Vec<photocraft_engine::kys::Entry> = items
+            let entries: Vec<lienzo_engine::kys::Entry> = items
                 .iter()
-                .map(|(id, label, _, def)| photocraft_engine::kys::Entry {
+                .map(|(id, label, _, def)| lienzo_engine::kys::Entry {
                     id: id.clone(),
                     label: label.clone(),
                     tool: id.starts_with("tools.select."),
                     keys: dialog_keys(overrides, alternates, id, def.as_deref()),
                 })
                 .collect();
-            let text = photocraft_engine::kys::write(&set_label, &entries);
+            let text = lienzo_engine::kys::write(&set_label, &entries);
             save_text(app, &format!("{set_label}.kys"), text)
         } else {
             let mut sections: Vec<shortcut_sets::Section> = Vec::new();
@@ -689,7 +689,7 @@ fn set_row(
 }
 
 /// Save `text` through the save dialog under the suggested file name.
-fn save_text(app: &mut PhotocraftApp, suggested: &str, text: String) -> Result<Value, String> {
+fn save_text(app: &mut LienzoApp, suggested: &str, text: String) -> Result<Value, String> {
     // A set name can hold characters a file name can't.
     let name: String = suggested.chars().map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c }).collect();
     app.pick_save(&name, move |app, path| {

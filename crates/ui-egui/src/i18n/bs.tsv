@@ -14,7 +14,7 @@
 # ...). No proprietary localisation resource, string table or product UI was consulted or copied;
 # in particular not any localisation of Adobe Photoshop. Add entries the same way. AI-assisted
 # (Claude Code), not yet reviewed by a native speaker; shared with storytold/craft-i18n
-# (locales/bs/photocraft.tsv and common.tsv).
+# (locales/bs/lienzo.tsv and common.tsv).
 # Conventions: Bosnian Latin script, Ijekavian, standard Bosnian vocabulary where the neighbouring
 # languages differ (historija, sačuvaj, tačka, datoteka, postavke), sentence case. Commands are
 # imperatives (Otvori…, Sačuvaj kao…), tools read "Alat …" (Alat četkica). Quotation marks „…”
@@ -3798,7 +3798,7 @@ layerLabel	No Color	Bez boje
 	Mezzotint	Mecotinta
 	Mosaic	Mozaik
 	Motion Blur	Zamućenje pokreta
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Izvorno prevlačenje i ispuštanje datoteka još nije podržano na Waylandu. Koristite Datoteka › Otvori ili pokrenite Lienzo pod XWaylandom s `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Izvorno prevlačenje i ispuštanje datoteka još nije podržano na Waylandu. Koristite Datoteka › Otvori ili pokrenite Lienzo pod XWaylandom s `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Neonski sjaj
 	New Guide Layout	Novi raspored vodilica
 	New Video Layer from File	Novi video sloj iz datoteke

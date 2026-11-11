@@ -8,18 +8,18 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 const OPTIONS: [&str; 4] = ["Pulled String Mode", "Stroke Catch-up", "Catch-up on Stroke End", "Adjust for Zoom"];
 
-fn bar(tool: Tool, smoothing: f32) -> Harness<'static, PhotocraftApp> {
+fn bar(tool: Tool, smoothing: f32) -> Harness<'static, LienzoApp> {
     bar_with(tool, smoothing, None)
 }
 
 /// [`bar`] with the four options set to `options` (in [`OPTIONS`] order) before the first frame.
-fn bar_with(tool: Tool, smoothing: f32, options: Option<[bool; 4]>) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar_with(tool: Tool, smoothing: f32, options: Option<[bool; 4]>) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     crate::paint_mouse::sync_tool_brush(&mut app);
@@ -29,18 +29,18 @@ fn bar_with(tool: Tool, smoothing: f32, options: Option<[bool; 4]>) -> Harness<'
         (s.pulled_string, s.catch_up, s.catch_up_on_end, s.adjust_for_zoom) = (a, b, c, d);
     }
     let mut h = Harness::builder().with_size(vec2(1800.0, 400.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h.get_by_label("Set additional smoothing options").click();
     h.run_steps(3);
     h
 }
 
-fn checkbox<'a>(h: &'a Harness<'static, PhotocraftApp>, label: &str) -> egui_kittest::Node<'a> {
+fn checkbox<'a>(h: &'a Harness<'static, LienzoApp>, label: &str) -> egui_kittest::Node<'a> {
     h.query_all_by_role(Role::CheckBox).find(|n| n.accesskit_node().label().as_deref() == Some(label)).unwrap_or_else(|| panic!("{label}"))
 }
 
-fn values(h: &Harness<'static, PhotocraftApp>) -> [bool; 4] {
+fn values(h: &Harness<'static, LienzoApp>) -> [bool; 4] {
     let s = &h.state().session.tools.brush.smoothing;
     [s.pulled_string, s.catch_up, s.catch_up_on_end, s.adjust_for_zoom]
 }
@@ -91,7 +91,7 @@ fn a_smoothing_that_shows_as_zero_greys_them_too() {
 const SET: [bool; 4] = [true, false, true, false];
 
 /// Types `text` into the options bar's Smoothing field, then Tabs out of it.
-fn type_smoothing(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
+fn type_smoothing(h: &mut Harness<'static, LienzoApp>, text: &str) {
     h.query_all_by_role(Role::SpinButton)
         .find(|n| n.accesskit_node().label().is_some_and(|l| l.trim_end_matches(':') == "Smoothing"))
         .expect("the Smoothing field")

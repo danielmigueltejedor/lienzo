@@ -2,7 +2,7 @@
 use super::*;
 use crate::brush::{DualBrush, Smoothing};
 use crate::tile::{GrayTile, StoredTile};
-use photocraft_geom::Point;
+use lienzo_geom::Point;
 
 #[test]
 fn contexts_share_primary_and_dual_mips_across_settings_and_symmetry_passes() {
@@ -65,7 +65,7 @@ fn cached_and_uncached_strokes_match_exactly_at_native_depths_and_modes() {
         for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
             let fmt = fmt.with_sample(sample);
             let mut pre = Surface::new(fmt);
-            pre.fill_rect(bounds, &photocraft_raster::from_rgba(&fmt, [0.3, 0.6, 0.8, 0.7]));
+            pre.fill_rect(bounds, &lienzo_raster::from_rgba(&fmt, [0.3, 0.6, 0.8, 0.7]));
             let render = |uncached: bool| {
                 let mut r = StrokeRenderer::new(&brush, Some(fmt), 1.0);
                 if uncached {

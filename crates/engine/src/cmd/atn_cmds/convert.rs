@@ -5,7 +5,7 @@ use super::{Action, AtnAction, AtnEvent, AtnFile, AtnItem, D, DEFAULT_SET, Descr
 
 // ------------------------------------------------------------------ import
 
-/// A step with no PhotoCraft equivalent.
+/// A step with no Lienzo equivalent.
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct Unsupported {
     pub action: String,
@@ -29,7 +29,7 @@ pub struct Imported {
 }
 
 fn photoshop_step(item: &AtnItem, label: String) -> (String, Value) {
-    let descriptor = item.descriptor.as_ref().map(|d| photocraft_paint::tile::b64_encode(&d.to_bytes()));
+    let descriptor = item.descriptor.as_ref().map(|d| lienzo_paint::tile::b64_encode(&d.to_bytes()));
     let event_kind = match &item.event {
         AtnEvent::Code(_) => "code",
         AtnEvent::Name(_) => "name",
@@ -147,7 +147,7 @@ pub(super) fn export_item(id: &str, params: &Value, set: &str) -> Option<AtnItem
             Some(Value::String(kind)) if kind == "code" => AtnEvent::Code(event.as_bytes().try_into().ok()?),
             Some(Value::String(kind)) if kind == "name" => AtnEvent::name(event),
             Some(_) => return None,
-            // Older PhotoCraft action data did not retain the event kind. Keep its previous
+            // Older Lienzo action data did not retain the event kind. Keep its previous
             // best-effort export behavior for compatibility.
             None => match event.as_bytes() {
                 [a, b, c, d] => AtnEvent::Code([*a, *b, *c, *d]),
@@ -155,7 +155,7 @@ pub(super) fn export_item(id: &str, params: &Value, set: &str) -> Option<AtnItem
             },
         };
         let descriptor = match jstr(params, "descriptor") {
-            Some(b64) => Some(Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(b64)?).ok()?),
+            Some(b64) => Some(Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(b64)?).ok()?),
             None => None,
         };
         return Some(AtnItem { event, dictionary: jstr(params, "name").unwrap_or("").as_bytes().to_vec(), descriptor, ..Default::default() });

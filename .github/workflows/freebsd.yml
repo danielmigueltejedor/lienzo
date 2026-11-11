@@ -35,6 +35,6 @@ jobs:
       craft-fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
       cargo-build-extra-args: "--features heif"
       # The VM's software Vulkan driver crashes (SIGSEGV) when several tests set up a device at
-      # once, so photocraft-gpu's tests run one at a time, like ui-egui's integration tests.
-      custom-test-command: "CARGO_PROFILE_DEV_DEBUG=0 cargo test --workspace --locked --features heif --exclude photocraft-ui-egui --exclude photocraft-gpu && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p photocraft-gpu --locked -- --test-threads=1 && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p photocraft-ui-egui --locked --lib && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p photocraft-ui-egui --locked --doc && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p photocraft-ui-egui --locked --test '*' -- --test-threads=1"
+      # once, so lienzo-gpu's tests run one at a time, like ui-egui's integration tests.
+      custom-test-command: "CARGO_PROFILE_DEV_DEBUG=0 cargo test --workspace --locked --features heif --exclude lienzo-ui-egui --exclude lienzo-gpu && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-gpu --locked -- --test-threads=1 && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --lib && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --doc && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --test '*' -- --test-threads=1"
       run-package-check: true

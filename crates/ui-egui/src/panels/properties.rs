@@ -1,11 +1,11 @@
-use super::{CornerRadius, Layer, LayerContent, LayerId, PhotocraftApp, Rect, RichText, Sense, Stroke, Tokens, empty, icons, json, pos2, theme, vec2, widgets};
+use super::{CornerRadius, Layer, LayerContent, LayerId, LienzoApp, Rect, RichText, Sense, Stroke, Tokens, empty, icons, json, pos2, theme, vec2, widgets};
 
 // ----------------------------------------------------------------------------- properties
 
 /// Floating Properties card anchored to the canvas' top-right corner. It has the docked group's
 /// tabs: Properties (`properties_body`: document, layer, adjustment and mask properties) and
 /// Adjustments (`adjustments_grid`).
-pub fn properties_window(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn properties_window(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.ui.docking.is_some() {
         return;
     }
@@ -83,7 +83,7 @@ pub fn properties_window(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-fn adjustment_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: LayerId, adj: &photocraft_doc::Adjustment) {
+fn adjustment_controls(app: &mut LienzoApp, ui: &mut egui::Ui, id: LayerId, adj: &lienzo_doc::Adjustment) {
     // Keep the scope reachable before tall editors and within a compact dock (#5231).
     // Adjustment layers affect the stack by default; clipping limits them to their base.
     if let Some(mut clip) = app.session.active().and_then(|s| s.doc.layer(id).map(|l| l.clipped))
@@ -109,7 +109,7 @@ fn adjustment_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: LayerId, 
     }
 }
 
-fn layer_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+fn layer_controls(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     let t = Tokens::get(ui.ctx());
     if let Some(s) = layer.surface() {
         let b = app.layer_frame_bounds(layer, s);
@@ -129,7 +129,7 @@ fn layer_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
 /// An Opacity or Fill (`key`) slider, applied as it moves: a drag is one history step, as with the
 /// Layers panel's sliders. Applying only when the drag stopped wrote back the old value, since the
 /// slider takes the pointer only while it is dragged or clicked, not on the release (#9683, #7601).
-fn pct_slider(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer, key: &str, label: &str, current: f32) {
+fn pct_slider(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer, key: &str, label: &str, current: f32) {
     let mut v = current * 100.0;
     let r = widgets::slider_row(ui, label, &mut v, 0.0..=100.0, "%", None);
     let stamp = r.id.with("drag-stamp");
@@ -148,12 +148,12 @@ fn pct_slider(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer, key: &s
 }
 
 /// Docked Properties body (Pro theme).
-pub(super) fn properties_body(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn properties_body(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let identity = app.session.active().map(|st| (st.doc.id, st.active_layer, app.ui.mask_target, app.ui.vector_mask_target, app.ui.properties_layer));
     ui.push_id(("properties-target", identity), |ui| properties_body_inner(app, ui));
 }
 
-fn properties_body_inner(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn properties_body_inner(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
         empty(ui, tl!("No properties"));
@@ -209,7 +209,7 @@ fn properties_body_inner(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         // Transform, Align, the kind's sections and Quick Actions.
         crate::layer_props_ui::properties(app, ui, layer);
     } else {
-        if matches!(layer.content, LayerContent::Fill(photocraft_doc::Fill::Gradient { .. })) {
+        if matches!(layer.content, LayerContent::Fill(lienzo_doc::Fill::Gradient { .. })) {
             crate::gradient_ui::properties(app, ui, layer);
             ui.add_space(6.0);
         }
@@ -225,7 +225,7 @@ fn properties_body_inner(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// Photoshop's Adjustments panel: a grid of one-click adjustment layers.
-pub(super) fn adjustments_grid(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn adjustments_grid(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     ui.label(RichText::new(tl!("Add an adjustment")).color(t.text_dim));
     ui.add_space(4.0);
@@ -264,7 +264,7 @@ pub(super) fn adjustments_grid(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// The options bar's Select and Mask… button: greyed out, as the menu item is, until there is a
 /// selection (or a layer mask) to refine (#7520).
-pub(super) fn select_and_mask_button(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn select_and_mask_button(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let enabled = crate::menus::is_enabled(app, "select.selectAndMask");
     let clicked = ui.add_enabled_ui(enabled, |ui| widgets::secondary_button(ui, tl!("Select and Mask…"), 0.0).clicked()).inner;
     if clicked {
@@ -304,13 +304,13 @@ mod tests {
     #[test]
     fn opacity_and_fill_sliders_keep_a_drag() {
         for key in ["Opacity", "Fill"] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
             let mut h = egui_kittest::Harness::builder().with_size(vec2(320.0, 400.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     if ui.ctx().cumulative_pass_nr() == 0 {
-                        PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ALL[0]);
+                        LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ALL[0]);
                         return;
                     }
                     let st = app.session.active().unwrap();
@@ -320,12 +320,12 @@ mod tests {
                 app,
             );
             h.run_steps(3);
-            let value = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+            let value = |h: &egui_kittest::Harness<'_, LienzoApp>| {
                 let st = h.state().session.active().unwrap();
                 let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
                 if key == "Opacity" { l.opacity } else { l.fill_opacity }
             };
-            let steps = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.entries().len();
+            let steps = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.entries().len();
             let before = steps(&h);
             assert!((value(&h) - 1.0).abs() < 1e-6);
             let r = h

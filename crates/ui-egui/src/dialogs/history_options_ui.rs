@@ -6,13 +6,13 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 
 pub const COMMAND: &str = "history.options";
 
 /// Opens the dialog for a parameterless `history.options`; anything else is not handled here.
-pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut LienzoApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id != COMMAND || params.as_object().is_some_and(|m| m.keys().any(|k| !k.starts_with("__"))) {
         return None;
     }
@@ -20,8 +20,8 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<
 }
 
 /// Open the dialog on the current options; returns its id.
-pub fn open(app: &mut PhotocraftApp) -> u64 {
-    let current = photocraft_engine::history_options_cmds::current(&app.session);
+pub fn open(app: &mut LienzoApp) -> u64 {
+    let current = lienzo_engine::history_options_cmds::current(&app.session);
     let mut f = Map::new();
     f.insert("__command".into(), json!(COMMAND));
     f.insert("__label".into(), json!("History Options…"));
@@ -29,7 +29,7 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
     f.insert("__choices".into(), json!({}));
     // Photoshop's order and capitalised labels, in the UI language (the form would sort the keys
     // and sentence-case them).
-    f.insert("__order".into(), json!(photocraft_engine::history_options_cmds::OPTIONS));
+    f.insert("__order".into(), json!(lienzo_engine::history_options_cmds::OPTIONS));
     f.insert(
         "__labels".into(),
         json!({
@@ -40,7 +40,7 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
             "makeLayerVisibilityChangesUndoable": tl!("Make Layer Visibility Changes Undoable"),
         }),
     );
-    for key in photocraft_engine::history_options_cmds::OPTIONS {
+    for key in lienzo_engine::history_options_cmds::OPTIONS {
         f.insert(key.into(), current.get(key).cloned().unwrap_or(Value::Bool(false)));
     }
     app.ui.open_dialog(DialogKind::Command, f)
@@ -50,8 +50,8 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
 mod tests {
     use super::*;
 
-    fn app() -> PhotocraftApp {
-        PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+    fn app() -> LienzoApp {
+        LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
     }
 
     #[test]
@@ -74,7 +74,7 @@ mod tests {
         // OK applies every checkbox.
         let id = open(&mut app);
         let fields = &mut app.ui.dialog_mut(id).unwrap().fields;
-        for key in photocraft_engine::history_options_cmds::OPTIONS {
+        for key in lienzo_engine::history_options_cmds::OPTIONS {
             let on = fields[key].as_bool().unwrap();
             fields.insert(key.into(), json!(!on));
         }
@@ -98,7 +98,7 @@ mod tests {
     fn the_dialog_draws_the_checkboxes_in_photoshops_order() {
         use egui_kittest::{Harness, kittest::Queryable};
         let mut h = Harness::builder().with_size(egui::vec2(700.0, 400.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app());
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         open(h.state_mut());
         h.run_steps(3);
         h.get_by_label("History Options");

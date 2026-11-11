@@ -5,15 +5,15 @@
 //! and a merge that still fails opens the dialog again with the reason. OK runs the engine's
 //! `channel.merge`, which closes the sources; agents call it directly with params (#11451).
 //!
-//! The dialog names documents by their [`photocraft_doc::DocId`], not their tab index: work that
+//! The dialog names documents by their [`lienzo_doc::DocId`], not their tab index: work that
 //! runs while it is open (a script moving or closing a document) can shift the indices, and OK
 //! must merge, and close, the documents that were picked. They are looked up again at OK.
 
-use photocraft_doc::ColorMode;
-use photocraft_engine::channel_cmds;
+use lienzo_doc::ColorMode;
+use lienzo_engine::channel_cmds;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 pub const COMMAND: &str = "channel.merge";
@@ -45,7 +45,7 @@ fn modes(count: usize) -> Vec<(String, &'static str)> {
 
 /// The documents that can be merged, by document id and name: the open grayscale ones of the
 /// active document's size, the active one first, as the engine picks them without params.
-fn sources(app: &PhotocraftApp) -> Vec<(u64, String)> {
+fn sources(app: &LienzoApp) -> Vec<(u64, String)> {
     let Some(active) = app.session.active() else { return Vec::new() };
     let docs = app.session.documents();
     let fits = |i: usize| docs.get(i).filter(|d| d.doc.mode == ColorMode::Grayscale && d.doc.size == active.doc.size);
@@ -70,7 +70,7 @@ fn picks(f: &Map<String, Value>) -> Vec<u64> {
 
 /// The dialog's fields: the first mode the documents can fill (RGB Color from three) and the
 /// merge-able documents in order, one per channel, or `None` without a document.
-pub fn fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
+pub fn fields(app: &LienzoApp) -> Option<Map<String, Value>> {
     app.session.active()?;
     let sources = sources(app);
     let picks: Vec<u64> = sources.iter().take(SLOTS).map(|(id, _)| *id).collect();
@@ -86,7 +86,7 @@ pub fn fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
 }
 
 /// Opens Merge Channels, or `None` without a document.
-pub fn open(app: &mut PhotocraftApp) -> Option<u64> {
+pub fn open(app: &mut LienzoApp) -> Option<u64> {
     let f = fields(app)?;
     Some(app.ui.open_dialog(crate::state::DialogKind::Command, f))
 }
@@ -119,7 +119,7 @@ pub fn can_confirm(f: &Map<String, Value>) -> bool {
 
 /// The picked documents' current tab indices, looked up by id; refused (English, for `tl!`)
 /// when one was closed, or is no longer a grayscale document of the others' size.
-fn resolve(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Vec<usize>, &'static str> {
+fn resolve(app: &LienzoApp, f: &Map<String, Value>) -> Result<Vec<usize>, &'static str> {
     if let Some(why) = problem(f) {
         return Err(why);
     }
@@ -133,7 +133,7 @@ fn resolve(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Vec<usize>, &'
 /// Checked before the dialog closes (`dialogs::confirm_preflight`), so a refused OK keeps it
 /// open with the reason under the pickers: too few or repeated documents, or a picked one that
 /// was closed or changed while the dialog was open.
-pub fn preflight(app: &mut PhotocraftApp, id: u64) -> Result<(), String> {
+pub fn preflight(app: &mut LienzoApp, id: u64) -> Result<(), String> {
     let Some(f) = app.ui.dialogs.iter().find(|d| d.id == id).map(|d| &d.fields).filter(|f| owns(f)) else { return Ok(()) };
     let Err(why) = resolve(app, f) else { return Ok(()) };
     if let Some(d) = app.ui.dialog_mut(id) {
@@ -144,14 +144,14 @@ pub fn preflight(app: &mut PhotocraftApp, id: u64) -> Result<(), String> {
 
 /// The `channel.merge` params for the dialog's fields: the mode and the picked documents' current
 /// indices, one per channel.
-pub fn params(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn params(app: &LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let documents = resolve(app, f).map_err(str::to_string)?;
     Ok(json!({ "mode": mode_field(f), "documents": documents }))
 }
 
 /// Runs the merge. Should it still be refused, the dialog opens again with its picks and the
 /// reason, rather than going away.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let result = params(app, f).and_then(|p| app.run(COMMAND, p));
     if let Err(e) = &result {
         let mut again = f.clone();
@@ -203,15 +203,15 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 mod tests {
     use super::*;
 
-    fn app(docs: usize) -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app(docs: usize) -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         for _ in 0..docs {
             app.run("file.new", json!({"width": 8, "height": 8, "mode": "grayscale"})).unwrap();
         }
         app
     }
 
-    fn id(app: &PhotocraftApp, index: usize) -> u64 {
+    fn id(app: &LienzoApp, index: usize) -> u64 {
         app.session.documents()[index].doc.id.0
     }
 
@@ -220,14 +220,14 @@ mod tests {
     }
 
     /// The merged document's first pixel as 8-bit RGB.
-    fn merged_pixel(app: &PhotocraftApp) -> [u8; 3] {
+    fn merged_pixel(app: &LienzoApp) -> [u8; 3] {
         let doc = &app.session.active().unwrap().doc;
-        let px = photocraft_compose::render(doc, doc.bounds()).px[0];
+        let px = lienzo_compose::render(doc, doc.bounds()).px[0];
         [px[0], px[1], px[2]].map(|v| (v * 255.0).round() as u8)
     }
 
     /// Three grayscale documents filled black, mid gray and white, then the active one is `active`.
-    fn shaded(active: usize) -> PhotocraftApp {
+    fn shaded(active: usize) -> LienzoApp {
         let mut app = app(3);
         for (i, gray) in ["#000000", "#808080", "#ffffff"].into_iter().enumerate() {
             app.session.set_active(i);
@@ -248,7 +248,7 @@ mod tests {
         assert_eq!(f["__sources"].as_array().unwrap().iter().map(|s| s[0].as_u64().unwrap()).collect::<Vec<_>>(), ids, "the active one first");
         assert_eq!((f["mode"].clone(), f["documents"].clone()), (json!("rgb"), json!(ids)), "one each, none repeated");
         assert_eq!(params(&app, &f).unwrap(), json!({"mode": "rgb", "documents": [2, 0, 1]}));
-        assert!(fields(&PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())).is_none());
+        assert!(fields(&LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())).is_none());
     }
 
     /// Three documents fill RGB and Lab, not CMYK; four fill CMYK too.

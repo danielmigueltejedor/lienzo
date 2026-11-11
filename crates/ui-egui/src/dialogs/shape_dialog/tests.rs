@@ -1,42 +1,42 @@
-use photocraft_doc::LayerContent;
-use photocraft_doc::vector::LiveShape;
+use lienzo_doc::LayerContent;
+use lienzo_doc::vector::LiveShape;
 use serde_json::json;
 
 use super::*;
 use crate::canvas::{Drag, finish_gesture};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
     app
 }
 
-fn press(app: &mut PhotocraftApp, tool: Tool, start: [f64; 2], end: [f64; 2]) {
+fn press(app: &mut LienzoApp, tool: Tool, start: [f64; 2], end: [f64; 2]) {
     app.ui.tool = tool;
     let d = Drag::new(tool, start, vec![[start[0], start[1], 1.0], [end[0], end[1], 1.0]], egui::Modifiers::NONE, false);
     finish_gesture(app, d);
 }
 
-fn layers(app: &PhotocraftApp) -> usize {
+fn layers(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
-fn live(app: &PhotocraftApp) -> LiveShape {
+fn live(app: &LienzoApp) -> LiveShape {
     let st = app.session.active().unwrap();
     let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
     let LayerContent::Shape(sh) = &l.content else { panic!("not a shape layer") };
     sh.live.clone().unwrap()
 }
 
-fn set(app: &mut PhotocraftApp, id: u64, fields: Value) {
+fn set(app: &mut LienzoApp, id: u64, fields: Value) {
     let d = app.ui.dialog_mut(id).unwrap();
     for (k, v) in fields.as_object().unwrap() {
         d.fields.insert(k.clone(), v.clone());
     }
 }
 
-fn only_dialog(app: &PhotocraftApp) -> u64 {
+fn only_dialog(app: &LienzoApp) -> u64 {
     assert_eq!(app.ui.dialogs.len(), 1, "a click opens one dialog");
     let d = &app.ui.dialogs[0];
     assert!(owns(&d.fields));
@@ -101,9 +101,9 @@ fn drags_still_draw_and_tools_without_a_dialog_ignore_clicks() {
 #[test]
 fn click_dialogs_and_drags_keep_complete_stroke_defaults() {
     let style = crate::shape_stroke_ui::StrokeOptions {
-        align: photocraft_doc::StrokeAlign::Outside,
-        cap: photocraft_doc::LineCap::Square,
-        join: photocraft_doc::LineJoin::Bevel,
+        align: lienzo_doc::StrokeAlign::Outside,
+        cap: lienzo_doc::LineCap::Square,
+        join: lienzo_doc::LineJoin::Bevel,
         miter_limit: 7.0,
         dashes: vec![3.0, 1.0, 0.0, 2.0],
         dash_offset: -0.75,
@@ -151,7 +151,7 @@ fn radius_fields_are_named_for_their_corners() {
     let id = open(&mut app, Tool::Rectangle, [10.0, 20.0]).unwrap();
     let fields = app.ui.dialog_mut(id).unwrap().fields.clone();
     let mut h = Harness::builder().with_size(egui::vec2(520.0, 520.0)).build_ui_state(move |ui, fields| body(&app, ui, fields), fields);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
     let labels: Vec<String> = h.query_all_by_role(Role::SpinButton).filter_map(|n| n.accesskit_node().label()).collect();
     // The visible rows are [top-left, top-right], [bottom-left, bottom-right]; the field for each
@@ -243,7 +243,7 @@ fn bad_values_are_errors_not_panics() {
 fn agents_click_set_and_confirm_over_the_control_channel() {
     let mut app = app();
     let ctx = egui::Context::default();
-    let call = |app: &mut PhotocraftApp, method: &str, params: Value| {
+    let call = |app: &mut LienzoApp, method: &str, params: Value| {
         let (req, _rx) = crate::control::ControlRequest::new(method, params);
         match crate::control::handle(app, &ctx, &req) {
             crate::control::Outcome::Done(v) => v,
@@ -274,7 +274,7 @@ fn the_dialog_body_renders_for_every_tool_and_unit() {
 }
 
 /// One frame of a dialog body with `events`: the texts it draws, each with its screen rect.
-fn frame(ctx: &egui::Context, app: &PhotocraftApp, fields: &mut serde_json::Map<String, Value>, events: Vec<egui::Event>) -> Vec<(String, egui::Rect)> {
+fn frame(ctx: &egui::Context, app: &LienzoApp, fields: &mut serde_json::Map<String, Value>, events: Vec<egui::Event>) -> Vec<(String, egui::Rect)> {
     let input = egui::RawInput { events, ..Default::default() };
     let mut out = ctx.run_ui(input, |ui| body(app, ui, fields));
     out.textures_delta.clear();
@@ -288,7 +288,7 @@ fn frame(ctx: &egui::Context, app: &PhotocraftApp, fields: &mut serde_json::Map<
 }
 
 /// A click of `button` at `pos`, as frames: move there, press, release.
-fn click(ctx: &egui::Context, app: &PhotocraftApp, f: &mut serde_json::Map<String, Value>, pos: egui::Pos2, button: egui::PointerButton) {
+fn click(ctx: &egui::Context, app: &LienzoApp, f: &mut serde_json::Map<String, Value>, pos: egui::Pos2, button: egui::PointerButton) {
     let press = |pressed| egui::Event::PointerButton { pos, button, pressed, modifiers: egui::Modifiers::NONE };
     frame(ctx, app, f, vec![egui::Event::PointerMoved(pos)]);
     frame(ctx, app, f, vec![press(true)]);
@@ -373,7 +373,7 @@ fn a_path_mode_click_opens_no_create_dialog() {
 /// nothing to the work path either. Its box would round to a 1 × 1 or 2 × 2 px outline.
 #[test]
 fn a_path_mode_click_that_moved_a_little_adds_no_subpath() {
-    let work = |app: &PhotocraftApp| app.session.active().unwrap().doc.work_path.as_ref().map_or(0, |p| p.subpaths.len());
+    let work = |app: &LienzoApp| app.session.active().unwrap().doc.work_path.as_ref().map_or(0, |p| p.subpaths.len());
     for tool in [Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line] {
         for end in [[20.8, 30.8], [21.8, 31.9]] {
             let mut app = app();

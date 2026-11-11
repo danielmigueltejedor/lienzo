@@ -4,8 +4,8 @@
 use base64::Engine as _;
 use std::sync::Arc;
 
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, SmartObject, SmartSource};
-use photocraft_geom::{Rect, Size};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, SmartObject, SmartSource};
+use lienzo_geom::{Rect, Size};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -48,7 +48,7 @@ fn smart(doc: &Document, id: LayerId) -> Result<&SmartObject> {
 fn embedded<'a>(doc: &'a Document, sm: &'a SmartObject) -> Result<(String, &'a [u8])> {
     let (name, bytes) = match &sm.source {
         SmartSource::Embedded { file_name, bytes } => (file_name.clone(), bytes.as_slice()),
-        SmartSource::Linked { path } => photocraft_io::linked::embedded_payload(&doc.metadata, path)
+        SmartSource::Linked { path } => lienzo_io::linked::embedded_payload(&doc.metadata, path)
             .ok_or_else(|| EngineError::Other("external editing requires embedded vector contents".into()))?,
     };
     validate_source(bytes)?;
@@ -65,7 +65,7 @@ fn validate_source(bytes: &[u8]) -> Result<()> {
 
 /// Identify supported vector formats from their payload rather than a filename suffix.
 fn source_extension(bytes: &[u8]) -> Option<&'static str> {
-    if photocraft_io::svg::is_svg(bytes) {
+    if lienzo_io::svg::is_svg(bytes) {
         Some("svg")
     } else if bytes.starts_with(b"%PDF-") {
         Some("pdf")
@@ -85,8 +85,8 @@ fn source_size(sm: &SmartObject) -> Option<(f64, f64)> {
 thread_local! { static PREVIEW_FRAME_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 
 /// Reading source geometry never rasterizes an old preview or decodes its embedded images.
-fn preview_frame(preview: &photocraft_doc::VectorPreview, source: &[u8]) -> Option<(f64, f64)> {
-    if source.len() > MAX_VECTOR_SOURCE_BYTES || !photocraft_io::vector_preview::is_native_source(source) {
+fn preview_frame(preview: &lienzo_doc::VectorPreview, source: &[u8]) -> Option<(f64, f64)> {
+    if source.len() > MAX_VECTOR_SOURCE_BYTES || !lienzo_io::vector_preview::is_native_source(source) {
         return None;
     }
     preview_frame_hash(preview, *blake3::hash(source).as_bytes())
@@ -94,23 +94,23 @@ fn preview_frame(preview: &photocraft_doc::VectorPreview, source: &[u8]) -> Opti
 
 /// Read the frame recorded in preview metadata, accepted only for `source_hash`; the caller
 /// supplies a digest it has verified against the actual source bytes.
-fn preview_frame_hash(preview: &photocraft_doc::VectorPreview, source_hash: [u8; 32]) -> Option<(f64, f64)> {
+fn preview_frame_hash(preview: &lienzo_doc::VectorPreview, source_hash: [u8; 32]) -> Option<(f64, f64)> {
     #[cfg(test)]
     PREVIEW_FRAME_CHECKS.with(|count| count.set(count.get() + 1));
-    photocraft_io::vector_preview::frame_metadata(preview, source_hash)
+    lienzo_io::vector_preview::frame_metadata(preview, source_hash)
 }
 
 /// Prefer the embedded source's preview frame via `frame`, else the PSD placed descriptor's
 /// stored size, rejected when non-finite or over 16384 px per side or [`MAX_PIXELS`].
-fn source_size_with(sm: &SmartObject, frame: impl FnOnce(&photocraft_doc::VectorPreview, &[u8]) -> Option<(f64, f64)>) -> Option<(f64, f64)> {
+fn source_size_with(sm: &SmartObject, frame: impl FnOnce(&lienzo_doc::VectorPreview, &[u8]) -> Option<(f64, f64)>) -> Option<(f64, f64)> {
     if let SmartSource::Embedded { bytes, .. } = &sm.source
         && let Some(preview) = sm.vector_preview.as_ref()
         && let Some(frame) = frame(preview, bytes)
     {
         return Some(frame);
     }
-    let placed = photocraft_io::smart_map::parse_sold(sm.psd_raw.as_ref()?.as_slice())?;
-    photocraft_io::smart_map::stored_size(&placed.descriptor)
+    let placed = lienzo_io::smart_map::parse_sold(sm.psd_raw.as_ref()?.as_slice())?;
+    lienzo_io::smart_map::stored_size(&placed.descriptor)
         .filter(|(w, h)| w.is_finite() && h.is_finite() && *w <= 16384.0 && *h <= 16384.0 && w * h <= MAX_PIXELS as f64)
 }
 
@@ -269,7 +269,7 @@ fn update_contents_with_frame_budget(s: &mut Session, p: &Value, native: bool, f
         }
     }
     let replacement_bytes = if native {
-        if !photocraft_io::vector_preview::is_native_source(original) {
+        if !lienzo_io::vector_preview::is_native_source(original) {
             return Err(bad(UPDATE_VECTOR, "the original source is not AI, PDF or EPS"));
         }
         let extension = p.get("extension").and_then(Value::as_str).ok_or_else(|| bad(UPDATE_VECTOR, "missing source extension"))?;
@@ -295,7 +295,7 @@ fn update_contents_with_frame_budget(s: &mut Session, p: &Value, native: bool, f
         bytes
     } else {
         // updateSvg replaces SVG contents; an AI, PDF or EPS source keeps its own format.
-        if photocraft_io::vector_preview::is_native_source(original) {
+        if lienzo_io::vector_preview::is_native_source(original) {
             return Err(bad(UPDATE, "the original source is AI, PDF or EPS: use layer.smartObjects.updateVectorSource"));
         }
         svg.as_bytes().to_vec()
@@ -317,14 +317,14 @@ fn update_contents_with_frame_budget(s: &mut Session, p: &Value, native: bool, f
             }
         }
     }
-    if svg.is_empty() || svg.len() > MAX_VECTOR_SOURCE_BYTES || !photocraft_io::svg::is_svg(svg.as_bytes()) {
+    if svg.is_empty() || svg.len() > MAX_VECTOR_SOURCE_BYTES || !lienzo_io::svg::is_svg(svg.as_bytes()) {
         return Err(bad(UPDATE, "SVG contents must contain a valid SVG document within 16 MiB"));
     }
     // Save-back can intentionally remove the last drawable object. The bounded importer
     // accepts an empty drawing so deleting the final object preserves transparency. A native
     // save's SVG becomes the stored display preview, so it is checked as strictly as stored
     // previews are on load and PSD export: an embedded image it can't read refuses it.
-    let import = if native { photocraft_io::svg::import_svg_preview_with_work } else { photocraft_io::svg::import_svg_bounded_with_work };
+    let import = if native { lienzo_io::svg::import_svg_preview_with_work } else { lienzo_io::svg::import_svg_bounded_with_work };
     let (imported, _) = import(&name, svg.as_bytes(), 4 * MAX_PIXELS).map_err(|error| bad(UPDATE, format!("can't import edited SVG contents: {error}")))?;
     let size = imported.document.size;
     if native {
@@ -363,11 +363,11 @@ fn update_contents_with_frame_budget(s: &mut Session, p: &Value, native: bool, f
         return Err(bad(UPDATE, "SVG contents exceed the 24 million pixel limit"));
     }
     let source = SmartSource::Embedded {
-        file_name: if native || photocraft_io::svg::is_svg(original) { name } else { "Artwork.svg".into() },
+        file_name: if native || lienzo_io::svg::is_svg(original) { name } else { "Artwork.svg".into() },
         bytes: Arc::new(replacement_bytes.clone()),
     };
     let vector_preview =
-        native.then(|| photocraft_doc::VectorPreview { source_hash: *blake3::hash(&replacement_bytes).as_bytes(), svg: Arc::new(svg.as_bytes().to_vec()) });
+        native.then(|| lienzo_doc::VectorPreview { source_hash: *blake3::hash(&replacement_bytes).as_bytes(), svg: Arc::new(svg.as_bytes().to_vec()) });
     let mut replacements: Vec<Layer> = Vec::with_capacity(ids.len());
     let mut pixels = 0u64;
     for instance in ids {

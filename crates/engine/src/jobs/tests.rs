@@ -14,7 +14,7 @@ fn session(w: u32, h: u32) -> Session {
     s.execute("layer.new.layer", json!({})).unwrap();
     s.edit("pattern", |doc, active| {
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
-        let r = photocraft_geom::Rect::new(0, 0, w as i32, h as i32);
+        let r = lienzo_geom::Rect::new(0, 0, w as i32, h as i32);
         let mut px = Vec::with_capacity((w * h * 4) as usize);
         for y in 0..h {
             for x in 0..w {
@@ -326,7 +326,7 @@ fn background_job_finishes_bookkeeping_on_edited_document_after_tab_switch() {
                 s.edit("Deferred Blur", |doc, active| {
                     let layer = active.ok_or_else(|| EngineError::Other("no active layer".into()))?;
                     let surface = doc.layer_mut(layer).ok_or(EngineError::NoLayer(layer))?.surface_mut().ok_or(EngineError::NoLayer(layer))?;
-                    surface.fill_rect(photocraft_geom::Rect::new(0, 0, 1, 1), &[0.4, 0.3, 0.2, 1.0]);
+                    surface.fill_rect(lienzo_geom::Rect::new(0, 0, 1, 1), &[0.4, 0.3, 0.2, 1.0]);
                     Ok(())
                 })?;
                 Ok(json!({"filter": {"radius": 2}}))
@@ -372,8 +372,8 @@ fn background_filter_on_a_channel_fades_that_channel_after_a_tab_switch() {
         s.edit("pattern", |doc, _| {
             let c = if quick_mask { doc.quick_mask.as_mut() } else { doc.channels.first_mut() };
             let c = c.ok_or_else(|| EngineError::Other("no channel".into()))?;
-            c.surface.fill_rect(photocraft_geom::Rect::new(0, 0, 32, 24), &[0.0]);
-            c.surface.fill_rect(photocraft_geom::Rect::new(8, 6, 20, 16), &[1.0]);
+            c.surface.fill_rect(lienzo_geom::Rect::new(0, 0, 32, 24), &[0.0]);
+            c.surface.fill_rect(lienzo_geom::Rect::new(8, 6, 20, 16), &[1.0]);
             Ok(())
         })
         .unwrap();
@@ -483,7 +483,7 @@ impl GatedSave {
 /// A fresh directory for a [`GatedSave`] test (on every platform, unlike the Unix-only
 /// fixtures' `tmp_dir`).
 fn save_dir(name: &str) -> std::path::PathBuf {
-    let d = std::env::temp_dir().join(format!("photocraft-engine-gated-save-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-engine-gated-save-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d
@@ -506,7 +506,7 @@ fn open_job(s: &mut Session) -> JobId {
         .unwrap())
 }
 
-fn index_of(s: &Session, doc: photocraft_doc::DocId) -> usize {
+fn index_of(s: &Session, doc: lienzo_doc::DocId) -> usize {
     s.documents().iter().position(|st| st.doc.id == doc).unwrap()
 }
 
@@ -734,7 +734,7 @@ fn remove_runs_as_a_job() {
 fn open_runs_as_a_job_and_cancel_adds_nothing() {
     let mut src = session(40, 30);
     let doc = (*src.active().unwrap().doc).clone();
-    let bytes = photocraft_io::export(&doc, "x.psd", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&doc, "x.psd", &Default::default()).unwrap().bytes;
     src.close(0);
     let mut s = Session::new();
     let id = job(s.start_open("x.psd", OpenSource::Bytes(Arc::new(bytes.clone()))).unwrap());
@@ -895,20 +895,20 @@ fn a_finished_batch_worker_rejects_late_cancellation() {
 #[cfg(any(unix, windows))]
 #[test]
 fn an_exr_path_open_decodes_in_bands_and_cancels_cleanly() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, ExrCompression, Format, Image, SampleType};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, ExrCompression, Format, Image, SampleType};
     let values: Vec<f32> = (0..64 * 48 * 3).map(|i| [0.25, 3.0, -0.5][i % 3]).collect();
     let image = Image::from_f32(64, 48, ChannelLayout::Rgb, &values).unwrap().convert(ChannelLayout::Rgb, SampleType::F16);
-    let bytes = photocraft_codecs::encode(&image, Format::OpenExr, &EncodeOptions { exr_compression: ExrCompression::Zip16, ..Default::default() }).unwrap();
-    let path = std::env::temp_dir().join(format!("photocraft-open-job-{}.exr", std::process::id()));
+    let bytes = lienzo_codecs::encode(&image, Format::OpenExr, &EncodeOptions { exr_compression: ExrCompression::Zip16, ..Default::default() }).unwrap();
+    let path = std::env::temp_dir().join(format!("lienzo-open-job-{}.exr", std::process::id()));
     std::fs::write(&path, &bytes).unwrap();
-    let reference = photocraft_io::import("band.exr", &bytes).unwrap().document;
+    let reference = lienzo_io::import("band.exr", &bytes).unwrap().document;
     let mut s = Session::new();
     let id = job(s.start_open("band.exr", OpenSource::Path(path.to_string_lossy().into_owned())).unwrap());
     let e = wait_event(&mut s, id);
     assert!(matches!(e.outcome, JobOutcome::Done(_)), "{e:?}");
     let doc = &s.documents()[0].doc;
     assert_eq!((doc.size, doc.mode, doc.depth), (reference.size, reference.mode, reference.depth));
-    use photocraft_doc::LayerContent;
+    use lienzo_doc::LayerContent;
     let (LayerContent::Raster(a), LayerContent::Raster(r)) = (&doc.layers[0].content, &reference.layers[0].content) else { panic!("raster background") };
     assert_eq!(a.to_interleaved(reference.bounds()), r.to_interleaved(reference.bounds()));
 
@@ -928,8 +928,8 @@ fn an_exr_path_open_decodes_in_bands_and_cancels_cleanly() {
 fn an_open_that_asks_about_its_profile_holds_the_document_back() {
     let mut src = session(8, 8);
     let mut doc = (*src.active().unwrap().doc).clone();
-    doc.icc_profile = Some(photocraft_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
-    let bytes = Arc::new(photocraft_io::export(&doc, "x.png", &Default::default()).unwrap().bytes);
+    doc.icc_profile = Some(lienzo_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
+    let bytes = Arc::new(lienzo_io::export(&doc, "x.png", &Default::default()).unwrap().bytes);
     src.close(0);
     let mut s = Session::new();
     s.execute("edit.colorSettings", json!({"askOnMismatch": true, "policyRgb": "preserve"})).unwrap();
@@ -955,7 +955,7 @@ fn warm_layer_bounds_visits_every_layer_and_can_be_cancelled() {
     s.execute("layer.groupLayers", json!({})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     let doc = s.active().unwrap().doc.clone();
-    fn count(layers: &[photocraft_doc::Layer]) -> usize {
+    fn count(layers: &[lienzo_doc::Layer]) -> usize {
         layers.iter().map(|l| 1 + l.children().map_or(0, count)).sum()
     }
     assert!(doc.layers.iter().any(|l| l.children().is_some_and(|c| !c.is_empty())), "a group with a layer in it");
@@ -1009,7 +1009,7 @@ fn params_that_are_not_an_object_are_rejected_before_running() {
 #[test]
 // Wall-clock timing depends on machine load (the release corpus job runs every test), so it is
 // opt-in; perf_scenarios tracks the same numbers as P25/P49.
-#[ignore = "timing: cargo test --release -p photocraft-engine --lib cancel_takes -- --ignored"]
+#[ignore = "timing: cargo test --release -p lienzo-engine --lib cancel_takes -- --ignored"]
 fn cancel_takes_effect_within_200_ms_on_24_mp() {
     for (cmd, params, select) in [("filter.blur.gaussianBlur", json!({"radius": 50}), false), ("edit.contentAwareFill", json!({}), true)] {
         let mut s = session(6000, 4000);
@@ -1454,7 +1454,7 @@ fn reaping_finished_workers_preserves_the_release_request() {
 
 #[cfg(unix)]
 fn tmp_dir(name: &str) -> std::path::PathBuf {
-    let d = std::env::temp_dir().join(format!("photocraft-engine-jobs-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-engine-jobs-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d
@@ -1471,9 +1471,9 @@ fn approved_open_forwards_the_flag_and_the_bound_estimate() {
     let gb = 1u64 << 30;
     let bytes = Arc::new(tiny_psd());
     // Known 8 GiB: S = 4 GiB, H = 6 GiB. The test charge puts the estimate just over S.
-    let snapshot = photocraft_io::memory::MemorySnapshot { available_ram: Some(8 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::memory::with_mock_memory(snapshot, || {
-        photocraft_io::psd_budget::with_test_estimate_charge(4 * gb + 1, || {
+    let snapshot = lienzo_io::memory::MemorySnapshot { available_ram: Some(8 * gb), swap_free: None, commit_headroom: None };
+    lienzo_io::memory::with_mock_memory(snapshot, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(4 * gb + 1, || {
             let mut s = Session::new();
             let started = s.start_open_for_user_with_background("tiny.psd", OpenSource::Bytes(Arc::clone(&bytes)), false).unwrap();
             let v = match started {
@@ -1498,9 +1498,9 @@ fn approved_open_forwards_the_flag_and_the_bound_estimate() {
 fn approval_is_bound_to_the_approved_estimate() {
     let gb = 1u64 << 30;
     let bytes = Arc::new(tiny_psd());
-    let snapshot = photocraft_io::memory::MemorySnapshot { available_ram: Some(8 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::memory::with_mock_memory(snapshot, || {
-        photocraft_io::psd_budget::with_test_estimate_charge(4 * gb + 1, || {
+    let snapshot = lienzo_io::memory::MemorySnapshot { available_ram: Some(8 * gb), swap_free: None, commit_headroom: None };
+    lienzo_io::memory::with_mock_memory(snapshot, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(4 * gb + 1, || {
             let mut s = Session::new();
             let source = OpenSource::Bytes(Arc::clone(&bytes));
             let fingerprint = SourceFingerprint::of(&source).unwrap();
@@ -1519,10 +1519,10 @@ fn approval_is_bound_to_the_approved_estimate() {
 fn unknown_capacity_metadata_never_invents_available_ram() {
     let gb = 1u64 << 30;
     let bytes = Arc::new(tiny_psd());
-    let snapshot = photocraft_io::memory::MemorySnapshot { available_ram: None, swap_free: None, commit_headroom: None };
-    photocraft_io::memory::with_mock_memory(snapshot, || {
+    let snapshot = lienzo_io::memory::MemorySnapshot { available_ram: None, swap_free: None, commit_headroom: None };
+    lienzo_io::memory::with_mock_memory(snapshot, || {
         // Above both the 2 GiB unknown-capacity allowance and the 8 GiB warning threshold.
-        photocraft_io::psd_budget::with_test_estimate_charge(8 * gb + 1, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(8 * gb + 1, || {
             let mut s = Session::new();
             let started = s.start_open_for_user_with_background("unknown.psd", OpenSource::Bytes(Arc::clone(&bytes)), false).unwrap();
             let v = match started {
@@ -1543,11 +1543,11 @@ fn an_open_reports_a_typed_hard_budget_refusal() {
     let gb = 1u64 << 30;
     let bytes = Arc::new(tiny_psd());
     // A measured 4 GiB gives a finite hard limit; a charge over it is refused.
-    let snapshot = photocraft_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
-    let hard = photocraft_io::memory::resolve_budget(snapshot, None).hard_limit;
+    let snapshot = lienzo_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
+    let hard = lienzo_io::memory::resolve_budget(snapshot, None).hard_limit;
     assert!(hard < u64::MAX, "the test needs a finite hard limit");
-    photocraft_io::memory::with_mock_memory(snapshot, || {
-        photocraft_io::psd_budget::with_test_estimate_charge(hard + 1, || {
+    lienzo_io::memory::with_mock_memory(snapshot, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(hard + 1, || {
             let mut s = Session::new();
             let err = s.start_open_for_user_with_background("over.psd", OpenSource::Bytes(Arc::clone(&bytes)), false).unwrap_err();
             match &err {

@@ -1,7 +1,7 @@
 //! #6430: integration tests use the production budget (Memory Usage), not the unit tests' reduced
 //! one.
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 fn painted() -> Session {

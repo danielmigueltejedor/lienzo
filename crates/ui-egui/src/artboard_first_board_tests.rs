@@ -4,13 +4,13 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 #[test]
 fn the_tools_first_drag_moves_the_background_into_the_board() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "white"})).unwrap();
     app.run("layer.new.layer", json!({"name": "Red"})).unwrap();
     app.run("select.rect", json!({"x": 100, "y": 100, "width": 200, "height": 150})).unwrap();

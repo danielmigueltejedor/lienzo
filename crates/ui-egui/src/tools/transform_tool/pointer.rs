@@ -3,9 +3,7 @@ use super::commit::{commit, committing, moves_type};
 use super::cylinder::cylinder_cursor;
 use super::drag_modes::{apply_drag, apply_mode_drag, drag_mods, handle_indicator, mode_allows, mode_mods};
 use super::warp::{quick_split_kind, split_cursor, surface_at, warp_hit, warp_pointer};
-use super::{
-    CursorIcon, HANDLE_PX, Homography, LayerContent, PhotocraftApp, ToolEvent, TransformMode, TransformSession, ViewXform, WarpStyle, handle_tolerance,
-};
+use super::{CursorIcon, HANDLE_PX, Homography, LayerContent, LienzoApp, ToolEvent, TransformMode, TransformSession, ViewXform, WarpStyle, handle_tolerance};
 
 /// Which part of the box a document point hits.
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -123,7 +121,7 @@ pub(crate) fn hit(t: &TransformSession, p: [f64; 2], tol: f64) -> Hit {
 
 /// [`hit`] for the Free Transform box, whose reference point is a handle only while the options
 /// bar's Toggle Reference Point is on (#11098).
-pub(crate) fn box_hit(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2], tol: f64) -> Hit {
+pub(crate) fn box_hit(app: &LienzoApp, t: &TransformSession, p: [f64; 2], tol: f64) -> Hit {
     hit_with(t, p, tol, app.ui.tool_options.transform_reference_point)
 }
 
@@ -181,7 +179,7 @@ pub(super) fn accepts_outside_click(g: Gesture, end: [f64; 2], tol: f64) -> bool
 }
 
 /// Whether a document point is outside the document, on the pasteboard around the canvas.
-fn on_pasteboard(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+fn on_pasteboard(app: &LienzoApp, p: [f64; 2]) -> bool {
     app.session.active().is_some_and(|st| p[0] < 0.0 || p[1] < 0.0 || p[0] >= f64::from(st.doc.size.width) || p[1] >= f64::from(st.doc.size.height))
 }
 
@@ -192,7 +190,7 @@ fn on_pasteboard(app: &PhotocraftApp, p: [f64; 2]) -> bool {
 /// a second click picks that layer. Not measured, so the box stays open as before: Transform
 /// Selection, a path or mask target, and hidden, locked or grouped layers (also when a grouped
 /// layer covers a top-level one at the click).
-fn on_other_layer(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2]) -> bool {
+fn on_other_layer(app: &LienzoApp, t: &TransformSession, p: [f64; 2]) -> bool {
     if t.selection || t.path.is_some() || t.target.is_some() || !p[0].is_finite() || !p[1].is_finite() {
         return false;
     }
@@ -200,17 +198,17 @@ fn on_other_layer(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2]) -> boo
     let doc = &st.doc;
     // The layers the commit moves: `edit.transform` takes the link group along as it is then, so a
     // layer linked after the box opened counts as moved too.
-    let moved = photocraft_engine::transform_cmds::box_targets(doc, &super::begin::moving_layers(t));
-    let moved = |id: photocraft_doc::LayerId| id.0 == t.layer || moved.contains(&id);
+    let moved = lienzo_engine::transform_cmds::box_targets(doc, &super::begin::moving_layers(t));
+    let moved = |id: lienzo_doc::LayerId| id.0 == t.layer || moved.contains(&id);
     // `as` saturates out-of-range floats; `layers_at` returns nothing off the canvas.
-    photocraft_engine::pick_cmds::layers_at(doc, p[0].floor() as i32, p[1].floor() as i32)
+    lienzo_engine::pick_cmds::layers_at(doc, p[0].floor() as i32, p[1].floor() as i32)
         .into_iter()
         .find(|id| !moved(*id) && !doc.effective_locks(*id).all)
         .is_some_and(|id| !doc.is_background(id) && doc.layers.iter().any(|l| l.id == id && l.artboard().is_none()))
 }
 
 /// Pointer input while transforming. Returns false when no transform is active.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
     let Some(t) = app.ui.transform.clone() else { return false };
     if committing(app).is_some() {
         return true;
@@ -291,7 +289,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) ->
 /// whole pixels, whatever the tool. Rounding the pointer alone left the edges off by the grab
 /// offset, and a proportional scale off by its ratio: a shape dragged to 540 px came out 539.6.
 /// Rotated, skewed and distorted boxes are left as dragged.
-fn round_to_pixel_grid(app: &mut PhotocraftApp) {
+fn round_to_pixel_grid(app: &mut LienzoApp) {
     if !app.session.prefs().tools.snap_vector_tools_and_transforms_to_pixel_grid {
         return;
     }
@@ -300,7 +298,7 @@ fn round_to_pixel_grid(app: &mut PhotocraftApp) {
         return;
     }
     let shapes =
-        |st: &photocraft_engine::DocState| moving_layers(t).iter().all(|id| st.doc.layer(*id).is_some_and(|l| matches!(l.content, LayerContent::Shape(_))));
+        |st: &lienzo_engine::DocState| moving_layers(t).iter().all(|id| st.doc.layer(*id).is_some_and(|l| matches!(l.content, LayerContent::Shape(_))));
     let vector = t.path.is_some() || app.session.active().is_some_and(shapes);
     if !vector || !upright(&t.quad) {
         return;
@@ -387,7 +385,7 @@ pub(super) fn rotation_degrees(quad: [[f64; 2]; 4]) -> f64 {
 
 /// Where the rotate cursor's arc bends at document point `p`, or `None` outside the rotate zone:
 /// anywhere outside, or while a rotate drag is on. It follows the nearest edge or corner.
-pub(crate) fn rotate_cursor_dir(app: &PhotocraftApp, p: [f64; 2]) -> Option<[f64; 2]> {
+pub(crate) fn rotate_cursor_dir(app: &LienzoApp, p: [f64; 2]) -> Option<[f64; 2]> {
     let t = app.ui.transform.as_ref()?;
     rotate_dir(t, handle_at(app, t, p, handle_tolerance(app)), p)
 }
@@ -401,13 +399,13 @@ fn rotate_dir(t: &TransformSession, h: Hit, p: [f64; 2]) -> Option<[f64; 2]> {
 }
 
 /// The handle a drag in progress holds, else the one under document point `p`.
-pub(super) fn handle_at(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2], tol: f64) -> Hit {
+pub(super) fn handle_at(app: &LienzoApp, t: &TransformSession, p: [f64; 2], tol: f64) -> Hit {
     app.transform_preview.as_ref().and_then(|pv| pv.gesture.map(|g| g.hit)).unwrap_or_else(|| box_hit(app, t, p, tol))
 }
 
 /// Cursor for hovering a document point while transforming. `xf` is the canvas's view;
 /// `mods` provides modifier keys (Command for Distort on corners / Skew on edges; Alt/Command for quick split in warp).
-pub fn cursor(app: &PhotocraftApp, xf: &ViewXform, p: [f64; 2], mods: egui::Modifiers) -> Option<CursorIcon> {
+pub fn cursor(app: &LienzoApp, xf: &ViewXform, p: [f64; 2], mods: egui::Modifiers) -> Option<CursorIcon> {
     let t = app.ui.transform.as_ref()?;
     let tol = handle_tolerance(app);
     if let Some(w) = &t.warp {

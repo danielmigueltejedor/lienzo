@@ -9,7 +9,7 @@
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <!-- PhotoCraft's own Create Warped Text glyph (not from an icon set): a T above a bowed arc. -->
+  <!-- Lienzo's own Create Warped Text glyph (not from an icon set): a T above a bowed arc. -->
   <path d="M6 5V3h12v2" />
   <path d="M12 3v11" />
   <path d="M9.5 14h5" />

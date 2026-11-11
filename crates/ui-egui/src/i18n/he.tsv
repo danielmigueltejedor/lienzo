@@ -3823,7 +3823,7 @@ layerLabel	No Color	בלי צבע
 	Mezzotint	מצו-טינטו
 	Mosaic	פסיפס
 	Motion Blur	טשטוש תנועה
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	גרירה ושחרור טבעיים של קבצים עדיין לא נתמכים ב-Wayland. השתמש בקובץ › פתח, או הפעל את Lienzo תחת XWayland עם `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	גרירה ושחרור טבעיים של קבצים עדיין לא נתמכים ב-Wayland. השתמש בקובץ › פתח, או הפעל את Lienzo תחת XWayland עם `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	זוהר ניאון
 	New Guide Layout	פריסת קווים מנחים חדשה
 	New Video Layer from File	שכבת וידאו חדשה מקובץ

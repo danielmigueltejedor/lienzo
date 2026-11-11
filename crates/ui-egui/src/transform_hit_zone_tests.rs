@@ -3,7 +3,7 @@ use crate::state::{ContentAwareOptions, TransformMode, TransformSession};
 use crate::transform_tool::{Hit, cursor, hit, rotate_cursor_dir};
 use egui::{CursorIcon, Modifiers, pos2};
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
 const QUAD: [[f64; 2]; 4] = [[100.0, 100.0], [500.0, 100.0], [500.0, 300.0], [100.0, 300.0]];
@@ -28,8 +28,8 @@ fn session(quad: [[f64; 2]; 4]) -> TransformSession {
     }
 }
 
-fn app(quad: [[f64; 2]; 4], zoom: f32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(quad: [[f64; 2]; 4], zoom: f32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", serde_json::json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
     app.ui.views[0].zoom = zoom;
@@ -318,8 +318,8 @@ fn unopened_move_controls_share_hover_but_keep_the_move_press_band() {
     assert!(!transform_controls_hit(r, r.center()), "inside remains an ordinary Move drag");
 }
 
-fn move_controls_fixture() -> (Harness<'static, PhotocraftApp>, [LayerId; 2]) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn move_controls_fixture() -> (Harness<'static, LienzoApp>, [LayerId; 2]) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300, "background": "transparent"})).unwrap();
     let layers = [[60, 60, 80, 60], [230, 150, 40, 40]].map(|rect| {
         app.run("shape.create", json!({"kind": "rect", "rect": rect, "fill": "#ff0000"})).unwrap();
@@ -332,19 +332,19 @@ fn move_controls_fixture() -> (Harness<'static, PhotocraftApp>, [LayerId; 2]) {
     app.ui.tool_options.move_target = "layer".into();
     app.ui.extras.snap = false;
     let mut h = Harness::builder().with_size(vec2(1000.0, 800.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 egui::CentralPanel::default().show(ui, |ui| crate::canvas::document_area(app, ui));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     (h, layers)
 }
 
-fn move_pointer(h: &mut Harness<'static, PhotocraftApp>, control: bool, kind: &str, [x, y]: [f32; 2]) {
+fn move_pointer(h: &mut Harness<'static, LienzoApp>, control: bool, kind: &str, [x, y]: [f32; 2]) {
     if control {
         use crate::control::{ControlRequest, Outcome};
         let (request, _) = ControlRequest::new("ui.pointer", json!({"events": [{"kind": kind, "x": x, "y": y}]}));
@@ -409,7 +409,7 @@ fn move_controls_allow_a_layer_marquee_from_empty_canvas_outside_the_press_band(
 #[test]
 fn move_whole_edge_press_enters_scaling_at_both_zooms() {
     for zoom in [1.0, 2.0] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", serde_json::json!({"width": 640, "height": 480})).unwrap();
         app.session.execute("shape.create", serde_json::json!({"kind": "rect", "rect": [100, 100, 400, 200], "fill": "#ff0000"})).unwrap();
         app.sync_views();
@@ -454,7 +454,7 @@ fn modes_that_do_not_rotate_and_invalid_points_do_not_hide_the_pointer() {
     assert_eq!(cursor(&app, &view(1.0), [620.0, 200.0], Modifiers::NONE), Some(CursorIcon::Default));
     app.ui.transform.as_mut().unwrap().content_aware = None;
     let t = app.ui.transform.as_mut().unwrap();
-    t.warp = Some(photocraft_geom::warp::Warp::none(t.rect));
+    t.warp = Some(lienzo_geom::warp::Warp::none(t.rect));
     assert_eq!(rotate_cursor_dir(&app, [620.0, 200.0]), None);
     assert_eq!(cursor(&app, &view(1.0), [620.0, 200.0], Modifiers::NONE), Some(CursorIcon::Crosshair), "Warp retains its own cursor");
     app.ui.transform.as_mut().unwrap().warp = None;

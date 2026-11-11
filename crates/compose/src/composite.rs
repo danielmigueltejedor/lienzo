@@ -40,11 +40,11 @@ pub(crate) fn composite_stack_at(layers: &[Layer], backdrop: &mut Buffer, cx: &C
 /// Photoshop (psd-tools adjustment_nested_composition_4: 9.6 → 5.1 % of pixels off;
 /// exposure_grayscale passes). Blends stay in float (quantising them too made other files
 /// worse).
-pub fn adjustment_quantum(depth: photocraft_color::SampleType) -> Option<f32> {
+pub fn adjustment_quantum(depth: lienzo_color::SampleType) -> Option<f32> {
     match depth {
-        photocraft_color::SampleType::U8 => Some(255.0),
-        photocraft_color::SampleType::U16 => Some(32768.0),
-        photocraft_color::SampleType::F32 => None,
+        lienzo_color::SampleType::U8 => Some(255.0),
+        lienzo_color::SampleType::U16 => Some(32768.0),
+        lienzo_color::SampleType::F32 => None,
     }
 }
 
@@ -107,7 +107,7 @@ pub(crate) fn dissolve_noise(x: i32, y: i32) -> f32 {
 /// stops are all opaque). Normal blending at alpha 1 returns the layer's colour exactly, so the
 /// layers below can be skipped (the live Gradient tool's preview recomposites the whole canvas on
 /// every pointer move).
-pub fn occludes_below(layer: &Layer, mode: photocraft_color::ColorMode) -> bool {
+pub fn occludes_below(layer: &Layer, mode: lienzo_color::ColorMode) -> bool {
     let LayerContent::Fill(f) = &layer.content else { return false };
     let opaque = match f {
         Fill::Solid(c) => c.alpha >= 1.0,
@@ -122,7 +122,7 @@ pub fn occludes_below(layer: &Layer, mode: photocraft_color::ColorMode) -> bool 
         && !cached
         && layer.visible
         && !layer.clipped
-        && layer.blend == photocraft_color::BlendMode::Normal
+        && layer.blend == lienzo_color::BlendMode::Normal
         && layer.opacity >= 1.0
         && layer.fill_opacity >= 1.0
         && !layer.mask.as_ref().is_some_and(|m| m.enabled)
@@ -136,16 +136,16 @@ pub fn occludes_below(layer: &Layer, mode: photocraft_color::ColorMode) -> bool 
 /// RGB documents test Gray and R, G, B; grayscale (and duotone) documents their one channel.
 /// Other modes composite in display RGB, where ranges over their own channels have no exact
 /// equivalent, so (like channel restrictions) the setting round-trips but isn't applied there.
-pub fn blend_if_active(layer: &Layer, mode: photocraft_color::ColorMode) -> bool {
-    use photocraft_color::ColorMode as M;
+pub fn blend_if_active(layer: &Layer, mode: lienzo_color::ColorMode) -> bool {
+    use lienzo_color::ColorMode as M;
     matches!(mode, M::Rgb | M::Grayscale | M::Duotone) && !layer.blend_if.is_default()
 }
 
 /// How much of a pixel shows through `layer`'s Blend If ranges, given the layer's own colour
 /// (`this`, `None` where the layer has no content of its own there) and the colour beneath it
 /// (`under`, `None` where nothing is beneath). Every range multiplies in.
-fn blend_if_weight(layer: &Layer, mode: photocraft_color::ColorMode, this: Option<[f32; 4]>, under: Option<[f32; 4]>) -> f32 {
-    use photocraft_color::ColorMode as M;
+fn blend_if_weight(layer: &Layer, mode: lienzo_color::ColorMode, this: Option<[f32; 4]>, under: Option<[f32; 4]>) -> f32 {
+    use lienzo_color::ColorMode as M;
     let bi = &layer.blend_if;
     let mut k = 1.0;
     for (side, px) in [this, under].into_iter().enumerate() {
@@ -285,7 +285,7 @@ fn composite_layer_any(layer: &Layer, clipped: &[Layer], backdrop: &mut Buffer, 
 
 /// An artboard: its background and the group, composited only inside the board (contents and
 /// effects outside it are clipped away; the backdrop there is untouched).
-fn composite_artboard(layer: &Layer, ab: &photocraft_doc::Artboard, clipped: &[Layer], backdrop: &mut Buffer, cx: &Ctx, scope: advanced::Scope) {
+fn composite_artboard(layer: &Layer, ab: &lienzo_doc::Artboard, clipped: &[Layer], backdrop: &mut Buffer, cx: &Ctx, scope: advanced::Scope) {
     let board = ab.rect.intersect(&backdrop.rect);
     if board.is_empty() {
         return;

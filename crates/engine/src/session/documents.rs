@@ -63,13 +63,13 @@ impl Session {
     }
 
     /// The active document and its active layer, for [`Self::note_layer_change`].
-    pub(crate) fn active_layer_stamp(&self) -> Option<(photocraft_doc::DocId, Option<LayerId>)> {
+    pub(crate) fn active_layer_stamp(&self) -> Option<(lienzo_doc::DocId, Option<LayerId>)> {
         self.active().map(|st| (st.doc.id, st.active_layer))
     }
 
     /// Count a change of the active document or layer since `before` (from
     /// [`Self::active_layer_stamp`]). Every path that can change either calls this after it.
-    pub(crate) fn note_layer_change(&mut self, before: Option<(photocraft_doc::DocId, Option<LayerId>)>) {
+    pub(crate) fn note_layer_change(&mut self, before: Option<(lienzo_doc::DocId, Option<LayerId>)>) {
         if self.active_layer_stamp() != before {
             self.active_layer_changes = self.active_layer_changes.wrapping_add(1);
         }
@@ -106,13 +106,13 @@ impl Session {
     /// Image Size, rotation), dropping the ones that land outside the new canvas. View state: the
     /// points stay pinned to their pixels, no history step. Cleared by the edit it is set for.
     /// The painting symmetry moves through `a` too.
-    pub(crate) fn set_sampler_map(&mut self, a: photocraft_geom::Affine) {
+    pub(crate) fn set_sampler_map(&mut self, a: lienzo_geom::Affine) {
         self.set_canvas_map(a, a);
     }
 
     /// [`set_sampler_map`](Self::set_sampler_map) for an edit whose sampler map differs from its
     /// geometry map (a flip or rotation maps pixel centres): `geometry` moves the painting symmetry.
-    pub(crate) fn set_canvas_map(&mut self, geometry: photocraft_geom::Affine, samplers: photocraft_geom::Affine) {
+    pub(crate) fn set_canvas_map(&mut self, geometry: lienzo_geom::Affine, samplers: lienzo_geom::Affine) {
         self.sampler_map = Some(samplers);
         self.symmetry_map = Some(geometry);
     }
@@ -155,7 +155,7 @@ impl Session {
     }
 
     /// Relative opening-order distance between two open documents, for portable action steps.
-    pub(crate) fn document_offset_between(&self, from: photocraft_doc::DocId, to: photocraft_doc::DocId) -> Option<i64> {
+    pub(crate) fn document_offset_between(&self, from: lienzo_doc::DocId, to: lienzo_doc::DocId) -> Option<i64> {
         let from = self.open_document_order.iter().position(|&id| id == from)?;
         let to = self.open_document_order.iter().position(|&id| id == to)?;
         i64::try_from(to).ok()?.checked_sub(i64::try_from(from).ok()?)
@@ -167,7 +167,7 @@ impl Session {
     pub fn add_document(&mut self, mut doc: Document, path: Option<String>) -> usize {
         // Persisted IDs can overlap the allocator, so check every replacement too.
         while self.docs.iter().any(|st| st.doc.id == doc.id) {
-            doc.id = photocraft_doc::DocId::fresh();
+            doc.id = lienzo_doc::DocId::fresh();
         }
         self.open_document_order.push(doc.id);
         let mut st = DocState::new(doc, path);

@@ -4,16 +4,16 @@
 use egui::accesskit::Role;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::BlendMode;
+use lienzo_doc::BlendMode;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn app_with_a_layer() -> Harness<'static, PhotocraftApp> {
+fn app_with_a_layer() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         // No tool options bar Mode dropdown showing "Normal" too.
@@ -24,13 +24,13 @@ fn app_with_a_layer() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn blend(h: &Harness<'_, PhotocraftApp>) -> BlendMode {
+fn blend(h: &Harness<'_, LienzoApp>) -> BlendMode {
     let st = h.state().session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().blend
 }
 
 /// The Layers panel's Blend Mode dropdown (showing `value`).
-fn blend_box(h: &Harness<'_, PhotocraftApp>, value: &str) -> egui::Rect {
+fn blend_box(h: &Harness<'_, LienzoApp>, value: &str) -> egui::Rect {
     let named = |n: &egui_kittest::Node<'_>| {
         let a = n.accesskit_node();
         a.value().as_deref() == Some(value) || a.label().as_deref() == Some(value)
@@ -83,7 +83,7 @@ fn a_click_still_opens_the_list_for_a_second_click() {
 #[test]
 fn single_frame_trackpad_tap_keeps_dialog_dropdown_above_modal_and_selects_option() {
     let mut h = app_with_a_layer();
-    let tap = |h: &mut Harness<'_, PhotocraftApp>, at: egui::Pos2| {
+    let tap = |h: &mut Harness<'_, LienzoApp>, at: egui::Pos2| {
         h.input_mut().events.push(egui::Event::PointerMoved(at));
         for pressed in [true, false] {
             h.input_mut().events.push(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });

@@ -1,11 +1,11 @@
 //! Tagged-block helpers: the preserved block-list encoding, fills, text,
 //! smart objects, locks and label colors.
 
-use photocraft_color::{Color, ColorMode};
-use photocraft_doc::{AdvancedBlending, BlendIf, BlendRange, Fill, GradientStyle, Knockout, LabelColor, Locks};
-use photocraft_geom::Affine;
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value, VersionedDescriptor};
-use photocraft_psd::layer::BlendingRanges;
+use lienzo_color::{Color, ColorMode};
+use lienzo_doc::{AdvancedBlending, BlendIf, BlendRange, Fill, GradientStyle, Knockout, LabelColor, Locks};
+use lienzo_geom::Affine;
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value, VersionedDescriptor};
+use lienzo_psd::layer::BlendingRanges;
 
 /// `brst` (channel blending restrictions): a list of big-endian u32 channel indices left out of
 /// blending → a bit mask (bit `i` = channel `i`; indices above 31 are ignored).
@@ -101,7 +101,7 @@ pub fn ranges_from_blend_if(b: &BlendIf, channels: usize) -> BlendingRanges {
 
 /// `lspf` bits (Adobe spec: bit 0 transparency, 1 composite, 2 position).
 /// Artboard (bit 3, `0x08`, as reference files write it) and "all" (bit 31) are undocumented.
-/// Older PhotoCraft builds wrote the artboard lock at bit 4 (`0x10`); that value is still
+/// Older Lienzo builds wrote the artboard lock at bit 4 (`0x10`); that value is still
 /// accepted on read so those files keep their lock, and is rewritten at `0x08`.
 pub fn locks_from_lspf(v: u32) -> Locks {
     Locks { transparency: v & 1 != 0, pixels: v & 2 != 0, position: v & 4 != 0, artboard: v & 0x08 != 0 || v & 0x10 != 0, all: v & 0x8000_0000 != 0 }
@@ -185,7 +185,7 @@ pub fn color_from_desc(d: &Descriptor) -> Option<Color> {
     .map(|c| with_pc_alpha(c, d))
 }
 
-/// PSD colour descriptors have no alpha. PhotoCraft writes `pcAl` (0..1) so shape fill
+/// PSD colour descriptors have no alpha. Lienzo writes `pcAl` (0..1) so shape fill
 /// opacity round-trips (#6180). Photoshop ignores the key.
 fn with_pc_alpha(mut c: Color, d: &Descriptor) -> Color {
     // A hostile file's NaN or infinity would survive the clamp: keep the colour opaque instead.
@@ -304,7 +304,7 @@ pub(crate) fn gradient_stops_editable(grad: &Descriptor, method: Option<&[u8]>) 
     let mut raw = gradient_stops_raw(grad);
     let m = crate::gradient_bake::Method::from_code(method);
     // Lab stops (Lab documents) interpolate in L*a*b*, which only baking reproduces.
-    let lab = raw.stops.iter().all(|(_, c)| c.mode == photocraft_color::ColorMode::Lab);
+    let lab = raw.stops.iter().all(|(_, c)| c.mode == lienzo_color::ColorMode::Lab);
     if raw.stops.len() >= 2 && (raw.smooth > 0.0 || m != crate::gradient_bake::Method::Classic || lab) {
         raw.stops = crate::gradient_bake::bake(std::mem::take(&mut raw.stops), &raw.mids, raw.smooth, m);
         raw.mids.clear();
@@ -590,7 +590,7 @@ pub(crate) fn with_pattern_placement(mut d: Descriptor, angle: f32, link: bool, 
 /// `warpCylinder` its seven `warpValues`. Read-only: the raw block is what gets written back.
 /// `None` when absent or `warpNone` with no mesh. A `PlLd` record keeps its warp elsewhere: see
 /// [`parse_plld_warp`].
-pub fn parse_placed_warp(key: &[u8; 4], data: &[u8]) -> Option<photocraft_geom::warp::Warp> {
+pub fn parse_placed_warp(key: &[u8; 4], data: &[u8]) -> Option<lienzo_geom::warp::Warp> {
     if key != b"SoLd" && key != b"SoLE" {
         return None;
     }
@@ -604,8 +604,8 @@ pub fn parse_placed_warp(key: &[u8; 4], data: &[u8]) -> Option<photocraft_geom::
 /// nothing), `None` when it can't be read (an unknown style, missing bounds, a mesh that is
 /// neither one 4 × 4 patch nor a consistent quilt grid, a cylinder that isn't a horizontal one
 /// without perspective, the only kind measured).
-pub(crate) fn warp_of(w: &Descriptor) -> Option<Option<photocraft_geom::warp::Warp>> {
-    use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
+pub(crate) fn warp_of(w: &Descriptor) -> Option<Option<lienzo_geom::warp::Warp>> {
+    use lienzo_geom::warp::{BezierMesh, Warp, WarpStyle};
     let style = enum_of(w, "warpStyle").and_then(|v| WarpStyle::parse(&String::from_utf8_lossy(v)))?;
     if style == WarpStyle::None {
         return Some(None);
@@ -658,7 +658,7 @@ pub(crate) const QUILT_MAX_PATCHES: usize = 64;
 /// control points, three per patch side plus one, in row-major order; `quiltSliceX` and
 /// `quiltSliceY` are the patch boundaries in the mesh's own units, first and last at its edges,
 /// which become the knots on the unit square. `None` for anything inconsistent.
-fn quilt_mesh(w: &Descriptor, env: &Descriptor, points: Vec<[f64; 2]>) -> Option<photocraft_geom::warp::BezierMesh> {
+fn quilt_mesh(w: &Descriptor, env: &Descriptor, points: Vec<[f64; 2]>) -> Option<lienzo_geom::warp::BezierMesh> {
     // Photoshop's split grid tops out far below this; it only bounds what a file can claim.
     const MAX_SIDE: usize = 3 * QUILT_MAX_PATCHES + 1;
     let count = |k: &str| -> Option<usize> {
@@ -671,7 +671,7 @@ fn quilt_mesh(w: &Descriptor, env: &Descriptor, points: Vec<[f64; 2]>) -> Option
     }
     let us = quilt_knots(env, "quiltSliceX", (cols - 1) / 3)?;
     let vs = quilt_knots(env, "quiltSliceY", (rows - 1) / 3)?;
-    Some(photocraft_geom::warp::BezierMesh { us, vs, points })
+    Some(lienzo_geom::warp::BezierMesh { us, vs, points })
 }
 
 /// The knots of a quilt's patch boundaries `key` (`quiltSliceX` or `quiltSliceY` in its
@@ -737,8 +737,8 @@ pub(crate) fn parse_prefix_versioned(data: &[u8]) -> Option<Descriptor> {
 /// which may spill past the source, else the source rect `0..w × 0..h`. Mapping the source rect
 /// instead counts the overhang twice and stretches the placement. A degenerate or non-finite box
 /// falls back to the source rect.
-pub(crate) fn placed_frame(warp: Option<&photocraft_geom::warp::Warp>, w: f64, h: f64) -> [f64; 4] {
-    use photocraft_geom::warp::WarpStyle;
+pub(crate) fn placed_frame(warp: Option<&lienzo_geom::warp::Warp>, w: f64, h: f64) -> [f64; 4] {
+    use lienzo_geom::warp::WarpStyle;
     let rect = [0.0, 0.0, w, h];
     let Some(m) = warp.filter(|wp| matches!(wp.style, WarpStyle::Custom | WarpStyle::Cylinder)).and_then(|wp| wp.mesh.as_ref()).filter(|m| m.is_valid()) else {
         return rect;
@@ -752,9 +752,9 @@ pub(crate) fn placed_frame(warp: Option<&photocraft_geom::warp::Warp>, w: f64, h
 /// The source-space box a projective (Distort / Perspective) placement maps onto its corners: a
 /// cylinder's control-point box, as for an affine placement (#4112), else the source rect. A
 /// custom warp keeps the source rect here: there is no Photoshop reference for that combination.
-pub(crate) fn perspective_frame(warp: Option<&photocraft_geom::warp::Warp>, w: f64, h: f64) -> [f64; 4] {
+pub(crate) fn perspective_frame(warp: Option<&lienzo_geom::warp::Warp>, w: f64, h: f64) -> [f64; 4] {
     match warp {
-        Some(wp) if wp.style == photocraft_geom::warp::WarpStyle::Cylinder => placed_frame(warp, w, h),
+        Some(wp) if wp.style == lienzo_geom::warp::WarpStyle::Cylinder => placed_frame(warp, w, h),
         _ => [0.0, 0.0, w, h],
     }
 }
@@ -803,7 +803,7 @@ pub fn corners_affine(p: &[f64; 8], frame: [f64; 4]) -> Option<Affine> {
 /// being its size (a custom warp's box needs no size); position and rotation stay right, only
 /// Replace Contents and re-renders depend on the scale. Import and export (which keeps an unedited
 /// record verbatim) both place a `PlLd` layer with this.
-pub fn plld_transform(p: &[f64; 8], size: Option<(f64, f64)>, warp: Option<&photocraft_geom::warp::Warp>) -> (Affine, Option<[f64; 9]>) {
+pub fn plld_transform(p: &[f64; 8], size: Option<(f64, f64)>, warp: Option<&lienzo_geom::warp::Warp>) -> (Affine, Option<[f64; 9]>) {
     let (w, h) = size.unwrap_or_else(|| ((p[2] - p[0]).hypot(p[3] - p[1]), (p[6] - p[0]).hypot(p[7] - p[1])));
     let perspective = corners_perspective_in([[p[0], p[1]], [p[2], p[3]], [p[4], p[5]], [p[6], p[7]]], perspective_frame(warp, w, h));
     let frame = if perspective.is_some() { perspective_frame(warp, w, h) } else { placed_frame(warp, w, h) };
@@ -842,7 +842,7 @@ pub enum PlldWarp {
     /// No warp: `warpNone`, a warp that moves nothing, or a record that ends at its corners.
     None,
     /// The warp, in source pixels like the `SoLd` one.
-    Warp(photocraft_geom::warp::Warp),
+    Warp(lienzo_geom::warp::Warp),
     /// A warp is stored but can't be read (or the record itself can't be): re-rendering the
     /// layer from its source would drop it.
     Unreadable,
@@ -901,7 +901,7 @@ pub(crate) fn corners_perspective_in(q: [[f64; 2]; 4], frame: [f64; 4]) -> Optio
     if (0..2).all(|i| (q[0][i] + q[2][i] - q[1][i] - q[3][i]).abs() <= tol) || !ok {
         return None;
     }
-    photocraft_algo::transform::Homography::rect_to_quad(frame, q).map(|m| m.0)
+    lienzo_algo::transform::Homography::rect_to_quad(frame, q).map(|m| m.0)
 }
 
 /// `masterFXSwitch` from an `lfx2` block (defaults to `true`).

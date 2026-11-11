@@ -1,14 +1,14 @@
 use super::*;
 use crate::canvas::{ToolEvent, tool_event};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 100, "height": 60})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 16, "hardness": 1.0}})).unwrap();
     app
 }
 
-fn drag(app: &mut PhotocraftApp, tool: Tool) {
+fn drag(app: &mut LienzoApp, tool: Tool) {
     app.ui.tool = tool;
     let m = egui::Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: 10.0, y: 30.0, pressure: 1.0 }, m);
@@ -17,12 +17,12 @@ fn drag(app: &mut PhotocraftApp, tool: Tool) {
     assert!(!app.ui.status_error, "{tool:?}: {}", app.ui.status);
 }
 
-fn active(app: &PhotocraftApp) -> &photocraft_doc::Layer {
+fn active(app: &LienzoApp) -> &lienzo_doc::Layer {
     let st = app.session.active().unwrap();
     st.active_layer.and_then(|id| st.doc.layer(id)).unwrap()
 }
 
-fn stripes(app: &mut PhotocraftApp, step: usize, target: &str) {
+fn stripes(app: &mut LienzoApp, step: usize, target: &str) {
     for x in (0..100).step_by(step) {
         app.run("paint.pencil", json!({"points": [[x, 0], [x, 60]], "size": 2, "color": "#606060", "target": target})).unwrap();
     }
@@ -170,7 +170,7 @@ fn healing_brush_heals_in_normal_with_a_mode_outside_its_menu() {
         let mut app = app();
         app.ui.tool = tool;
         crate::paint_mouse::sync_tool_brush(&mut app);
-        app.session.tools.brush.mode = photocraft_color::BlendMode::Overlay;
+        app.session.tools.brush.mode = lienzo_color::BlendMode::Overlay;
         app.ui.clone_source = Some([10.0, 10.0]);
         drag(&mut app, tool);
         let (_, params) = app.session.journal.last().unwrap();
@@ -206,14 +206,14 @@ fn paint_bucket_mode_reaches_the_fill() {
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = Tool::PaintBucket;
     app.session.tools.foreground = [0.5, 0.5, 0.5, 1.0];
-    let click = |app: &mut PhotocraftApp| {
+    let click = |app: &mut LienzoApp| {
         let m = egui::Modifiers::NONE;
         tool_event(app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, m);
         tool_event(app, ToolEvent::Up { x: 20.0, y: 20.0 }, m);
     };
     click(&mut app);
     app.session.tools.foreground = [1.0, 0.0, 0.0, 1.0];
-    app.ui.tool_options.bucket_blend_mode = photocraft_color::BlendMode::Multiply;
+    app.ui.tool_options.bucket_blend_mode = lienzo_color::BlendMode::Multiply;
     click(&mut app);
     let px = active(&app).surface().unwrap().rgba(20, 20);
     assert!((px[0] - 0.5).abs() < 0.02 && px[1] < 0.02, "multiplied: {px:?}");
@@ -395,7 +395,7 @@ fn mixer_brush_is_selectable_and_paints_only_inside_the_selection_via_control() 
 fn patch_tool_lassoes_then_drags_the_patch() {
     let mut app = app();
     app.run("paint.pencil", json!({"points": [[68, 30], [74, 30]], "size": 6, "color": "#ff0000"})).unwrap();
-    let red = |app: &PhotocraftApp| active(app).surface().unwrap().rgba(71, 30)[1] < 0.5;
+    let red = |app: &LienzoApp| active(app).surface().unwrap().rgba(71, 30)[1] < 0.5;
     assert!(red(&app));
     app.ui.tool = Tool::Patch;
     let m = egui::Modifiers::NONE;
@@ -424,7 +424,7 @@ fn patch_tool_lassoes_then_drags_the_patch() {
 /// press on, and the release leaves only the new area selected. ⇧ keeps the old one and adds.
 #[test]
 fn a_new_patch_lasso_hides_and_replaces_the_old_selection() {
-    let lasso = |app: &mut PhotocraftApp, x0: f64, m: egui::Modifiers, release: bool| {
+    let lasso = |app: &mut LienzoApp, x0: f64, m: egui::Modifiers, release: bool| {
         tool_event(app, ToolEvent::Down { x: x0, y: 20.0, pressure: 1.0 }, m);
         for [x, y] in [[x0 + 16.0, 20.0], [x0 + 16.0, 40.0], [x0, 40.0]] {
             tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
@@ -433,7 +433,7 @@ fn a_new_patch_lasso_hides_and_replaces_the_old_selection() {
             tool_event(app, ToolEvent::Up { x: x0, y: 40.0 }, m);
         }
     };
-    let selected = |app: &PhotocraftApp, x: i32| app.session.active().unwrap().doc.selection.as_ref().is_some_and(|s| s.sample_channel(x, 30, 0) > 0.0);
+    let selected = |app: &LienzoApp, x: i32| app.session.active().unwrap().doc.selection.as_ref().is_some_and(|s| s.sample_channel(x, 30, 0) > 0.0);
     for tool in [Tool::Patch, Tool::ContentAwareMove] {
         let mut app = app();
         app.ui.tool = tool;
@@ -455,14 +455,14 @@ fn a_new_patch_lasso_hides_and_replaces_the_old_selection() {
 }
 
 /// The screen boxes of the marching ants painted in one canvas frame (meshes of black and white).
-fn painted_ants(app: &mut PhotocraftApp) -> Vec<egui::Rect> {
+fn painted_ants(app: &mut LienzoApp) -> Vec<egui::Rect> {
     painted_ants_of(app, 0)
 }
 
 /// [`painted_ants`] for the document at `idx`.
-fn painted_ants_of(app: &mut PhotocraftApp, idx: usize) -> Vec<egui::Rect> {
+fn painted_ants_of(app: &mut LienzoApp, idx: usize) -> Vec<egui::Rect> {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(300.0, 200.0));
     let view = crate::state::View { zoom: 2.0, center: [50.0, 30.0], doc_size: [100, 60], fit_pending: false, ..Default::default() };
     let mut output = ctx.run_ui(egui::RawInput { screen_rect: Some(rect), ..Default::default() }, |ui| {
@@ -508,7 +508,7 @@ fn a_new_patch_lasso_paints_no_ants_on_the_old_selection() {
 /// never a scan per frame (#11024).
 #[test]
 fn hidden_ants_still_cache_the_selection_bounds() {
-    let cached = |app: &PhotocraftApp| {
+    let cached = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         let fingerprint = crate::surface_fingerprint(st.doc.selection.as_ref().unwrap());
         app.bounds_cache.get(&(u64::MAX - st.doc.id.0)).is_some_and(|(f, b)| *f == fingerprint && !b.is_empty())
@@ -548,7 +548,7 @@ fn a_patch_drag_is_dropped_when_another_document_is_active() {
         assert!(app.drag.is_none() && !patch_replaces_selection(&app), "{tool:?}: dropped on the switch");
         tool_event(&mut app, ToolEvent::Up { x: 60.0, y: 40.0 }, egui::Modifiers::NONE);
         let sel = app.session.active().unwrap().doc.selection.clone().unwrap();
-        assert_eq!(sel.content_bounds(), photocraft_geom::Rect::new(50, 10, 80, 40), "{tool:?}: the other document's selection is untouched");
+        assert_eq!(sel.content_bounds(), lienzo_geom::Rect::new(50, 10, 80, 40), "{tool:?}: the other document's selection is untouched");
     }
 }
 
@@ -603,7 +603,7 @@ fn a_patch_drag_is_dropped_when_its_document_is_reopened_with_the_same_id() {
             assert_eq!(app.drag.is_some(), !reopen, "{tool:?}: reopened {reopen}, edited {edits}");
             tool_event(&mut app, ToolEvent::Up { x: 60.0, y: 40.0 }, egui::Modifiers::NONE);
             let sel = app.session.active().unwrap().doc.selection.clone().unwrap();
-            let lassoed = sel.content_bounds() != photocraft_geom::Rect::new(10, 20, 26, 40);
+            let lassoed = sel.content_bounds() != lienzo_geom::Rect::new(10, 20, 26, 40);
             assert_eq!(lassoed, !reopen, "{tool:?}: reopened {reopen}, edited {edits}: {:?}", sel.content_bounds());
         }
     }
@@ -662,7 +662,7 @@ fn content_aware_move_tool_lassoes_then_moves_or_extends() {
     for (mode, keeps) in [("move", false), ("extend", true)] {
         let mut app = app();
         app.run("paint.pencil", json!({"points": [[20, 30], [24, 30]], "size": 6, "color": "#0000ff"})).unwrap();
-        let blue = |app: &PhotocraftApp, x: i32| active(app).surface().unwrap().rgba(x, 30)[0] < 0.5;
+        let blue = |app: &LienzoApp, x: i32| active(app).surface().unwrap().rgba(x, 30)[0] < 0.5;
         app.ui.tool = Tool::ContentAwareMove;
         app.ui.tool_options.cam_transform_on_drop = false;
         app.ui.tool_options.cam_mode = mode.into();
@@ -691,12 +691,12 @@ fn content_aware_move_tool_lassoes_then_moves_or_extends() {
 fn content_aware_move_transform_on_drop_turns_the_patch_on_enter() {
     let mut app = app();
     app.run("paint.pencil", json!({"points": [[16, 30], [28, 30]], "size": 4, "color": "#0000ff"})).unwrap();
-    let blue = |app: &PhotocraftApp, x: i32, y: i32| active(app).surface().unwrap().rgba(x, y)[0] < 0.5;
+    let blue = |app: &LienzoApp, x: i32, y: i32| active(app).surface().unwrap().rgba(x, y)[0] < 0.5;
     app.ui.tool = Tool::ContentAwareMove;
     app.ui.tool_options.cam_transform_on_drop = true;
     app.ui.tool_options.cam_structure = 7.0;
     let m = egui::Modifiers::NONE;
-    let drag = |app: &mut PhotocraftApp, path: &[[f64; 2]]| {
+    let drag = |app: &mut LienzoApp, path: &[[f64; 2]]| {
         let ([x, y], rest) = (path[0], &path[1..]);
         tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
         for &[x, y] in rest {
@@ -762,7 +762,7 @@ fn red_eye_options_bar_shows_pupil_size_and_darken() {
     let mut app = app();
     app.ui.tool = Tool::RedEye;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -770,7 +770,7 @@ fn red_eye_options_bar_shows_pupil_size_and_darken() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::Studio);
     h.run_steps(4);
     h.get_by_label("Pupil Size");
     h.get_by_label("Darken Amount");
@@ -826,14 +826,14 @@ fn waiting_remove_strokes_keep_their_own_brush() {
     app.ui.tool = Tool::Remove;
     app.ui.tool_options.remove_after_each_stroke = false;
     let m = egui::Modifiers::NONE;
-    let stroke = |app: &mut PhotocraftApp, x: f64| {
+    let stroke = |app: &mut LienzoApp, x: f64| {
         tool_event(app, ToolEvent::Down { x, y: 20.0, pressure: 1.0 }, m);
         tool_event(app, ToolEvent::Move { x, y: 40.0, pressure: 1.0 }, m);
         tool_event(app, ToolEvent::Up { x, y: 40.0 }, m);
     };
     app.run("tools.setBrush", json!({"brush": {"size": 20, "hardness": 0.0}})).unwrap();
     stroke(&mut app, 25.0);
-    let tint = |app: &PhotocraftApp| app.remove_trail.as_ref().map(|t| (0..100).filter(|&x| t.coverage(x, 30) > 0).count());
+    let tint = |app: &LienzoApp| app.remove_trail.as_ref().map(|t| (0..100).filter(|&x| t.coverage(x, 30) > 0).count());
     let first = tint(&app);
     app.run("tools.setBrush", json!({"brush": {"size": 4, "hardness": 1.0}})).unwrap();
     stroke(&mut app, 75.0);
@@ -1088,7 +1088,7 @@ fn art_history_options_bar_defaults() {
     let mut app = app();
     app.ui.tool = Tool::ArtHistoryBrush;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1096,7 +1096,7 @@ fn art_history_options_bar_defaults() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::Studio);
     h.run_steps(4);
     h.get_by_label("Style");
     h.get_by_label("Area");
@@ -1172,7 +1172,7 @@ fn history_brush_options_bar_shows_source_name() {
     let mut app = app();
     app.ui.tool = Tool::HistoryBrush;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1180,7 +1180,7 @@ fn history_brush_options_bar_shows_source_name() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::Studio);
     h.run_steps(4);
     h.get_by_label("Paints from the document's opening state");
 

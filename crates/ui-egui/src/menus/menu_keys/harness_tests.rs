@@ -1,50 +1,50 @@
 //! The menu bar from the keyboard (#4988): Alt / F10 focus the bar, Alt+letter opens a menu,
 //! letters run rows, and the shortcuts wait while the bar has the keyboard.
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::menu_keys::Keys;
 use crate::menu_nav::{Nav, is_open};
 use egui_kittest::{Harness, kittest::Queryable};
 use serde_json::json;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.sync_views();
     app
 }
 
 /// The menu bar alone, as `menu_nav_tests` drives it.
-fn bar() -> Harness<'static, PhotocraftApp> {
+fn bar() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 720.0)).build_ui_state(
         |ui, app| {
             crate::menus::menu_bar(app, ui);
         },
         app(),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h
 }
 
-fn key(h: &mut Harness<'static, PhotocraftApp>, k: egui::Key) {
+fn key(h: &mut Harness<'static, LienzoApp>, k: egui::Key) {
     h.key_press(k);
     h.run_steps(3);
 }
 
-fn alt_key(h: &mut Harness<'static, PhotocraftApp>, k: egui::Key) {
+fn alt_key(h: &mut Harness<'static, LienzoApp>, k: egui::Key) {
     h.event_modifiers(egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::ALT }, egui::Modifiers::ALT);
     h.run_steps(3);
 }
 
 /// A tap on Alt: down, then up with nothing else pressed between.
-fn alt_tap(h: &mut Harness<'static, PhotocraftApp>) {
+fn alt_tap(h: &mut Harness<'static, LienzoApp>) {
     h.key_down(egui::Key::AltLeft);
     h.run_steps(2);
     h.key_up(egui::Key::AltLeft);
     h.run_steps(3);
 }
 
-fn rows(h: &Harness<'static, PhotocraftApp>, level: usize) -> Vec<crate::menu_nav::Row> {
+fn rows(h: &Harness<'static, LienzoApp>, level: usize) -> Vec<crate::menu_nav::Row> {
     Nav::current(&h.ctx).rows.get(level).cloned().unwrap_or_default()
 }
 
@@ -112,7 +112,7 @@ fn alt_with_a_wheel_scroll_or_a_lost_focus_is_no_tap() {
 /// holding Alt alone long enough to repeat is still a tap.
 #[test]
 fn a_held_alt_repeating_after_the_wheel_is_no_tap() {
-    let repeat = |h: &mut Harness<'static, PhotocraftApp>| {
+    let repeat = |h: &mut Harness<'static, LienzoApp>| {
         h.event_modifiers(
             egui::Event::Key { key: egui::Key::AltLeft, physical_key: None, pressed: true, repeat: true, modifiers: egui::Modifiers::ALT },
             egui::Modifiers::ALT,
@@ -313,7 +313,7 @@ fn azerbaijani_and_turkish_mnemonics_keep_the_two_i_pairs_distinct() {
 #[test]
 fn the_shortcuts_wait_while_the_keyboard_is_on_the_bar() {
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = app();
         app.services.native_menu = None;
         app
@@ -367,7 +367,7 @@ fn labels_without_latin_letters_show_their_english_key() {
 #[test]
 fn a_command_shortcut_leaves_the_bar_and_runs() {
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = app();
         app.services.native_menu = None;
         app
@@ -427,9 +427,9 @@ fn every_menu_row_starts_its_label_after_one_checkmark_column() {
 }
 
 /// The whole app (shortcuts, dialogs and the menu bar), for keys other handlers see first.
-fn whole_app() -> Harness<'static, PhotocraftApp> {
+fn whole_app() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_max_steps(16).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app()
     });
     h.run_steps(4);
@@ -437,18 +437,18 @@ fn whole_app() -> Harness<'static, PhotocraftApp> {
 }
 
 /// `key` pressed and released with `mods` held, as the platform reports a chord.
-fn chord(h: &mut Harness<'static, PhotocraftApp>, key: egui::Key, mods: egui::Modifiers) {
+fn chord(h: &mut Harness<'static, LienzoApp>, key: egui::Key, mods: egui::Modifiers) {
     h.event_modifiers(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: mods }, mods);
     h.event_modifiers(egui::Event::Key { key, physical_key: None, pressed: false, repeat: false, modifiers: mods }, mods);
     h.run_steps(2);
 }
 
-fn alt_down(h: &mut Harness<'static, PhotocraftApp>, mods: egui::Modifiers) {
+fn alt_down(h: &mut Harness<'static, LienzoApp>, mods: egui::Modifiers) {
     h.event_modifiers(egui::Event::Key { key: egui::Key::AltLeft, physical_key: None, pressed: true, repeat: false, modifiers: mods }, mods);
     h.run_steps(2);
 }
 
-fn alt_up(h: &mut Harness<'static, PhotocraftApp>) {
+fn alt_up(h: &mut Harness<'static, LienzoApp>) {
     h.event_modifiers(
         egui::Event::Key { key: egui::Key::AltLeft, physical_key: None, pressed: false, repeat: false, modifiers: egui::Modifiers::NONE },
         egui::Modifiers::NONE,
@@ -484,7 +484,7 @@ fn alt_held_through_a_shortcut_does_not_put_the_keyboard_on_the_bar() {
 fn alt_held_during_a_drag_is_no_tap() {
     let mut h = bar();
     let at = egui::pos2(640.0, 400.0);
-    let button = |h: &mut Harness<'static, PhotocraftApp>, pressed: bool, mods: egui::Modifiers| {
+    let button = |h: &mut Harness<'static, LienzoApp>, pressed: bool, mods: egui::Modifiers| {
         h.event_modifiers(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed, modifiers: mods }, mods);
         h.run_steps(2);
     };
@@ -516,7 +516,7 @@ fn alt_held_during_a_drag_is_no_tap() {
     assert_eq!(Keys::current(&h.ctx).focus, None, "one frame");
     // Two buttons: the right one let go while the left is still down. Alt pressed then is still
     // pressed during the left-button drag.
-    let btn = |h: &mut Harness<'static, PhotocraftApp>, button: egui::PointerButton, pressed: bool| {
+    let btn = |h: &mut Harness<'static, LienzoApp>, button: egui::PointerButton, pressed: bool| {
         h.event_modifiers(egui::Event::PointerButton { pos: at, button, pressed, modifiers: none }, none);
         h.run_steps(2);
     };
@@ -538,13 +538,13 @@ fn alt_held_during_a_drag_is_no_tap() {
 #[test]
 fn alt_in_a_zoom_field_only_alerts() {
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 720.0)).build_ui_state(
-        |ui, (app, pct): &mut (PhotocraftApp, f32)| {
+        |ui, (app, pct): &mut (LienzoApp, f32)| {
             crate::menus::menu_bar(app, ui);
             crate::widgets::compact_wrapping_value_field(ui, pct, 0.0..=12800.0, "%", egui::vec2(90.0, 20.0)).accessible_name("Zoom");
         },
         (app(), 100.0),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h.get_by_role(egui::accesskit::Role::SpinButton).click();
     h.run_steps(2);
@@ -570,18 +570,18 @@ fn alt_in_a_zoom_field_only_alerts() {
 
 /// The menu bar and a zoom field, with `zoom_field::tick` as the app runs it. `beep` stands in for
 /// the platform's alert.
-fn bar_and_zoom_field(beep: fn()) -> Harness<'static, (PhotocraftApp, f32)> {
+fn bar_and_zoom_field(beep: fn()) -> Harness<'static, (LienzoApp, f32)> {
     let mut app = app();
     app.services.beep = Some(beep);
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 720.0)).build_ui_state(
-        |ui, (app, pct): &mut (PhotocraftApp, f32)| {
+        |ui, (app, pct): &mut (LienzoApp, f32)| {
             crate::zoom_field::tick(app, &ui.ctx().clone());
             crate::menus::menu_bar(app, ui);
             crate::widgets::compact_wrapping_value_field(ui, pct, 0.0..=12800.0, "%", egui::vec2(90.0, 20.0)).accessible_name("Zoom");
         },
         (app, 100.0),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h.get_by_role(egui::accesskit::Role::SpinButton).click();
     h.run_steps(2);
@@ -593,7 +593,7 @@ fn bar_and_zoom_field(beep: fn()) -> Harness<'static, (PhotocraftApp, f32)> {
 }
 
 /// A letter as the platform sends it: the key, and the text it types.
-fn letter(h: &mut Harness<'static, (PhotocraftApp, f32)>, c: char) {
+fn letter(h: &mut Harness<'static, (LienzoApp, f32)>, c: char) {
     let key = egui::Key::from_name(&c.to_string()).unwrap();
     h.event(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE });
     h.event(egui::Event::Text(c.to_lowercase().to_string()));

@@ -136,7 +136,7 @@ pub(crate) fn recorded_params(s: &Session, id: &str, mut p: Value) -> Value {
         return p;
     }
     let Some(st) = s.active() else { return p };
-    let Some(layer) = p.get("layer").and_then(Value::as_u64).map(photocraft_doc::LayerId).or(st.active_layer).and_then(|id| st.doc.layer(id)) else { return p };
+    let Some(layer) = p.get("layer").and_then(Value::as_u64).map(lienzo_doc::LayerId).or(st.active_layer).and_then(|id| st.doc.layer(id)) else { return p };
     let ordinal = st.doc.walk().into_iter().filter(|(_, _, l)| l.name == layer.name).position(|(_, _, l)| l.id == layer.id).unwrap_or(0);
     if let Some(object) = p.as_object_mut() {
         object.remove("layer");
@@ -232,7 +232,7 @@ pub fn shell_save_command(id: &str) -> bool {
 /// started) is no longer open: a Save Document script event closed it. Playback stops there, so
 /// the next step without a document, such as the Close half of an imported Close with Save: Yes,
 /// doesn't act on whichever document is active now (#7367).
-pub fn save_target_closed(s: &Session, id: &str, target: Option<photocraft_doc::DocId>) -> Option<String> {
+pub fn save_target_closed(s: &Session, id: &str, target: Option<lienzo_doc::DocId>) -> Option<String> {
     let target = target.filter(|_| shell_save_command(id))?;
     (!s.documents().iter().any(|d| d.doc.id == target)).then(|| {
         "the document was closed during the save (by a Save Document script event); playback stopped so later steps don't act on another document".into()

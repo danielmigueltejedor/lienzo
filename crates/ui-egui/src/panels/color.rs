@@ -1,8 +1,8 @@
-use super::{Color32, PhotocraftApp, Rect, RichText, Sense, Stroke, StrokeKind, Tokens, c32, pos2, theme, vec2, widgets};
+use super::{Color32, LienzoApp, Rect, RichText, Sense, Stroke, StrokeKind, Tokens, c32, pos2, theme, vec2, widgets};
 
 /// The Color panel's foreground and background chips. A click picks the colour the field edits,
 /// framed; a double-click opens the Color Picker on it.
-pub(crate) fn field_chips(app: &mut PhotocraftApp, ui: &mut egui::Ui, chips: Rect) {
+pub(crate) fn field_chips(app: &mut LienzoApp, ui: &mut egui::Ui, chips: Rect) {
     let t = Tokens::get(ui.ctx());
     let bgr = Rect::from_min_size(chips.min + vec2(13.0, 13.0), vec2(22.0, 22.0));
     let fgr = Rect::from_min_size(chips.min + vec2(3.0, 3.0), vec2(22.0, 22.0));
@@ -71,7 +71,7 @@ pub(crate) fn field_hsva(mut hsva: egui::ecolor::Hsva, remembered: (f32, f32)) -
 
 /// Photoshop's Color panel Hue Cube (saturation/brightness field + hue strip) or Brightness Cube
 /// (hue/saturation field + brightness strip), drawn as shaded meshes, over a hex/RGB readout.
-pub(crate) fn color_field(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(crate) fn color_field(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let bg_active = app.ui.color_panel.background;
     let key = egui::Id::unique(("color-field-hue", bg_active));
@@ -208,13 +208,13 @@ pub(crate) fn srgb_bytes(c: [f32; 4]) -> [u8; 3] {
 /// so a 50% grey has Brightness 50%. egui's `Hsva` conversions work in linear light, which put
 /// that grey at 22% and drew the field's middle as 188 (#3323); `Hsva` only holds the numbers.
 pub(crate) fn srgb_hsva(c: [f32; 4]) -> egui::ecolor::Hsva {
-    let [h, s, v] = photocraft_color::convert::rgb_to_hsb([c[0], c[1], c[2]].map(|v| v.clamp(0.0, 1.0)));
+    let [h, s, v] = lienzo_color::convert::rgb_to_hsb([c[0], c[1], c[2]].map(|v| v.clamp(0.0, 1.0)));
     egui::ecolor::Hsva::new(h / 360.0, s, v, 1.0)
 }
 
 /// The inverse of srgb_hsva: the Color panel's HSB back to sRGB-encoded values.
 pub(crate) fn hsva_srgb(h: egui::ecolor::Hsva) -> [f32; 4] {
-    let [r, g, b] = photocraft_color::convert::hsb_to_rgb([h.h * 360.0, h.s.clamp(0.0, 1.0), h.v.clamp(0.0, 1.0)]);
+    let [r, g, b] = lienzo_color::convert::hsb_to_rgb([h.h * 360.0, h.s.clamp(0.0, 1.0), h.v.clamp(0.0, 1.0)]);
     [r, g, b, 1.0]
 }
 

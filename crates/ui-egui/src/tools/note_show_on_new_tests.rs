@@ -1,19 +1,19 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use super::{PhotocraftApp, Tool, ToolEvent, json};
+use super::{LienzoApp, Tool, ToolEvent, json};
 use crate::control::{ControlRequest, Outcome, handle};
 
 /// Open a document with the Note tool active and no notes yet.
-fn note_tool() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn note_tool() -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
     app.ui.tool = Tool::Note;
     (app, egui::Context::default())
 }
 
 /// Send a click or drag to the canvas in document coordinates.
-fn gesture(app: &mut PhotocraftApp, [x, y]: [f64; 2], [end_x, end_y]: [f64; 2]) {
+fn gesture(app: &mut LienzoApp, [x, y]: [f64; 2], [end_x, end_y]: [f64; 2]) {
     crate::canvas::tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
     if [x, y] != [end_x, end_y] {
         crate::canvas::tool_event(app, ToolEvent::Move { x: end_x, y: end_y, pressure: 1.0 }, egui::Modifiers::NONE);

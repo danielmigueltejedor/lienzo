@@ -16,7 +16,7 @@ fn noise_gradient_fill(min: [i32; 4], max: [i32; 4], add_transparency: bool) -> 
 
 #[test]
 fn constant_rgb_noise_fill_uses_its_exact_colour() {
-    use photocraft_doc::Fill;
+    use lienzo_doc::Fill;
     let fill = fill_from_desc(b"GdFl", &noise_gradient_fill([50, 25, 0, 0], [50, 25, 0, 100], false));
     let Some(Fill::Gradient { stops, .. }) = fill else { panic!("constant noise gradient") };
     assert_eq!(stops, vec![(0.0, Color::rgb(0.5, 0.25, 0.0)), (1.0, Color::rgb(0.5, 0.25, 0.0))]);
@@ -24,7 +24,7 @@ fn constant_rgb_noise_fill_uses_its_exact_colour() {
 
 #[test]
 fn variable_or_transparent_noise_stays_a_fill_with_the_placeholder_ramp() {
-    use photocraft_doc::Fill;
+    use lienzo_doc::Fill;
     // Photoshop's default Noise gradient (min 0, max 100) and a transparent variant: no
     // exact colour is provable, but the fill must parse — the layer keeps its type, its
     // stored pixels (`fill_cache`) and its raw `GdFl` block. Only the uncached preview
@@ -40,8 +40,8 @@ fn variable_or_transparent_noise_stays_a_fill_with_the_placeholder_ramp() {
 /// alpha) and survive a write; the ramp's alpha follows them.
 #[test]
 fn gradient_fill_opacity_stops_become_alpha() {
-    use photocraft_color::Color;
-    use photocraft_doc::{Fill, GradientStyle};
+    use lienzo_color::Color;
+    use lienzo_doc::{Fill, GradientStyle};
     let red = Color::rgba(1.0, 0.0, 0.0, 1.0);
     let f = Fill::gradient(vec![(0.0, red), (1.0, Color { alpha: 0.0, ..red })], 90.0, 1.0, GradientStyle::Linear, false);
     let (k, data) = super::write_fill(&f);
@@ -49,7 +49,7 @@ fn gradient_fill_opacity_stops_become_alpha() {
     let Fill::Gradient { stops, opacity_stops, .. } = &back else { panic!("gradient") };
     assert_eq!(opacity_stops, &vec![(0.0, 1.0), (1.0, 0.0)]);
     assert!(stops.iter().all(|s| s.1.c[0] == 1.0 && s.1.c[1] == 0.0));
-    let ramp = photocraft_compose::gradient_fill::Ramp::new(&back).unwrap();
+    let ramp = lienzo_compose::gradient_fill::Ramp::new(&back).unwrap();
     assert_eq!(ramp.sample(0.0)[3], 1.0);
     assert!(ramp.sample(1.0)[3] < 0.01);
     // Opaque gradients come back without opacity stops.
@@ -64,16 +64,16 @@ fn gradient_fill_opacity_stops_become_alpha() {
 /// `gs99`, which Photoshop doesn't write, so every gradient opened as Classic.
 #[test]
 fn gradient_fill_reads_the_interpolation_method() {
-    use photocraft_color::Color;
-    use photocraft_doc::{Fill, GradientStyle};
-    use photocraft_psd::descriptor::{Id, Value};
+    use lienzo_color::Color;
+    use lienzo_doc::{Fill, GradientStyle};
+    use lienzo_psd::descriptor::{Id, Value};
     let f = Fill::gradient(vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], 0.0, 1.0, GradientStyle::Linear, false);
     let (k, data) = super::write_fill(&f);
     let d = super::parse_prefix_versioned(&data).unwrap();
     let mid = |code: &str| {
         let d = d.clone().with("gradientsInterpolationMethod", Value::Enumerated { type_id: Id::new("gradientInterpolationMethodType"), value: Id::new(code) });
         let back = super::fill_from_desc(&k, &d).unwrap();
-        let ramp = photocraft_compose::gradient_fill::Ramp::new(&back).unwrap();
+        let ramp = lienzo_compose::gradient_fill::Ramp::new(&back).unwrap();
         (ramp.sample(0.5)[0] * 255.0).round()
     };
     assert_eq!(mid("Gcls"), 128.0);
@@ -84,8 +84,8 @@ fn gradient_fill_reads_the_interpolation_method() {
 
 #[test]
 fn lab_descriptor_colours_round_trip() {
-    use photocraft_color::ColorMode;
-    use photocraft_psd::descriptor::{Descriptor, Value};
+    use lienzo_color::ColorMode;
+    use lienzo_psd::descriptor::{Descriptor, Value};
     let d = Descriptor::new("LbCl").with("Lmnc", Value::Double(19.07)).with("A   ", Value::Double(52.29)).with("B   ", Value::Double(-85.08));
     let c = super::color_from_desc(&d).unwrap();
     assert_eq!(c.mode, ColorMode::Lab);
@@ -103,8 +103,8 @@ fn lab_descriptor_colours_round_trip() {
 /// psd-tools `stroke-color-descriptors-hsb-with-rgb-mode.psd`, used to be dropped (#6774).
 #[test]
 fn hsb_descriptor_colours_parse() {
-    use photocraft_doc::Fill;
-    use photocraft_psd::descriptor::{Descriptor, Value};
+    use lienzo_doc::Fill;
+    use lienzo_psd::descriptor::{Descriptor, Value};
     let hsb = |h: f64, s: f64, b: f64| {
         Descriptor::new("HSBC").with("H   ", Value::UnitFloat { unit: *b"#Ang", value: h }).with("Strt", Value::Double(s)).with("Brgh", Value::Double(b))
     };
@@ -124,9 +124,9 @@ fn hsb_descriptor_colours_parse() {
 }
 
 #[test]
-fn color_descriptor_keeps_photocraft_alpha() {
-    use photocraft_color::Color;
-    use photocraft_doc::Fill;
+fn color_descriptor_keeps_lienzo_alpha() {
+    use lienzo_color::Color;
+    use lienzo_doc::Fill;
     let c = Color::rgba(0.2, 0.4, 0.6, 0.25);
     let (k, d) = super::fill_to_desc(&Fill::Solid(c));
     let Fill::Solid(back) = super::fill_from_desc(&k, &d).unwrap() else { panic!("solid") };
@@ -139,8 +139,8 @@ fn color_descriptor_keeps_photocraft_alpha() {
 }
 
 #[test]
-fn non_finite_photocraft_alpha_is_ignored() {
-    use photocraft_color::Color;
+fn non_finite_lienzo_alpha_is_ignored() {
+    use lienzo_color::Color;
     for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         let d = super::color_to_desc(&Color::rgb(0.2, 0.4, 0.6)).with("pcAl", Value::Double(bad));
         let c = super::color_from_desc(&d).unwrap();
@@ -152,13 +152,13 @@ fn non_finite_photocraft_alpha_is_ignored() {
 
 #[test]
 fn gradient_stop_alpha_round_trips_once() {
-    use photocraft_color::Color;
-    use photocraft_doc::Fill;
+    use lienzo_color::Color;
+    use lienzo_doc::Fill;
     let fill = Fill::Gradient {
         stops: vec![(0.0, Color::rgba(1.0, 0.0, 0.0, 0.5)), (1.0, Color::WHITE)],
         angle: 90.0,
         scale: 1.0,
-        style: photocraft_doc::GradientStyle::Linear,
+        style: lienzo_doc::GradientStyle::Linear,
         reverse: false,
         opacity_stops: vec![],
         midpoints: vec![],
@@ -174,8 +174,8 @@ fn gradient_stop_alpha_round_trips_once() {
 
 #[test]
 fn blending_ranges_map_to_blend_if() {
-    use photocraft_doc::{BlendIf, BlendRange};
-    use photocraft_psd::layer::BlendingRanges;
+    use lienzo_doc::{BlendIf, BlendRange};
+    use lienzo_psd::layer::BlendingRanges;
     // Full ranges (what every layer without Blend If carries) → the default setting.
     assert_eq!(super::blend_if_from_ranges(&BlendingRanges::full(3)), BlendIf::default());
     assert_eq!(super::blend_if_from_ranges(&BlendingRanges::default()), BlendIf::default());
@@ -201,7 +201,7 @@ fn blending_ranges_map_to_blend_if() {
 
 #[test]
 fn advanced_blending_blocks_round_trip() {
-    use photocraft_doc::{AdvancedBlending, Knockout};
+    use lienzo_doc::{AdvancedBlending, Knockout};
     let a = AdvancedBlending {
         knockout: Knockout::Deep,
         blend_interior: true,
@@ -240,8 +240,8 @@ fn brst_round_trip() {
 
 #[test]
 fn placed_layer_warp_is_read() {
-    use photocraft_geom::warp::WarpStyle;
-    use photocraft_psd::descriptor::ObjectArray;
+    use lienzo_geom::warp::WarpStyle;
+    use lienzo_psd::descriptor::ObjectArray;
     let e = |t: &str, v: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(v) };
     let bounds = Descriptor::new("Rctn")
         .with("Top ", Value::UnitFloat { unit: *b"#Pxl", value: 0.0 })
@@ -289,7 +289,7 @@ fn locks_and_labels() {
     for bits in [0u32, 1, 2, 4, 8, 0x0D, 0x8000_0000, 0x8000_000F] {
         assert_eq!(lspf_from_locks(&locks_from_lspf(bits)), bits);
     }
-    // Older PhotoCraft files wrote the artboard lock at 0x10; it reads back as artboard
+    // Older Lienzo files wrote the artboard lock at 0x10; it reads back as artboard
     // and is rewritten at the reference value 0x08.
     assert!(locks_from_lspf(0x10).artboard);
     assert_eq!(lspf_from_locks(&locks_from_lspf(0x10)), 0x08);

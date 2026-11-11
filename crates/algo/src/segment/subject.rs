@@ -36,8 +36,8 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
-use photocraft_geom::Rect;
-use photocraft_raster::{Cancelled, Interrupt};
+use lienzo_geom::Rect;
+use lienzo_raster::{Cancelled, Interrupt};
 
 use super::gmm::Gmm;
 use super::grabcut::{self, BG, PR_BG, PR_FG};

@@ -2,14 +2,14 @@
 //! without connecting from the previous stroke, while Brush, Pencil, History Brush and the other
 //! brush-like tools still connect on Shift-click.
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 use serde_json::json;
 
 /// Create a session whose initial history state is white and whose current canvas is black.
-fn app_with_history_source() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_with_history_source() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     // State 0 ("New"): white 160x160 RGB canvas, which is the default history source.
     app.run("file.new", json!({"width": 160, "height": 160, "background": "white"})).unwrap();
     // Fill the canvas with black so any pixel restored from the white history source is > 0.
@@ -22,12 +22,12 @@ fn app_with_history_source() -> PhotocraftApp {
 }
 
 /// Read the red channel of the active background layer at `(x, y)`.
-fn red(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn red(app: &LienzoApp, x: i32, y: i32) -> f32 {
     app.session.documents()[0].doc.layers[0].surface().unwrap().rgba(x, y)[0]
 }
 
 /// Extract the `[x, y]` stroke points recorded by the latest journaled `cmd`.
-fn last_points(app: &PhotocraftApp, cmd: &str) -> Vec<[f64; 2]> {
+fn last_points(app: &LienzoApp, cmd: &str) -> Vec<[f64; 2]> {
     let p = app.session.journal.iter().rev().find(|(id, _)| id == cmd).map(|(_, p)| p.clone()).unwrap();
     p["points"].as_array().unwrap().iter().map(|q| [q[0].as_f64().unwrap(), q[1].as_f64().unwrap()]).collect()
 }

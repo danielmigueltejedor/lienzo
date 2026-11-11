@@ -5,29 +5,29 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
-fn ruler_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn ruler_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.ui.tool = Tool::Ruler;
     app
 }
 
-fn down(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn down(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
 }
-fn mv(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn mv(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, Modifiers::NONE);
 }
-fn up(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn up(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Up { x, y }, Modifiers::NONE);
 }
 
 /// Escape through the app's shortcut handling, as the canvas gets it.
-fn escape(app: &mut PhotocraftApp) {
+fn escape(app: &mut LienzoApp) {
     let ctx = egui::Context::default();
     let raw = egui::RawInput {
         events: vec![
@@ -42,11 +42,11 @@ fn escape(app: &mut PhotocraftApp) {
 }
 
 /// The ruler's (start, end).
-fn ruler(app: &PhotocraftApp) -> Option<([f64; 2], [f64; 2])> {
+fn ruler(app: &LienzoApp) -> Option<([f64; 2], [f64; 2])> {
     app.session.active().unwrap().doc.measurement.ruler.map(|r| (r.start, r.end))
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 

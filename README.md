@@ -53,7 +53,7 @@ You need a recent stable Rust toolchain.
 ```bash
 git clone https://github.com/danielmigueltejedor/lienzo.git
 cd lienzo
-cargo run --release -p photocraft
+cargo run --release -p lienzo
 ```
 
 The crates and the binary still carry their original internal names; they will be renamed with

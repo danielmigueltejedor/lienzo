@@ -1,21 +1,21 @@
 //! #7942 / #7531: path fields of command dialogs get a Browse… button (Artboards to Files'
 //! folder, Install Plug-in…'s .wasm file) that fills the field from a file dialog.
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::file_dialog::{FileDialogAnswer, FileDialogRequest};
 use egui::vec2;
 use egui_kittest::{Harness, kittest::Queryable};
 use serde_json::{Value, json};
 
-fn harness(answers: Vec<Option<FileDialogAnswer>>) -> (Harness<'static, PhotocraftApp>, std::rc::Rc<std::cell::RefCell<Vec<FileDialogRequest>>>) {
+fn harness(answers: Vec<Option<FileDialogAnswer>>) -> (Harness<'static, LienzoApp>, std::rc::Rc<std::cell::RefCell<Vec<FileDialogRequest>>>) {
     let (show, asked) = crate::file_dialog::fake(answers);
     let h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() })
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() })
     });
     (h, asked)
 }
 
-fn field(h: &Harness<'_, PhotocraftApp>, key: &str) -> Option<Value> {
+fn field(h: &Harness<'_, LienzoApp>, key: &str) -> Option<Value> {
     h.state().ui.dialogs.last().and_then(|d| d.fields.get(key).cloned())
 }
 

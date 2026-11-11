@@ -3,11 +3,11 @@
 
 use std::sync::{Arc, Weak};
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{Document, LayerContent, LayerId};
+use lienzo_color::BlendMode;
+use lienzo_doc::{Document, LayerContent, LayerId};
 use serde_json::{Map, Value, json};
 
-use crate::{PhotocraftApp, state::DialogKind, theme::Tokens, widgets};
+use crate::{LienzoApp, state::DialogKind, theme::Tokens, widgets};
 
 pub const COMMAND: &str = "layer.smartFilter.blendingOptions";
 const TARGET: &str = "__smartFilter";
@@ -39,7 +39,7 @@ impl Targets {
 }
 
 /// Identify the Smart Filter at `layer`/`index` (document, revision, filter) so a stale dialog can be told apart from a current one.
-fn snapshot(app: &PhotocraftApp, layer: LayerId, index: usize) -> Result<Value, String> {
+fn snapshot(app: &LienzoApp, layer: LayerId, index: usize) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document open")?;
     if app.session.job_on(st.doc.id).is_some() {
         return Err(tl!("Wait for the current job to finish.").into());
@@ -53,7 +53,7 @@ fn snapshot(app: &PhotocraftApp, layer: LayerId, index: usize) -> Result<Value, 
 }
 
 /// The `__smartFilter` dialog field: the filter's snapshot plus a guard token for the document it was taken from.
-pub(crate) fn target(app: &mut PhotocraftApp, layer: LayerId, index: usize) -> Result<Value, String> {
+pub(crate) fn target(app: &mut LienzoApp, layer: LayerId, index: usize) -> Result<Value, String> {
     let mut target = snapshot(app, layer, index)?;
     let doc = &app.session.active().ok_or("no document open")?.doc;
     let token = app.smart_filter_targets.capture(doc)?;
@@ -64,7 +64,7 @@ pub(crate) fn target(app: &mut PhotocraftApp, layer: LayerId, index: usize) -> R
 }
 
 /// Revision/filter identity catches edits; the weak snapshot also rejects a same-id reopen.
-pub(crate) fn validate_target(app: &PhotocraftApp, target: &Value) -> Result<(LayerId, usize), String> {
+pub(crate) fn validate_target(app: &LienzoApp, target: &Value) -> Result<(LayerId, usize), String> {
     let layer = LayerId(target.get("layer").and_then(Value::as_u64).ok_or("invalid Smart Filter target")?);
     let index = target.get("index").and_then(Value::as_u64).and_then(|i| usize::try_from(i).ok()).ok_or("invalid Smart Filter index")?;
     let token = target.get("guard").and_then(Value::as_u64).ok_or("invalid Smart Filter snapshot")?;
@@ -81,7 +81,7 @@ pub(crate) fn validate_target(app: &PhotocraftApp, target: &Value) -> Result<(La
 }
 
 /// Open the Blending Options dialog for one Smart Filter, starting from its recorded mode and opacity (shown as a percentage).
-pub fn open(app: &mut PhotocraftApp, layer: LayerId, index: usize) -> Result<u64, String> {
+pub fn open(app: &mut LienzoApp, layer: LayerId, index: usize) -> Result<u64, String> {
     let target = self::target(app, layer, index)?;
     let st = app.session.active().ok_or("no document open")?;
     let Some(LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else { return Err("the layer is not a Smart Object".into()) };
@@ -124,7 +124,7 @@ fn blend_params(fields: &Map<String, Value>) -> Result<Value, String> {
 }
 
 /// The command a confirmed Smart Filter dialog runs on the validated target: its blending, or `layer.smartFilter.setParams` for a parameter editor.
-pub(crate) fn edit_command(app: &PhotocraftApp, fields: &Map<String, Value>) -> Result<(String, Value), String> {
+pub(crate) fn edit_command(app: &LienzoApp, fields: &Map<String, Value>) -> Result<(String, Value), String> {
     let (layer, index) = validate_target(app, fields.get(TARGET).ok_or("no Smart Filter target")?)?;
     if owns(fields) {
         let mut params = blend_params(fields)?;
@@ -151,7 +151,7 @@ fn mode_note(blend: Option<&str>) -> Option<&'static str> {
 }
 
 /// The Blending Options form: Mode (with the Dissolve note), Opacity, Preview and the result viewport.
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
     ui.horizontal(|ui| {
         ui.label(tl!("Mode"));
         let mut blend = fields.get("blend").and_then(Value::as_str).unwrap_or("Normal").to_string();
@@ -185,7 +185,7 @@ struct ViewImage {
 }
 
 /// Show the document as the dialog will leave it (the live preview, or the unchanged document while Preview is off) as a fixed-size thumbnail.
-fn viewport(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>, preview: bool) {
+fn viewport(app: &mut LienzoApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>, preview: bool) {
     let Some(st) = app.session.active() else { return };
     let doc = if preview {
         app.filter_preview.as_ref().filter(|p| p.key.doc == st.doc.id && p.key.revision == st.revision && !p.committing).and_then(|p| p.result.clone())
@@ -204,7 +204,7 @@ fn viewport(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String,
     let mut image = ui.ctx().data(|d| d.get_temp::<ViewImage>(key));
     if image.as_ref().is_none_or(|i| !Arc::ptr_eq(&i.doc, &doc)) {
         // Fixed thumbnail size and content identity: never composite a full surface per frame.
-        let buffer = photocraft_compose::thumbnail_buffer(&doc, 256);
+        let buffer = lienzo_compose::thumbnail_buffer(&doc, 256);
         match app.session.color.canvas_display(&doc) {
             Ok(display) => {
                 let thumb = display.to_rgba8(&buffer);

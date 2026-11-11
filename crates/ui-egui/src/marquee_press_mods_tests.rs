@@ -6,25 +6,25 @@
 use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
-fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
+fn harness(tool: Tool) -> Harness<'static, LienzoApp> {
     harness_with_step_dt(tool, 0.25)
 }
 
-fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1100.0, 800.0)).with_step_dt(step_dt).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -34,7 +34,7 @@ fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, Photocraft
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     // 100 %: one document pixel per point, so drags land on whole pixels.
     let v = &mut h.state_mut().ui.views[0];
@@ -45,7 +45,7 @@ fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, Photocraft
     h
 }
 
-fn view_xform(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
+fn view_xform(h: &Harness<'static, LienzoApp>) -> ViewXform {
     let app = h.state();
     let v = &app.ui.views[0];
     ViewXform {
@@ -58,28 +58,28 @@ fn view_xform(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
     }
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     view_xform(h).to_screen(x, y)
 }
 
-fn mods(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers) {
+fn mods(h: &mut Harness<'static, LienzoApp>, m: Modifiers) {
     h.event(egui::Event::ModifiersChanged(m));
     h.run_steps(1);
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, down: bool, m: Modifiers) {
+fn button(h: &mut Harness<'static, LienzoApp>, p: Pos2, down: bool, m: Modifiers) {
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: m });
     h.run_steps(1);
 }
 
 /// Move the pointer to document point `(x, y)` in a few steps.
-fn move_to(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32) {
+fn move_to(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(2);
 }
 
-fn press_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) {
+fn press_at(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, m: Modifiers) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -88,18 +88,18 @@ fn press_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifier
     move_to(h, x + 8.0, y + 6.0);
 }
 
-fn release_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) {
+fn release_at(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, m: Modifiers) {
     move_to(h, x, y);
     button(h, screen(h, x, y), false, m);
     h.run_steps(2);
 }
 
-fn selection(h: &Harness<'static, PhotocraftApp>) -> Rect {
+fn selection(h: &Harness<'static, LienzoApp>) -> Rect {
     h.state().session.active().unwrap().doc.selection.as_ref().map_or(Rect::EMPTY, |s| s.content_bounds())
 }
 
 /// The two-row readout shows `W: {w} px` and `H: {ht} px` (Photoshop's format).
-fn readout(h: &Harness<'static, PhotocraftApp>, w: i32, ht: i32) -> bool {
+fn readout(h: &Harness<'static, LienzoApp>, w: i32, ht: i32) -> bool {
     let labels = h.query_by_label("W:").is_some() && h.query_by_label("H:").is_some();
     let count = |v: i32| h.query_all_by_label(&format!("{v} px")).count();
     let values = if w == ht { count(w) == 2 } else { count(w) == 1 && count(ht) == 1 };
@@ -107,7 +107,7 @@ fn readout(h: &Harness<'static, PhotocraftApp>, w: i32, ht: i32) -> bool {
 }
 
 /// Drag a marquee from `from` to `to` with `m` held from before the press to after the release.
-fn drag_held(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers, from: [f32; 2], to: [f32; 2]) {
+fn drag_held(h: &mut Harness<'static, LienzoApp>, m: Modifiers, from: [f32; 2], to: [f32; 2]) {
     mods(h, m);
     press_at(h, from[0], from[1], m);
     move_to(h, to[0], to[1]);

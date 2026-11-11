@@ -3,10 +3,10 @@
 //! 100,98–403,301 and 420,318–723,451 scaled by dragging the bottom-right handle by (−100, −60).
 
 use egui::Modifiers;
-use photocraft_doc::LayerContent;
+use lienzo_doc::LayerContent;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform, tool_event};
 use crate::shape_bounds_box::scale_for;
 use crate::state::Tool;
@@ -25,13 +25,13 @@ fn view(rotation: f32) -> ViewXform {
     }
 }
 
-fn cursor(app: &PhotocraftApp, p: [f64; 2]) -> Option<egui::CursorIcon> {
+fn cursor(app: &LienzoApp, p: [f64; 2]) -> Option<egui::CursorIcon> {
     crate::shape_bounds_box::cursor(app, &view(0.0), p)
 }
 
 /// A 1000 × 700 document with the two measured rectangles, both selected.
-fn app_with_two_shapes(tool: Tool) -> (PhotocraftApp, u64, u64) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_two_shapes(tool: Tool) -> (LienzoApp, u64, u64) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 1000, "height": 700, "background": "white"})).unwrap();
     app.run("shape.create", json!({"kind": "rect", "rect": [100, 98, 303, 203], "fill": "#e02020"})).unwrap();
     let a = app.session.active().unwrap().active_layer.unwrap();
@@ -43,9 +43,9 @@ fn app_with_two_shapes(tool: Tool) -> (PhotocraftApp, u64, u64) {
     (app, a.0, b.0)
 }
 
-fn bounds(app: &PhotocraftApp, id: u64) -> (f64, f64, f64, f64) {
+fn bounds(app: &LienzoApp, id: u64) -> (f64, f64, f64, f64) {
     let st = app.session.active().unwrap();
-    let LayerContent::Shape(sh) = &st.doc.layer(photocraft_doc::LayerId(id)).unwrap().content else { panic!("a shape layer") };
+    let LayerContent::Shape(sh) = &st.doc.layer(lienzo_doc::LayerId(id)).unwrap().content else { panic!("a shape layer") };
     sh.path.control_bounds().unwrap()
 }
 
@@ -54,7 +54,7 @@ fn near(got: (f64, f64, f64, f64), want: [f64; 4]) {
     assert!(got.iter().zip(want).all(|(g, w)| (g - w).abs() <= 1.0), "{got:?} vs {want:?}");
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, NONE);
     let mid = [(from[0] + to[0]) / 2.0, (from[1] + to[1]) / 2.0];
     tool_event(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, NONE);
@@ -76,7 +76,7 @@ fn the_measured_drag_gives_the_reference_bounds_with_every_tool() {
         assert!(app.ui.transform.is_none() && app.ui.shape_box.is_none(), "{tool:?}: no Free Transform session opens");
         // The shapes stay live.
         for id in [a, b] {
-            let LayerContent::Shape(sh) = &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content else { panic!() };
+            let LayerContent::Shape(sh) = &app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().content else { panic!() };
             assert!(sh.live.is_some(), "{tool:?}: still a live shape");
         }
     }
@@ -203,13 +203,13 @@ fn hidden_paths_hide_the_box_and_its_handles_take_no_press() {
 }
 
 /// Press the bottom-right handle and drag it, without releasing.
-fn press_and_drag(app: &mut PhotocraftApp) {
+fn press_and_drag(app: &mut LienzoApp) {
     tool_event(app, ToolEvent::Down { x: 723.0, y: 451.0, pressure: 1.0 }, NONE);
     tool_event(app, ToolEvent::Move { x: 623.0, y: 391.0, pressure: 1.0 }, NONE);
     assert!(app.ui.shape_box.is_some());
 }
 
-fn release_changes_nothing(app: &mut PhotocraftApp, a: u64, b: u64, steps: usize, why: &str) {
+fn release_changes_nothing(app: &mut LienzoApp, a: u64, b: u64, steps: usize, why: &str) {
     tool_event(app, ToolEvent::Up { x: 623.0, y: 391.0 }, NONE);
     assert!(app.ui.shape_box.is_none(), "{why}");
     near(bounds(app, a), [100.0, 98.0, 403.0, 301.0]);
@@ -398,7 +398,7 @@ fn edge_hit_picks_the_nearest_side_within_its_band() {
 
 /// The two measured rectangles selected, and an unselected one starting 3 px right of their box
 /// (726,200–876,300). Returns the app, the selected two and the neighbour.
-fn app_with_a_neighbour(tool: Tool) -> (PhotocraftApp, u64, u64, u64) {
+fn app_with_a_neighbour(tool: Tool) -> (LienzoApp, u64, u64, u64) {
     let (mut app, a, b) = app_with_two_shapes(tool);
     app.run("shape.create", json!({"kind": "rect", "rect": [726, 200, 150, 100], "fill": "#20a040"})).unwrap();
     let n = app.session.active().unwrap().active_layer.unwrap().0;
@@ -435,7 +435,7 @@ fn a_press_on_a_neighbouring_shape_or_past_the_band_stays_the_tools() {
         assert!(app.ui.shape_box.is_none(), "{p:?}: no scale starts");
         tool_event(&mut app, ToolEvent::Up { x: p[0], y: p[1] }, NONE);
         let st = app.session.active().unwrap();
-        assert_eq!(st.selected_layers(), vec![photocraft_doc::LayerId(n)], "{p:?}: the neighbour is selected");
+        assert_eq!(st.selected_layers(), vec![lienzo_doc::LayerId(n)], "{p:?}: the neighbour is selected");
         assert_eq!(st.history.past_len(), steps, "{p:?}: nothing scaled");
         near(bounds(&app, a), [100.0, 98.0, 403.0, 301.0]);
         near(bounds(&app, b), [420.0, 318.0, 723.0, 451.0]);
@@ -461,7 +461,7 @@ fn a_press_on_a_neighbouring_shape_or_past_the_band_stays_the_tools() {
 #[test]
 fn the_pick_still_finds_shapes_just_past_their_path_bounds() {
     use crate::vector_ui::pick_shape_at;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 1000, "height": 700, "background": "white"})).unwrap();
     // A stroke-only ellipse 200,200–400,300: picked by its outline alone.
     app.run("shape.create", json!({"kind": "ellipse", "rect": [200, 200, 200, 100], "fill": null, "stroke": {"width": 2}})).unwrap();

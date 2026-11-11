@@ -8,8 +8,8 @@ fn context() -> egui::Context {
     ctx
 }
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 400, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
@@ -18,7 +18,7 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn run(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) -> Option<IMEOutput> {
+fn run(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>) -> Option<IMEOutput> {
     let raw = egui::RawInput { focused: true, events, ..Default::default() };
     let mut out = ctx.run_ui(raw, |ui| {
         let rect = egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(400.0, 300.0));
@@ -32,7 +32,7 @@ fn run(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) -
     out.platform_output.ime
 }
 
-fn layer_text(app: &PhotocraftApp) -> String {
+fn layer_text(app: &LienzoApp) -> String {
     let ed = app.ui.text_edit.as_ref().expect("editing");
     current_text(app, LayerId(ed.layer)).expect("text layer")
 }
@@ -200,7 +200,7 @@ fn external_edit_case(bytes: bool, split: bool, discard: bool) {
     let revision = app.session.active().unwrap().revision;
     let history = app.session.active().unwrap().history.entries();
     let selection = app.ui.text_edit.as_ref().map(|ed| (ed.anchor, ed.caret));
-    let unchanged = |app: &PhotocraftApp| {
+    let unchanged = |app: &LienzoApp| {
         assert_eq!(layer_text(app), "bcにdef");
         assert_eq!(app.session.active().unwrap().revision, revision);
         assert_eq!(app.session.active().unwrap().history.entries(), history);
@@ -253,7 +253,7 @@ fn external_edit_case(bytes: bool, split: bool, discard: bool) {
 
 /// Delivers the deletion of the cancelled composition. With `split`, it is rejected on its own
 /// first. Returns the events that the caller still has to deliver.
-fn reject_cancelled_deletion(app: &mut PhotocraftApp, ctx: &egui::Context, bytes: bool, split: bool, unchanged: &dyn Fn(&PhotocraftApp)) -> Vec<egui::Event> {
+fn reject_cancelled_deletion(app: &mut LienzoApp, ctx: &egui::Context, bytes: bool, split: bool, unchanged: &dyn Fn(&LienzoApp)) -> Vec<egui::Event> {
     let mut events = vec![terminal_delete(bytes)];
     if split {
         run(app, ctx, events).expect("rejected deletion descriptor");
@@ -267,7 +267,7 @@ fn reject_cancelled_deletion(app: &mut PhotocraftApp, ctx: &egui::Context, bytes
     events
 }
 
-fn invalidated_descriptor(app: &mut PhotocraftApp, ctx: &egui::Context, discard: bool) -> egui::output::IMEOutput {
+fn invalidated_descriptor(app: &mut LienzoApp, ctx: &egui::Context, discard: bool) -> egui::output::IMEOutput {
     if discard {
         ctx.options_mut(|o| o.max_passes = std::num::NonZeroUsize::new(4).expect("four passes"));
         let mut passes = Vec::new();
@@ -596,7 +596,7 @@ fn uninterrupted_live_and_empty_preedit_delete_commit_and_direct_commit_stay_val
     assert_eq!(layer_text(&app), "D", "without known preedit the direct commit replaces the selection");
 }
 
-fn actual_app_frame(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) -> egui::FullOutput {
+fn actual_app_frame(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>) -> egui::FullOutput {
     use eframe::App as _;
     let mut frame = eframe::Frame::_new_kittest();
     let mut raw =
@@ -718,14 +718,14 @@ fn an_actual_same_batch_selection_requires_completion_before_the_new_live_preedi
     }
 }
 
-fn pending(app: &PhotocraftApp) -> Option<egui::ImeResetId> {
+fn pending(app: &LienzoApp) -> Option<egui::ImeResetId> {
     match app.type_ime.resets.get(&egui::ViewportId::ROOT) {
         Some(ResetPhase::Awaiting { id, .. }) => Some(*id),
         _ => None,
     }
 }
 
-fn interrupt_with_selection(app: &mut PhotocraftApp, ctx: &egui::Context) -> egui::ImeResetId {
+fn interrupt_with_selection(app: &mut LienzoApp, ctx: &egui::Context) -> egui::ImeResetId {
     run(app, ctx, vec![preedit("P")]);
     run(app, ctx, vec![raw_key(egui::Key::A, true, false)]).expect("custom output").reset_request.expect("published reset")
 }
@@ -1016,7 +1016,7 @@ fn synchronous_select_all_accepts_fresh_text_but_still_blocks_stale_ime() {
 }
 
 struct ResetHarness {
-    app: PhotocraftApp,
+    app: LienzoApp,
     stock: bool,
     picker_button: bool,
     search: String,
@@ -1025,7 +1025,7 @@ struct ResetHarness {
     search_height: Option<f32>,
 }
 
-fn reset_harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, ResetHarness> {
+fn reset_harness(app: LienzoApp) -> egui_kittest::Harness<'static, ResetHarness> {
     let mut h = egui_kittest::Harness::builder()
         .with_size(egui::vec2(1200.0, 800.0))
         .with_context_setup(|ctx| {
@@ -1048,7 +1048,7 @@ fn reset_harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, ResetHarn
                             &mut current,
                             170.0,
                             &["Family 00".into(), "Family 01".into()],
-                            photocraft_engine::prefs::FontPreview::Medium,
+                            lienzo_engine::prefs::FontPreview::Medium,
                             &mut FontLibrary::default(),
                         );
                         // The font field is its own text input: it takes focus as a click would, and
@@ -1270,7 +1270,7 @@ fn a_recreated_context_installed_before_run_ui_rejects_the_old_completion_and_re
     // The host replaces its Context and must run the same supported setup before `run_ui`;
     // a begin-pass hook registered later could not mark the first pass.
     let next = egui::Context::default();
-    PhotocraftApp::setup_context(&next, app.ui.theme);
+    LienzoApp::setup_context(&next, app.ui.theme);
     let mut frame = eframe::Frame::_new_kittest();
     let mut saw_ui_pass = false;
     let mut output = next.run_ui(

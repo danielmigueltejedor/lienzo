@@ -1,18 +1,18 @@
 //! A scratch disk that fills up pauses spilling; History's byte limit applies again until it
 //! resumes, so undo states cannot pile up in memory unbounded meanwhile.
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer};
-use photocraft_engine::Session;
-use photocraft_geom::{Size, TileCoord};
-use photocraft_raster::spill;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer};
+use lienzo_engine::Session;
+use lienzo_geom::{Size, TileCoord};
+use lienzo_raster::spill;
 use serde_json::json;
 
 #[test]
 fn paused_scratch_disk_restores_the_history_limit() {
-    let dir = std::env::temp_dir().join(format!("photocraft-engine-scratch-pause-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-engine-scratch-pause-{}", std::process::id()));
     let mut session = Session::new();
     session.edit_prefs(|p| {
-        p.scratch_disks.disks = vec![photocraft_engine::prefs::ScratchDisk { path: dir.to_string_lossy().into(), enabled: true }];
+        p.scratch_disks.disks = vec![lienzo_engine::prefs::ScratchDisk { path: dir.to_string_lossy().into(), enabled: true }];
         p.performance.memory_usage_mb = 64;
     });
     assert!(spill::enabled());

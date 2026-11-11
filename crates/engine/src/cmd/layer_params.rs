@@ -118,7 +118,7 @@ pub(crate) fn mask_new_layer(doc: &mut Document, l: &mut Layer, p: &Value, cmd: 
         Some(v) => Some(crate::vector_cmds::parse_path(v).map_err(|e| bad(cmd, e))?),
     };
     match path {
-        Some(path) => l.vector_mask = Some(photocraft_doc::VectorMask::new(path)),
+        Some(path) => l.vector_mask = Some(lienzo_doc::VectorMask::new(path)),
         None => match selection_mask(doc)? {
             Some(mask) => {
                 l.mask = Some(mask);

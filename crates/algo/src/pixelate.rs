@@ -3,7 +3,7 @@
 //! Cell layouts are anchored at the reference bounds' origin and random
 //! choices hash document coordinates, so output is independent of tiling.
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 pub(crate) mod cells;
 mod facet;

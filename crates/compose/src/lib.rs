@@ -36,10 +36,10 @@ pub mod shape_split;
 mod uniform;
 pub mod viewport;
 
-use photocraft_color::blend::BlendMode;
-use photocraft_doc::{Document, Fill, Layer, LayerContent, Pattern};
-use photocraft_geom::Rect;
-use photocraft_raster::{Rgba8Image, Surface};
+use lienzo_color::blend::BlendMode;
+use lienzo_doc::{Document, Fill, Layer, LayerContent, Pattern};
+use lienzo_geom::Rect;
+use lienzo_raster::{Rgba8Image, Surface};
 use psblend as blend;
 
 pub use advanced::advanced_active;
@@ -98,7 +98,7 @@ pub struct Buffer {
 
 impl Clone for Buffer {
     fn clone(&self) -> Self {
-        let mut px = photocraft_raster::scratch::take(self.px.len(), [0.0; 4]);
+        let mut px = lienzo_raster::scratch::take(self.px.len(), [0.0; 4]);
         px.copy_from_slice(&self.px);
         Self { rect: self.rect, px }
     }
@@ -106,7 +106,7 @@ impl Clone for Buffer {
 
 impl Drop for Buffer {
     fn drop(&mut self) {
-        photocraft_raster::scratch::give(std::mem::take(&mut self.px));
+        lienzo_raster::scratch::give(std::mem::take(&mut self.px));
     }
 }
 
@@ -115,7 +115,7 @@ impl Buffer {
         Self::filled(rect, [0.0; 4])
     }
     pub fn filled(rect: Rect, c: [f32; 4]) -> Self {
-        Self { rect, px: photocraft_raster::scratch::take(rect.width() as usize * rect.height() as usize, c) }
+        Self { rect, px: lienzo_raster::scratch::take(rect.width() as usize * rect.height() as usize, c) }
     }
     /// The pixels, taken out of the buffer (it can't be destructured: it returns them to the
     /// pool on drop).

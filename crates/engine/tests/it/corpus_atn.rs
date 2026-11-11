@@ -1,12 +1,12 @@
 //! Corpus test (feature `corpus`; run with `cargo xtask test-corpus`): every `.atn` set under
 //! `corpus/atn/` loads through `actions.load`, exports through `actions.save`, and the export
-//! loads back to the same actions (allowing the specified compound-property event expansion). Steps without a PhotoCraft equivalent are counted against a
+//! loads back to the same actions (allowing the specified compound-property event expansion). Steps without a Lienzo equivalent are counted against a
 //! ceiling, so a mapping regression (or a new unmapped event in the corpus) shows up here.
 #![cfg(feature = "corpus")]
 
 use std::path::{Path, PathBuf};
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -33,7 +33,7 @@ const CEILING_UNSUPPORTED: usize = 540;
 /// A compound layer-property command deliberately becomes one Photoshop event per property
 /// (#8304). Compare that documented sequence exactly, including its target and every flag;
 /// all other commands and action metadata retain their original equality check.
-fn exported_action(action: &photocraft_engine::actions_cmds::Action) -> photocraft_engine::actions_cmds::Action {
+fn exported_action(action: &lienzo_engine::actions_cmds::Action) -> lienzo_engine::actions_cmds::Action {
     let mut out = action.clone();
     out.steps.clear();
     out.disabled.clear();
@@ -74,7 +74,7 @@ fn exported_action(action: &photocraft_engine::actions_cmds::Action) -> photocra
 
 #[test]
 fn compound_roundtrip_expectation_keeps_properties_targets_flags_and_action_metadata() {
-    use photocraft_engine::actions_cmds::Action;
+    use lienzo_engine::actions_cmds::Action;
     let mut source = Action::new(
         "Properties",
         vec![("layer.setProps".into(), json!({"layer": "Before", "name": "After", "opacity": 0.5, "blend": "Normal"})), ("select.inverse".into(), json!({}))],
@@ -114,7 +114,7 @@ fn atn_corpus_loads_saves_and_reloads() {
     let (mut steps, mut unsupported) = (0usize, 0usize);
     for p in &files {
         let name = p.strip_prefix(&root).unwrap_or(p).display().to_string();
-        let data = photocraft_engine::paint::tile::b64_encode(&std::fs::read(p).unwrap());
+        let data = lienzo_engine::paint::tile::b64_encode(&std::fs::read(p).unwrap());
         let mut s = Session::new();
         let loaded = match s.execute("actions.load", json!({"data": data})) {
             Ok(v) => v,
@@ -138,9 +138,9 @@ fn atn_corpus_loads_saves_and_reloads() {
                 continue;
             }
         };
-        let bytes = photocraft_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap_or("")).unwrap_or_default();
+        let bytes = lienzo_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap_or("")).unwrap_or_default();
         let mut t = Session::new();
-        match t.execute("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(&bytes)})) {
+        match t.execute("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(&bytes)})) {
             Ok(_) if t.actions.list == first => {}
             Ok(_) => {
                 // Name the first step that differs, so a mapping asymmetry is quick to find.

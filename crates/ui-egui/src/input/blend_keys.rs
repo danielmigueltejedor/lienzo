@@ -7,10 +7,10 @@
 //! (`tools.setBrush`, `layer.setProps` with every target layer), so it is one undo step.
 
 use egui::{Event, Key};
-use photocraft_color::BlendMode;
+use lienzo_color::BlendMode;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// The mode `step` places after (or before, when negative) `current` in `modes`, wrapping around.
@@ -79,7 +79,7 @@ enum Press {
 /// Consumes this frame's ⇧+ / ⇧− presses (⇧= on a US layout is `+`; on a German one
 /// `layout_keys::apply` has already turned ⇧+ and ⇧- into `+` and `-`) and ⇧⌥ letters, and
 /// applies them. Runs before the tool letters, which would otherwise take ⇧⌥M as M.
-pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn handle(app: &mut LienzoApp, ctx: &egui::Context) {
     let presses: Vec<Press> = ctx.input_mut(|i| {
         let mut out = Vec::new();
         i.events.retain(|e| match e {
@@ -166,7 +166,7 @@ fn target(tool: Tool) -> Target {
 }
 
 /// The active tool's mode, `None` being Clear. A brush-based tool's lives in its own brush.
-pub fn tool_mode(app: &mut PhotocraftApp) -> Option<BlendMode> {
+pub fn tool_mode(app: &mut LienzoApp) -> Option<BlendMode> {
     let o = &app.ui.tool_options;
     match app.ui.tool {
         Tool::Brush if o.brush_clear => None,
@@ -182,7 +182,7 @@ pub fn tool_mode(app: &mut PhotocraftApp) -> Option<BlendMode> {
 }
 
 /// Sets the active tool's mode; `None` is Clear.
-fn set_tool_mode(app: &mut PhotocraftApp, mode: Option<BlendMode>) {
+fn set_tool_mode(app: &mut LienzoApp, mode: Option<BlendMode>) {
     match app.ui.tool {
         Tool::Gradient => {
             if let Some(m) = mode {
@@ -218,7 +218,7 @@ fn set_tool_mode(app: &mut PhotocraftApp, mode: Option<BlendMode>) {
     }
 }
 
-pub(crate) fn set_gradient_mode(app: &mut PhotocraftApp, mode: BlendMode) {
+pub(crate) fn set_gradient_mode(app: &mut LienzoApp, mode: BlendMode) {
     let before = app.ui.tool_options.clone();
     app.ui.tool_options.gradient_blend_mode = mode;
     // Live mode: a selected gradient fill layer follows, as with the dropdown.
@@ -227,7 +227,7 @@ pub(crate) fn set_gradient_mode(app: &mut PhotocraftApp, mode: BlendMode) {
 
 /// Sets `mode` on every selected layer that can take it, in one undo step: the locked Background
 /// has no blend mode, and only groups pass through.
-fn set_layers_mode(app: &mut PhotocraftApp, mode: BlendMode) {
+fn set_layers_mode(app: &mut LienzoApp, mode: BlendMode) {
     let Some(st) = app.session.active() else { return };
     let ids: Vec<u64> = st
         .selected_layers()
@@ -243,7 +243,7 @@ fn set_layers_mode(app: &mut PhotocraftApp, mode: BlendMode) {
 
 /// One ⇧+ (`step` 1) or ⇧− (`step` -1) press. Selected layers all take the mode after the active
 /// layer's.
-pub fn press(app: &mut PhotocraftApp, step: i32) {
+pub fn press(app: &mut LienzoApp, step: i32) {
     match target(app.ui.tool) {
         Target::Tool(modes) => {
             let current = tool_mode(app);
@@ -269,7 +269,7 @@ pub fn press(app: &mut PhotocraftApp, step: i32) {
 
 /// One ⇧⌥ letter press. A mode the target's menu doesn't have (Clear or Behind for layers, Pass
 /// Through for a painting tool, Overlay for the Healing Brush) does nothing.
-pub fn pick_mode(app: &mut PhotocraftApp, pick: Pick) {
+pub fn pick_mode(app: &mut LienzoApp, pick: Pick) {
     let want = match pick {
         Pick::Mode(m) => Some(m),
         Pick::Clear => None,

@@ -3939,7 +3939,7 @@ layerLabel	No Color	Bez boje
 	Mezzotint	Mecotinta
 	Mosaic	Mozaik
 	Motion Blur	Zamućenje pokreta
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Izvorno prevlačenje i otpuštanje datoteka još nije podržano na Wayland-u. Koristite Datoteka › Otvori ili pokrenite Lienzo pod XWayland-om pomoću `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Izvorno prevlačenje i otpuštanje datoteka još nije podržano na Wayland-u. Koristite Datoteka › Otvori ili pokrenite Lienzo pod XWayland-om pomoću `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Neonski sjaj
 	New Guide Layout	Novi raspored vodilja
 	New Video Layer from File	Novi video sloj iz datoteke

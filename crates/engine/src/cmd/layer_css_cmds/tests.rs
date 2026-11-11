@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_doc::Layer;
-use photocraft_geom::Rect;
+use lienzo_doc::Layer;
+use lienzo_geom::Rect;
 
 /// A 400 × 300 document at 72 ppi with a 200 × 140 pixel layer at (100, 80) named `name`.
 fn session(name: &str) -> Session {
@@ -43,21 +43,21 @@ fn fill_and_type_layers_describe_their_colour_and_font() {
     let doc = session("Box").active().unwrap().doc.clone();
     // Photoshop: a solid colour gives `background-color`. A fill layer is a shape with a vector
     // mask, placed at its outline; without one it has no rule (Copy CSS is greyed out, measured).
-    let mut fill = Layer::new("Card", LayerContent::Fill(Fill::Solid(photocraft_color::Color::rgb(1.0, 120.0 / 255.0, 30.0 / 255.0))));
+    let mut fill = Layer::new("Card", LayerContent::Fill(Fill::Solid(lienzo_color::Color::rgb(1.0, 120.0 / 255.0, 30.0 / 255.0))));
     assert!(rule(&doc, 4, &fill).is_none());
-    fill.vector_mask = Some(photocraft_doc::VectorMask::new(photocraft_vector::shapes::rect(250.0, 200.0, 120.0, 60.0)));
+    fill.vector_mask = Some(lienzo_doc::VectorMask::new(lienzo_vector::shapes::rect(250.0, 200.0, 120.0, 60.0)));
     assert_eq!(
         rule(&doc, 4, &fill).unwrap(),
         ".Card {\n  background-color: rgb(255, 120, 30);\n  position: absolute;\n  left: 250px;\n  top: 200px;\n  width: 120px;\n  height: 60px;\n  z-index: 4;\n}\n"
     );
     // A type layer: size, family, colour, auto leading and alignment, then only its position
     // (Photoshop writes no size for point text). Its position is where its pixels are.
-    let mut cache = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut cache = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     cache.fill_rect(Rect::new(49, 28, 120, 52), &[0.0, 0.0, 0.0, 1.0]);
-    let text = photocraft_doc::TextLayer {
+    let text = lienzo_doc::TextLayer {
         font_family: "Inter".into(),
         size_pt: 24.0,
-        color: photocraft_color::Color::rgb(0.0, 0.0, 0.0),
+        color: lienzo_color::Color::rgb(0.0, 0.0, 0.0),
         cache: Some(cache),
         ..Default::default()
     };
@@ -159,15 +159,15 @@ fn positions_are_cut_after_three_decimals() {
 #[test]
 fn paragraph_text_is_placed_at_its_box_and_sized_by_its_text() {
     let doc = session("Box").active().unwrap().doc.clone();
-    let mut cache = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut cache = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     cache.fill_rect(Rect::new(62, 44, 218, 95), &[0.0, 0.0, 0.0, 1.0]);
-    let mut text = photocraft_doc::TextLayer {
+    let mut text = lienzo_doc::TextLayer {
         text: "Hello world this wraps around".into(),
         font_family: "Inter".into(),
         size_pt: 24.0,
         cache: Some(cache),
-        shape: photocraft_doc::text::TextShape::Box { x: 0.0, y: 0.0, width: 200.0, height: 120.0 },
-        transform: photocraft_geom::Affine::translate(60.0, 40.0),
+        shape: lienzo_doc::text::TextShape::Box { x: 0.0, y: 0.0, width: 200.0, height: 120.0 },
+        transform: lienzo_geom::Affine::translate(60.0, 40.0),
         ..Default::default()
     };
     let css = rule(&doc, 3, &Layer::new("Para", LayerContent::Text(text.clone()))).unwrap_or_default();
@@ -175,8 +175,8 @@ fn paragraph_text_is_placed_at_its_box_and_sized_by_its_text() {
         css,
         ".Para {\n  font-size: 24px;\n  font-family: \"Inter\";\n  color: rgb(0, 0, 0);\n  line-height: 1.2;\n  text-align: left;\n  position: absolute;\n  left: 60px;\n  top: 40px;\n  width: 156px;\n  height: 51px;\n  z-index: 3;\n}\n"
     );
-    let style = photocraft_doc::text::CharStyle { font_family: "Inter".into(), size_pt: 24.0, leading_pt: Some(36.0), ..Default::default() };
-    text.runs = vec![photocraft_doc::text::TextRun { len: text.text.len(), style }];
+    let style = lienzo_doc::text::CharStyle { font_family: "Inter".into(), size_pt: 24.0, leading_pt: Some(36.0), ..Default::default() };
+    text.runs = vec![lienzo_doc::text::TextRun { len: text.text.len(), style }];
     let css = rule(&doc, 3, &Layer::new("Para", LayerContent::Text(text))).unwrap_or_default();
     assert!(
         css.contains("  line-height: 1.5;\n  text-align: left;\n  position: absolute;\n  left: 60px;\n  top: 76px;\n  width: 156px;\n  height: 51px;\n"),
@@ -215,9 +215,9 @@ fn names_in_quoted_values_are_escaped() {
     let css = session("a\\b\nc").execute(ID, json!({})).unwrap()["css"].as_str().unwrap().to_string();
     assert!(css.contains("  background-image: url(\"a\\\\b\\a c.png\");\n"), "{css}");
     let doc = session("Box").active().unwrap().doc.clone();
-    let mut cache = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut cache = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     cache.fill_rect(Rect::new(49, 28, 120, 52), &[0.0, 0.0, 0.0, 1.0]);
-    let text = photocraft_doc::TextLayer { font_family: "My \"Font\"".into(), size_pt: 24.0, cache: Some(cache), ..Default::default() };
+    let text = lienzo_doc::TextLayer { font_family: "My \"Font\"".into(), size_pt: 24.0, cache: Some(cache), ..Default::default() };
     let css = rule(&doc, 3, &Layer::new("Title", LayerContent::Text(text))).unwrap_or_default();
     assert!(css.contains("  font-family: \"My \\\"Font\\\"\";\n"), "{css}");
 }
@@ -321,7 +321,7 @@ fn a_layer_with_a_drop_shadow_writes_its_rule_without_the_effect() {
     s.edit("fx", |doc, active| {
         let l = doc.layer_mut(active.unwrap()).unwrap();
         l.effects.enabled = true;
-        l.effects.items.push(photocraft_doc::effects::Effect::default_drop_shadow());
+        l.effects.items.push(lienzo_doc::effects::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -337,7 +337,7 @@ fn point_type_is_placed_by_its_line_box() {
     let mut s = session("Box");
     let id = s.execute("type.create", json!({"x": 50, "y": 150, "text": "Hello", "size": 24})).unwrap()["layer"].as_u64().unwrap();
     let doc = &s.active().unwrap().doc;
-    let pix = photocraft_doc::comps::position_bounds(doc.walk().into_iter().find(|(_, _, l)| l.id.0 == id).unwrap().2);
+    let pix = lienzo_doc::comps::position_bounds(doc.walk().into_iter().find(|(_, _, l)| l.id.0 == id).unwrap().2);
     let css = s.execute(ID, json!({"layer": id})).unwrap()["css"].as_str().unwrap().to_string();
     let value = |key: &str| css.split(&format!("  {key}: ")).nth(1).and_then(|v| v.split("px;").next()).and_then(|v| v.parse::<f64>().ok()).unwrap();
     let (left, top) = (value("left"), value("top"));

@@ -1,8 +1,8 @@
 //! #10694: Content-Aware Fill options survive ATN load, save and playback.
 
-use photocraft_doc::{LayerId, Rect};
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_psd::{
+use lienzo_doc::{LayerId, Rect};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Descriptor, Id, UnicodeString, Value as D},
 };
@@ -36,13 +36,13 @@ fn recorded(event: AtnEvent, descriptor: Descriptor) -> Vec<u8> {
 }
 
 fn load(s: &mut Session, bytes: &[u8]) -> Value {
-    s.execute("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(bytes)})).unwrap()
+    s.execute("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(bytes)})).unwrap()
 }
 
 fn save(s: &mut Session) -> Vec<u8> {
     let saved = s.execute("actions.save", json!({"set": "CAF"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    photocraft_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()
+    lienzo_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()
 }
 
 /// Match the qualified native fixture, using the action command's default seed.

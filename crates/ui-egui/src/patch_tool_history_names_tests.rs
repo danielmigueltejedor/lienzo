@@ -3,12 +3,12 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
-fn app_with(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -16,7 +16,7 @@ fn app_with(tool: Tool) -> PhotocraftApp {
 }
 
 /// Drag a triangle with the active tool and return the last History step.
-fn drag_lasso(app: &mut PhotocraftApp) -> Option<String> {
+fn drag_lasso(app: &mut LienzoApp) -> Option<String> {
     tool_event(app, ToolEvent::Down { x: 100.0, y: 100.0, pressure: 1.0 }, Modifiers::NONE);
     for (x, y) in [(200.0, 100.0), (300.0, 100.0), (300.0, 300.0)] {
         tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, Modifiers::NONE);

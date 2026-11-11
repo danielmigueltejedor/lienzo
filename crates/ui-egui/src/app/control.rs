@@ -1,6 +1,6 @@
-use super::{ControlRequest, PhotocraftApp, Receiver, gpu_canvas};
+use super::{ControlRequest, LienzoApp, Receiver, gpu_canvas};
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Attach a control channel (requests arrive from a transport thread: TCP, stdin, tests).
     pub fn with_control(mut self, rx: Receiver<ControlRequest>) -> Self {
         self.control_rx = Some(rx);

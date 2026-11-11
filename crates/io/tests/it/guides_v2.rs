@@ -1,13 +1,13 @@
 //! Image resources 1092 (guides with colours) and 1097 (guide GUIDs) next to 1032 (#5966).
 
-use photocraft_io::guides_map::{DEFAULT_GUIDE_RGB, GUIDE_IDS, GUIDES_V2};
-use photocraft_io::*;
-use photocraft_psd::testgen;
-use photocraft_psd::{Compression, ImageResource, PsdFile, Version};
+use lienzo_io::guides_map::{DEFAULT_GUIDE_RGB, GUIDE_IDS, GUIDES_V2};
+use lienzo_io::*;
+use lienzo_psd::testgen;
+use lienzo_psd::{Compression, ImageResource, PsdFile, Version};
 
 const RED: [u8; 3] = [0xff, 0x00, 0x00];
 
-type Edit = fn(&mut photocraft_doc::Document);
+type Edit = fn(&mut lienzo_doc::Document);
 
 fn guides_v1(guides: &[(i32, u8)]) -> Vec<u8> {
     let mut v = Vec::new();

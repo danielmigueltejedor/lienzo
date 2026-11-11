@@ -1,7 +1,7 @@
 //! Image-placeholder geometry. The outline is normalized to the unit square; its affine
 //! placement is independent of the image's placement, so resizing a frame never resamples it.
 use crate::{Path, ShapeLayer, ShapeStroke};
-use photocraft_geom::{Affine, Point, Rect};
+use lienzo_geom::{Affine, Point, Rect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

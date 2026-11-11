@@ -43,7 +43,7 @@ change the document. Locks and invalid geometry are rejected before committing a
 
 Native `.pcraft` saves keep the complete frame model, with a default for old files. PSD export
 uses editable groups, vector masks, Smart Objects, and a separate vector border to preserve the
-appearance. Private `pcFr` metadata restores PhotoCraft frame editability when reopened here;
+appearance. Private `pcFr` metadata restores Lienzo frame editability when reopened here;
 unknown Photoshop blocks remain preserved. These exports are **not Photoshop's native frame layer
 type**: its private frame metadata has not been independently established. Old anonymous masked
 groups are not guessed to be frames from their names.
@@ -62,10 +62,10 @@ frame-sized compositor mask until content or a visible stroke is added.
 Regression tests cover persistent handles after release, existing-frame resizing, cancel/undo,
 frame/content/both selection, frame-only Free Transform, independent transforms at 8/16/32-bit,
 proportional placement/replacement, conversion, hostile geometry, locks, and native/PSD round trips.
-Set `PHOTOCRAFT_FRAME_SNAPSHOTS` when running
+Set `LIENZO_FRAME_SNAPSHOTS` when running
 `frame_tool::tests::frame_creation_handles_render_at_native_scales` to render the full production
 shell with a synthetic image in every theme, at 1280×720 and 800×480 points, at 1× and 2×.
 
-Measure 24 MP creation with `cargo run --release -p photocraft-engine --example bench_frame`.
+Measure 24 MP creation with `cargo run --release -p lienzo-engine --example bench_frame`.
 The comparison times the former raster-mask construction against the complete vector creation
 command; it does not measure image placement or a full canvas render.

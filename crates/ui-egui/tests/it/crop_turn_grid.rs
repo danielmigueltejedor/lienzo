@@ -1,20 +1,20 @@
 //! #10931: the default Crop turn temporarily replaces the chosen overlay with
 //! centred 48-point cells; Classic Mode and Straighten keep their existing look.
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
-use photocraft_ui_egui::crop_overlay::{self, CropOverlay, OverlayShow, Polyline};
-use photocraft_ui_egui::crop_ui;
-use photocraft_ui_egui::state::Tool;
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::crop_overlay::{self, CropOverlay, OverlayShow, Polyline};
+use lienzo_ui_egui::crop_ui;
+use lienzo_ui_egui::state::Tool;
 use serde_json::{Value, json};
 
-fn control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) {
+fn control(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) {
     let (request, _rx) = ControlRequest::new(method, params.clone());
     assert!(matches!(handle(app, ctx, &request), Outcome::Done(_)), "{method} {params}");
 }
 
-fn app(classic: bool, show: OverlayShow) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(classic: bool, show: OverlayShow) -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":412,"height":301})).unwrap();
     app.sync_views();
@@ -31,11 +31,11 @@ fn app(classic: bool, show: OverlayShow) -> (PhotocraftApp, egui::Context) {
     (app, ctx)
 }
 
-fn turning(app: &mut PhotocraftApp, ctx: &egui::Context) -> [f64; 2] {
+fn turning(app: &mut LienzoApp, ctx: &egui::Context) -> [f64; 2] {
     turning_by(app, ctx, 10.0)
 }
 
-fn turning_by(app: &mut PhotocraftApp, ctx: &egui::Context, degrees: f64) -> [f64; 2] {
+fn turning_by(app: &mut LienzoApp, ctx: &egui::Context, degrees: f64) -> [f64; 2] {
     let c = crop_ui::center(app.ui.crop_rect.unwrap());
     let p = [c[0] + 500.0, c[1]];
     let a = degrees.to_radians();
@@ -45,7 +45,7 @@ fn turning_by(app: &mut PhotocraftApp, ctx: &egui::Context, degrees: f64) -> [f6
     q
 }
 
-fn release(app: &mut PhotocraftApp, ctx: &egui::Context, p: [f64; 2]) {
+fn release(app: &mut LienzoApp, ctx: &egui::Context, p: [f64; 2]) {
     control(app, ctx, "ui.pointer", json!({"events":[{"kind":"up","x":p[0],"y":p[1]}]}));
     assert!(crop_ui::turning(app).is_none());
 }
@@ -139,12 +139,12 @@ fn canvas_paints_48_point_cells_at_zoom_two_and_hidpi() {
         view.fill_pending = false;
         view.doc_size = [412, 301];
         view.center = [206.0, 150.5];
-        let xf = photocraft_ui_egui::canvas::ViewXform { rect, zoom: 1.0, center: view.center, flip: false, rotation: view.rotation, aspect: 1.0 };
+        let xf = lienzo_ui_egui::canvas::ViewXform { rect, zoom: 1.0, center: view.center, flip: false, rotation: view.rotation, aspect: 1.0 };
         let q = crop_ui::corners(app.ui.crop_rect.unwrap(), crop_ui::angle(&app)).map(|p| xf.to_screen(p[0] as f32, p[1] as f32));
         let input = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1000.0, 800.0))), ..Default::default() };
         let mut output = ctx.run_ui(input, |ui| {
             ui.set_clip_rect(clip);
-            let painted_view = photocraft_ui_egui::canvas::canvas_view(&mut app, ui, 0, rect, view.clone(), true);
+            let painted_view = lienzo_ui_egui::canvas::canvas_view(&mut app, ui, 0, rect, view.clone(), true);
             assert_eq!(painted_view.zoom, 2.0);
         });
         // Shape-only CPU inspection has no renderer to consume texture updates.
@@ -222,7 +222,7 @@ fn a_zoomed_panned_view_is_covered_without_visiting_the_whole_frame() {
     let at = [c[0][0] + 0.8 * (c[1][0] - c[0][0]) + 0.7 * (c[3][0] - c[0][0]), c[0][1] + 0.8 * (c[1][1] - c[0][1]) + 0.7 * (c[3][1] - c[0][1])];
     control(&mut app, &ctx, "ui.set", json!({"zoom":100.0,"center":at}));
     assert!(crop_ui::turning(&app).is_some());
-    let xf = photocraft_ui_egui::canvas::ViewXform::active(&app).unwrap();
+    let xf = lienzo_ui_egui::canvas::ViewXform::active(&app).unwrap();
     let q = crop_ui::corners(app.ui.crop_rect.unwrap(), crop_ui::angle(&app)).map(|p| xf.to_screen(p[0] as f32, p[1] as f32));
     let (u, v) = (q[1] - q[0], q[3] - q[0]);
     assert!(u.y.abs() < 0.1 && v.x.abs() < 0.1, "the default-mode frame stays upright");

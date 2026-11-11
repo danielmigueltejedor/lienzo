@@ -1,11 +1,11 @@
 //! Release benchmark for the live Mixer Brush on a 24 MP document.
 //! Setup and checksum are outside the timed command. Run with
-//! `cargo run --release -p photocraft-engine --example bench_dry_mixer`.
+//! `cargo run --release -p lienzo-engine --example bench_dry_mixer`.
 
 use std::time::Instant;
 
-use photocraft_engine::{EngineError, Session};
-use photocraft_geom::Rect;
+use lienzo_engine::{EngineError, Session};
+use lienzo_geom::Rect;
 use serde_json::json;
 
 const W: i32 = 6000;

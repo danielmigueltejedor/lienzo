@@ -169,10 +169,10 @@ fn bevel_of(style: BevelStyle, technique: BevelTechnique) -> Bevel {
         use_global_light: false,
         gloss_contour: Contour::Linear,
         gloss_anti_alias: false,
-        highlight: photocraft_doc::FxCommon::new(BlendMode::Screen, 0.75),
-        highlight_color: photocraft_color::Color::WHITE,
-        shadow: photocraft_doc::FxCommon::new(BlendMode::Multiply, 0.75),
-        shadow_color: photocraft_color::Color::BLACK,
+        highlight: lienzo_doc::FxCommon::new(BlendMode::Screen, 0.75),
+        highlight_color: lienzo_color::Color::WHITE,
+        shadow: lienzo_doc::FxCommon::new(BlendMode::Multiply, 0.75),
+        shadow_color: lienzo_color::Color::BLACK,
         contour: None,
         texture: None,
     }
@@ -649,7 +649,7 @@ fn bevel_maps_do_not_depend_on_the_threads() {
         }
     }
     let shapes = [aa_disc(97, 83, 30.0), aa_round_rect(131, 77, 9.0, 11.0, 120.0, 66.0, 14.0), aa_bar(90, 130, 60.0, 150.0, 25.0), patchy];
-    let mut sf = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut sf = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     sf.fill_rect(Rect::new(0, 0, 4, 2), &[0.0, 0.0, 0.0, 1.0]);
     sf.fill_rect(Rect::new(0, 2, 4, 4), &[1.0, 1.0, 1.0, 1.0]);
     let pats = [Pattern::new("stripes", sf, 4, 4)];
@@ -663,7 +663,7 @@ fn bevel_maps_do_not_depend_on_the_threads() {
                     let mut b = bevel_of(style, technique);
                     (b.size, b.soften) = (size, soften);
                     if textured {
-                        b.texture = Some(photocraft_doc::BevelTexture {
+                        b.texture = Some(lienzo_doc::BevelTexture {
                             name: "stripes".into(),
                             id: String::new(),
                             scale: 1.0,
@@ -752,7 +752,7 @@ fn chisel_hard_has_flat_facets() {
 #[test]
 fn linear_bevel_contour_leaves_the_height_alone_at_any_range() {
     for range in [0.5, 0.7, 1.0] {
-        let lut = bevel_contour_lut(&photocraft_doc::BevelContour { contour: Contour::Linear, range, anti_alias: false });
+        let lut = bevel_contour_lut(&lienzo_doc::BevelContour { contour: Contour::Linear, range, anti_alias: false });
         for v in [0.0f32, 0.25, 0.5, 0.75, 1.0] {
             assert!((lut_at(&lut, v) - v).abs() < 1e-3, "range {range}: {v} -> {}", lut_at(&lut, v));
         }
@@ -768,23 +768,23 @@ fn bevel_contour_and_texture_shape_the_height() {
     // A contour reshapes the profile (here a ramp folded at its middle).
     let mut c = plain.clone();
     let fold = vec![
-        photocraft_doc::adjust::CurvePoint { input: 0.0, output: 0.0 },
-        photocraft_doc::adjust::CurvePoint { input: 0.5, output: 1.0 },
-        photocraft_doc::adjust::CurvePoint { input: 1.0, output: 0.0 },
+        lienzo_doc::adjust::CurvePoint { input: 0.0, output: 0.0 },
+        lienzo_doc::adjust::CurvePoint { input: 0.5, output: 1.0 },
+        lienzo_doc::adjust::CurvePoint { input: 1.0, output: 0.0 },
     ];
     c.contour =
-        Some(photocraft_doc::BevelContour { contour: Contour::Custom { name: "fold".into(), points: fold, corners: vec![] }, range: 1.0, anti_alias: false });
+        Some(lienzo_doc::BevelContour { contour: Contour::Custom { name: "fold".into(), points: fold, corners: vec![] }, range: 1.0, anti_alias: false });
     let (b, _) = bevel_maps(&shape, &c, &l, &no_tex(), &PreparedPatterns::new(&[], PREPARED_PATTERN_BYTES));
     let diff: f32 = a[1].v.iter().zip(&b[1].v).map(|(x, y)| (x - y).abs()).sum();
     assert!(diff > 5.0, "{diff}");
     // A striped texture lights the flat middle.
-    let mut sf = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut sf = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     sf.fill_rect(Rect::new(0, 0, 4, 2), &[0.0, 0.0, 0.0, 1.0]);
     sf.fill_rect(Rect::new(0, 2, 4, 4), &[1.0, 1.0, 1.0, 1.0]);
     let pats = [Pattern::new("stripes", sf, 4, 4)];
     let mut t = plain.clone();
     t.texture =
-        Some(photocraft_doc::BevelTexture { name: "stripes".into(), id: String::new(), scale: 1.0, depth: 1.0, invert: false, link: true, phase: (0.0, 0.0) });
+        Some(lienzo_doc::BevelTexture { name: "stripes".into(), id: String::new(), scale: 1.0, depth: 1.0, invert: false, link: true, phase: (0.0, 0.0) });
     let tex = TextureCtx { rect: Rect::new(0, 0, 40, 40), patterns: &pats, anchor: (0.0, 0.0) };
     let (m, _) = bevel_maps(&shape, &t, &l, &tex, &PreparedPatterns::new(&pats, PREPARED_PATTERN_BYTES));
     let mid: f32 = (16..24).map(|y| m[0].v[y * 40 + 20] + m[1].v[y * 40 + 20]).sum();
@@ -795,8 +795,8 @@ fn bevel_contour_and_texture_shape_the_height() {
 #[test]
 fn glow_range_stretches_the_contour() {
     let mut g = Glow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Screen, 1.0),
-        paint: FxPaint::Color(photocraft_color::Color::WHITE),
+        common: lienzo_doc::FxCommon::new(BlendMode::Screen, 1.0),
+        paint: FxPaint::Color(lienzo_color::Color::WHITE),
         technique: GlowTechnique::Softer,
         spread: 0.0,
         size: 10.0,
@@ -818,8 +818,8 @@ fn glow_range_stretches_the_contour() {
 #[test]
 fn glows_match_photoshop() {
     let glow = |technique, size: f32, spread: f32, source| Glow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0),
-        paint: FxPaint::Color(photocraft_color::Color::BLACK),
+        common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0),
+        paint: FxPaint::Color(lienzo_color::Color::BLACK),
         technique,
         spread,
         size,
@@ -878,9 +878,9 @@ fn square_shape(n: usize) -> Map {
 fn satin_at_distance_zero_matches_photoshop() {
     // Photoshop 27.11, Satin black 100 %, angle 90°, Linear contour, distance 0, size 5 over a
     // #808080 square: the rows from the top edge read 82, 102, 123, 128.
-    let s = photocraft_doc::effects::Satin {
-        common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0),
-        color: photocraft_color::Color::BLACK,
+    let s = lienzo_doc::effects::Satin {
+        common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0),
+        color: lienzo_color::Color::BLACK,
         angle: 90.0,
         distance: 0.0,
         size: 5.0,
@@ -898,8 +898,8 @@ fn satin_at_distance_zero_matches_photoshop() {
 
 fn shadow(noise: f32, origin: (i32, i32)) -> Map {
     let s = Shadow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Multiply, 1.0),
-        color: photocraft_color::Color::BLACK,
+        common: lienzo_doc::FxCommon::new(BlendMode::Multiply, 1.0),
+        color: lienzo_color::Color::BLACK,
         angle: 0.0,
         use_global_light: false,
         distance: 0.0,
@@ -971,8 +971,8 @@ fn effect_noise_does_not_light_up_empty_blur_tails() {
 #[test]
 fn glow_noise_follows_the_contour_and_range() {
     let g = |noise: f32| Glow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Screen, 1.0),
-        paint: FxPaint::Color(photocraft_color::Color::WHITE),
+        common: lienzo_doc::FxCommon::new(BlendMode::Screen, 1.0),
+        paint: FxPaint::Color(lienzo_color::Color::WHITE),
         technique: GlowTechnique::Softer,
         spread: 0.0,
         size: 6.0,
@@ -1000,8 +1000,8 @@ fn effect_noise_stays_inside_the_visible_falloff() {
         }
     }
     let g = |noise: f32| Glow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Screen, 1.0),
-        paint: FxPaint::Color(photocraft_color::Color::WHITE),
+        common: lienzo_doc::FxCommon::new(BlendMode::Screen, 1.0),
+        paint: FxPaint::Color(lienzo_color::Color::WHITE),
         technique: GlowTechnique::Softer,
         spread: 0.0,
         size: 10.0,
@@ -1013,8 +1013,8 @@ fn effect_noise_stays_inside_the_visible_falloff() {
         source: GlowSource::Edge,
     };
     let s = |noise: f32| Shadow {
-        common: photocraft_doc::FxCommon::new(BlendMode::Multiply, 1.0),
-        color: photocraft_color::Color::BLACK,
+        common: lienzo_doc::FxCommon::new(BlendMode::Multiply, 1.0),
+        color: lienzo_color::Color::BLACK,
         angle: 0.0,
         use_global_light: false,
         distance: 0.0,
@@ -1054,17 +1054,16 @@ fn shifting_by_hostile_distances_does_not_overflow() {
 #[test]
 fn an_inside_stroke_emboss_counts_as_an_interior_blend() {
     let stroke = |position: StrokePosition| {
-        Effect::Stroke(photocraft_doc::StrokeFx {
-            common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0),
+        Effect::Stroke(lienzo_doc::StrokeFx {
+            common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0),
             size: 4.0,
             position,
-            paint: photocraft_doc::FxPaint::Color(photocraft_color::Color::BLACK),
+            paint: lienzo_doc::FxPaint::Color(lienzo_color::Color::BLACK),
             overprint: false,
         })
     };
     let layer = |effects: Vec<Effect>| {
-        let mut l =
-            photocraft_doc::Layer::new("L", photocraft_doc::LayerContent::Raster(photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8)));
+        let mut l = lienzo_doc::Layer::new("L", lienzo_doc::LayerContent::Raster(lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8)));
         l.effects.items = effects;
         l
     };
@@ -1081,18 +1080,17 @@ fn an_inside_stroke_emboss_counts_as_an_interior_blend() {
 #[test]
 fn stroke_emboss_bevels_every_stroke_even_a_transparent_one() {
     let stroke = |size: f32, position: StrokePosition, opacity: f32| {
-        Effect::Stroke(photocraft_doc::StrokeFx {
-            common: photocraft_doc::FxCommon::new(BlendMode::Normal, opacity),
+        Effect::Stroke(lienzo_doc::StrokeFx {
+            common: lienzo_doc::FxCommon::new(BlendMode::Normal, opacity),
             size,
             position,
-            paint: photocraft_doc::FxPaint::Color(photocraft_color::Color::BLACK),
+            paint: lienzo_doc::FxPaint::Color(lienzo_color::Color::BLACK),
             overprint: false,
         })
     };
     let emboss = Effect::BevelEmboss(bevel_of(BevelStyle::StrokeEmboss, BevelTechnique::Smooth));
     let maps = |effects: Vec<Effect>| {
-        let mut l =
-            photocraft_doc::Layer::new("L", photocraft_doc::LayerContent::Raster(photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8)));
+        let mut l = lienzo_doc::Layer::new("L", lienzo_doc::LayerContent::Raster(lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8)));
         l.effects.items = effects;
         let n = l.effects.items.len();
         let m = build_maps(&l, square(60, 20, 40).v, Rect::new(0, 0, 60, 60), &GlobalLight::default(), &no_tex());

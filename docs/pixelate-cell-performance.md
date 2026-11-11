@@ -112,11 +112,11 @@ directories so Cargo cannot reuse a library from the other worktree. No builds
 ran during the timed trials.
 
 ```sh
-RAYON_NUM_THREADS=16 cargo run --release -p photocraft-algo --example bench_pixelate -- crystallize 6000 4000 u8 5 /tmp/crystallize.bin rgb
-RAYON_NUM_THREADS=16 cargo run --release -p photocraft-algo --example bench_pixelate -- pointillize-large 6000 4000 u16 5 /tmp/pointillize.bin cmyk
-RAYON_NUM_THREADS=16 cargo run --release -p photocraft-engine --example bench_cell_filters -- crystallize 10 5 8 layer
-RAYON_NUM_THREADS=16 cargo run --release -p photocraft-engine --example bench_cell_filters -- pointillize 100 5 8 layer
-RAYON_NUM_THREADS=16 cargo run --release -p photocraft-engine --example bench_cell_filters -- pointillize 5 5 8 background
+RAYON_NUM_THREADS=16 cargo run --release -p lienzo-algo --example bench_pixelate -- crystallize 6000 4000 u8 5 /tmp/crystallize.bin rgb
+RAYON_NUM_THREADS=16 cargo run --release -p lienzo-algo --example bench_pixelate -- pointillize-large 6000 4000 u16 5 /tmp/pointillize.bin cmyk
+RAYON_NUM_THREADS=16 cargo run --release -p lienzo-engine --example bench_cell_filters -- crystallize 10 5 8 layer
+RAYON_NUM_THREADS=16 cargo run --release -p lienzo-engine --example bench_cell_filters -- pointillize 100 5 8 layer
+RAYON_NUM_THREADS=16 cargo run --release -p lienzo-engine --example bench_cell_filters -- pointillize 5 5 8 background
 ```
 
 For the before run, create a worktree at the base above and copy the two benchmark

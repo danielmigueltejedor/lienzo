@@ -4,9 +4,9 @@
 //! channel thumbnails, histograms, file previews), where a full-resolution composite of a 200 MP
 //! document would cost seconds and gigabytes.
 
-use photocraft_doc::{Document, Layer, LayerContent, Size, SmartObject};
-use photocraft_geom::{Affine, Rect};
-use photocraft_raster::Surface;
+use lienzo_doc::{Document, Layer, LayerContent, Size, SmartObject};
+use lienzo_geom::{Affine, Rect};
+use lienzo_raster::Surface;
 
 /// Nearest-neighbour downsample of a surface by integer factor `k` (document coordinates / k).
 pub fn downsample(s: &Surface, k: u32) -> Surface {
@@ -145,9 +145,9 @@ pub fn proxy_faithful(doc: &Document) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::vector::{Knot, Path, Subpath, VectorMask};
-    use photocraft_doc::{Effect, Fill, GradientStyle, LayerMask};
+    use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+    use lienzo_doc::vector::{Knot, Path, Subpath, VectorMask};
+    use lienzo_doc::{Effect, Fill, GradientStyle, LayerMask};
 
     fn two_colors(size: Size, depth: SampleType) -> Document {
         let mut doc = Document::new("mask", size, ColorMode::Rgb, depth);
@@ -216,7 +216,7 @@ mod tests {
     /// placement, which must shrink with the canvas, cache and filter mask.
     #[test]
     fn proxy_scales_smart_object_placement() {
-        use photocraft_doc::SmartSource;
+        use lienzo_doc::SmartSource;
         let mut doc = Document::new("smart", Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
         let mut cache = Surface::new(doc.pixel_format());
         cache.fill_rect(Rect::new(16, 16, 32, 48), &[0.0, 0.0, 0.0, 1.0]);
@@ -257,7 +257,7 @@ mod tests {
             let mut doc = Document::new("mask", Size::new(16, 12), ColorMode::Rgb, depth);
             let mut surface = Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
             surface.fill_rect(Rect::new(0, 0, 8, 12), &[1.0]);
-            let mut mask = photocraft_doc::AlphaChannel::new("Quick Mask", surface);
+            let mut mask = lienzo_doc::AlphaChannel::new("Quick Mask", surface);
             mask.opacity = 0.25;
             doc.quick_mask = Some(mask);
             for k in [1, 2, 4] {

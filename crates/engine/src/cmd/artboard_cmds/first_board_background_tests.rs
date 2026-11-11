@@ -2,7 +2,7 @@
 //! `layer.new.artboard`, at 8, 16 and 32 bit, with the cases that keep today's result.
 
 use super::*;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 /// 800 x 600 with the white Background and a pixel layer "Red" at 100,100 to 300,250.
 fn session(depth: u32) -> Session {
@@ -11,7 +11,7 @@ fn session(depth: u32) -> Session {
     s.edit("Red", |doc, active| {
         let fmt = doc.pixel_format();
         let mut l = Layer::raster("Red", fmt);
-        l.surface_mut().unwrap().fill_rect(Rect { x0: 100, y0: 100, x1: 300, y1: 250 }, &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+        l.surface_mut().unwrap().fill_rect(Rect { x0: 100, y0: 100, x1: 300, y1: 250 }, &lienzo_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
         let id = doc.insert_above(None, l);
         *active = Some(id);
         Ok(id)

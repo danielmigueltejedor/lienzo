@@ -1,4 +1,4 @@
-use super::{PhotocraftApp, RichText, Tokens, label, vec2, widgets};
+use super::{LienzoApp, RichText, Tokens, label, vec2, widgets};
 
 // ----------------------------------------------------------------------------- status bar
 
@@ -8,7 +8,7 @@ pub fn status_bar_heights(t: &Tokens) -> (f32, f32) {
     if t.pro { (24.0, 18.0) } else { (30.0, 22.0) }
 }
 
-pub fn status_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn status_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let (frame, gap) = crate::theme::island(&t, t.chrome, egui::Margin::symmetric(if t.islands() { 14 } else { 10 }, 0), crate::theme::Gap::Top);
     egui::Panel::bottom("status_bar").exact_size(status_bar_heights(&t).0 + gap).show_separator_line(!t.islands()).frame(frame).show(ui, |ui| {

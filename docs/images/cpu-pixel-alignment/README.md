@@ -4,6 +4,6 @@ Original 200 × 200 pixel crops at screen coordinates (200, 250)–(400, 450) fr
 
 `before.png` shows the half-pixel horizontal offset. `after.png` shows the aligned canvas and is byte-for-byte equal to the GPU canvas crop. Their grayscale standard deviations are 17.4105 and 24.6821 respectively. The 901-pixel-wide control stays sharp.
 
-The source document fits the offscreen WARP adapter texture limit, so reduced-texture sampling does not mask the pixel-alignment comparison. These captures are original PhotoCraft assets, licensed MIT OR Apache-2.0 (the license files are alongside them).
+The source document fits the offscreen WARP adapter texture limit, so reduced-texture sampling does not mask the pixel-alignment comparison. These captures are original Lienzo assets, licensed MIT OR Apache-2.0 (the license files are alongside them).
 
 Default Crop keeps its continuous camera positioning so the crop frame stays fixed during fractional pointer drags. Normal canvas views and Classic Crop use pixel alignment at integral physical magnifications.

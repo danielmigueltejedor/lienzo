@@ -2,19 +2,19 @@
 //! (hardness 0 %, spacing 25 %), not the 20 px hard default. The other painting tools and
 //! `paint.stroke` without a `brush` keep the default tip.
 
-use photocraft_ui_egui::control::{ControlRequest, handle};
-use photocraft_ui_egui::{PhotocraftApp, Tool};
+use lienzo_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::{LienzoApp, Tool};
 use serde_json::{Value, json};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app
 }
 
 /// A control request as the control channel sends it, then the frame's sync.
-fn control(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
+fn control(app: &mut LienzoApp, method: &str, params: Value) -> Value {
     let ctx = egui::Context::default();
     let (req, rx) = ControlRequest::new(method, params);
     handle(app, &ctx, &req);
@@ -23,21 +23,21 @@ fn control(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
 }
 
 /// Pick `tool`, and swap its brush in as a frame does.
-fn pick(app: &mut PhotocraftApp, tool: Tool) {
+fn pick(app: &mut LienzoApp, tool: Tool) {
     app.ui.tool = tool;
-    photocraft_ui_egui::paint_mouse::sync_tool_brush(app);
+    lienzo_ui_egui::paint_mouse::sync_tool_brush(app);
     app.sync_views();
 }
 
 /// Size, hardness, spacing, angle and roundness of the live brush, as `brush.get` reports them
 /// (rounded: they are `f32`s).
-fn tip(app: &mut PhotocraftApp) -> [f64; 5] {
+fn tip(app: &mut LienzoApp) -> [f64; 5] {
     let b = app.run("brush.get", json!({})).unwrap();
     ["size", "hardness", "spacing", "angle", "roundness"].map(|k| (b[k].as_f64().unwrap() * 1e4).round() / 1e4)
 }
 
 /// Give the live brush a tip that is neither default, so a reset has something to undo.
-fn scramble(app: &mut PhotocraftApp) {
+fn scramble(app: &mut LienzoApp) {
     let b = &mut app.session.tools.brush;
     (b.size, b.hardness, b.spacing, b.angle, b.roundness) = (57.0, 0.4, 0.6, 30.0, 0.5);
 }

@@ -1,15 +1,15 @@
 //! Progress and cancellation for calls that wait. Render Video runs on the existing blocking
 //! worker; other long commands run as engine jobs that the server polls ([`Waiter`]): the headless
 //! session's own, or the app's over the bridge.
-use super::{Arc, AutomationError, Backend, BridgeClient, CallToolResult, PhotocraftMcp, PoisonError, Value, fail, json, no_backend, ok_json};
+use super::{Arc, AutomationError, Backend, BridgeClient, CallToolResult, LienzoMcp, PoisonError, Value, fail, json, no_backend, ok_json};
 use crate::headless::JobPoll;
-use photocraft_engine::jobs::{JobId, Started};
+use lienzo_engine::jobs::{JobId, Started};
 use rmcp::RoleServer;
 use rmcp::model::ProgressNotificationParam;
 use rmcp::service::RequestContext;
 use std::time::{Duration, Instant};
 
-impl PhotocraftMcp {
+impl LienzoMcp {
     pub(super) async fn render_video_progress(&self, params: Value, context: RequestContext<RoleServer>) -> CallToolResult {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         // rmcp may drop the request future on cancellation. The blocking worker owns the
@@ -121,7 +121,7 @@ impl Drop for Abandon {
     }
 }
 
-impl PhotocraftMcp {
+impl LienzoMcp {
     /// Headless: run command `id` for a caller that waits (#8129). A job-capable command runs as
     /// a background job, so the session serves other calls meanwhile; its progress goes to
     /// `waiter` as `step.0 + fraction` of `step.1`, and cancelling the request cancels the job,
@@ -137,7 +137,7 @@ impl PhotocraftMcp {
         let mut guard = match self
             .headless_op(move |h| {
                 if cancel.as_ref().is_some_and(|token| token.is_cancelled()) {
-                    return Err(photocraft_engine::EngineError::Cancelled.into());
+                    return Err(lienzo_engine::EngineError::Cancelled.into());
                 }
                 Ok(match h.command_begin(&id, params)? {
                     Started::Job(job) if cancel.as_ref().is_some_and(|token| token.is_cancelled()) => {
@@ -194,7 +194,7 @@ impl PhotocraftMcp {
         step: (usize, usize),
     ) -> Result<Value, AutomationError> {
         // A UI command can start a job without naming it in its reply: the app waits on those.
-        if photocraft_engine::commands::find(&id).is_none() {
+        if lienzo_engine::commands::find(&id).is_none() {
             return client.call("engine.execute", json!({"command": id, "params": params, "wait": true})).await;
         }
         let started = client.call("engine.execute", json!({"command": id, "params": params, "wait": false})).await?;
@@ -281,7 +281,7 @@ fn cancel_answer(job: u64, id: &str, reply: Result<Value, AutomationError>) -> A
             let reason = refusal(&value, job).unwrap_or("unknown reason");
             AutomationError::Bridge(format!("job {job} ({id}) was not cancelled: {reason}; check jobs_list for its outcome"))
         }
-        Ok(value) if cancellation_acknowledged(&value) => photocraft_engine::EngineError::Cancelled.into(),
+        Ok(value) if cancellation_acknowledged(&value) => lienzo_engine::EngineError::Cancelled.into(),
         Ok(value) => AutomationError::Bridge(format!("cancellation of job {job} ({id}) was not confirmed: {value}; check jobs_list for its outcome")),
         Err(error) => AutomationError::Bridge(format!("job {job} ({id}) cancellation was not confirmed: {error}; check jobs_list for its outcome")),
     }
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn a_refused_cancel_is_not_reported_as_cancelled() {
         let cancelled = cancel_answer(7, "filter.blur.gaussianBlur", Ok(json!({"cancelled": 1})));
-        assert!(matches!(cancelled, AutomationError::Engine(photocraft_engine::EngineError::Cancelled)), "{cancelled}");
+        assert!(matches!(cancelled, AutomationError::Engine(lienzo_engine::EngineError::Cancelled)), "{cancelled}");
         let refused = cancel_answer(7, "filter.blur.gaussianBlur", Err(AutomationError::App("job 7 is not running".into())));
         assert!(matches!(&refused, AutomationError::Bridge(m) if m.contains("not confirmed") && m.contains("job 7 is not running")), "{refused}");
         let refused = cancel_answer(7, "filter.blur.gaussianBlur", Ok(json!({"cancelled": 0, "notCancelled": [{"job": 7, "reason": "committing"}]})));

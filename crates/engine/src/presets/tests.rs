@@ -1,7 +1,7 @@
 use serde_json::{Value, json};
 
 use crate::Session;
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use lienzo_doc::{Fill, LayerContent, LayerId};
 
 fn session(depth: u32) -> Session {
     let mut s = Session::new();
@@ -38,8 +38,8 @@ fn style_preset_new_from_an_explicit_effect_list() {
     let d = s.active().unwrap();
     let l = d.doc.layer(d.active_layer.unwrap()).unwrap();
     assert_eq!(l.effects.items.len(), 1);
-    assert!(matches!(&l.effects.items[0], photocraft_doc::Effect::Stroke(st) if st.size == 6.0));
-    assert_eq!(l.blend, photocraft_color::BlendMode::Multiply);
+    assert!(matches!(&l.effects.items[0], lienzo_doc::Effect::Stroke(st) if st.size == 6.0));
+    assert_eq!(l.blend, lienzo_color::BlendMode::Multiply);
     assert!((l.fill_opacity - 0.4).abs() < 1e-6);
     // Malformed lists are graceful errors.
     assert!(s.execute("style.presets.new", json!({"effects": [["nope", {}]]})).is_err());
@@ -486,13 +486,13 @@ fn an_opacity_only_style_added_sets_just_the_opacity() {
     s.execute("style.presets.new", json!({"name": "Faded", "includeBlending": false, "effects": [["stroke", {"size": 2}]], "opacity": 40})).unwrap();
     s.edit("Blending fixture", |doc, _| {
         let l = doc.layer_mut(a).unwrap();
-        (l.blend, l.fill_opacity, l.opacity) = (photocraft_doc::BlendMode::Multiply, 0.7, 0.9);
+        (l.blend, l.fill_opacity, l.opacity) = (lienzo_doc::BlendMode::Multiply, 0.7, 0.9);
         Ok(())
     })
     .unwrap();
     s.execute("style.presets.apply", json!({"preset": "Faded", "add": true, "layer": a.0})).unwrap();
     let l = s.active().unwrap().doc.layer(a).unwrap().clone();
-    assert_eq!((l.blend, l.fill_opacity, l.opacity), (photocraft_doc::BlendMode::Multiply, 0.7, 0.4));
+    assert_eq!((l.blend, l.fill_opacity, l.opacity), (lienzo_doc::BlendMode::Multiply, 0.7, 0.4));
     assert_eq!(l.effects.items.len(), 1);
 }
 
@@ -519,7 +519,7 @@ fn shape_path_language_parses() {
     let p = super::shapes::parse("M 0 0 L 10 0 L 10 10 Z ! O 5 5 2").unwrap();
     assert_eq!(p.subpaths.len(), 2);
     assert_eq!(p.subpaths[0].knots.len(), 3);
-    assert_eq!(p.subpaths[1].op, photocraft_doc::vector::PathOp::Subtract);
+    assert_eq!(p.subpaths[1].op, lienzo_doc::vector::PathOp::Subtract);
     assert!(super::shapes::parse("M 0 0 L x").is_err());
     assert!(super::shapes::parse("").is_err());
     assert!(super::shapes::parse("L 1 1").is_err());
@@ -776,10 +776,10 @@ fn clone_doc(depth: u32) -> Session {
         let mut px = Vec::new();
         for y in 0..48 {
             for x in 0..64 {
-                px.extend(photocraft_raster::from_rgba(&fmt, [x as f32 / 63.0, y as f32 / 47.0, 0.0, 1.0]));
+                px.extend(lienzo_raster::from_rgba(&fmt, [x as f32 / 63.0, y as f32 / 47.0, 0.0, 1.0]));
             }
         }
-        surf.write_region(photocraft_geom::Rect::new(0, 0, 64, 48), &px);
+        surf.write_region(lienzo_geom::Rect::new(0, 0, 64, 48), &px);
         Ok(())
     })
     .unwrap();
@@ -872,14 +872,14 @@ fn gradient_preset_click_fills_the_selected_shape_layer() {
     let Some(Fill::Gradient { stops, angle, style, .. }) = shape_fill(&s, id) else { panic!("not a gradient") };
     // Red 01 starts at #7f0000; a new gradient fill is linear at 90°.
     assert_eq!(stops[0].1.to_rgba8(), [0x7f, 0, 0, 0xff]);
-    assert_eq!((angle, style), (90.0, photocraft_doc::GradientStyle::Linear));
+    assert_eq!((angle, style), (90.0, lienzo_doc::GradientStyle::Linear));
     s.execute("edit.undo", json!({})).unwrap();
     assert_eq!(shape_fill(&s, id), before);
 
     s.execute("shape.edit", json!({"layer": id.0, "fill": {"gradient": {"angle": 30, "style": "radial", "scale": 80, "reverse": true}}})).unwrap();
     s.execute("gradient.presets.select", json!({"preset": "Green 01"})).unwrap();
     let Some(Fill::Gradient { angle, style, scale, reverse, .. }) = shape_fill(&s, id) else { panic!("not a gradient") };
-    assert_eq!((angle, style, scale, reverse), (30.0, photocraft_doc::GradientStyle::Radial, 0.8, true));
+    assert_eq!((angle, style, scale, reverse), (30.0, lienzo_doc::GradientStyle::Radial, 0.8, true));
 }
 
 /// A locked shape refuses the click before anything changes, the Gradient tool's gradient included.

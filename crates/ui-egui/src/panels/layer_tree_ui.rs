@@ -7,10 +7,10 @@
 //! `layer.setExpanded` (a view change: no history step).
 
 use egui::{Rect, Sense, Shape, Stroke, pos2, vec2};
-use photocraft_doc::{Document, Layer, LayerContent};
+use lienzo_doc::{Document, Layer, LayerContent};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 /// Width the disclosure triangle takes in a group row.
@@ -39,7 +39,7 @@ pub fn display_rows(doc: &Document, show_all: bool) -> Vec<(usize, &Layer)> {
 /// The Layers panel's rows for `app`: [`display_rows`] (every row while filtered) without a Type
 /// Mask session's working text, which is no layer to the user: Photoshop shows only the mask
 /// overlay while you type (#3036).
-pub fn panel_rows<'a>(app: &PhotocraftApp, doc: &'a Document) -> Vec<(usize, &'a Layer)> {
+pub fn panel_rows<'a>(app: &LienzoApp, doc: &'a Document) -> Vec<(usize, &'a Layer)> {
     let mut rows = display_rows(doc, crate::layer_filter_ui::Filter::of(&app.ui).show_all());
     if let Some(working) = app.ui.text_edit.as_ref().filter(|ed| ed.mask).map(|ed| ed.layer) {
         rows.retain(|(_, l)| l.id.0 != working);

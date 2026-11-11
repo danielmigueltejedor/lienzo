@@ -5,7 +5,7 @@ use super::{Adjustment, Buffer, ColorMode, CurvePoint, LevelsChannel, SampleType
 pub fn float_tone_identity(adj: &Adjustment, depth: Option<SampleType>) -> [bool; 3] {
     match adj {
         Adjustment::Curves { master, per_channel, space: ToneSpace::Rgb, .. } if depth == Some(SampleType::F32) => {
-            std::array::from_fn(|i| photocraft_doc::adjust::is_identity_curve(master) && photocraft_doc::adjust::is_identity_curve(&per_channel[i]))
+            std::array::from_fn(|i| lienzo_doc::adjust::is_identity_curve(master) && lienzo_doc::adjust::is_identity_curve(&per_channel[i]))
         }
         _ => [false; 3],
     }
@@ -73,7 +73,7 @@ pub fn tone_luts_depth(adj: &Adjustment, depth: Option<SampleType>) -> [Vec<f32>
 /// through the conversions the document's surfaces use. The change is added as a difference of
 /// two round trips, so channels a curve leaves alone (and out-of-gamut colours) stay exact.
 fn tone_in_space(space: ToneSpace, luts: &[Vec<f32>; 4], c: [f32; 3]) -> [f32; 3] {
-    use photocraft_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
+    use lienzo_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
     let (before, after) = match space {
         ToneSpace::Cmyk => {
             let ink = rgb_to_cmyk(c);
@@ -370,7 +370,7 @@ pub fn curve_lut_mode(points: &[CurvePoint], pencil: bool) -> Vec<f32> {
     if pencil { curve_map_lut(points) } else { curve_lut(points) }
 }
 
-/// A pencil-drawn Curves map (see [`photocraft_doc::adjust::curve_map`]): straight segments
+/// A pencil-drawn Curves map (see [`lienzo_doc::adjust::curve_map`]): straight segments
 /// between its entries, constant outside the first/last, clamped to 0..=1, sampled into a LUT.
 pub fn curve_map_lut(points: &[CurvePoint]) -> Vec<f32> {
     let mut pts: Vec<(f32, f32)> = points.iter().filter(|p| p.input.is_finite() && p.output.is_finite()).map(|p| (p.input, p.output)).collect();

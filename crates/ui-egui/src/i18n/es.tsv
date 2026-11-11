@@ -3910,7 +3910,7 @@ layerLabel	No Color	Sin color
 	Mezzotint	Grabado a media tinta
 	Mosaic	Mosaico
 	Motion Blur	Desenfoque de movimiento
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Arrastrar y soltar archivos de forma nativa aún no es compatible con Wayland. Use Archivo › Abrir o ejecute Lienzo mediante XWayland con `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Arrastrar y soltar archivos de forma nativa aún no es compatible con Wayland. Use Archivo › Abrir o ejecute Lienzo mediante XWayland con `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Resplandor de neón
 	New Guide Layout	Nuevo diseño de guías
 	New Video Layer from File	Nueva capa de vídeo desde archivo

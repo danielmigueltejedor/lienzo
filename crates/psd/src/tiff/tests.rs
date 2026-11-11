@@ -696,7 +696,7 @@ fn unknown_descriptor_shaped_blocks_are_converted() {
 
 #[test]
 fn linked_layer_items() {
-    // One embedded file (liFD, version 7) as photocraft-io writes it.
+    // One embedded file (liFD, version 7) as lienzo-io writes it.
     let mut item = Vec::new();
     item.put(b"liFD");
     item.put_u32(7);

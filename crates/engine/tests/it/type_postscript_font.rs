@@ -1,7 +1,7 @@
 //! `type.create` accepts an exact PostScript face name in its font field.
 
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::Session;
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn font_with_postscript_name(source: &[u8], postscript: &str) -> Vec<u8> {
@@ -39,11 +39,11 @@ fn font_with_postscript_name(source: &[u8], postscript: &str) -> Vec<u8> {
 #[test]
 fn type_create_resolves_exact_postscript_font_names() {
     let ps = "Lienzo-Black-Test";
-    photocraft_text::shared()
+    lienzo_text::shared()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .fonts
-        .register_font_data(font_with_postscript_name(photocraft_text::fonts::INTER_REGULAR.as_slice(), ps));
+        .register_font_data(font_with_postscript_name(lienzo_text::fonts::INTER_REGULAR.as_slice(), ps));
 
     let mut session = Session::new();
     session.execute("file.new", json!({"width": 200, "height": 100, "background": "transparent"})).unwrap();
@@ -65,11 +65,11 @@ fn type_create_resolves_exact_postscript_font_names() {
 #[test]
 fn exact_postscript_face_clears_retained_weight_variation() {
     let ps = "Lienzo-Black-Test-Var";
-    photocraft_text::shared()
+    lienzo_text::shared()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .fonts
-        .register_font_data(font_with_postscript_name(photocraft_text::fonts::INTER_REGULAR.as_slice(), ps));
+        .register_font_data(font_with_postscript_name(lienzo_text::fonts::INTER_REGULAR.as_slice(), ps));
 
     let mut session = Session::new();
     session.execute("file.new", json!({"width": 200, "height": 100, "background": "transparent"})).unwrap();

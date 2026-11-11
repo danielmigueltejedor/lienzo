@@ -14,7 +14,7 @@
 //! and the order of every preset, built-ins included. A built-in that is renamed or moved to
 //! another group becomes the user's preset (built-ins are regenerated with their own group).
 
-use photocraft_paint::BrushPreset;
+use lienzo_paint::BrushPreset;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -30,7 +30,7 @@ fn always(_: &Session) -> std::result::Result<(), String> {
 /// Longest preset or group name accepted.
 pub const MAX_NAME: usize = 255;
 /// Deepest folder path accepted inside a group (matches the `.abr` reader's limit).
-pub const MAX_FOLDER_DEPTH: usize = photocraft_psd::abr::MAX_FOLDER_DEPTH;
+pub const MAX_FOLDER_DEPTH: usize = lienzo_psd::abr::MAX_FOLDER_DEPTH;
 
 fn text(p: &Value, k: &str, cmd: &str) -> Result<String> {
     let v = p.get(k).and_then(Value::as_str).map(str::trim).filter(|n| !n.is_empty()).ok_or_else(|| bad(cmd, format!("missing `{k}`")))?;

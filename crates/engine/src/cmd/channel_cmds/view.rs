@@ -72,7 +72,7 @@ impl ChannelView {
             && self.shown_layer_mask(doc).is_none()
     }
     /// The layer mask shown on the canvas (#196) and how, if its layer still has a mask.
-    pub fn shown_layer_mask<'a>(&self, doc: &'a Document) -> Option<(&'a photocraft_doc::LayerMask, crate::mask_view_cmds::MaskViewMode)> {
+    pub fn shown_layer_mask<'a>(&self, doc: &'a Document) -> Option<(&'a lienzo_doc::LayerMask, crate::mask_view_cmds::MaskViewMode)> {
         let v = self.layer_mask?;
         Some((crate::mask_view_cmds::viewed_mask(doc.layer(v.layer)?, v.filter)?, v.mode))
     }

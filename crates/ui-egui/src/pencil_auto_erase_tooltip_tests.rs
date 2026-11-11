@@ -6,18 +6,18 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 use crate::theme::ThemeKind;
 
 const TIP: &str = "Draws background color over foreground colors";
 
-fn bar(theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar(theme: ThemeKind) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = Tool::Pencil;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }

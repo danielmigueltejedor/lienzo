@@ -1,11 +1,11 @@
 //! Measured layer-style action steps retain their settings and use the existing native commands.
-use photocraft_doc::{Document, Effect, LayerId};
-use photocraft_engine::{
+use lienzo_doc::{Document, Effect, LayerId};
+use lienzo_engine::{
     Session,
     actions_cmds::Action,
     atn_cmds::{export, import},
 };
-use photocraft_psd::{
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Class, Descriptor, Id, MAX_DEPTH, ObjectArray, ReferenceItem, UnicodeString, Value as D},
 };
@@ -286,7 +286,7 @@ fn layer_style_native_exports_are_strict_and_make_defaults_explicit() {
         }
         let invalid = if id == SCALE { scale(100.0) } else { create() }.with("extra", D::Boolean(true));
         let mut p = if id == SCALE { json!({"scale":200}) } else { json!({}) };
-        p["_atnLayerStyleDescriptor"] = json!(photocraft_paint::tile::b64_encode(&invalid.to_bytes()));
+        p["_atnLayerStyleDescriptor"] = json!(lienzo_paint::tile::b64_encode(&invalid.to_bytes()));
         assert!(exported(id, p).is_none());
     }
     assert!(exported(CREATE, json!({"scale":100})).is_none());

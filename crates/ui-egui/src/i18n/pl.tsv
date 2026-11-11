@@ -1240,7 +1240,7 @@
 	Draw with the Pen tool (P) or make a work path from a selection.	Rysuj narzędziem Pióro (P) lub utwórz ścieżkę roboczą z zaznaczenia.
 	Drop an image or PSD anywhere to open it.	Upuść obraz lub plik PSD w dowolnym miejscu, aby go otworzyć.
 	Native file drag-and-drop is unavailable	Natywne przeciąganie plików jest niedostępne
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Natywne przeciąganie plików nie jest jeszcze obsługiwane w Waylandzie. Użyj Plik › Otwórz lub uruchom Lienzo w XWayland poleceniem `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Natywne przeciąganie plików nie jest jeszcze obsługiwane w Waylandzie. Użyj Plik › Otwórz lub uruchom Lienzo w XWayland poleceniem `WAYLAND_DISPLAY= lienzo`.
 	Duplicate Layers…	Duplikuj warstwy…
 	Duplicate style	Duplikuj styl
 	Edit Toolbar…	Edytuj pasek narzędzi…

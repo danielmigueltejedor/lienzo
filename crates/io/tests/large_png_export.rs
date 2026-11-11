@@ -4,11 +4,11 @@
 
 use std::io::Read;
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, export};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, export};
+use lienzo_raster::Surface;
 
 /// The IHDR fields and the IDAT payloads of `png`.
 fn chunks(png: &[u8]) -> ((u32, u32, u8, u8), Vec<&[u8]>) {
@@ -26,7 +26,7 @@ fn chunks(png: &[u8]) -> ((u32, u32, u8, u8), Vec<&[u8]>) {
     (ihdr.unwrap(), idat)
 }
 
-/// Run with `cargo test --release -p photocraft-io --test large_png_export -- --ignored`; with
+/// Run with `cargo test --release -p lienzo-io --test large_png_export -- --ignored`; with
 /// `COMPOSITE=1` a translucent layer on top makes the export composite the banner.
 /// Measured 2026-10-22 (20 threads): 12.3 s and 0.49 GB peak RSS, composited 29 s and 1.2 GB; the
 /// whole-image export took 12.9 s and 8.0 GB, composited 43 s and 10.3 GB.

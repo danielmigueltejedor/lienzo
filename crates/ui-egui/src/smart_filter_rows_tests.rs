@@ -5,18 +5,18 @@
 use egui::accesskit::{Role, Toggled};
 use egui::{Modifiers, Pos2};
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::{LayerContent, LayerId};
+use lienzo_doc::{LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 
 /// Smart objects "Smart A" (Gaussian Blur and Offset) and "Smart B" (no filters), and a pixel
 /// layer "Pixels" on top: (harness, A, B, pixels).
-fn panel() -> (egui_kittest::Harness<'static, PhotocraftApp>, u64, u64, u64) {
-    let mut s = photocraft_engine::Session::new();
+fn panel() -> (egui_kittest::Harness<'static, LienzoApp>, u64, u64, u64) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
-    let smart = |s: &mut photocraft_engine::Session, name: &str| {
+    let smart = |s: &mut lienzo_engine::Session, name: &str| {
         s.execute("layer.new.layer", json!({})).unwrap();
         s.execute("edit.fill", json!({"contents": "black"})).unwrap();
         let id = s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
@@ -31,14 +31,14 @@ fn panel() -> (egui_kittest::Harness<'static, PhotocraftApp>, u64, u64, u64) {
     s.execute("layer.setProps", json!({"layer": c, "name": "Pixels"})).unwrap();
     // 60 fps steps, so a double-click's two clicks fall inside egui's 0.3 s window.
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 900.0)).with_max_steps(64).with_step_dt(1.0 / 60.0).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(4);
     (h, a, b, c)
 }
 
-fn filters(h: &egui_kittest::Harness<'static, PhotocraftApp>, id: u64) -> Vec<String> {
+fn filters(h: &egui_kittest::Harness<'static, LienzoApp>, id: u64) -> Vec<String> {
     match &h.state().session.active().unwrap().doc.layer(LayerId(id)).unwrap().content {
         LayerContent::Smart(sm) => sm.smart_filters.iter().map(|f| f.command.clone()).collect(),
         _ => Vec::new(),
@@ -47,16 +47,16 @@ fn filters(h: &egui_kittest::Harness<'static, PhotocraftApp>, id: u64) -> Vec<St
 
 /// The centre of the Layers panel row (or footer button) labelled `label`: rows are selectable
 /// labels, which AccessKit calls buttons, unlike the same name drawn elsewhere.
-fn at(h: &egui_kittest::Harness<'static, PhotocraftApp>, label: &str) -> Pos2 {
+fn at(h: &egui_kittest::Harness<'static, LienzoApp>, label: &str) -> Pos2 {
     h.query_all_by_label(label).find(|n| n.accesskit_node().role() == Role::Button).unwrap_or_else(|| panic!("`{label}` drawn")).rect().center()
 }
 
-fn selected(h: &egui_kittest::Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn selected(h: &egui_kittest::Harness<'static, LienzoApp>, label: &str) -> bool {
     h.get_by_role_and_label(Role::Button, label).accesskit_node().toggled() == Some(Toggled::True)
 }
 
 /// Press at `from`, move to `to` in steps and release there, with `modifiers` held on release.
-fn drag(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2, modifiers: Modifiers) {
+fn drag(h: &mut egui_kittest::Harness<'static, LienzoApp>, from: Pos2, to: Pos2, modifiers: Modifiers) {
     h.hover_at(from);
     h.run_steps(1);
     h.drag_at(from);
@@ -139,7 +139,7 @@ fn a_camera_raw_filter_copies_and_its_copy_opens_on_the_target() {
     h.run_steps(4);
     let (from, to) = (at(&h, "RAW Develop Filter"), at(&h, "Smart B"));
     drag(&mut h, from, to, Modifiers::ALT);
-    let raw = |h: &egui_kittest::Harness<'static, PhotocraftApp>, id: u64| match &h.state().session.active().unwrap().doc.layer(LayerId(id)).unwrap().content {
+    let raw = |h: &egui_kittest::Harness<'static, LienzoApp>, id: u64| match &h.state().session.active().unwrap().doc.layer(LayerId(id)).unwrap().content {
         LayerContent::Smart(sm) => sm.smart_filters.iter().find(|f| f.command == "filter.cameraRaw").map(|f| f.params.clone()),
         _ => None,
     };
@@ -192,7 +192,7 @@ fn dragging_a_filter_up_or_down_its_stack_reorders_it() {
     assert_eq!(filters(&h, a), [blur, offset]);
 }
 
-fn click_at(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, p: Pos2) {
+fn click_at(h: &mut egui_kittest::Harness<'static, LienzoApp>, p: Pos2) {
     h.hover_at(p);
     h.run_steps(1);
     h.drag_at(p);
@@ -329,13 +329,13 @@ fn with_the_layers_panel_closed_delete_leaves_the_filter() {
 /// document's only layer, converted for Smart Filters, selects the filter.
 #[test]
 fn a_click_selects_a_filter_of_the_bottom_layer() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
     let id = s.execute("filter.convertForSmartFilters", json!({})).unwrap()["layer"].as_u64().unwrap();
     s.execute("filter.blur.gaussianBlur", json!({"radius": 1})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 900.0)).with_max_steps(64).with_step_dt(1.0 / 60.0).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(4);
     let blur = at(&h, "Gaussian Blur");
@@ -348,7 +348,7 @@ fn a_click_selects_a_filter_of_the_bottom_layer() {
 
 /// A double-click whose two clicks land in one frame, as a real mouse delivers them when a frame
 /// takes longer than the gap between the clicks (`Harness::event` would run a frame per event).
-fn double_click_in_one_frame(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, p: Pos2) {
+fn double_click_in_one_frame(h: &mut egui_kittest::Harness<'static, LienzoApp>, p: Pos2) {
     h.hover_at(p);
     h.run_steps(1);
     for pressed in [true, false, true, false] {
@@ -396,6 +396,6 @@ fn double_clicking_the_liquify_filter_of_an_inactive_smart_object_edits_it() {
     crate::liquify_ui::control(h.state_mut(), &json!({"commit": true})).unwrap();
     assert!(!h.state().ui.status_error, "{}", h.state().ui.status);
     let LayerContent::Smart(sm) = &h.state().session.active().unwrap().doc.layer(LayerId(a)).unwrap().content else { panic!("smart object") };
-    let liquify = sm.smart_filters.iter().find(|f| f.command == photocraft_engine::distort_cmds::LIQUIFY).unwrap();
+    let liquify = sm.smart_filters.iter().find(|f| f.command == lienzo_engine::distort_cmds::LIQUIFY).unwrap();
     assert_eq!(liquify.params["strokes"].as_array().map(Vec::len), Some(2), "the new stroke was kept");
 }

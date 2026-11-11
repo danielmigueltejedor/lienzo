@@ -21,10 +21,10 @@
 
 use std::sync::Arc;
 
-use photocraft_algo::Image;
-use photocraft_doc::SmartFilter;
-use photocraft_geom::Rect;
-use photocraft_psd::descriptor::{Descriptor, Id, Value};
+use lienzo_algo::Image;
+use lienzo_doc::SmartFilter;
+use lienzo_geom::Rect;
+use lienzo_psd::descriptor::{Descriptor, Id, Value};
 use serde_json::{Value as J, json};
 
 use super::{blend_options, from_hex, get_desc, int, set, to_hex};
@@ -42,7 +42,7 @@ const HEADER: usize = 10;
 const MODE_TWO_PLANES: u16 = 3;
 /// 8K × 8K: far beyond the observed document-sized maps, and bounds the f32 map we build.
 const MAX_MAP_PIXELS: usize = 1 << 26;
-/// 4K × 4K: the largest map PhotoCraft embeds itself. Params hold it as hex, about 4 bytes per
+/// 4K × 4K: the largest map Lienzo embeds itself. Params hold it as hex, about 4 bytes per
 /// pixel, copied with every history state and written into `.pcraft`'s manifest, so a few of the
 /// largest readable maps would make a file the reader refuses.
 const MAX_EMBED_PIXELS: usize = 1 << 24;
@@ -141,7 +141,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
     }
     // Neutral blending in the template: the model's own fields replace it on export.
     let mut template = item.clone();
-    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
     set(&mut template, "blendOptions", blend_options(&neutral));
     set(&mut template, "enab", Value::Boolean(true));
     params.as_object_mut()?.insert(TEMPLATE_KEY.into(), json!(to_hex(&template.to_bytes())));
@@ -231,9 +231,9 @@ pub fn embed_map(params: &J, map: &Image) -> Option<J> {
     let enumerated = |t: &str, v: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(v) };
     // The settings here are placeholders: the params' own replace them when the filter renders
     // and when it is written to PSD (`export_item`).
-    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
     let item = Descriptor::new("filterFX")
-        .with("Nm  ", Value::Text(photocraft_psd::descriptor::UnicodeString::new_nul("Displace...")))
+        .with("Nm  ", Value::Text(lienzo_psd::descriptor::UnicodeString::new_nul("Displace...")))
         .with("blendOptions", blend_options(&neutral))
         .with("enab", Value::Boolean(true))
         .with("hasoptions", Value::Boolean(true))
@@ -305,16 +305,10 @@ mod tests {
     fn item(map: Vec<u8>) -> Descriptor {
         let e = |t: &str, v: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(v) };
         Descriptor::new("filterFX")
-            .with("Nm  ", Value::Text(photocraft_psd::descriptor::UnicodeString::new_nul("Displace...")))
+            .with("Nm  ", Value::Text(lienzo_psd::descriptor::UnicodeString::new_nul("Displace...")))
             .with(
                 "blendOptions",
-                blend_options(&SmartFilter {
-                    command: String::new(),
-                    params: J::Null,
-                    blend: photocraft_color::BlendMode::Normal,
-                    opacity: 1.0,
-                    visible: true,
-                }),
+                blend_options(&SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true }),
             )
             .with("enab", Value::Boolean(true))
             .with("hasoptions", Value::Boolean(true))

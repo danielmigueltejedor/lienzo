@@ -14,13 +14,13 @@
 use std::hash::{Hash, Hasher};
 
 use egui::{Align2, Color32, FontId, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
-use photocraft_algo::{FilterParams, GALLERY_CATEGORIES, GalleryFilter};
-use photocraft_doc::{DocId, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_algo::{FilterParams, GALLERY_CATEGORIES, GalleryFilter};
+use lienzo_doc::{DocId, LayerId};
+use lienzo_geom::Rect;
+use lienzo_raster::{Interrupt, Surface};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::edit_history::{EditHistory, Step};
 use crate::filter_dialog::{Kind, parse_spec};
 use crate::theme::Tokens;
@@ -197,12 +197,12 @@ fn sample(surf: &Surface, r: Rect, k: u32) -> Surface {
 
 /// Runs a stack on a small surface (the preview and thumbnails).
 fn render(src: &Surface, params: &Value) -> Surface {
-    let effects = photocraft_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
+    let effects = lienzo_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
     let b = src.content_bounds().union(&Rect::new(0, 0, 1, 1));
     let b = Rect::new(0, 0, b.x1, b.y1);
-    let mut out = photocraft_algo::apply_in(src, &FilterParams::FilterGallery { effects }, b, b, None, b);
-    if let Ok(Some(colors)) = photocraft_engine::color_channels::explicit(params, src.format().mode.color_channels())
-        && photocraft_engine::color_channels::restrict_surface(src, &mut out, colors).is_err()
+    let mut out = lienzo_algo::apply_in(src, &FilterParams::FilterGallery { effects }, b, b, None, b);
+    if let Ok(Some(colors)) = lienzo_engine::color_channels::explicit(params, src.format().mode.color_channels())
+        && lienzo_engine::color_channels::restrict_surface(src, &mut out, colors).is_err()
     {
         return src.clone();
     }
@@ -214,13 +214,13 @@ fn render(src: &Surface, params: &Value) -> Surface {
 /// the pixels equal the same crop of the applied result; then `k`×`k` blocks are averaged.
 /// `None` when cancelled.
 fn preview_pixels(src: &Surface, canvas: Rect, params: &Value, vis: Rect, k: u32, ctl: &Interrupt) -> Option<Surface> {
-    let effects = photocraft_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
+    let effects = lienzo_engine::gallery_cmds::effects_from_json(params).unwrap_or_default();
     let fp = FilterParams::FilterGallery { effects };
     let content = src.content_bounds();
-    let area = photocraft_algo::output_area(&fp, content, canvas, None).intersect(&vis);
-    let mut full = if area.is_empty() { src.clone() } else { photocraft_algo::apply_in_with(src, &fp, area, canvas, None, canvas.union(&content), ctl)? };
-    if let Some(colors) = photocraft_engine::color_channels::explicit(params, src.format().mode.color_channels()).ok()? {
-        photocraft_engine::color_channels::restrict_region(src, &mut full, colors, area).ok()?;
+    let area = lienzo_algo::output_area(&fp, content, canvas, None).intersect(&vis);
+    let mut full = if area.is_empty() { src.clone() } else { lienzo_algo::apply_in_with(src, &fp, area, canvas, None, canvas.union(&content), ctl)? };
+    if let Some(colors) = lienzo_engine::color_channels::explicit(params, src.format().mode.color_channels()).ok()? {
+        lienzo_engine::color_channels::restrict_region(src, &mut full, colors, area).ok()?;
     }
     Some(reduce(&full, vis, k))
 }
@@ -315,7 +315,7 @@ fn colour_param(p: &Value, key: &str) -> Option<[f32; 4]> {
 }
 
 /// Opens the dialog on the active layer, starting from the last gallery stack used.
-pub fn open(app: &mut PhotocraftApp) -> Result<(), String> {
+pub fn open(app: &mut LienzoApp) -> Result<(), String> {
     let (layer, src, _) = crate::distort_ui::active_filter_target(app)?;
     let last = app.session.journal.iter().rev().find(|(id, _)| id == "filter.filterGallery").map(|(_, p)| p.clone());
     let effects = last.as_ref().map(effects_from).unwrap_or_default();
@@ -325,9 +325,9 @@ pub fn open(app: &mut PhotocraftApp) -> Result<(), String> {
 
 /// Re-opens Filter Gallery smart filter `index` of smart object `layer` with its recorded stack,
 /// previewing on the pixels below it; OK updates that filter (`layer.smartFilter.setParams`).
-pub fn open_smart_filter(app: &mut PhotocraftApp, layer: LayerId, index: usize) -> Result<(), String> {
+pub fn open_smart_filter(app: &mut LienzoApp, layer: LayerId, index: usize) -> Result<(), String> {
     let st = app.session.active().ok_or("no document")?;
-    let Some(photocraft_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
+    let Some(lienzo_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
         return Err("the layer is not a smart object".into());
     };
     let filter = sm.smart_filters.get(index).ok_or("no such smart filter")?;
@@ -335,7 +335,7 @@ pub fn open_smart_filter(app: &mut PhotocraftApp, layer: LayerId, index: usize) 
         return Err("the smart filter is not a Filter Gallery filter".into());
     }
     let p = filter.params.clone();
-    let src = photocraft_engine::smart_cmds::render_below_filter(&st.doc, sm, index)
+    let src = lienzo_engine::smart_cmds::render_below_filter(&st.doc, sm, index)
         .map_err(|e| e.to_string())?
         .ok_or("the smart object's contents are unavailable (missing linked file?)")?;
     let fg = colour_param(&p, "foreground").unwrap_or(app.session.tools.foreground);
@@ -344,7 +344,7 @@ pub fn open_smart_filter(app: &mut PhotocraftApp, layer: LayerId, index: usize) 
 }
 
 fn open_on(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     layer: LayerId,
     src: Surface,
     mut effects: Vec<EffectLayer>,
@@ -399,7 +399,7 @@ fn open_on(
 }
 
 /// OK: runs `filter.filterGallery` with the stack (one history step).
-pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn commit(app: &mut LienzoApp) -> Result<Value, String> {
     let Some(d) = app.distort.gallery.take() else { return Err("the Filter Gallery is not open".into()) };
     if !d.effects.iter().any(|e| e.visible) {
         return Ok(json!({"committed": false}));
@@ -413,7 +413,7 @@ pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Control channel: `filter.filterGallery {"ui": {...}}` while the dialog is open.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut LienzoApp, ui: &Value) -> Result<Value, String> {
     let flag = |k: &str| ui.get(k).and_then(Value::as_bool) == Some(true);
     if flag("commit") {
         let r = commit(app)?;
@@ -468,7 +468,7 @@ struct PreviewJob {
     key: u64,
     vis: Rect,
     rx: std::sync::mpsc::Receiver<Result<Option<(egui::ColorImage, f64)>, String>>,
-    ctl: photocraft_engine::jobs::JobCtx,
+    ctl: lienzo_engine::jobs::JobCtx,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -494,7 +494,7 @@ fn step_zoom(d: &GalleryDialog, dir: i32) -> f32 {
 
 /// ⌘+ / ⌘− / ⌘0 / ⌘1 (or their overrides) zoom the preview like its − / + buttons, Fit in View
 /// and 100 %, not the canvas behind the dialog.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) {
     let nav = if app.distort.gallery.is_some() { crate::shortcuts::nav_shortcut(app, ctx) } else { None };
     let (Some(d), Some(id)) = (app.distort.gallery.as_mut(), nav) else { return };
     d.zoom = match id {
@@ -604,7 +604,7 @@ fn start_job(d: &mut GalleryDialog, ctx: &egui::Context, key: u64, vis: Rect, k:
         return;
     }
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    let ctl = photocraft_engine::jobs::JobCtx::new();
+    let ctl = lienzo_engine::jobs::JobCtx::new();
     let (work, src, canvas, params, repaint) = (ctl.clone(), d.src.clone(), d.canvas, params.clone(), ctx.clone());
     let spawned = std::thread::Builder::new().name("gallery-preview".into()).spawn(move || {
         let run = || {
@@ -648,7 +648,7 @@ fn update_thumbs(d: &mut GalleryDialog, ctx: &egui::Context, budget: usize) {
 }
 
 /// Draws the dialog (a full-window layer over the app).
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let screen = ctx.content_rect();
     let mut action: Option<&str> = None;
@@ -828,7 +828,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
                             .and_then(Value::as_array)
                             .map(|a| a.iter().filter_map(Value::as_f64).map(|v| v as f32).collect::<Vec<_>>())
                             .filter(|v| v.len() >= 3);
-                        let neon = photocraft_algo::GalleryEffect::new(GalleryFilter::NeonGlow).color;
+                        let neon = lienzo_algo::GalleryEffect::new(GalleryFilter::NeonGlow).color;
                         let mut rgb = c.map_or([neon[0], neon[1], neon[2]], |v| [v[0], v[1], v[2]]);
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new(tl!("Glow Color")).color(t.text_dim));

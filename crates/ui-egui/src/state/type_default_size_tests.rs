@@ -7,7 +7,7 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 
 /// The size in points the scripted tool options report: `ui.inspect`'s `toolOptions` is
@@ -18,8 +18,8 @@ fn scripted_size(o: &ToolOptions) -> f64 {
 }
 
 /// An app with one document of the given size and resolution.
-fn app_with_document(width: u32, height: u32, resolution: f64) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_document(width: u32, height: u32, resolution: f64) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": width, "height": height, "resolution": resolution})).unwrap();
     app.sync_views();
     app
@@ -73,7 +73,7 @@ fn the_default_size_does_not_depend_on_the_document() {
 /// A tool option saved by an older version is a remembered choice: a saved 48 stays 48.
 #[test]
 fn a_size_saved_by_an_older_version_keeps_its_value() {
-    let mut restarted = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut restarted = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     restarted.session.prefs.edit(|p| p.tool_options = json!({ "type_size": 48.0 }));
     crate::tool_memory::restore(&mut restarted);
     assert_eq!(restarted.ui.tool_options.type_size, 48.0, "a saved 48 pt is not overwritten by the new default");

@@ -2,8 +2,8 @@
 //! Layer › New › Group… (`layer.new.group`) and Group from Layers (`layer.new.groupFromLayers`,
 //! `layer.groupLayers`), so the dialog's OK is a single history step.
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{LabelColor, Layer};
+use lienzo_color::BlendMode;
+use lienzo_doc::{LabelColor, Layer};
 use serde_json::Value;
 
 use crate::{EngineError, Result};
@@ -91,8 +91,8 @@ pub(crate) fn below(cmd: &str, p: &Value) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use photocraft_color::BlendMode;
-    use photocraft_doc::{Document, LabelColor, Layer, LayerContent, LayerId};
+    use lienzo_color::BlendMode;
+    use lienzo_doc::{Document, LabelColor, Layer, LayerContent, LayerId};
     use serde_json::{Value, json};
 
     use crate::Session;
@@ -217,7 +217,7 @@ mod tests {
         let g = id(s.execute("layer.new.group", json!({"position": "below"})).unwrap());
         assert_eq!(top(&s)[1..], [a, g, b]);
         assert!(layer(&s, g).clipped, "under a clipped layer the group is clipped too");
-        assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY), "B still clips to A");
+        assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY), "B still clips to A");
         // On the base itself: the new group goes between A and its clipped layers.
         s.undo();
         s.execute("layer.select", json!({"layer": a.0})).unwrap();

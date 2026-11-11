@@ -32,14 +32,14 @@ fn shift_axis_switches_once_the_pointer_is_clearly_nearer_the_other_one() {
     assert!(near(constrain([30.0, 20.0], Some(v), 4), [30.0, 0.0]));
 }
 
-fn app_with_layer() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_layer() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 24, 24), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 24, 24), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -51,11 +51,11 @@ fn app_with_layer() -> PhotocraftApp {
     app
 }
 
-fn bounds(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> photocraft_geom::Rect {
+fn bounds(app: &LienzoApp, id: lienzo_doc::LayerId) -> lienzo_geom::Rect {
     app.session.active().unwrap().doc.layer(id).unwrap().surface().unwrap().content_bounds()
 }
 
-fn drag(app: &mut PhotocraftApp, pts: &[[f64; 2]], mods: egui::Modifiers) {
+fn drag(app: &mut LienzoApp, pts: &[[f64; 2]], mods: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: pts[0][0], y: pts[0][1], pressure: 1.0 }, mods);
     for p in &pts[1..pts.len() - 1] {
         crate::canvas::tool_event(app, ToolEvent::Move { x: p[0], y: p[1], pressure: 1.0 }, mods);
@@ -69,10 +69,10 @@ fn shift_drag_moves_along_one_axis_only() {
     let mut app = app_with_layer();
     let id = app.session.active().unwrap().active_layer.unwrap();
     drag(&mut app, &[[16.0, 16.0], [22.0, 18.0], [26.0, 19.0]], egui::Modifiers::SHIFT);
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(18, 8, 34, 24));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(18, 8, 34, 24));
     // Switching axis mid-drag: the end point decides.
     drag(&mut app, &[[16.0, 16.0], [22.0, 17.0], [18.0, 30.0], [17.0, 36.0]], egui::Modifiers::SHIFT);
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(18, 28, 34, 44));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(18, 28, 34, 44));
 }
 
 #[test]
@@ -86,14 +86,14 @@ fn alt_drag_duplicates_and_moves_the_copy_in_one_step() {
     assert_eq!(st.doc.layers.len(), n0 + 1, "one copy");
     let copy = st.active_layer.unwrap();
     assert_ne!(copy, orig);
-    assert_eq!(bounds(&app, orig), photocraft_geom::Rect::new(8, 8, 24, 24), "original untouched");
-    assert_eq!(bounds(&app, copy), photocraft_geom::Rect::new(18, 13, 34, 29));
+    assert_eq!(bounds(&app, orig), lienzo_geom::Rect::new(8, 8, 24, 24), "original untouched");
+    assert_eq!(bounds(&app, copy), lienzo_geom::Rect::new(18, 13, 34, 29));
     let st = app.session.active().unwrap();
     assert_eq!(st.history.past_len(), h0 + 1, "one undo step");
     assert_eq!(st.history.undo_label(), Some("Move"));
     assert!(app.session.undo());
     assert_eq!(app.session.active().unwrap().doc.layers.len(), n0);
-    assert_eq!(bounds(&app, orig), photocraft_geom::Rect::new(8, 8, 24, 24));
+    assert_eq!(bounds(&app, orig), lienzo_geom::Rect::new(8, 8, 24, 24));
     // ⌥-click without a drag makes no copy.
     drag(&mut app, &[[16.0, 16.0], [16.0, 16.0]], egui::Modifiers::ALT);
     assert_eq!(app.session.active().unwrap().doc.layers.len(), n0);
@@ -101,7 +101,7 @@ fn alt_drag_duplicates_and_moves_the_copy_in_one_step() {
     drag(&mut app, &[[16.0, 16.0], [30.0, 19.0]], egui::Modifiers::SHIFT | egui::Modifiers::ALT);
     let st = app.session.active().unwrap();
     assert_eq!(st.doc.layers.len(), n0 + 1);
-    assert_eq!(bounds(&app, st.active_layer.unwrap()), photocraft_geom::Rect::new(22, 8, 38, 24));
+    assert_eq!(bounds(&app, st.active_layer.unwrap()), lienzo_geom::Rect::new(22, 8, 38, 24));
 }
 
 /// Allow Non-Linear History: the copy's step moves the later states in front of it, and
@@ -133,7 +133,7 @@ fn alt_drag_duplicates_every_selected_layer() {
     let st = app.session.active().unwrap();
     assert_eq!(st.doc.layers.len(), n0 + 2);
     assert_eq!(st.history.past_len(), h0 + 1);
-    assert_eq!(bounds(&app, a), photocraft_geom::Rect::new(8, 8, 24, 24));
+    assert_eq!(bounds(&app, a), lienzo_geom::Rect::new(8, 8, 24, 24));
     assert!(st.doc.layer(b).is_some());
 }
 
@@ -143,11 +143,11 @@ fn nudge_moves_layers_or_the_transform_box() {
     let id = app.session.active().unwrap().active_layer.unwrap();
     nudge(&mut app, 10.0, 0.0, false);
     nudge(&mut app, 0.0, -1.0, false);
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(18, 7, 34, 23));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(18, 7, 34, 23));
     let n0 = app.session.active().unwrap().doc.layers.len();
     nudge(&mut app, 1.0, 0.0, true);
     assert_eq!(app.session.active().unwrap().doc.layers.len(), n0 + 1);
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(18, 7, 34, 23));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(18, 7, 34, 23));
     let ctx = egui::Context::default();
     crate::transform_tool::begin(&mut app, &ctx).unwrap();
     let q0 = app.ui.transform.as_ref().unwrap().quad;
@@ -156,12 +156,12 @@ fn nudge_moves_layers_or_the_transform_box() {
 }
 
 /// One key press through `arrow_keys`, as egui delivers it.
-fn press(app: &mut PhotocraftApp, key: egui::Key, mods: egui::Modifiers) -> bool {
+fn press(app: &mut LienzoApp, key: egui::Key, mods: egui::Modifiers) -> bool {
     press_at(app, key, mods, 0.0)
 }
 
 /// [`press`] at egui time `time` (seconds).
-fn press_at(app: &mut PhotocraftApp, key: egui::Key, mods: egui::Modifiers, time: f64) -> bool {
+fn press_at(app: &mut LienzoApp, key: egui::Key, mods: egui::Modifiers, time: f64) -> bool {
     let ctx = egui::Context::default();
     ctx.input_mut(|i| {
         i.time = time;
@@ -200,13 +200,13 @@ fn arrow_key_modifiers_reach_the_move_tool() {
     let id = app.session.active().unwrap().active_layer.unwrap();
     let n0 = app.session.active().unwrap().doc.layers.len();
     assert!(press(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(9, 8, 25, 24));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(9, 8, 25, 24));
     assert!(press(&mut app, egui::Key::ArrowDown, egui::Modifiers::SHIFT));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(9, 18, 25, 34));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(9, 18, 25, 34));
     assert!(press(&mut app, egui::Key::ArrowLeft, egui::Modifiers::ALT));
     let st = app.session.active().unwrap();
     assert_eq!(st.doc.layers.len(), n0 + 1, "⌥ duplicated first");
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(9, 18, 25, 34), "the original stays");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(9, 18, 25, 34), "the original stays");
 }
 
 /// ⌘ as a Mac sends it, and Ctrl as Windows and Linux send it (`command` is Ctrl there).
@@ -223,26 +223,26 @@ fn cmd_arrows_nudge_the_layer_from_the_brush() {
     let n0 = app.session.active().unwrap().doc.layers.len();
     // A plain arrow turns the Brush's tip (below), never the layer.
     assert!(press(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(8, 8, 24, 24));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(8, 8, 24, 24));
     assert_eq!(app.session.tools.brush.angle, -1.0);
     app.run("tools.setBrush", json!({"brush": {"angle": 0}})).unwrap();
     for cmd in [CTRL, MAC_CMD] {
         assert!(press(&mut app, egui::Key::ArrowRight, cmd));
     }
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(10, 8, 26, 24), "1 px per press");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(10, 8, 26, 24), "1 px per press");
     assert!(press(&mut app, egui::Key::ArrowDown, CTRL | egui::Modifiers::SHIFT));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(10, 18, 26, 34), "⌘⇧: 10 px");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(10, 18, 26, 34), "⌘⇧: 10 px");
     assert!(press(&mut app, egui::Key::ArrowLeft, CTRL | egui::Modifiers::ALT));
     let st = app.session.active().unwrap();
     assert_eq!(st.doc.layers.len(), n0 + 1, "⌘⌥ duplicated first");
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(10, 18, 26, 34), "the original stays");
-    assert_eq!(bounds(&app, st.active_layer.unwrap()), photocraft_geom::Rect::new(9, 18, 25, 34), "the copy moved");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(10, 18, 26, 34), "the original stays");
+    assert_eq!(bounds(&app, st.active_layer.unwrap()), lienzo_geom::Rect::new(9, 18, 25, 34), "the copy moved");
     assert_eq!(app.ui.tool, Tool::Brush);
     // The Move tool itself takes ⌘-arrows as plain ones.
     app.ui.tool = Tool::Move;
     assert!(press(&mut app, egui::Key::ArrowUp, CTRL));
     let copy = app.session.active().unwrap().active_layer.unwrap();
-    assert_eq!(bounds(&app, copy), photocraft_geom::Rect::new(9, 17, 25, 33));
+    assert_eq!(bounds(&app, copy), lienzo_geom::Rect::new(9, 17, 25, 33));
 }
 
 /// #2474: tools where ⌘ means something else in Photoshop (Pen and path tools, Hand, Zoom,
@@ -256,7 +256,7 @@ fn cmd_arrows_leave_the_layer_alone_where_cmd_is_not_the_move_tool() {
         assert!(!press(&mut app, egui::Key::ArrowRight, CTRL), "{tool:?}");
         assert!(!press(&mut app, egui::Key::ArrowRight, MAC_CMD | egui::Modifiers::SHIFT), "{tool:?}");
     }
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(8, 8, 24, 24));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.tool = Tool::Brush;
     crate::transform_tool::begin(&mut app, &egui::Context::default()).unwrap();
     let q0 = app.ui.transform.as_ref().unwrap().quad;
@@ -272,7 +272,7 @@ fn cmd_arrows_move_the_selected_pixels_with_a_selection_tool() {
     app.ui.tool = Tool::RectMarquee;
     app.session.execute("select.rect", json!({"x": 8, "y": 8, "width": 8, "height": 8})).unwrap();
     assert!(press(&mut app, egui::Key::ArrowRight, CTRL));
-    let offset = |app: &PhotocraftApp| photocraft_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
+    let offset = |app: &LienzoApp| lienzo_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
     assert_eq!(offset(&app), Some((1, 0)), "the selected pixels float, 1 px to the right");
     assert!(press(&mut app, egui::Key::ArrowDown, CTRL | egui::Modifiers::SHIFT));
     assert_eq!(offset(&app), Some((1, 10)), "⌘⇧: 10 px");
@@ -294,23 +294,23 @@ fn arrow_keys_nudge_the_selection_with_a_selection_tool() {
     app.ui.tool = Tool::Lasso;
     assert!(!press(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE), "no selection: not used");
     app.session.execute("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
-    let sel = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();
+    let sel = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();
     let h0 = app.session.active().unwrap().history.past_len();
     assert!(press(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE));
     assert!(press(&mut app, egui::Key::ArrowDown, egui::Modifiers::SHIFT));
-    assert_eq!(sel(&app), photocraft_geom::Rect::new(5, 14, 15, 24));
+    assert_eq!(sel(&app), lienzo_geom::Rect::new(5, 14, 15, 24));
     assert_eq!(app.session.active().unwrap().history.past_len(), h0 + 2);
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(8, 8, 24, 24), "pixels stay put");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(8, 8, 24, 24), "pixels stay put");
     // Not while a polygon is being drawn.
     app.ui.tool = Tool::PolygonLasso;
     app.ui.polygon = vec![[1.0, 1.0]];
     assert!(!press(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE));
 }
-fn history(app: &PhotocraftApp) -> usize {
+fn history(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn left_edge(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> i32 {
+fn left_edge(app: &LienzoApp, id: lienzo_doc::LayerId) -> i32 {
     bounds(app, id).x0
 }
 
@@ -326,13 +326,13 @@ fn a_run_of_arrow_nudges_is_one_history_step() {
         assert!(press_at(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE, 5.0 + 0.2 * f64::from(i)));
     }
     assert!(press_at(&mut app, egui::Key::ArrowDown, egui::Modifiers::SHIFT, 7.6));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(20, 18, 36, 34));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(20, 18, 36, 34));
     assert_eq!(history(&app), h0 + 1, "thirteen presses, one state");
     assert_eq!(app.session.active().unwrap().history.undo_label(), Some("Nudge"));
     assert!(app.session.undo());
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(8, 8, 24, 24), "one Undo takes back the run");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(8, 8, 24, 24), "one Undo takes back the run");
     assert!(app.session.redo());
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(20, 18, 36, 34), "and one Redo does it again");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(20, 18, 36, 34), "and one Redo does it again");
 }
 
 /// #9511: zoomed out, where each press moves several document pixels, a run of nudges is still
@@ -348,13 +348,13 @@ fn a_run_of_arrow_nudges_is_one_history_step_zoomed_out() {
         assert!(press_at(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE, 5.0 + 0.2 * f64::from(i)));
     }
     assert!(press_at(&mut app, egui::Key::ArrowDown, egui::Modifiers::SHIFT, 7.6));
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(32, 18, 48, 34));
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(32, 18, 48, 34));
     assert_eq!(history(&app), h0 + 1, "thirteen presses, one state");
     assert_eq!(app.session.active().unwrap().history.undo_label(), Some("Nudge"));
     assert!(app.session.undo());
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(8, 8, 24, 24), "one Undo takes back the run");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(8, 8, 24, 24), "one Undo takes back the run");
     assert!(app.session.redo());
-    assert_eq!(bounds(&app, id), photocraft_geom::Rect::new(32, 18, 48, 34), "and one Redo does it again");
+    assert_eq!(bounds(&app, id), lienzo_geom::Rect::new(32, 18, 48, 34), "and one Redo does it again");
 }
 
 /// A pause longer than Nudge Bundle Pause starts a new run; a longer pause setting keeps it.
@@ -404,7 +404,7 @@ fn every_press_is_a_step_with_bundling_off() {
 fn other_changes_end_the_run() {
     let mut app = app_with_layer();
     let a = app.session.active().unwrap().active_layer.unwrap();
-    let tap = |app: &mut PhotocraftApp| assert!(press(app, egui::Key::ArrowRight, egui::Modifiers::NONE));
+    let tap = |app: &mut LienzoApp| assert!(press(app, egui::Key::ArrowRight, egui::Modifiers::NONE));
     let h0 = history(&app);
     tap(&mut app);
     tap(&mut app);
@@ -437,7 +437,7 @@ fn other_changes_end_the_run() {
     let before = history(&app);
     app.session
         .edit("paint", |doc, active| {
-            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 4, 4), &[0.0, 1.0, 0.0, 1.0]);
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 0, 4, 4), &[0.0, 1.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -465,16 +465,16 @@ fn selection_outline_nudges_bundle_into_one_step() {
     let mut app = app_with_layer();
     app.ui.tool = Tool::Lasso;
     app.session.execute("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
-    let sel = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();
+    let sel = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().unwrap().content_bounds();
     let h0 = history(&app);
     for i in 0..5 {
         assert!(press_at(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE, 2.0 + 0.1 * f64::from(i)));
     }
     assert!(press_at(&mut app, egui::Key::ArrowDown, egui::Modifiers::SHIFT, 2.6));
-    assert_eq!(sel(&app), photocraft_geom::Rect::new(9, 14, 19, 24));
+    assert_eq!(sel(&app), lienzo_geom::Rect::new(9, 14, 19, 24));
     assert_eq!(history(&app), h0 + 1);
     assert!(app.session.undo());
-    assert_eq!(sel(&app), photocraft_geom::Rect::new(4, 4, 14, 14), "Undo takes the outline back where it was drawn");
+    assert_eq!(sel(&app), lienzo_geom::Rect::new(4, 4, 14, 14), "Undo takes the outline back where it was drawn");
     // The layer nudge and the outline nudge are different runs even back to back.
     app.session.execute("select.deselect", json!({})).unwrap();
     app.ui.tool = Tool::Move;
@@ -490,10 +490,10 @@ fn free_transform_nudges_bundle_into_one_undo_step() {
     let mut app = app_with_layer();
     let ctx = egui::Context::default();
     crate::transform_tool::begin(&mut app, &ctx).unwrap();
-    let quad = |app: &PhotocraftApp| app.ui.transform.as_ref().unwrap().quad;
+    let quad = |app: &LienzoApp| app.ui.transform.as_ref().unwrap().quad;
     let q0 = quad(&app);
     let moved = |dx: f64, dy: f64| q0.map(|q| [q[0] + dx, q[1] + dy]);
-    let settle = |app: &mut PhotocraftApp| crate::transform_tool::track_steps(app, &ctx);
+    let settle = |app: &mut LienzoApp| crate::transform_tool::track_steps(app, &ctx);
     for i in 0..6 {
         assert!(press_at(&mut app, egui::Key::ArrowRight, egui::Modifiers::NONE, 4.0 + 0.1 * f64::from(i)));
         settle(&mut app);

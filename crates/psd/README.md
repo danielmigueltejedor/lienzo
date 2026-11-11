@@ -1,6 +1,6 @@
-# photocraft-psd
+# lienzo-psd
 
-A standalone reader and writer for Adobe Photoshop **PSD** (version 1) and **PSB** (version 2, "large document format") files. It keeps everything it reads, so an unmodified file writes back byte for byte. It depends on no other photocraft crate.
+A standalone reader and writer for Adobe Photoshop **PSD** (version 1) and **PSB** (version 2, "large document format") files. It keeps everything it reads, so an unmodified file writes back byte for byte. It depends on no other lienzo crate.
 
 * Clean-room implementation from Adobe's public *Photoshop File Formats Specification*. Where the spec is silent, behavior follows MIT-licensed psd-tools / ag-psd documentation, and the code comments say so.
 * `#![forbid(unsafe_code)]`. Builds for `wasm32-unknown-unknown`. The core API works on byte slices; the file helpers only exist on native targets.
@@ -151,8 +151,8 @@ allocations for padded channels return an error on failure.
 ## Legacy animation inspection
 
 ```sh
-cargo run -p photocraft-psd --example animation_inspect -- /path/to/input.psd
-cargo test -p photocraft-psd --test it animation::
+cargo run -p lienzo-psd --example animation_inspect -- /path/to/input.psd
+cargo test -p lienzo-psd --test it animation::
 ```
 
 The inspection example accepts an explicit local PSD/PSB (up to 128 MiB), reports frame counts,
@@ -165,11 +165,11 @@ assuming that resource 4003 always belongs to animation. Unknown records and uns
 versions stay raw. `FrIn` definitions and `FSts` playback order are separate; ids are opaque stored
 `long` values. Missing frame delays remain absent, and sparse `mlst` properties are not filled with
 guessed defaults. Timeline tracks, loops, inheritance and property evaluation are left to higher
-layers. This parser alone does **not** make PSD animations play in PhotoCraft.
+layers. This parser alone does **not** make PSD animations play in Lienzo.
 
 ## Testing
 
-`cargo test -p photocraft-psd --all-features` runs the unit tests, integration tests and proptests:
+`cargo test -p lienzo-psd --all-features` runs the unit tests, integration tests and proptests:
 
 * Byte stability and model round-trips for every generated case: all depths, color modes and compressions, PSD and PSB.
 * PackBits edge cases.
@@ -183,7 +183,7 @@ layers. This parser alone does **not** make PSD animations play in PhotoCraft.
 
 `tests/it/corpus.rs` walks `corpus/psd/**/*.{psd,psb}` at the workspace root when that directory exists. For each file it asserts that parsing succeeds and the file round-trips byte for byte, and it prints a result per file. Without the directory it skips silently.
 
-A `cargo-fuzz` skeleton lives in `fuzz/`. It is its own workspace and is excluded from photocraft's. Run it with `cargo +nightly fuzz run parse` (or `descriptor`) from `crates/psd`.
+A `cargo-fuzz` skeleton lives in `fuzz/`. It is its own workspace and is excluded from lienzo's. Run it with `cargo +nightly fuzz run parse` (or `descriptor`) from `crates/psd`.
 
 ## Spec ambiguities and decisions
 

@@ -16,7 +16,7 @@ pub fn document_to_psd(doc: &Document) -> PsdFile {
 
 /// Converts a document to a PSD/PSB file model, returning warnings about
 /// anything that could not be represented. The merged composite is rendered
-/// with `photocraft_compose::flatten`.
+/// with `lienzo_compose::flatten`.
 pub fn document_to_psd_with(doc: &Document, opts: &PsdExportOptions) -> (PsdFile, Vec<String>) {
     document_to_psd_sized(doc, opts, 0, &Interrupt::NONE, PSD_MAX_FILE_SIZE)
 }
@@ -106,8 +106,8 @@ fn export_supported_document(
         ctl.progress(done / units);
         !ctl.cancelled()
     };
-    let space = photocraft_compose::cmyk_space(doc);
-    photocraft_color::convert::with_cmyk_space(space.as_ref(), || ex.emit(&doc.layers, &mut tick));
+    let space = lienzo_compose::cmyk_space(doc);
+    lienzo_color::convert::with_cmyk_space(space.as_ref(), || ex.emit(&doc.layers, &mut tick));
     drop(tick);
     ctl.progress(layers_share);
 
@@ -135,7 +135,7 @@ fn export_supported_document(
         resources.push(ImageResource::new(1045, unicode_names_resource(&names)));
         resources.push(ImageResource::new(crate::channel_map::DISPLAY_INFO, crate::channel_map::display_info(&extra, has_alpha)));
         // Photoshop writes 1053 in every file with an extra channel. Its absence is how a file from
-        // an earlier PhotoCraft is told apart (`psd_import::earlier_photocraft_spot_planes`).
+        // an earlier Lienzo is told apart (`psd_import::earlier_lienzo_spot_planes`).
         resources.push(ImageResource::new(crate::channel_map::ALPHA_IDENTIFIERS, crate::channel_map::alpha_identifiers(has_alpha, extra.len())));
     }
     if let Some(id) = quick_mask_id {
@@ -151,19 +151,19 @@ fn export_supported_document(
     // EXIF resolution follow the ResolutionInfo resource, so no copy contradicts it (#1691).
     let ppi = Some((doc.resolution_dpi, doc.resolution_dpi)).filter(|d| d.0 > 0.0);
     if let Some(x) = &doc.metadata.xmp {
-        resources.push(ImageResource::new(ids::XMP, photocraft_codecs::export_xmp(x, ppi).as_bytes().to_vec()));
+        resources.push(ImageResource::new(ids::XMP, lienzo_codecs::export_xmp(x, ppi).as_bytes().to_vec()));
     }
     if let Some(e) = &doc.metadata.exif {
-        resources.push(ImageResource::new(ids::EXIF, photocraft_codecs::export_exif(e, ppi).into_owned()));
+        resources.push(ImageResource::new(ids::EXIF, lienzo_codecs::export_exif(e, ppi).into_owned()));
     }
     let mut global_blocks = Vec::new();
     let preserved = ex.smart.finish(crate::annotations_map::export_blocks(doc, crate::pattern_map::export_global_blocks(doc)));
     // The type layers' `Txt2` is regenerated (the auto-kern modes live there, and a preserved
     // block goes stale as text is edited): one object per `TextIndex`, at the slot each layer's
-    // `TySh` names (unused slots stay empty; see `photocraft_text::psd::build_txt2`). The block
+    // `TySh` names (unused slots stay empty; see `lienzo_text::psd::build_txt2`). The block
     // it replaces is handed over so a kept object keeps everything the file held beyond its text
     // and style runs (Photoshop's `/21 /1` glyph pen positions, …).
-    let text_layers: Vec<(i32, &photocraft_doc::TextLayer)> = doc
+    let text_layers: Vec<(i32, &lienzo_doc::TextLayer)> = doc
         .walk()
         .into_iter()
         .filter_map(|(_, _, l)| match &l.content {
@@ -177,8 +177,8 @@ fn export_supported_document(
     // as Photopea reject it (#3514). Keep the block when the file had one (round-trip its pen
     // positions/extras), a layer is Optical (#1348), or a layer carries stylistic sets / other
     // Txt2-only features (#10308).
-    let txt2 = (previous.is_some() || photocraft_text::psd::needs_txt2(&text_layers))
-        .then(|| photocraft_text::psd::build_txt2_at(&text_layers, previous.as_deref(), ex.dpi));
+    let txt2 =
+        (previous.is_some() || lienzo_text::psd::needs_txt2(&text_layers)).then(|| lienzo_text::psd::build_txt2_at(&text_layers, previous.as_deref(), ex.dpi));
     for (sig, key, data) in preserved {
         // With no type layers left the opened file's `Txt2` describes text that is gone (fonts and
         // layout caches, often most of the file): Photoshop drops it, and so does the save (#9563).
@@ -271,7 +271,7 @@ fn export_supported_document(
     // open a 32-bit file without them (#291).
     let color_mode_data = match duotone_inks {
         Some(raw) => raw,
-        None => photocraft_psd::hdr::color_mode_data_for_depth(header.depth),
+        None => lienzo_psd::hdr::color_mode_data_for_depth(header.depth),
     };
     let mut file = PsdFile {
         header,
@@ -306,7 +306,7 @@ fn add_format_warnings(doc: &Document, opts: &PsdExportOptions, fmt: PixelFormat
 struct MergedExport<'a> {
     header: Header,
     image_data: ImageData,
-    extra: Vec<&'a photocraft_doc::AlphaChannel>,
+    extra: Vec<&'a lienzo_doc::AlphaChannel>,
     has_alpha: bool,
     quick_mask_id: Option<u16>,
     real_merged: bool,
@@ -352,7 +352,7 @@ fn append_extra_channels<'a>(
     planes: &mut Vec<u8>,
     has_alpha: bool,
     sample: SampleType,
-) -> (Vec<&'a photocraft_doc::AlphaChannel>, Option<u16>) {
+) -> (Vec<&'a lienzo_doc::AlphaChannel>, Option<u16>) {
     let cc = ex.cc;
     let max_extra = 56 - cc - usize::from(has_alpha);
     if doc.channels.len() > max_extra {
@@ -436,17 +436,16 @@ fn index_layer_ids_and_text(doc: &Document, ex: &mut Ex<'_>) {
             let LayerContent::Text(t) = &l.content else {
                 continue;
             };
-            match t.psd_raw.as_deref().and_then(|d| photocraft_text::psd::text_index(d)) {
+            match t.psd_raw.as_deref().and_then(|d| lienzo_text::psd::text_index(d)) {
                 Some(i) if used_txt.insert(i) => {
                     ex.text_index.insert(l.id, i);
                 }
                 _ => fresh.push(l.id),
             }
         }
-        let objects =
-            doc.metadata.psd_global_blocks.iter().find(|(_, key, _)| key == b"Txt2").map_or(0, |(_, _, d)| photocraft_text::psd::txt2_object_count(d));
+        let objects = doc.metadata.psd_global_blocks.iter().find(|(_, key, _)| key == b"Txt2").map_or(0, |(_, _, d)| lienzo_text::psd::txt2_object_count(d));
         let mut next_txt = used_txt.iter().max().map_or(0, |m| m + 1).max(i32::try_from(objects).unwrap_or(i32::MAX));
-        if next_txt.saturating_add(fresh.len() as i32) > photocraft_text::psd::MAX_TEXT_INDEX + 1 {
+        if next_txt.saturating_add(fresh.len() as i32) > lienzo_text::psd::MAX_TEXT_INDEX + 1 {
             next_txt = 0;
         }
         for id in fresh {

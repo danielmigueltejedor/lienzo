@@ -9,11 +9,11 @@
 //! changes nothing.
 
 use egui::{Color32, Modifiers, Pos2, Stroke};
-use photocraft_doc::LayerContent;
-use photocraft_doc::vector::LiveShape;
-use photocraft_vector::shapes;
+use lienzo_doc::LayerContent;
+use lienzo_doc::vector::LiveShape;
+use lienzo_vector::shapes;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
@@ -120,7 +120,7 @@ impl Target {
     }
 
     /// The outline for `radii`.
-    fn path(&self, radii: [f64; 4]) -> photocraft_doc::Path {
+    fn path(&self, radii: [f64; 4]) -> lienzo_doc::Path {
         match &self.geom {
             Geom::Rect([x, y, w, h]) => shapes::rounded_rect(*x, *y, *w, *h, radii),
             Geom::Polygon { rect, sides, star_ratio, .. } => {
@@ -147,7 +147,7 @@ pub struct Drag {
 }
 
 /// Do the widgets show with the current tool?
-fn shows(app: &PhotocraftApp) -> bool {
+fn shows(app: &LienzoApp) -> bool {
     app.ui.transform.is_none()
         && match app.ui.tool {
             Tool::PathSelection | Tool::Rectangle | Tool::Triangle | Tool::Polygon | Tool::Star => true,
@@ -183,7 +183,7 @@ fn target(layer: u64, live: &LiveShape) -> Option<Target> {
 }
 
 /// The selected layers that are live shapes with corners, front first.
-fn targets(app: &PhotocraftApp) -> Vec<Target> {
+fn targets(app: &LienzoApp) -> Vec<Target> {
     if !shows(app) {
         return Vec::new();
     }
@@ -202,13 +202,13 @@ fn targets(app: &PhotocraftApp) -> Vec<Target> {
     out
 }
 
-fn zoom(app: &PhotocraftApp) -> f64 {
+fn zoom(app: &LienzoApp) -> f64 {
     f64::from(app.point_zoom().max(0.01))
 }
 
 /// The widget of `targets` within grabbing distance of document point `p`: the shape (an index
 /// into `targets`) and its corner, the nearest when several are close.
-fn hit(app: &PhotocraftApp, targets: &[Target], p: [f64; 2]) -> Option<(usize, usize)> {
+fn hit(app: &LienzoApp, targets: &[Target], p: [f64; 2]) -> Option<(usize, usize)> {
     let z = zoom(app);
     let tol = 7.0 / z;
     targets
@@ -222,12 +222,12 @@ fn hit(app: &PhotocraftApp, targets: &[Target], p: [f64; 2]) -> Option<(usize, u
 
 /// Is a widget under document point `p`, or one being dragged? The canvas then shows the corner
 /// radius cursor.
-pub fn hovers(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+pub fn hovers(app: &LienzoApp, p: [f64; 2]) -> bool {
     app.ui.corner_radius.is_some() || hit(app, &targets(app), p).is_some()
 }
 
 /// Canvas pointer events for the corner widgets; false when the event is not theirs.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     match ev {
         ToolEvent::Down { x, y, .. } => {
             if mods.command {
@@ -305,7 +305,7 @@ fn dragged_radius(d: &Drag) -> Option<f64> {
 
 /// The widgets of every selected live shape with corners; while one is dragged, the new outlines
 /// and the radius beside the pointer (`R: 25.0 px`), as in Photoshop.
-pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32) {
+pub fn draw(app: &LienzoApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32) {
     let drag = app.ui.corner_radius.as_ref();
     if let Some(r) = drag.and_then(dragged_radius)
         && let Some(at) = painter.ctx().input(|i| i.pointer.hover_pos())

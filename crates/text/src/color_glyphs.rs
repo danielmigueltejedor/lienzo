@@ -5,8 +5,8 @@
 //! skrifa walks the paint graph and calls a [`ColorPainter`]; [`Painter`] paints into a window of
 //! the text raster in premultiplied sRGB, [`OutlineBounds`] only collects where it would paint.
 
-use photocraft_color::blend::{BlendMode, blend_rgb};
-use photocraft_doc::text::AntiAlias;
+use lienzo_color::blend::{BlendMode, blend_rgb};
+use lienzo_doc::text::AntiAlias;
 use skrifa::GlyphId;
 use skrifa::color::{Brush, ColorPainter, ColorStop, CompositeMode, Extend, Transform};
 use skrifa::raw::types::BoundingBox;

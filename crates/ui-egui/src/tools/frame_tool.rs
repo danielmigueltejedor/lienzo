@@ -1,13 +1,13 @@
 //! Frame Tool: persistent placeholders and independently selectable frame/image geometry.
 use crate::{
-    PhotocraftApp,
+    LienzoApp,
     canvas::{ToolEvent, ViewXform},
     state::Tool,
     theme::Tokens,
 };
 use egui::{CursorIcon, Pos2, Stroke, StrokeKind};
-use photocraft_doc::{DocId, Frame, Layer, LayerContent, LayerId};
-use photocraft_geom::{Affine, Point, Rect};
+use lienzo_doc::{DocId, Frame, Layer, LayerContent, LayerId};
+use lienzo_geom::{Affine, Point, Rect};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -28,7 +28,7 @@ pub struct FrameToolUi {
     pub ellipse: bool,
     pub shape: String,
     pub sides: u32,
-    pub stroke: Option<photocraft_doc::ShapeStroke>,
+    pub stroke: Option<lienzo_doc::ShapeStroke>,
     pub target: Target,
     pub selected: Option<u64>,
     #[serde(skip)]
@@ -53,7 +53,7 @@ pub enum EditMode {
     Rotate,
 }
 pub(crate) struct Preview {
-    doc: std::sync::Arc<photocraft_doc::Document>,
+    doc: std::sync::Arc<lienzo_doc::Document>,
     revision: u64,
     key: u64,
 }
@@ -70,18 +70,18 @@ fn drawn(start: [f64; 2], cur: [f64; 2], square: bool, centred: bool) -> [i64; 4
     let (a, b) = if centred { ([sx - dx, sy - dy], [sx + dx, sy + dy]) } else { (start, [sx + dx, sy + dy]) };
     [a[0].min(b[0]), a[1].min(b[1]), a[0].max(b[0]), a[1].max(b[1])].map(|v| v.round() as i64)
 }
-pub fn selected(app: &PhotocraftApp) -> Option<&Layer> {
+pub fn selected(app: &LienzoApp) -> Option<&Layer> {
     let st = app.session.active()?;
-    let id = photocraft_engine::frame_cmds::frame_of(&st.doc, st.active_layer?)?;
+    let id = lienzo_engine::frame_cmds::frame_of(&st.doc, st.active_layer?)?;
     st.doc.layer(id)
 }
-fn path_visible(doc: &photocraft_doc::Document, path: &[usize]) -> bool {
+fn path_visible(doc: &lienzo_doc::Document, path: &[usize]) -> bool {
     (1..=path.len()).all(|n| path.get(..n).and_then(|p| doc.layer_at(p)).is_some_and(|l| l.visible))
 }
-fn visible(app: &PhotocraftApp, id: LayerId) -> bool {
+fn visible(app: &LienzoApp, id: LayerId) -> bool {
     app.session.active().is_some_and(|st| st.doc.path_of(id).is_some_and(|p| path_visible(&st.doc, &p)))
 }
-fn content_layer(app: &PhotocraftApp, r: [i64; 4]) -> Option<u64> {
+fn content_layer(app: &LienzoApp, r: [i64; 4]) -> Option<u64> {
     let st = app.session.active()?;
     let l = st.doc.layer(st.active_layer?)?;
     if !matches!(l.content, LayerContent::Raster(_) | LayerContent::Text(_) | LayerContent::Shape(_) | LayerContent::Smart(_)) || st.doc.is_background(l.id) {
@@ -92,25 +92,25 @@ fn content_layer(app: &PhotocraftApp, r: [i64; 4]) -> Option<u64> {
         return None;
     }
     // Another frame's image stays in its frame; the drag draws an empty frame instead.
-    if photocraft_engine::frame_cmds::frame_of(&st.doc, l.id).is_some() {
+    if lienzo_engine::frame_cmds::frame_of(&st.doc, l.id).is_some() {
         return None;
     }
-    let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, l);
+    let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, l);
     (!b.is_empty() && i64::from(b.x0) < r[2] && r[0] < i64::from(b.x1) && i64::from(b.y0) < r[3] && r[1] < i64::from(b.y1)).then_some(l.id.0)
 }
-fn report(app: &mut PhotocraftApp, r: Result<Value, String>) {
+fn report(app: &mut LienzoApp, r: Result<Value, String>) {
     if let Err(e) = r {
         app.ui.status = e;
         app.ui.status_error = true;
     }
 }
-pub(crate) fn select(app: &mut PhotocraftApp, id: LayerId, target: Target) {
+pub(crate) fn select(app: &mut LienzoApp, id: LayerId, target: Target) {
     let r = select_result(app, id, target);
     if let Err(e) = r {
         report(app, Err(e));
     }
 }
-pub(crate) fn select_result(app: &mut PhotocraftApp, id: LayerId, target: Target) -> Result<(), String> {
+pub(crate) fn select_result(app: &mut LienzoApp, id: LayerId, target: Target) -> Result<(), String> {
     let child = app.session.active().and_then(|st| st.doc.layer(id)).and_then(|l| l.children()).and_then(|c| c.first()).map(|l| l.id);
     let layer = if target == Target::Content { child.unwrap_or(id) } else { id };
     app.run("layer.select", json!({"layer":layer.0}))?;
@@ -121,14 +121,14 @@ pub(crate) fn select_result(app: &mut PhotocraftApp, id: LayerId, target: Target
     app.ui.selected_path = None;
     Ok(())
 }
-pub(crate) fn target(app: &PhotocraftApp, l: &Layer) -> Target {
+pub(crate) fn target(app: &LienzoApp, l: &Layer) -> Target {
     if app.ui.frame_tool.selected != Some(l.id.0) {
         if app.session.active().is_some_and(|st| st.active_layer != Some(l.id)) { Target::Content } else { Target::Frame }
     } else {
         app.ui.frame_tool.target
     }
 }
-fn shape_params(app: &PhotocraftApp, r: [i64; 4]) -> Value {
+fn shape_params(app: &LienzoApp, r: [i64; 4]) -> Value {
     let [x, y, x1, y1] = r;
     let shape = if app.ui.frame_tool.ellipse {
         "ellipse"
@@ -140,8 +140,8 @@ fn shape_params(app: &PhotocraftApp, r: [i64; 4]) -> Value {
     let mut p = json!({"x":x,"y":y,"width":x1.saturating_sub(x),"height":y1.saturating_sub(y),"shape":shape,"sides":app.ui.frame_tool.sides.clamp(3,100)});
     if shape == "custom" {
         let name = app.ui.presets_ui.shape();
-        if let Some(sh) = photocraft_engine::presets::shapes::all_groups(&app.session).iter().flat_map(|g| &g.items).find(|s| s.name == name) {
-            p["path"] = photocraft_engine::vector_cmds::path_json(&sh.path);
+        if let Some(sh) = lienzo_engine::presets::shapes::all_groups(&app.session).iter().flat_map(|g| &g.items).find(|s| s.name == name) {
+            p["path"] = lienzo_engine::vector_cmds::path_json(&sh.path);
         }
     }
     if let Some(s) = &app.ui.frame_tool.stroke {
@@ -149,11 +149,11 @@ fn shape_params(app: &PhotocraftApp, r: [i64; 4]) -> Value {
     }
     p
 }
-fn outline(app: &PhotocraftApp, r: [i64; 4]) -> Option<photocraft_doc::Path> {
+fn outline(app: &LienzoApp, r: [i64; 4]) -> Option<lienzo_doc::Path> {
     let p = shape_params(app, r);
     let shape = p.get("shape").and_then(Value::as_str)?;
     if shape == "custom" {
-        let sh = photocraft_engine::vector_cmds::parse_path(p.get("path")?).ok()?;
+        let sh = lienzo_engine::vector_cmds::parse_path(p.get("path")?).ok()?;
         let (x0, y0, x1, y1) = sh.control_bounds()?;
         if x1 <= x0 || y1 <= y0 {
             return None;
@@ -163,7 +163,7 @@ fn outline(app: &PhotocraftApp, r: [i64; 4]) -> Option<photocraft_doc::Path> {
         return Some(sh.transform(&Affine { m: [sx, 0.0, 0.0, sy, x as f64 - x0 * sx, y as f64 - y0 * sy] }));
     }
     let [x, y, xe, ye] = r;
-    photocraft_engine::vector_cmds::shape_path(&json!({"kind":match shape{"ellipse"=>"ellipse","triangle"|"polygon"=>"polygon",_=>"rect"},"rect":[x,y,xe-x,ye-y],"sides":if shape=="triangle"{3}else{app.ui.frame_tool.sides.clamp(3,100)}})).ok()
+    lienzo_engine::vector_cmds::shape_path(&json!({"kind":match shape{"ellipse"=>"ellipse","triangle"|"polygon"=>"polygon",_=>"rect"},"rect":[x,y,xe-x,ye-y],"sides":if shape=="triangle"{3}else{app.ui.frame_tool.sides.clamp(3,100)}})).ok()
 }
 fn handles(f: &Frame) -> [(Point, i8, i8); 8] {
     [(0., 0., -1, -1), (0.5, 0., 0, -1), (1., 0., 1, -1), (1., 0.5, 1, 0), (1., 1., 1, 1), (0.5, 1., 0, 1), (0., 1., -1, 1), (0., 0.5, -1, 0)]
@@ -181,7 +181,7 @@ fn control_hit(f: &Frame, p: [f64; 2], zoom: f64) -> Option<EditMode> {
 }
 fn on_border(f: &Frame, p: [f64; 2], zoom: f64) -> bool {
     let path = f.outline();
-    photocraft_vector::flatten::flatten_path(&path, 0.5 / zoom.max(0.01)).iter().any(|line| {
+    lienzo_vector::flatten::flatten_path(&path, 0.5 / zoom.max(0.01)).iter().any(|line| {
         let segments = line.pts.windows(2).filter_map(|s| Some((*s.first()?, *s.get(1)?)));
         let closing = line.closed.then(|| Some((*line.pts.last()?, *line.pts.first()?))).flatten();
         segments.chain(closing).any(|((ax, ay), (bx, by))| {
@@ -195,9 +195,9 @@ fn on_border(f: &Frame, p: [f64; 2], zoom: f64) -> bool {
 fn inside(f: &Frame, p: [f64; 2]) -> bool {
     let (x, y) = (p[0].floor() as i32, p[1].floor() as i32);
     let (Some(x1), Some(y1)) = (x.checked_add(1), y.checked_add(1)) else { return false };
-    photocraft_vector::path_coverage(&f.outline(), Rect::new(x, y, x1, y1)).first().is_some_and(|v| *v > 0.0)
+    lienzo_vector::path_coverage(&f.outline(), Rect::new(x, y, x1, y1)).first().is_some_and(|v| *v > 0.0)
 }
-pub(crate) fn frame_at(app: &PhotocraftApp, p: [f64; 2]) -> Option<LayerId> {
+pub(crate) fn frame_at(app: &LienzoApp, p: [f64; 2]) -> Option<LayerId> {
     let st = app.session.active()?;
     let zoom = f64::from(app.point_zoom());
     st.doc
@@ -289,7 +289,7 @@ fn edit_transform(f: &Frame, mode: EditMode, start: [f64; 2], p: [f64; 2], mods:
         }
     }
 }
-fn update_preview(app: &mut PhotocraftApp) {
+fn update_preview(app: &mut LienzoApp) {
     let Some(FrameDrag::Edit { layer, doc, revision, proposed, .. }) = app.ui.frame_tool.drag.as_ref() else { return };
     let Some(st) = app.session.active().filter(|st| st.doc.id == *doc && st.revision == *revision) else {
         app.frame_preview = None;
@@ -305,12 +305,12 @@ fn update_preview(app: &mut PhotocraftApp) {
                 return;
             }
         }
-        photocraft_engine::frame_cmds::refresh(l);
+        lienzo_engine::frame_cmds::refresh(l);
     }
     let key = app.frame_preview.as_ref().map_or(1, |p| p.key.wrapping_add(1));
     app.frame_preview = Some(Preview { doc: std::sync::Arc::new(shown), revision, key });
 }
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(std::sync::Arc<photocraft_doc::Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(std::sync::Arc<lienzo_doc::Document>, u64)> {
     if let Some(t) = app.ui.transform.clone().filter(frame_transform) {
         let transform = transformed_frame(app, &t).ok()?;
         let st = app.session.documents().get(idx)?;
@@ -328,7 +328,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(std::s
             let mut doc = (*st.doc).clone();
             let l = doc.layer_mut(LayerId(t.layer))?;
             l.frame.as_mut()?.transform = transform;
-            photocraft_engine::frame_cmds::refresh(l);
+            lienzo_engine::frame_cmds::refresh(l);
             app.frame_preview = Some(Preview { doc: std::sync::Arc::new(doc), revision: st.revision, key });
         }
     }
@@ -336,18 +336,18 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(std::s
     let p = app.frame_preview.as_ref()?;
     (app.ui.tool == Tool::Frame && st.doc.id == p.doc.id && st.revision == p.revision).then(|| (p.doc.clone(), (1 << 57) | p.key))
 }
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     app.ui.frame_tool.drag = None;
     app.frame_preview = None;
 }
 /// A native double click (also driven by ui.click count=2) toggles content-only selection.
-pub fn double_click(app: &mut PhotocraftApp, p: [f64; 2]) {
+pub fn double_click(app: &mut LienzoApp, p: [f64; 2]) {
     let Some(id) = frame_at(app, p) else { return };
     let next = if selected(app).is_some_and(|l| l.id == id && target(app, l) == Target::Content) { Target::Both } else { Target::Content };
     select(app, id, next);
     cancel(app);
 }
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
     if app.ui.tool != Tool::Frame {
         return false;
     }
@@ -380,7 +380,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) ->
                 }
                 let Some(st) = app.session.active() else { return false };
                 let Some(child) = st.doc.layer(*id).and_then(|l| l.children()).and_then(|c| c.first()) else { return false };
-                let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, child);
+                let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, child);
                 let (x0, y0, x1, y1) = (f64::from(b.x0), f64::from(b.y0), f64::from(b.x1), f64::from(b.y1));
                 [(x0, y0), ((x0 + x1) / 2., y0), (x1, y0), (x1, (y0 + y1) / 2.), (x1, y1), ((x0 + x1) / 2., y1), (x0, y1), (x0, (y0 + y1) / 2.)]
                     .iter()
@@ -496,8 +496,8 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) ->
     }
     true
 }
-fn paint_path(painter: &egui::Painter, xf: &ViewXform, path: &photocraft_doc::Path, stroke: Stroke) {
-    for line in photocraft_vector::flatten::flatten_path(path, 0.5 / f64::from(xf.zoom).max(0.01)) {
+fn paint_path(painter: &egui::Painter, xf: &ViewXform, path: &lienzo_doc::Path, stroke: Stroke) {
+    for line in lienzo_vector::flatten::flatten_path(path, 0.5 / f64::from(xf.zoom).max(0.01)) {
         let mut points: Vec<Pos2> = line.pts.iter().map(|&(x, y)| xf.to_screen(x as f32, y as f32)).collect();
         if line.closed
             && let Some(first) = points.first().copied()
@@ -507,7 +507,7 @@ fn paint_path(painter: &egui::Painter, xf: &ViewXform, path: &photocraft_doc::Pa
         painter.add(egui::Shape::line(points, stroke));
     }
 }
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let t = Tokens::get(painter.ctx());
     let stroke = Stroke::new(1.5, t.accent);
     if let Some(st) = app.session.active() {
@@ -559,7 +559,7 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
         if let Some(st) = app.session.active()
             && let Some(child) = l.children().and_then(|c| c.first())
         {
-            let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, child);
+            let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, child);
             let r = egui::Rect::from_two_pos(xf.to_screen(b.x0 as f32, b.y0 as f32), xf.to_screen(b.x1 as f32, b.y1 as f32));
             painter.rect_stroke(r, 0., stroke, StrokeKind::Inside);
             for p in [r.left_top(), r.center_top(), r.right_top(), r.right_center(), r.right_bottom(), r.center_bottom(), r.left_bottom(), r.left_center()] {
@@ -577,7 +577,7 @@ fn paint_handle(p: &egui::Painter, at: Pos2, t: &Tokens) {
     p.rect_filled(r, 0., t.card);
     p.rect_stroke(r, 0., Stroke::new(1., t.accent), StrokeKind::Inside);
 }
-pub fn cursor(app: &PhotocraftApp, p: [f64; 2]) -> Option<CursorIcon> {
+pub fn cursor(app: &LienzoApp, p: [f64; 2]) -> Option<CursorIcon> {
     let zoom = f64::from(app.point_zoom());
     if let Some(l) = selected(app)
         && let Some(f) = &l.frame
@@ -594,44 +594,44 @@ pub fn cursor(app: &PhotocraftApp, p: [f64; 2]) -> Option<CursorIcon> {
     }
     frame_at(app, p).map(|_| CursorIcon::Move)
 }
-fn stroke_json(s: &photocraft_doc::ShapeStroke) -> Value {
+fn stroke_json(s: &lienzo_doc::ShapeStroke) -> Value {
     let fill = match &s.paint {
-        photocraft_doc::Fill::Solid(c) => {
+        lienzo_doc::Fill::Solid(c) => {
             let [r, g, b] = c.to_rgb();
             json!([r, g, b, c.alpha])
         }
         _ => Value::Null,
     };
-    json!({"color":fill,"width":s.width,"opacity":s.opacity*100.,"align":match s.align{photocraft_doc::StrokeAlign::Inside=>"inside",photocraft_doc::StrokeAlign::Outside=>"outside",_=>"center"}})
+    json!({"color":fill,"width":s.width,"opacity":s.opacity*100.,"align":match s.align{lienzo_doc::StrokeAlign::Inside=>"inside",lienzo_doc::StrokeAlign::Outside=>"outside",_=>"center"}})
 }
-fn stroke_controls(ui: &mut egui::Ui, value: &mut Option<photocraft_doc::ShapeStroke>) -> bool {
+fn stroke_controls(ui: &mut egui::Ui, value: &mut Option<lienzo_doc::ShapeStroke>) -> bool {
     let before = value.clone();
     let mut enabled = value.is_some();
     if crate::widgets::checkbox(ui, &mut enabled, tl!("Stroke")).changed() {
-        *value = enabled.then(photocraft_doc::ShapeStroke::default);
+        *value = enabled.then(lienzo_doc::ShapeStroke::default);
     }
     if let Some(s) = value {
         let c = match s.paint {
-            photocraft_doc::Fill::Solid(c) => c,
-            _ => photocraft_doc::Color::BLACK,
+            lienzo_doc::Fill::Solid(c) => c,
+            _ => lienzo_doc::Color::BLACK,
         };
         let [r, g, b] = c.to_rgb();
         let mut rgba = [r, g, b, c.alpha];
         if ui.color_edit_button_rgba_unmultiplied(&mut rgba).changed() {
-            s.paint = photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(rgba[0], rgba[1], rgba[2], rgba[3]));
+            s.paint = lienzo_doc::Fill::Solid(lienzo_doc::Color::rgba(rgba[0], rgba[1], rgba[2], rgba[3]));
         }
         crate::widgets::value_field_named(ui, tl!("Stroke:"), &mut s.width, 0.0..=1000.0, "px", 58.0);
         craft_ui::ComboBox::from_id_salt("frame-stroke-align")
             .selected_text(match s.align {
-                photocraft_doc::StrokeAlign::Inside => tl!("Inside"),
-                photocraft_doc::StrokeAlign::Outside => tl!("Outside"),
+                lienzo_doc::StrokeAlign::Inside => tl!("Inside"),
+                lienzo_doc::StrokeAlign::Outside => tl!("Outside"),
                 _ => tl!("Center"),
             })
             .show_ui(ui, |ui| {
                 for (a, label) in [
-                    (photocraft_doc::StrokeAlign::Inside, tl!("Inside")),
-                    (photocraft_doc::StrokeAlign::Center, tl!("Center")),
-                    (photocraft_doc::StrokeAlign::Outside, tl!("Outside")),
+                    (lienzo_doc::StrokeAlign::Inside, tl!("Inside")),
+                    (lienzo_doc::StrokeAlign::Center, tl!("Center")),
+                    (lienzo_doc::StrokeAlign::Outside, tl!("Outside")),
                 ] {
                     ui.selectable_value(&mut s.align, a, label);
                 }
@@ -639,7 +639,7 @@ fn stroke_controls(ui: &mut egui::Ui, value: &mut Option<photocraft_doc::ShapeSt
     }
     *value != before
 }
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     if tool != Tool::Frame {
         return false;
     }
@@ -687,7 +687,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
     true
 }
 /// Frame-aware Properties: W/H/X/Y edit the container; the content can be selected/fitted/replaced.
-pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, l: &Layer) {
+pub fn properties(app: &mut LienzoApp, ui: &mut egui::Ui, l: &Layer) {
     let Some(f) = &l.frame else { return };
     if app.session.active().is_some_and(|st| {
         let locks = st.doc.effective_locks(l.id);
@@ -766,7 +766,7 @@ pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, l: &Layer) {
 mod tests;
 
 /// A compact on-canvas import/replace bar, following the currently selected frame.
-pub fn task_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, xf: &ViewXform) {
+pub fn task_bar(app: &mut LienzoApp, ui: &mut egui::Ui, xf: &ViewXform) {
     if app.ui.tool != Tool::Frame || app.ui.frame_tool.drag.is_some() || app.ui.transform.is_some() || !app.ui.dialogs.is_empty() {
         return;
     }
@@ -806,7 +806,7 @@ pub fn task_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, xf: &ViewXform) {
 pub(crate) fn frame_transform(t: &crate::state::TransformSession) -> bool {
     t.target.as_ref().and_then(|v| v.get("frame")).and_then(Value::as_u64) == Some(t.layer)
 }
-pub(crate) fn transformed_frame(app: &PhotocraftApp, t: &crate::state::TransformSession) -> Result<Affine, String> {
+pub(crate) fn transformed_frame(app: &LienzoApp, t: &crate::state::TransformSession) -> Result<Affine, String> {
     if t.warp.is_some() {
         return Err(tl!("A frame supports affine transforms; select its image to warp it").into());
     }
@@ -838,7 +838,7 @@ pub(crate) fn transformed_frame(app: &PhotocraftApp, t: &crate::state::Transform
 }
 
 /// Arrow keys respect which thumbnail is selected; Shift moves ten document pixels.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if app.ui.tool != Tool::Frame
         || app.ui.transform.is_some()
         || app.ui.frame_tool.drag.is_some()

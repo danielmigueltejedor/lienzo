@@ -1,10 +1,10 @@
 //! #10883: the Layers panel's Group filter.
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 use super::{Filter, FilterBy};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::UiState;
 
 fn new_session() -> Session {
@@ -14,8 +14,8 @@ fn new_session() -> Session {
 }
 
 /// The app with `s` open and the Layers panel filtered by Group.
-fn app(s: Session) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+fn app(s: Session) -> LienzoApp {
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.ui.layer_filter_by = FilterBy::Group;
     app
 }
@@ -47,14 +47,14 @@ fn set_expanded(s: &mut Session, name: &str, expanded: bool) {
 
 /// The rows the panel draws, top to bottom, two spaces per level: the rows and the filter the
 /// Layers panel uses for the frame.
-fn listed(app: &PhotocraftApp) -> Vec<String> {
+fn listed(app: &LienzoApp) -> Vec<String> {
     let doc = &app.session.active().unwrap().doc;
     let f = Filter::of_app(app);
     crate::layer_tree_ui::panel_rows(app, doc).into_iter().filter(|(_, l)| f.shows(l)).map(|(depth, l)| format!("{}{}", "  ".repeat(depth), l.name)).collect()
 }
 
 /// The selected layers' names.
-fn selected(app: &PhotocraftApp) -> Vec<String> {
+fn selected(app: &LienzoApp) -> Vec<String> {
     let st = app.session.active().unwrap();
     st.selected_layers().iter().filter_map(|id| st.doc.layer(*id)).map(|l| l.name.clone()).collect()
 }

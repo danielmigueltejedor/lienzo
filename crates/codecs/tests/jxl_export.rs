@@ -1,8 +1,6 @@
 //! Lossless JPEG XL export and honest export-only capability reporting.
 
-use photocraft_codecs::{
-    ASYMMETRIC_EXCEPTIONS, ChannelLayout, CodecError, EncodeOptions, Format, Image, SampleType, caps, decode, detect, encode, from_extension,
-};
+use lienzo_codecs::{ASYMMETRIC_EXCEPTIONS, ChannelLayout, CodecError, EncodeOptions, Format, Image, SampleType, caps, decode, detect, encode, from_extension};
 
 #[test]
 fn jpeg_xl_is_export_only_and_detects_both_signatures() {

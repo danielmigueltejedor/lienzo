@@ -6,21 +6,19 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Mutex;
 
-use photocraft_engine::Session;
-use photocraft_raster::headroom;
-use photocraft_ui_egui::{PhotocraftApp, Services};
+use lienzo_engine::Session;
+use lienzo_raster::headroom;
+use lienzo_ui_egui::{LienzoApp, Services};
 use serde_json::json;
 
 /// The simulation is process-wide: the tests take turns.
 static LOCK: Mutex<()> = Mutex::new(());
 
-fn app(writes: Rc<RefCell<u32>>) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(
+fn app(writes: Rc<RefCell<u32>>) -> LienzoApp {
+    let mut app = LienzoApp::new(
         Session::new(),
         Services {
-            export: Some(Box::new(|doc, path, _| {
-                photocraft_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
-            })),
+            export: Some(Box::new(|doc, path, _| lienzo_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
             write: Some(Box::new(move |_, _| {
                 *writes.borrow_mut() += 1;
                 Ok(())
@@ -33,7 +31,7 @@ fn app(writes: Rc<RefCell<u32>>) -> PhotocraftApp {
     app
 }
 
-fn identity(app: &PhotocraftApp) -> (String, Option<String>, u64, u64) {
+fn identity(app: &LienzoApp) -> (String, Option<String>, u64, u64) {
     let st = app.session.active().unwrap();
     (st.doc.name.clone(), st.path.clone(), st.revision, st.saved_revision)
 }
@@ -59,8 +57,8 @@ fn a_save_that_does_not_fit_fails_and_leaves_the_document_unsaved() {
     assert_eq!(*writes.borrow(), 1);
 }
 
-fn warnings(app: &PhotocraftApp) -> usize {
-    app.ui.notices.iter().filter(|n| n.title == photocraft_ui_egui::memory_warning::TITLE).count()
+fn warnings(app: &LienzoApp) -> usize {
+    app.ui.notices.iter().filter(|n| n.title == lienzo_ui_egui::memory_warning::TITLE).count()
 }
 
 /// Going low posts one notice that stays; hovering low doesn't post again; recovering past the
@@ -68,10 +66,10 @@ fn warnings(app: &PhotocraftApp) -> usize {
 #[test]
 fn the_low_memory_warning_posts_once_and_rearms_with_hysteresis() {
     let _turn = LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    use photocraft_ui_egui::memory_warning::{REARM_ABOVE, WARN_BELOW, tick};
+    use lienzo_ui_egui::memory_warning::{REARM_ABOVE, WARN_BELOW, tick};
     let mut app = app(Rc::new(RefCell::new(0)));
     let mut now = 0.0;
-    let mut look = |app: &mut PhotocraftApp, available: Option<u64>| {
+    let mut look = |app: &mut LienzoApp, available: Option<u64>| {
         headroom::simulate_available(available);
         now += 2.5;
         tick(app, now);
@@ -100,9 +98,9 @@ fn the_low_memory_warning_posts_once_and_rearms_with_hysteresis() {
 #[test]
 fn no_warning_without_a_document() {
     let _turn = LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-    let mut app = PhotocraftApp::new(Session::new(), Services::default());
+    let mut app = LienzoApp::new(Session::new(), Services::default());
     headroom::simulate_available(Some(0));
-    photocraft_ui_egui::memory_warning::tick(&mut app, 100.0);
+    lienzo_ui_egui::memory_warning::tick(&mut app, 100.0);
     headroom::simulate_available(None);
     assert_eq!(warnings(&app), 0);
 }

@@ -2,14 +2,14 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::menus::{MenuItem, menu_items};
 
-fn app() -> PhotocraftApp {
-    PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+fn app() -> LienzoApp {
+    LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
 }
 
-fn submenu(app: &PhotocraftApp) -> Vec<MenuItem> {
+fn submenu(app: &LienzoApp) -> Vec<MenuItem> {
     menu_items(app).into_iter().filter(|i| i.path == ["Layer", "Smart Objects"]).collect()
 }
 
@@ -72,7 +72,7 @@ fn the_warp_rows_are_gone_from_the_submenu_but_the_commands_stay() {
     let app = app();
     for id in ["layer.smartObjects.warp", "layer.smartObjects.perspectiveWarp", "layer.smartObjects.puppetWarp"] {
         assert!(!submenu(&app).iter().any(|i| i.id == id), "{id}");
-        assert!(photocraft_engine::cmd::command_specs().iter().any(|c| c.id == id), "{id} stays registered");
+        assert!(lienzo_engine::cmd::command_specs().iter().any(|c| c.id == id), "{id} stays registered");
     }
     let all = menu_items(&app);
     for id in ["edit.puppetWarp", "edit.perspectiveWarp", "edit.transform.warp"] {
@@ -87,13 +87,13 @@ fn embed_all_linked_is_disabled_without_a_linked_smart_object_and_enabled_with_o
     app.run("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("setup", |doc, active| {
-            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(2, 2, 10, 10), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(2, 2, 10, 10), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.sync_views();
-    let enabled = |app: &PhotocraftApp, id: &str| submenu(app).iter().find(|i| i.id == id).unwrap().enabled;
+    let enabled = |app: &LienzoApp, id: &str| submenu(app).iter().find(|i| i.id == id).unwrap().enabled;
     assert!(!enabled(&app, "layer.smartObjects.embedAllLinked"));
     let path = std::env::temp_dir().join(format!("pc-so-menu-{}.pcraft", std::process::id()));
     app.run("layer.smartObjects.convertToLinked", json!({"path": path.to_str().unwrap()})).unwrap();

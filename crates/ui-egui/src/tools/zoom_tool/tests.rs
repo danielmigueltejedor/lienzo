@@ -17,15 +17,15 @@ fn scrub_zoom_is_continuous_and_clamped() {
     assert_eq!(scrub_zoom(2.0, f32::NAN, DOC), 2.0);
 }
 
-fn harness(scrubby: bool, ppp: f32) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(scrubby: bool, ppp: f32) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = crate::state::Tool::Zoom;
     app.ui.tool_options.zoom_scrubby = scrubby;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_pixels_per_point(ppp).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             // Fonts set up after the first frame only apply from the next one.
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -34,24 +34,24 @@ fn harness(scrubby: bool, ppp: f32) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn view_xf(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
+fn view_xf(h: &Harness<'static, LienzoApp>) -> ViewXform {
     ViewXform::active(h.state()).unwrap()
 }
 
 // Pixel alignment derives a presentation camera within half a display pixel of the
 // stored target; interrupting an animation must keep that same target and its zoom.
-fn assert_camera_center(h: &Harness<'static, PhotocraftApp>, target: &View) {
+fn assert_camera_center(h: &Harness<'static, LienzoApp>, target: &View) {
     let xf = view_xf(h);
     let delta = (xf.to_screen(target.center[0], target.center[1]) - xf.rect.center()) * h.ctx.pixels_per_point();
     assert!(delta.x.abs() <= 0.501 && delta.y.abs() <= 0.501, "camera differs by {delta:?} display pixels");
 }
 
-fn press(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, pressed: bool) {
+fn press(h: &mut Harness<'static, LienzoApp>, p: Pos2, pressed: bool) {
     h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Default::default() });
     h.step();
 }
@@ -209,8 +209,8 @@ fn gpu_zoom_animation_reuses_the_document_composite() {
     };
     let renderer = egui_kittest::wgpu::WgpuTestRenderer::from_render_state(rs);
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_pixels_per_point(1.0).renderer(renderer).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::ALL[0]);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.set_wgpu(cc.wgpu_render_state.clone().unwrap());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.run("edit.fill", json!({"color": "#2060c0"})).unwrap();
@@ -246,7 +246,7 @@ fn gpu_zoom_animation_reuses_the_document_composite() {
         let pixel = image.get_pixel(center.x as u32, center.y as u32);
         assert!(pixel[2] > pixel[0] * 2, "{name}: document remains visible: {pixel:?}");
         if let Some(directory) = &directory {
-            image.save(directory.join(format!("photocraft-zoom-{name}.png"))).unwrap();
+            image.save(directory.join(format!("lienzo-zoom-{name}.png"))).unwrap();
         }
     }
     assert!(!h.state().ui.views[0].zoom_animating);
@@ -261,7 +261,7 @@ fn gpu_zoom_animation_reuses_the_document_composite() {
     assert_eq!(h.state().perf.last_refresh, "", "immediate zoom reuses the GPU composite");
     let image = h.render().unwrap();
     if let Some(directory) = &directory {
-        image.save(directory.join("photocraft-zoom-disabled.png")).unwrap();
+        image.save(directory.join("lienzo-zoom-disabled.png")).unwrap();
     }
 }
 

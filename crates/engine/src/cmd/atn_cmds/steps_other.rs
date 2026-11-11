@@ -43,7 +43,7 @@ pub(super) fn bare_to(_: &str, p: &Value) -> Option<Descriptor> {
     (pixel_target(p) && sets_only(p, &["target"])).then(|| desc("null"))
 }
 
-/// An enumeration key: (key, param, type, Photoshop ↔ PhotoCraft values, Photoshop's default).
+/// An enumeration key: (key, param, type, Photoshop ↔ Lienzo values, Photoshop's default).
 type EnumKey = (&'static str, &'static str, &'static str, &'static [(&'static str, &'static str)], &'static str);
 
 pub(super) const DE_INTERLACE: &[EnumKey] = &[
@@ -125,7 +125,7 @@ fn custom_params(d: &Descriptor) -> Option<Value> {
 pub(super) fn custom_from(d: &Descriptor) -> Mapped {
     let Some(mut p) = custom_params(d) else { return Mapped::Unsupported { harmless: false } };
     if custom_to("filter.other.custom", &p).as_ref() != Some(d) {
-        p["__atnCustom"] = json!(photocraft_paint::tile::b64_encode(&d.to_bytes()));
+        p["__atnCustom"] = json!(lienzo_paint::tile::b64_encode(&d.to_bytes()));
     }
     step("filter.other.custom", p)
 }
@@ -139,7 +139,7 @@ pub(super) fn custom_to(_: &str, p: &Value) -> Option<Descriptor> {
         return None;
     }
     if let Some(original) =
-        p.get("__atnCustom").and_then(Value::as_str).and_then(photocraft_paint::tile::b64_decode).and_then(|bytes| Descriptor::from_bytes(&bytes).ok())
+        p.get("__atnCustom").and_then(Value::as_str).and_then(lienzo_paint::tile::b64_decode).and_then(|bytes| Descriptor::from_bytes(&bytes).ok())
     {
         let mut core = p.clone();
         core.as_object_mut()?.remove("__atnCustom");

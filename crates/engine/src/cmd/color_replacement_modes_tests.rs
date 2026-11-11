@@ -2,8 +2,8 @@
 //! the reference application's messages, painting nothing and adding no history; the live stroke
 //! is refused the same way. RGB/8, RGB/16, CMYK and Lab paint.
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Size};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Size};
 use serde_json::json;
 
 use super::*;

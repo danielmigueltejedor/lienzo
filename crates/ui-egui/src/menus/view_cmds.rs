@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 
 mod arrange;
@@ -214,7 +214,7 @@ mod form_reset_tests {
 
     #[test]
     fn alt_reset_restores_form_orig() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let id = form(&mut app, "test.form", "Test", json!({"radius": 5.0, "on": true}), json!({}));
         let f = &mut app.ui.dialog_mut(id).unwrap().fields;
         f.insert("radius".into(), json!(99.0));

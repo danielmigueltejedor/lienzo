@@ -43,7 +43,7 @@ pub(super) fn clouds_from(id: &str, d: &Descriptor) -> Mapped {
 }
 
 /// Explicit colors and layer references have no fields in these ATN events. A seed has none
-/// either, but `seed: 0` (what PhotoCraft's dialog records) is what the imported empty step
+/// either, but `seed: 0` (what Lienzo's dialog records) is what the imported empty step
 /// plays as, so it is dropped; any other seed would play differently and is refused.
 pub(super) fn clouds_to(_: &str, p: &Value) -> Option<Descriptor> {
     let seed_replays = p.get("seed").is_none_or(|s| s.as_f64() == Some(0.0));

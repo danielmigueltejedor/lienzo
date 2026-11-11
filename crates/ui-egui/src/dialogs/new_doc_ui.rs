@@ -6,11 +6,11 @@
 use egui::{Align2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
 use serde_json::{Map, Value, json};
 
-use photocraft_engine::prefs::UnitsAndRulers;
+use lienzo_engine::prefs::UnitsAndRulers;
 
 use crate::theme::Tokens;
 use crate::{icons, widgets};
-use photocraft_engine::document_preset_cmds::DocumentSettings;
+use lienzo_engine::document_preset_cmds::DocumentSettings;
 
 /// A blank-document preset: (name, width px, height px, ppi).
 pub type Preset = (&'static str, u32, u32, f32);
@@ -232,8 +232,8 @@ pub fn apply_preset(f: &mut Map<String, Value>, p: &Preset, units: &UnitsAndRule
 }
 
 /// The colour mode of the dialog's `mode` value.
-fn color_mode_of(mode: &str) -> Option<photocraft_color::ColorMode> {
-    use photocraft_color::ColorMode;
+fn color_mode_of(mode: &str) -> Option<lienzo_color::ColorMode> {
+    use lienzo_color::ColorMode;
     match mode {
         "rgb" => Some(ColorMode::Rgb),
         "gray" | "grayscale" => Some(ColorMode::Grayscale),
@@ -247,13 +247,13 @@ fn color_mode_of(mode: &str) -> Option<photocraft_color::ColorMode> {
 /// its profile's description), then the built-in and installed profiles of that space, as
 /// `file.new`'s `profile` values (an id or a path) with their labels.
 fn profile_options(
-    space: Option<photocraft_cms::ColorSpace>,
+    space: Option<lienzo_cms::ColorSpace>,
     working: &str,
-    installed: &[photocraft_engine::installed_profiles::InstalledProfile],
+    installed: &[lienzo_engine::installed_profiles::InstalledProfile],
 ) -> Vec<(String, String)> {
     let mut v = vec![("working".to_string(), crate::i18n::fmt(tl!("Working: {working}"), &[("working", working)]))];
     let Some(space) = space else { return v };
-    v.extend(photocraft_cms::Builtin::ALL.iter().filter(|b| b.profile().color_space == space).map(|b| (b.id().to_string(), b.description().to_string())));
+    v.extend(lienzo_cms::Builtin::ALL.iter().filter(|b| b.profile().color_space == space).map(|b| (b.id().to_string(), b.description().to_string())));
     v.extend(installed.iter().filter(|i| i.is_destination() && i.color_space == space).map(|i| (i.path.clone(), i.description.clone())));
     v
 }
@@ -319,7 +319,7 @@ const SWATCH: f32 = 22.0;
 
 /// The colour the new document's background starts with: white, black, the captured or current
 /// toolbox background colour, or a custom `"#rrggbb"`; `None` for Transparent.
-fn background_rgb(app: &crate::PhotocraftApp, f: &Map<String, Value>) -> Option<[f32; 3]> {
+fn background_rgb(app: &crate::LienzoApp, f: &Map<String, Value>) -> Option<[f32; 3]> {
     let bg = get_s(f, "background", "white");
     match bg.as_str() {
         "transparent" => None,
@@ -338,7 +338,7 @@ fn background_rgb(app: &crate::PhotocraftApp, f: &Map<String, Value>) -> Option<
 }
 
 /// Restore a snapshot without replacing the new document's name or its clipboard offer.
-pub fn apply_saved_preset(f: &mut Map<String, Value>, preset: &photocraft_engine::document_preset_cmds::DocumentPreset) {
+pub fn apply_saved_preset(f: &mut Map<String, Value>, preset: &lienzo_engine::document_preset_cmds::DocumentPreset) {
     apply_settings(f, &preset.settings);
     f.insert("__savedPreset".into(), json!(preset.name));
 }
@@ -437,7 +437,7 @@ fn recent_cards(f: &Map<String, Value>, recent: &[DocumentSettings], units: &Uni
     cards
 }
 
-fn saved_presets(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) -> bool {
+fn saved_presets(app: &mut crate::LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) -> bool {
     let presets = app.session.presets.documents.clone();
     if presets.is_empty() {
         ui.label(tl!("No saved presets yet."));
@@ -479,7 +479,7 @@ fn saved_presets(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<
     create
 }
 
-fn save_preset(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+fn save_preset(app: &mut crate::LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.add_space(12.0);
     if f.get("__savingPreset").and_then(Value::as_bool) != Some(true) {
         if widgets::secondary_button(ui, tl!("Save Preset…"), 240.0).clicked() {
@@ -525,7 +525,7 @@ fn save_preset(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<St
 
 /// Returns whether a preset double-click requested creation, after applying its settings.
 /// A recent category click can make egui count the preset double-click as a triple-click.
-pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) -> bool {
+pub fn body(app: &mut crate::LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) -> bool {
     let t = Tokens::get(ui.ctx());
     // Headings and field labels are static, as in Photoshop: no text cursor over them, no
     // drag-selecting them (#8331). Text fields keep theirs.
@@ -762,9 +762,9 @@ pub fn body(app: &mut crate::PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<Strin
             small_label(ui, tl!("Color Profile"));
             {
                 let mode = get_s(f, "mode", "rgb");
-                let space = color_mode_of(&mode).map(photocraft_engine::color_cmds::mode_space);
+                let space = color_mode_of(&mode).map(lienzo_engine::color_cmds::mode_space);
                 let working = color_mode_of(&mode).map(|m| app.session.color.working(m).description.clone()).unwrap_or_default();
-                let installed = photocraft_engine::installed_profiles::installed();
+                let installed = lienzo_engine::installed_profiles::installed();
                 let opts = profile_options(space, &working, &installed);
                 let mut profile = get_s(f, "profile", "working");
                 if !opts.iter().any(|(v, _)| *v == profile) {

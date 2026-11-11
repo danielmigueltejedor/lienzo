@@ -6,19 +6,19 @@ use egui::{Event, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::brush_sections::{EllipseGrab, ellipse_drag, ellipse_grab, roundness_handles};
 use crate::state::Tool;
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 20, "hardness": 1.0, "angle": 0.0, "roundness": 1.0}})).unwrap();
     app.ui.tool = Tool::Brush;
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -27,7 +27,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let c = h.state().last_canvas_rect.center();
     let ctx = h.ctx.clone();
@@ -39,7 +39,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
 /// The widget's centre on screen. It is the top block's first item, 84 × 84, and the Size column
 /// starts one item spacing right of it, its first row (24 pt tall, the label centred in it) level
 /// with the widget's top.
-fn widget_centre(h: &Harness<'static, PhotocraftApp>) -> Pos2 {
+fn widget_centre(h: &Harness<'static, LienzoApp>) -> Pos2 {
     use egui_kittest::kittest::Queryable;
     let picker = h.ctx.memory(|m| m.area_rect(crate::brush_picker::picker_id())).expect("the picker is open");
     let label = h.query_all_by_label(crate::i18n::t("Size")).find(|n| picker.contains(n.rect().center())).expect("the picker's Size label").rect();
@@ -47,13 +47,13 @@ fn widget_centre(h: &Harness<'static, PhotocraftApp>) -> Pos2 {
     Pos2::new(label.left() - spacing - 42.0, label.center().y - 12.0 + 42.0)
 }
 
-fn brush(h: &Harness<'static, PhotocraftApp>) -> (f32, f32) {
+fn brush(h: &Harness<'static, LienzoApp>) -> (f32, f32) {
     let b = &h.state().session.tools.brush;
     (b.angle, b.roundness)
 }
 
 /// A press at `from`, moves through `path` and the release at its end, a frame each.
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, path: &[Pos2]) {
+fn drag(h: &mut Harness<'static, LienzoApp>, from: Pos2, path: &[Pos2]) {
     h.event(Event::PointerMoved(from));
     h.run_steps(1);
     h.event(Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });

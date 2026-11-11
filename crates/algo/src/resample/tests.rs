@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
 
 fn ramp(sample: SampleType) -> Surface {
     let mut s = Surface::new(PixelFormat::new(ColorMode::Rgb, sample, true));
@@ -425,12 +425,12 @@ fn controlled_resize_matches_pixels_and_discards_cancelled_work() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let src = ramp(depth);
         let expected = resize_surface(&src, 1.7, 0.6, Resample::Bicubic);
-        let actual = resize_surface_with_interrupt(&src, 1.7, 0.6, Resample::Bicubic, &photocraft_raster::Interrupt::NONE).unwrap();
+        let actual = resize_surface_with_interrupt(&src, 1.7, 0.6, Resample::Bicubic, &lienzo_raster::Interrupt::NONE).unwrap();
         let bounds = expected.content_bounds();
         assert_eq!(expected.read_region(bounds), actual.read_region(bounds));
         let cancelled = || true;
         let progress = |_| {};
-        let ctl = photocraft_raster::Interrupt::new(&cancelled, &progress);
+        let ctl = lienzo_raster::Interrupt::new(&cancelled, &progress);
         assert!(resize_surface_with_interrupt(&src, 1.7, 0.6, Resample::Bicubic, &ctl).is_err());
     }
 }
@@ -448,7 +448,7 @@ fn controlled_resize_checks_cancellation_per_band_group() {
             false
         };
         let progress = |_| {};
-        let ctl = photocraft_raster::Interrupt::new(&cancelled, &progress);
+        let ctl = lienzo_raster::Interrupt::new(&cancelled, &progress);
         assert!(resize_surface_with_interrupt(&src, 1.7, 0.6, Resample::Bicubic, &ctl).is_ok());
         let passes = plan(Resample::Bicubic, 1.7, 0.6).len();
         let checks = calls.load(std::sync::atomic::Ordering::Relaxed);

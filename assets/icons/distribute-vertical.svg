@@ -9,7 +9,7 @@
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <!-- PhotoCraft's own Move tool options-bar glyph (not from an icon set). -->
+  <!-- Lienzo's own Move tool options-bar glyph (not from an icon set). -->
   <path d="M4 3h16" />
   <path d="M4 21h16" />
   <rect x="7" y="9" width="10" height="6" rx="1" />

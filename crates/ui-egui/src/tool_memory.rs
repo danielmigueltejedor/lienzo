@@ -16,10 +16,10 @@
 //! `Preferences::group_tools` (#3569), so a tool picked from a flyout stays on its toolbar slot
 //! and its key after a restart. A name this version doesn't know is skipped, as with the options.
 
-use photocraft_engine::BrushSettings;
+use lienzo_engine::BrushSettings;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 
 /// The tool whose brush the session brush is, and the other painting tools' brushes.
@@ -29,7 +29,7 @@ pub(crate) type ToolBrushes = (Tool, Vec<(Tool, BrushSettings)>);
 pub(crate) type CmykPicks = Vec<([f32; 3], [f32; 4])>;
 
 /// Explicit choices override temporary pen and held-key tools, even when selecting the same tool.
-pub(crate) fn select(app: &mut PhotocraftApp, tool: Tool) {
+pub(crate) fn select(app: &mut LienzoApp, tool: Tool) {
     app.stylus.tool_before_eraser = None;
     app.ui.spring = None;
     if app.ui.tool == Tool::Frame && tool != Tool::Frame {
@@ -44,7 +44,7 @@ pub(crate) fn select(app: &mut PhotocraftApp, tool: Tool) {
 
 /// Add New Artboard's placing mode ends with the Artboard tool (#11386): every place that sets
 /// `ui.tool` calls this right after, so there is one rule.
-pub(crate) fn ended_by_tool(app: &mut PhotocraftApp) {
+pub(crate) fn ended_by_tool(app: &mut LienzoApp) {
     if app.ui.tool != Tool::Artboard {
         app.ui.artboard_tool.adding = false;
     }
@@ -53,7 +53,7 @@ pub(crate) fn ended_by_tool(app: &mut PhotocraftApp) {
 /// Temporary canvas overrides do not change `ui.tool`. Spring-loaded letters and the pen's
 /// eraser end do, so remember the tool they will return to instead. A different explicit choice
 /// (or beginning a type edit) owns the tool and stands, just as in `spring_tools::tick`.
-pub(crate) fn selected(app: &PhotocraftApp) -> Tool {
+pub(crate) fn selected(app: &LienzoApp) -> Tool {
     let tool = if app.ui.tool == Tool::Eraser { app.stylus.tool_before_eraser.unwrap_or(app.ui.tool) } else { app.ui.tool };
     if let Some(s) = &app.ui.spring
         && tool == s.tool
@@ -76,7 +76,7 @@ fn changed(o: &ToolOptions) -> Value {
 /// Remember the selected tool, the tools used last and the options once the user lets go of the
 /// pointer. Run every frame, so choices made through the control channel or a tool preset are
 /// remembered too.
-pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn persist(app: &mut LienzoApp, ctx: &egui::Context) {
     if ctx.input(|i| i.pointer.any_down()) {
         return;
     }
@@ -105,13 +105,13 @@ pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Keep pixel and mask swatches separately, even when the app exits with a mask targeted.
-fn colors(app: &PhotocraftApp) -> [[[f32; 4]; 2]; 2] {
+fn colors(app: &LienzoApp) -> [[[f32; 4]; 2]; 2] {
     let t = &app.session.tools;
     let current = [t.foreground, t.background];
     if t.mask_targeted { [t.other_colors, current] } else { [current, t.other_colors] }
 }
 
-fn persist_colors(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn persist_colors(app: &mut LienzoApp, ctx: &egui::Context) {
     let now = colors(app);
     if app.prefs_rt.tool_colors == Some(now) && app.prefs_rt.tool_cmyk_picks == app.session.tools.cmyk_picks {
         return;
@@ -135,11 +135,11 @@ fn color_value(pairs: [[[f32; 4]; 2]; 2], cmyk_picks: &CmykPicks) -> Value {
 
 /// A missing legacy value represents these defaults, not an indivisible null leaf.
 pub(crate) fn default_colors() -> Value {
-    let tools = photocraft_engine::ToolState::default();
+    let tools = lienzo_engine::ToolState::default();
     color_value([[tools.foreground, tools.background], tools.other_colors], &tools.cmyk_picks)
 }
 
-fn restore_colors(app: &mut PhotocraftApp) {
+fn restore_colors(app: &mut LienzoApp) {
     let saved = &app.session.prefs().tool_colors;
     let mut pairs = colors(app);
     let [[foreground, background], [mask_foreground, mask_background]] = &mut pairs;
@@ -164,7 +164,7 @@ fn restore_colors(app: &mut PhotocraftApp) {
                     None
                 }
             })
-            .take(photocraft_engine::ToolState::CMYK_PICKS)
+            .take(lienzo_engine::ToolState::CMYK_PICKS)
             .collect()
     });
     let [pixels, mask] = pairs;
@@ -183,7 +183,7 @@ fn restore_colors(app: &mut PhotocraftApp) {
 
 /// Remember the tools used last when the list changes, whether or not the selected tool did: a
 /// tool picked during a drag that ends on the tool it began with changes only the list.
-fn persist_group_tools(app: &mut PhotocraftApp, ctx: &egui::Context, tool: Tool) {
+fn persist_group_tools(app: &mut LienzoApp, ctx: &egui::Context, tool: Tool) {
     // Noted here as well: no frame follows a tool picked right before quitting.
     app.ui.remember_group_tool(tool);
     if app.prefs_rt.group_tools.as_ref() == Some(&app.ui.group_tools) {
@@ -202,7 +202,7 @@ fn persist_group_tools(app: &mut PhotocraftApp, ctx: &egui::Context, tool: Tool)
 /// Remember the painting tools' own brushes when they change (a compare per frame otherwise:
 /// tip bitmaps are shared, so equal brushes compare by pointer). A brush that can't be remembered
 /// yet (a sampled tip too big to embed, before the preset store takes it) keeps what was saved.
-fn persist_brushes(app: &mut PhotocraftApp) {
+fn persist_brushes(app: &mut LienzoApp) {
     let (owner, brushes) = (saved_owner(app), &app.ui.tool_brushes);
     if app.prefs_rt.tool_brushes.as_ref().is_some_and(|(o, b)| *o == owner && b == brushes) {
         return;
@@ -215,7 +215,7 @@ fn persist_brushes(app: &mut PhotocraftApp) {
             continue;
         }
         let Ok(Value::String(key)) = serde_json::to_value(tool) else { continue };
-        if let Some(v) = photocraft_engine::brush_cmds::remembered_settings(brush).or_else(|| old.get(&key).cloned()) {
+        if let Some(v) = lienzo_engine::brush_cmds::remembered_settings(brush).or_else(|| old.get(&key).cloned()) {
             saved.insert(key, v);
         }
     }
@@ -234,7 +234,7 @@ fn persist_brushes(app: &mut PhotocraftApp) {
 /// `last_brush::persist` has saved that brush. Until then (a sampled tip too big to embed, before
 /// the preset store takes it) `last_brush` still holds the previously saved owner's brush, so
 /// that owner stands; with none saved it is the Brush, as `toolBrushes` is null then.
-fn saved_owner(app: &PhotocraftApp) -> Tool {
+fn saved_owner(app: &LienzoApp) -> Tool {
     let t = &app.session.tools;
     if t.brush_rev == t.brush_saved_rev {
         return app.ui.brush_tool;
@@ -245,7 +245,7 @@ fn saved_owner(app: &PhotocraftApp) -> Tool {
 /// Restore the painting tools' own brushes and which tool the session brush (`last_brush`)
 /// belongs to. Unknown tools, tools without a brush and brushes that don't read back are skipped
 /// with a warning: such a tool starts from the current brush, as on a first launch.
-fn restore_brushes(app: &mut PhotocraftApp) {
+fn restore_brushes(app: &mut LienzoApp) {
     let saved = app.session.prefs().tool_brushes.clone();
     if !saved.is_null() && !saved.is_object() {
         log::warn!("Preferences: the remembered tool brushes are not an object; using the defaults");
@@ -264,7 +264,7 @@ fn restore_brushes(app: &mut PhotocraftApp) {
             log::warn!("Preferences: ignoring the remembered brush of `{k}`");
             continue;
         };
-        match photocraft_engine::brush_cmds::restored_settings(&app.session, v) {
+        match lienzo_engine::brush_cmds::restored_settings(&app.session, v) {
             Some(b) => brushes.push((t, b)),
             None => log::warn!("Preferences: ignoring the remembered brush of `{k}`: it doesn't read back"),
         }
@@ -275,7 +275,7 @@ fn restore_brushes(app: &mut PhotocraftApp) {
 
 /// Flush the final tool state on normal exit, even if no further frame ran after a change.
 /// The brush first, as in a frame, so the saved brush owner matches the saved brush.
-pub(crate) fn save_on_exit(app: &mut PhotocraftApp) -> Result<(), String> {
+pub(crate) fn save_on_exit(app: &mut LienzoApp) -> Result<(), String> {
     let ctx = egui::Context::default();
     crate::last_brush::persist(app, &ctx);
     persist(app, &ctx);
@@ -284,7 +284,7 @@ pub(crate) fn save_on_exit(app: &mut PhotocraftApp) -> Result<(), String> {
 
 /// Restore the tools used last, keeping their order. Anything that isn't a tool is skipped with a
 /// warning: the rest of the list still holds.
-fn restore_group_tools(app: &mut PhotocraftApp) {
+fn restore_group_tools(app: &mut LienzoApp) {
     let saved = app.session.prefs().group_tools.clone();
     if !saved.is_null() && !saved.is_array() {
         log::warn!("Preferences: the remembered group tools are not a list; using the defaults");
@@ -298,7 +298,7 @@ fn restore_group_tools(app: &mut PhotocraftApp) {
 }
 
 /// Restore the selected tool before the first frame and its options field by field.
-pub fn restore(app: &mut PhotocraftApp) {
+pub fn restore(app: &mut LienzoApp) {
     restore_group_tools(app);
     let saved = app.session.prefs().selected_tool.clone();
     if !saved.is_null() {
@@ -392,7 +392,7 @@ pub(crate) fn sanitize(o: &mut ToolOptions) {
     if o.crop_overlay_orientation > 3 {
         o.crop_overlay_orientation = d.crop_overlay_orientation;
     }
-    if !photocraft_engine::sample_cmds::SAMPLE_SIZES.contains(&o.eyedropper_size) {
+    if !lienzo_engine::sample_cmds::SAMPLE_SIZES.contains(&o.eyedropper_size) {
         o.eyedropper_size = d.eyedropper_size;
     }
     if !o.shape_stroke.valid() {
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn selected_tool_and_non_default_options_roundtrip() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.tool = Tool::Lasso;
         app.ui.tool_options.tolerance = 42.5;
         persist(&mut app, &egui::Context::default());
@@ -433,7 +433,7 @@ mod tests {
         assert_eq!(saved.tool_options["tolerance"], Value::from(42.5));
         assert!(saved.tool_options.get("contiguous").is_none(), "unchanged defaults are not written");
 
-        let mut restored = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut restored = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         restored.session.prefs.edit(|p| {
             p.selected_tool = saved.selected_tool.clone();
             p.tool_options = saved.tool_options.clone();
@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn restore_ignores_unknown_and_malformed_tool_options() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let original_tool = app.ui.tool;
         let default_contiguous = ToolOptions::default().contiguous;
         app.session.prefs.edit(|p| {

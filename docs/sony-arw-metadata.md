@@ -1,12 +1,12 @@
 # Sony ARW metadata evidence
 
-2026-10-11: PhotoCraft now reads applied white balance and black levels from Sony's encrypted
+2026-10-11: Lienzo now reads applied white balance and black levels from Sony's encrypted
 SR2SubIFD when usable plain tags are absent. It also applies the measured ILCE-6000 image area.
 This corrects source metadata; it does not add a camera colour profile or a JPEG tone match.
 
 ## Research and scope
 
-PhotoCraft already contains the cRAW sensor decoder from [#83](https://github.com/storytold/photocraft/pull/83)
+Lienzo already contains the cRAW sensor decoder from [#83](https://github.com/storytold/photocraft/pull/83)
 and the 512 black fallback from [#1902](https://github.com/storytold/photocraft/pull/1902).
 The open [#2135](https://github.com/storytold/photocraft/pull/2135) proposes fitting camera-JPEG
 colour and tone; [#2230](https://github.com/storytold/photocraft/pull/2230) adds camera profiles.
@@ -17,13 +17,13 @@ duplicating those colour-development proposals.
 LightCraft's [#115](https://github.com/storytold/lightcraft/pull/115),
 [#535](https://github.com/storytold/lightcraft/issues/535) and its current camera-preview-colour
 documentation distinguish applied WB, camera calibration and JPEG tone/DRO. Its SR2 investigation
-suggested testing encrypted metadata before estimating WB from scene pixels. PhotoCraft's
+suggested testing encrypted metadata before estimating WB from scene pixels. Lienzo's
 implementation is independent: no sibling source, decoder dependency or camera colour table is
 included. The first keystream words were recovered again from local metadata observations.
 
 ## Measurement
 
-Three read-only local ILCE-6000 ARW/JPEG pairs were inspected with ExifTool 13.59 and PhotoCraft's
+Three read-only local ILCE-6000 ARW/JPEG pairs were inspected with ExifTool 13.59 and Lienzo's
 `rawinfo` example. No private files, scene pixels or metadata dumps are committed.
 
 | Source fact | All three ARWs |
@@ -71,7 +71,7 @@ The full sensor buffer still passes through black subtraction, applied WB, demos
 not substituted for RAW pixels. All three files import and export at 6000 × 4000 in 16-bit RGB.
 
 Local comparisons with the paired camera JPEGs and installed LightCraft 0.6.0 show reduced
-WB casts, but PhotoCraft remains flatter, darker and less saturated. These ARWs have no DNG
+WB casts, but Lienzo remains flatter, darker and less saturated. These ARWs have no DNG
 colour matrix, so the existing neutral camera-to-sRGB fallback and scene-referred tone remain.
 Camera JPEGs also have DRO Auto and lens/tone processing; they are visual references, not
 linear sensor oracles. The remaining camera colour and tone work belongs to G14 and the open

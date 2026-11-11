@@ -16,7 +16,7 @@
 //! describes the document's guides and colours; otherwise it leaves both out, so the file
 //! carries 1032 alone, as Photoshop files before version 2 did (#5966).
 
-use photocraft_doc::{Document, Guides};
+use lienzo_doc::{Document, Guides};
 
 /// Grid and Guides, version 2 (positions, directions and colours).
 pub const GUIDES_V2: u16 = 1092;

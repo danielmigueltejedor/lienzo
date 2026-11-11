@@ -20,12 +20,12 @@
 
 use std::sync::Arc;
 
-use photocraft_color::blend::BlendMode;
-use photocraft_color::convert::CmykSpace;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::adjust::ToneSpace;
-use photocraft_doc::{Adjustment, Document, Knockout, Layer, LayerContent};
-use photocraft_geom::Rect;
+use lienzo_color::blend::BlendMode;
+use lienzo_color::convert::CmykSpace;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::adjust::ToneSpace;
+use lienzo_doc::{Adjustment, Document, Knockout, Layer, LayerContent};
+use lienzo_geom::Rect;
 
 use super::extents::recycle_mask;
 use super::{Ctx, RENDER_TILE, advanced, empty_in, mask_vals, pattern};
@@ -95,14 +95,14 @@ fn plain(l: &Layer) -> bool {
 /// given in CMYK is drawn with exactly those inks); solid colour fills, and fills carrying the
 /// pixels they were rendered to. Gradient and pattern fills without those pixels aren't.
 fn cmyk_pixels(l: &Layer) -> bool {
-    let cmyk = |s: &photocraft_raster::Surface| s.format().mode == ColorMode::Cmyk;
+    let cmyk = |s: &lienzo_raster::Surface| s.format().mode == ColorMode::Cmyk;
     match &l.content {
         LayerContent::Raster(s) => cmyk(s),
         LayerContent::Text(_) | LayerContent::Shape(_) | LayerContent::Smart(_) => l.surface().is_none_or(cmyk),
         LayerContent::Fill(f) => match &l.fill_cache {
             Some(c) if c.fill == *f => cmyk(&c.surface),
             // Solid colours and gradients render natively in CMYK; patterns don't.
-            _ => !matches!(f, photocraft_doc::Fill::Pattern { .. }),
+            _ => !matches!(f, lienzo_doc::Fill::Pattern { .. }),
         },
         _ => false,
     }
@@ -321,7 +321,7 @@ fn layer_content(l: &Layer, rect: Rect, cx: &Ctx) -> CmykBuffer {
             _ => {
                 // The compositor's own CMYK rendering of the fill, at the document's depth (a
                 // colour given in CMYK keeps its inks); a solid colour is one pixel, spread out.
-                let solid = matches!(f, photocraft_doc::Fill::Solid(_));
+                let solid = matches!(f, lienzo_doc::Fill::Solid(_));
                 let at = if solid { Rect::new(0, 0, 1, 1) } else { rect };
                 rendered = super::gradient_fill::render_cmyk_fill(f, at, super::fill_frame(l, cx.canvas), cx.depth);
                 match &rendered {
@@ -605,7 +605,7 @@ fn render_tile(doc: &Document, rect: Rect, cx: &Ctx, space: Option<&Arc<CmykSpac
     // Blends stay clipped to 0..1 whatever the depth: unclipped (HDR) blending would make
     // brightness above 1, i.e. negative ink. Set explicitly, since a tile can run on a thread
     // that is in the middle of an RGB composite of a 32-bit document.
-    photocraft_color::convert::with_cmyk_space(space, || super::in_blend_space(false, false, || composite_stack(&doc.layers, &mut b, cx)));
+    lienzo_color::convert::with_cmyk_space(space, || super::in_blend_space(false, false, || composite_stack(&doc.layers, &mut b, cx)));
     b
 }
 
@@ -630,10 +630,10 @@ pub fn render_display(doc: &Document, rect: Rect) -> Option<super::Buffer> {
     let inks = render_cmyk(doc, rect)?;
     let space = super::cmyk_space(doc);
     let show = |part: &[Cmyka]| -> Vec<[f32; 4]> {
-        photocraft_color::convert::with_cmyk_space(space.as_ref(), || {
+        lienzo_color::convert::with_cmyk_space(space.as_ref(), || {
             part.iter()
                 .map(|p| {
-                    let [r, g, b] = photocraft_color::convert::cmyk_to_rgb([p[0], p[1], p[2], p[3]]);
+                    let [r, g, b] = lienzo_color::convert::cmyk_to_rgb([p[0], p[1], p[2], p[3]]);
                     [r, g, b, p[4]]
                 })
                 .collect()

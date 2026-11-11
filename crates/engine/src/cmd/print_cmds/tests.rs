@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::{Knot, NamedPath, Path, Subpath};
+use lienzo_doc::{Knot, NamedPath, Path, Subpath};
 
 /// Compares signed-offset layout with actual PDF image operators and whole-page mirroring
 /// across scale/fit/orientation cases, while checking the source document stays unchanged.
@@ -37,7 +37,7 @@ fn negative_print_positions_match_pdf_without_changing_the_document() {
         assert_eq!(after.revision, revision);
         assert_eq!(after.doc.size, before.size);
         assert_eq!(after.doc.resolution_dpi, before.resolution_dpi);
-        assert_eq!(photocraft_compose::thumbnail(&before, 32).pixels, photocraft_compose::thumbnail(&after.doc, 32).pixels);
+        assert_eq!(lienzo_compose::thumbnail(&before, 32).pixels, lienzo_compose::thumbnail(&after.doc, 32).pixels);
     }
 }
 
@@ -64,7 +64,7 @@ fn print_position_and_geometry_bounds_reject_malformed_inputs() {
 }
 
 fn tmp(name: &str) -> String {
-    let d = std::env::temp_dir().join(format!("photocraft-print-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-print-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     // Spelt the way command results spell paths, so an expectation built with `/` matches on
@@ -141,7 +141,7 @@ fn print_dry_run_renders_a_pdf_and_reports_the_platform_backend() {
     let scale = r["scale"].as_f64().unwrap();
     assert!(scale > 200.0, "fit to a landscape letter page: {scale}");
     assert!(s.execute("file.print", json!({"paper": "napkin", "dryRun": true})).is_err());
-    assert!(s.execute("file.print", json!({"colorHandling": "photocraftManages", "dryRun": true})).is_err(), "needs a printer profile");
+    assert!(s.execute("file.print", json!({"colorHandling": "lienzoManages", "dryRun": true})).is_err(), "needs a printer profile");
 }
 
 /// The Japanese papers are in the table at their metric sizes, their customary names resolve (case,
@@ -219,13 +219,13 @@ fn japanese_paper_sizes_reach_the_pdf_page() {
 }
 
 #[test]
-fn photocraft_manages_colors_converts_to_the_printer_profile() {
+fn lienzo_manages_colors_converts_to_the_printer_profile() {
     let mut s = session("rgb", 8);
     let out = format!("{}/managed.pdf", tmp("managed"));
     let r = s
         .execute(
             "file.print",
-            json!({"output": out, "dryRun": true, "colorHandling": "photocraftManages", "printerProfile": "coated-cmyk", "intent": "perceptual", "bpc": false}),
+            json!({"output": out, "dryRun": true, "colorHandling": "lienzoManages", "printerProfile": "coated-cmyk", "intent": "perceptual", "bpc": false}),
         )
         .unwrap();
     assert_eq!(r["color"]["intent"], "perceptual");
@@ -326,9 +326,9 @@ fn native_rgb_route_preserves_pdf_only_color_and_page_content() {
     assert!(native_rgb_compatible(&page, "printerManages"));
     page.image.icc = Some(vec![1, 2, 3]);
     assert!(!native_rgb_compatible(&page, "printerManages"), "preserve embedded source ICC in the PDF route");
-    assert!(native_rgb_compatible(&page, "photocraftManages"));
+    assert!(native_rgb_compatible(&page, "lienzoManages"));
     assert!(native_rgb_compatible(&page, "photoshopManages"));
-    assert!(!native_rgb_compatible(&page_of(4, vec![0; 8], false), "photocraftManages"));
+    assert!(!native_rgb_compatible(&page_of(4, vec![0; 8], false), "lienzoManages"));
     assert!(native_rgb_compatible(&page_of(1, vec![0; 2], false), "noColorManagement"));
 }
 
@@ -433,7 +433,7 @@ fn printer_page_refuses_an_unknown_orientation() {
 /// A real driver turns: Windows' "Microsoft Print to PDF" on its default (portrait) settings, for a
 /// landscape A4 layout, gets settings turned to landscape and a wide page; a portrait layout keeps
 /// the driver's own settings. Needs that printer, so it runs by hand:
-/// `cargo test -p photocraft-engine --lib a_portrait_driver -- --ignored`.
+/// `cargo test -p lienzo-engine --lib a_portrait_driver -- --ignored`.
 #[cfg(windows)]
 #[test]
 #[ignore]
@@ -454,16 +454,16 @@ fn printer_profile_can_be_an_installed_icc_file() {
     let dir = tmp("icc");
     let icc = format!("{dir}/My Paper.icc");
     let output = format!("{dir}/managed.pdf");
-    std::fs::write(&icc, photocraft_cms::Builtin::CoatedCmyk.profile().to_bytes().as_slice()).unwrap();
+    std::fs::write(&icc, lienzo_cms::Builtin::CoatedCmyk.profile().to_bytes().as_slice()).unwrap();
     let mut s = session("rgb", 16);
     let r = s
-        .execute("file.print", json!({"output": output, "dryRun": true, "colorHandling": "photocraftManages", "printerProfile": icc, "emulsionDown": true}))
+        .execute("file.print", json!({"output": output, "dryRun": true, "colorHandling": "lienzoManages", "printerProfile": icc, "emulsionDown": true}))
         .unwrap();
     assert_eq!(r["color"]["printerProfile"], json!(icc));
     let (_, _, cs, data) = pdf_image(&std::fs::read(r["pdf"].as_str().unwrap()).unwrap());
     assert_eq!(cs, "[/ICCBased 7 0 R]");
     assert_eq!(data.len(), 300 * 150 * 4);
-    assert!(s.execute("file.print", json!({"dryRun": true, "colorHandling": "photocraftManages", "printerProfile": format!("{dir}/missing.icc")})).is_err());
+    assert!(s.execute("file.print", json!({"dryRun": true, "colorHandling": "lienzoManages", "printerProfile": format!("{dir}/missing.icc")})).is_err());
     let _ = std::fs::remove_file(r["pdf"].as_str().unwrap());
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -547,7 +547,7 @@ fn package_copies_links_and_relinks() {
         assert!(!p.contains('\\'), "{p}");
     }
     assert!(docp.ends_with("Print Me/Print Me.pcraft"));
-    let back = photocraft_io::import("Print Me.pcraft", &std::fs::read(docp).unwrap()).unwrap().document;
+    let back = lienzo_io::import("Print Me.pcraft", &std::fs::read(docp).unwrap()).unwrap().document;
     let linked: Vec<String> = back
         .walk()
         .iter()
@@ -643,7 +643,7 @@ fn paths_export_as_illustrator_postscript() {
     s.edit("paths", |d, _| {
         let tri = Subpath::polygon(&[(10.0, 10.0), (100.0, 10.0), (50.0, 90.0)]);
         let mut curve = Subpath::polyline(&[(0.0, 0.0), (300.0, 150.0)]);
-        curve.knots[0] = Knot::smooth(photocraft_geom::Point::new(0.0, 0.0), photocraft_geom::Point::new(0.0, 0.0), photocraft_geom::Point::new(50.0, 0.0));
+        curve.knots[0] = Knot::smooth(lienzo_geom::Point::new(0.0, 0.0), lienzo_geom::Point::new(0.0, 0.0), lienzo_geom::Point::new(50.0, 0.0));
         d.paths.push(NamedPath { name: "Shapes".into(), path: Path::new(vec![tri, curve]), psd_raw: None });
         Ok(())
     })
@@ -695,7 +695,7 @@ fn print_without_sending_requires_output_unless_dry_run_and_forgets_send_overrid
 #[cfg(unix)]
 #[test]
 fn spool_transport_streams_pdf_and_propagates_refusal() {
-    const CHILD: &str = "PHOTOCRAFT_TEST_PRINT_TRANSPORT";
+    const CHILD: &str = "LIENZO_TEST_PRINT_TRANSPORT";
     if let Ok(dir) = std::env::var(CHILD) {
         let mut s = session("rgb", 8);
         let source = s.active().unwrap().doc.id;
@@ -749,7 +749,7 @@ fn spool_transport_streams_pdf_and_propagates_refusal() {
     let script = dir.path().join("lp");
     std::fs::write(
         &script,
-        b"#!/bin/sh\nif [ \"$2\" = Refuse ]; then echo 'queue refused' >&2; exit 1; fi\nprintf '%s\\n' \"$@\" > \"$PHOTOCRAFT_TEST_PRINT_TRANSPORT/args\"\n/bin/cat > \"$PHOTOCRAFT_TEST_PRINT_TRANSPORT/received.pdf\"\necho 'request id is Office-42 (0 file(s))'\n",
+        b"#!/bin/sh\nif [ \"$2\" = Refuse ]; then echo 'queue refused' >&2; exit 1; fi\nprintf '%s\\n' \"$@\" > \"$LIENZO_TEST_PRINT_TRANSPORT/args\"\n/bin/cat > \"$LIENZO_TEST_PRINT_TRANSPORT/received.pdf\"\necho 'request id is Office-42 (0 file(s))'\n",
     ).unwrap();
     std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o700)).unwrap();
     // `lp` takes a job only when CUPS lists a printer (`lp_route`), so the fake CUPS lists its queues.
@@ -765,8 +765,8 @@ fn spool_transport_streams_pdf_and_propagates_refusal() {
         .env(CHILD, dir.path())
         .env("PATH", dir.path())
         // The child spools into the fake `lp` above, so a shell that blocks real printing
-        // (`PHOTOCRAFT_NO_PRINT`, see `disabled_printing_never_spools`) must not stop it.
-        .env_remove("PHOTOCRAFT_NO_PRINT")
+        // (`LIENZO_NO_PRINT`, see `disabled_printing_never_spools`) must not stop it.
+        .env_remove("LIENZO_NO_PRINT")
         .output()
         .unwrap();
     assert!(result.status.success(), "{}\n{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
@@ -977,15 +977,15 @@ fn uncached_listings_do_not_wait(cache_other: bool) {
 }
 
 /// Spooling tests run in a child process: `disable_printing` is process-wide and a test above
-/// sets it, and CI sets `PHOTOCRAFT_NO_PRINT` for the whole shell. True in the child, which runs
+/// sets it, and CI sets `LIENZO_NO_PRINT` for the whole shell. True in the child, which runs
 /// the test body; the parent starts the child and checks that it passed.
 fn in_child(test: &str, envs: &[(&str, &str)]) -> bool {
-    const CHILD: &str = "PHOTOCRAFT_TEST_PRINT_CHILD";
+    const CHILD: &str = "LIENZO_TEST_PRINT_CHILD";
     if std::env::var_os(CHILD).is_some() {
         return true;
     }
     let mut cmd = std::process::Command::new(std::env::current_exe().unwrap());
-    cmd.args(["--exact", test, "--nocapture"]).env(CHILD, "1").env_remove("PHOTOCRAFT_NO_PRINT");
+    cmd.args(["--exact", test, "--nocapture"]).env(CHILD, "1").env_remove("LIENZO_NO_PRINT");
     for (k, v) in envs {
         cmd.env(k, v);
     }
@@ -1101,7 +1101,7 @@ fn lp_takes_the_job_only_when_cups_lists_a_printer_and_picks_the_only_one() {
 #[cfg(not(target_os = "windows"))]
 mod cups {
     use super::*;
-    use photocraft_ipp::{
+    use lienzo_ipp::{
         Attribute, OP_CUPS_GET_CLASSES, OP_CUPS_GET_DEFAULT, OP_CUPS_GET_PRINTERS, OP_PRINT_JOB, Printer, Request, TAG_JOB_GROUP, TAG_NAME, TAG_PRINTER_GROUP,
     };
     use std::io::{BufRead, BufReader, Read, Write};
@@ -1169,7 +1169,7 @@ mod cups {
                 }
                 let mut body = vec![0u8; len];
                 reader.read_exact(&mut body).unwrap();
-                let (op, attrs, doc) = photocraft_ipp::parse_request(&body).unwrap();
+                let (op, attrs, doc) = lienzo_ipp::parse_request(&body).unwrap();
                 let list = |names: &[&str]| {
                     if names.is_empty() {
                         return Request::new(0x0406, 1).end();
@@ -1275,7 +1275,7 @@ mod cups {
     /// Runs in a child process, since the path is process-wide.
     #[test]
     fn without_lp_the_job_goes_over_ipp_then_to_the_app_spooler() {
-        const CHILD: &str = "PHOTOCRAFT_TEST_PRINT_NO_LP";
+        const CHILD: &str = "LIENZO_TEST_PRINT_NO_LP";
         if std::env::var_os(CHILD).is_some() {
             let mut s = session("rgb", 8);
             let r = s.execute("file.print", json!({"copies": 2})).unwrap();
@@ -1299,7 +1299,7 @@ mod cups {
             .env(CHILD, "1")
             .env("PATH", no_lp.path())
             .env("CUPS_SERVER", &server)
-            .env_remove("PHOTOCRAFT_NO_PRINT")
+            .env_remove("LIENZO_NO_PRINT")
             .output()
             .unwrap();
         let (stdout, stderr) = (String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));

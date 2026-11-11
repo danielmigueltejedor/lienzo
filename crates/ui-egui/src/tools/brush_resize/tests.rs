@@ -7,15 +7,15 @@ use crate::canvas::tool_event;
 
 const CTRL_ALT: Modifiers = Modifiers { alt: true, ctrl: true, shift: false, mac_cmd: false, command: false };
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 300, "height": 200, "background": "transparent"})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 40, "hardness": 0.2}})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn history(app: &PhotocraftApp) -> usize {
+fn history(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -77,7 +77,7 @@ fn canvas_drag_shows_the_circle_and_readout() {
     let mut a = app(Tool::Brush);
     a.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -86,10 +86,10 @@ fn canvas_drag_shows_the_circle_and_readout() {
         },
         a,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     let c = h.state().last_canvas_rect.center();
-    let press = |h: &mut Harness<'static, PhotocraftApp>, pos: Pos2, pressed: bool| {
+    let press = |h: &mut Harness<'static, LienzoApp>, pos: Pos2, pressed: bool| {
         h.event(egui::Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: CTRL_ALT });
         h.run();
     };
@@ -116,9 +116,9 @@ fn canvas_drag_shows_the_circle_and_readout() {
     assert_eq!(history(h.state()), undo0, "no undo step");
 }
 
-fn canvas(a: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn canvas(a: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -127,18 +127,18 @@ fn canvas(a: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         a,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     h
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2, button: PointerButton, pressed: bool, modifiers: Modifiers) {
+fn button(h: &mut Harness<'static, LienzoApp>, pos: Pos2, button: PointerButton, pressed: bool, modifiers: Modifiers) {
     h.event(egui::Event::PointerButton { pos, button, pressed, modifiers });
     h.run_steps(2);
 }
 
 /// Alt+right-drag from the canvas centre, six steps of `step` screen points.
-fn alt_right_drag(h: &mut Harness<'static, PhotocraftApp>, step: egui::Vec2) -> Pos2 {
+fn alt_right_drag(h: &mut Harness<'static, LienzoApp>, step: egui::Vec2) -> Pos2 {
     let c = h.state().last_canvas_rect.center();
     h.event(egui::Event::ModifiersChanged(Modifiers::ALT));
     h.event(egui::Event::PointerMoved(c));
@@ -374,10 +374,10 @@ fn the_tip_preview_follows_the_brush_falloff() {
         assert!(hard.iter().all(|(d, a)| *d <= 52.0 * zoom || *a == 0), "zoom {zoom}: and ends at its rim");
         let soft = tip_mesh(50.0, zoom, 0.0);
         for (d, a) in &soft {
-            let want = 200.0 * photocraft_paint::tip_falloff(d / zoom, 50.0, 0.0);
+            let want = 200.0 * lienzo_paint::tip_falloff(d / zoom, 50.0, 0.0);
             assert!((f32::from(*a) - want).abs() <= 3.0 || *a == 0, "zoom {zoom}: at {d}: {a}, the engine {want}");
         }
-        let reach = photocraft_paint::tip_reach(50.0, 0.0);
+        let reach = lienzo_paint::tip_reach(50.0, 0.0);
         assert!(soft.iter().any(|(d, a)| *d > 60.0 * zoom && *a > 0), "zoom {zoom}: a soft tip shows past its radius");
         assert!(soft.iter().all(|(d, _)| *d <= reach * zoom + 0.5), "zoom {zoom}: and no further than it reaches");
     }

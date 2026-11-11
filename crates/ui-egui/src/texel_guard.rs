@@ -15,7 +15,7 @@
 //! [`TexelGuard`] rewrites fully transparent texels in every upload as premultiplied
 //! (0, 0, 0, 1) before eframe hands the upload to the renderer: alpha 1/255 black, which darkens
 //! what is underneath by less than one 8-bit level. It is installed only on the affected adapter
-//! ([`affected`]); `PHOTOCRAFT_TEXEL_GUARD=1` forces it on (to check it on any GPU) and `=0` off.
+//! ([`affected`]); `LIENZO_TEXEL_GUARD=1` forces it on (to check it on any GPU) and `=0` off.
 
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ use egui::{Color32, FullOutput, ImageData, TexturesDelta};
 /// What a fully transparent texel is uploaded as.
 pub const NEAR_CLEAR: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 1);
 
-/// Whether texture uploads on this adapter need the guard (`env`: `PHOTOCRAFT_TEXEL_GUARD`).
+/// Whether texture uploads on this adapter need the guard (`env`: `LIENZO_TEXEL_GUARD`).
 pub fn affected(info: &wgpu::AdapterInfo, env: Option<&str>) -> bool {
     match env {
         Some("1") => true,
@@ -70,7 +70,7 @@ impl egui::Plugin for TexelGuard {
 /// Install [`TexelGuard`] on `ctx` when the window's adapter needs it; returns whether it did.
 /// Call once, with the adapter eframe renders the window with.
 pub fn install(ctx: &egui::Context, info: &wgpu::AdapterInfo) -> bool {
-    let on = affected(info, std::env::var("PHOTOCRAFT_TEXEL_GUARD").ok().as_deref());
+    let on = affected(info, std::env::var("LIENZO_TEXEL_GUARD").ok().as_deref());
     if on && ctx.plugin_opt::<TexelGuard>().is_none() {
         ctx.add_plugin(TexelGuard);
         log::info!("texture uploads: transparent texels written as alpha 1/255 ({}, {:?}; gfx-rs/wgpu#3552)", info.name, info.backend);
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn install_adds_the_plugin_once_and_only_where_needed() {
-        if std::env::var_os("PHOTOCRAFT_TEXEL_GUARD").is_some() {
+        if std::env::var_os("LIENZO_TEXEL_GUARD").is_some() {
             return;
         }
         let ctx = egui::Context::default();

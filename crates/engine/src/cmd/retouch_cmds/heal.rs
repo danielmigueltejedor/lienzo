@@ -105,10 +105,10 @@ pub(super) fn history_source(s: &Session, id: Option<LayerId>, p: &Value, cmd: &
             let only = source_doc.layers.first().ok_or_else(missing)?;
             // A shape paints past its path, as in Photoshop: a solid fill its colour, and a gradient,
             // a pattern or no fill plain white, whatever its outline.
-            if let photocraft_doc::LayerContent::Shape(shape) = &only.content {
+            if let lienzo_doc::LayerContent::Shape(shape) = &only.content {
                 let color = match &shape.fill {
-                    Some(photocraft_doc::Fill::Solid(color)) => *color,
-                    _ => photocraft_color::Color::WHITE,
+                    Some(lienzo_doc::Fill::Solid(color)) => *color,
+                    _ => lienzo_color::Color::WHITE,
                 };
                 let c = color.in_mode(fmt.mode);
                 let mut pixel = c.c.get(..fmt.mode.color_channels()).unwrap_or_default().to_vec();

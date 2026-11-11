@@ -1,8 +1,8 @@
 use super::*;
 use serde_json::json;
 
-fn app_with_box() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_box() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.views[0].zoom = 1.0;
@@ -55,7 +55,7 @@ fn moving_selected_pixels_snaps_their_bounds_not_the_marquee() {
     assert_eq!(gesture, Some(Gesture::Move { rect: [20.0, 20.0, 120.0, 110.0] }), "the Background");
 }
 
-fn mover_bounds(app: &PhotocraftApp) -> photocraft_geom::Rect {
+fn mover_bounds(app: &LienzoApp) -> lienzo_geom::Rect {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds()
 }
@@ -64,7 +64,7 @@ fn mover_bounds(app: &PhotocraftApp) -> photocraft_geom::Rect {
 fn drawing_a_new_crop_snaps_its_corner_not_the_default_frame() {
     // In both crop modes: the default mode draws a new box inside the untouched frame too.
     for (classic, snap, end) in [(true, false, [300.0, 220.0]), (true, true, [294.0, 217.0]), (false, false, [300.0, 220.0]), (false, true, [294.0, 217.0])] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 640, "height": 480, "background": "white"})).unwrap();
         app.run("shape.create", json!({"kind": "rect", "rect": [100, 80, 200, 140], "fill": "#d59b40"})).unwrap();
         app.sync_views();
@@ -100,7 +100,7 @@ fn drawing_a_new_crop_snaps_its_corner_not_the_default_frame() {
 fn a_straighten_line_inside_the_frame_is_not_snapped_as_a_frame_move() {
     let mac_cmd = egui::Modifiers { mac_cmd: true, command: true, ..Default::default() };
     for (classic, armed, m) in [(true, true, egui::Modifiers::NONE), (true, false, mac_cmd), (false, true, egui::Modifiers::NONE)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
@@ -140,7 +140,7 @@ fn a_windows_ctrl_straighten_line_does_not_snap_its_start_either() {
     let mac_cmd = egui::Modifiers { mac_cmd: true, command: true, ..Default::default() };
     for frame in [Some([20.0, 20.0, 120.0, 70.0]), Some([130.0, 20.0, 190.0, 70.0]), None] {
         for (m, start) in [(win_ctrl, [97.0, 30.0]), (mac_cmd, [100.0, 30.0])] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
             app.sync_views();
             app.ui.views[0].zoom = 1.0;
@@ -326,7 +326,7 @@ fn marquee_corner_snaps_to_guides_and_document_edges() {
 #[test]
 fn drawing_repositioned_with_space_snaps_its_edges() {
     for tool in [Tool::RectMarquee, Tool::EllipseMarquee, Tool::ObjectSelection, Tool::Rectangle, Tool::Line] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
@@ -357,7 +357,7 @@ fn drawing_repositioned_with_space_snaps_its_edges() {
 #[test]
 fn selection_drag_snaps_the_selection_bounds() {
     for (tool, cut) in [(Tool::RectMarquee, false), (Tool::Lasso, false), (Tool::RectMarquee, true)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
@@ -372,7 +372,7 @@ fn selection_drag_snaps_the_selection_bounds() {
         crate::canvas::tool_event(&mut app, ToolEvent::Move { x: 193.0, y: 117.0, pressure: 1.0 }, m);
         crate::canvas::tool_event(&mut app, ToolEvent::Up { x: 193.0, y: 117.0 }, m);
         let st = app.session.active().unwrap();
-        let off = photocraft_engine::float_cmds::floating(st).map_or((0, 0), |f| f.offset);
+        let off = lienzo_engine::float_cmds::floating(st).map_or((0, 0), |f| f.offset);
         let sel = st.doc.selection.as_ref().unwrap().content_bounds().translate(off.0, off.1);
         assert_eq!((sel.x0, sel.y0, sel.x1, sel.y1), (170, 100, 220, 140), "{tool:?} cut: {cut}");
     }
@@ -411,7 +411,7 @@ fn distort_corner_snaps_from_grab_offset(offset: [f64; 2]) {
     assert!(app.prefs_rt.snap.is_none() && app.prefs_rt.snap_lines.is_empty());
 }
 
-fn app_with_corner_guides(menu: &str) -> PhotocraftApp {
+fn app_with_corner_guides(menu: &str) -> LienzoApp {
     let mut app = app_with_box();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 110})).unwrap();
     app.run("view.newGuide", json!({"orientation": "horizontal", "position": 30})).unwrap();
@@ -419,7 +419,7 @@ fn app_with_corner_guides(menu: &str) -> PhotocraftApp {
     app
 }
 
-fn move_corner(app: &mut PhotocraftApp, index: usize, offset: [f64; 2], end: [f64; 2], down: egui::Modifiers, moving: egui::Modifiers) {
+fn move_corner(app: &mut LienzoApp, index: usize, offset: [f64; 2], end: [f64; 2], down: egui::Modifiers, moving: egui::Modifiers) {
     let corner = app.ui.transform.as_ref().unwrap().quad[index];
     crate::canvas::tool_event(app, ToolEvent::Down { x: corner[0] + offset[0], y: corner[1] + offset[1], pressure: 1.0 }, down);
     crate::canvas::tool_event(app, ToolEvent::Move { x: end[0] + offset[0], y: end[1] + offset[1], pressure: 1.0 }, moving);
@@ -717,7 +717,7 @@ fn free_transform_drags_and_handles_snap() {
 #[test]
 fn free_transform_of_a_shape_keeps_whole_pixels() {
     for grid in [true, false] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 1080, "height": 1080, "resolution": 72})).unwrap();
         app.run("prefs.set", json!({"path": "tools.snapVectorToolsAndTransformsToPixelGrid", "value": grid})).unwrap();
         app.sync_views();
@@ -746,7 +746,7 @@ fn free_transform_of_a_shape_keeps_whole_pixels() {
         assert_eq!(whole(q), grid, "grid {grid}: corner {q:?}");
         crate::transform_tool::commit(&mut app);
         let st = app.session.active().unwrap();
-        let photocraft_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("a shape layer") };
+        let lienzo_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("a shape layer") };
         let (x0, y0, x1, y1) = sh.path.control_bounds().unwrap();
         if grid {
             for v in [x0, y0, x1, y1] {
@@ -793,7 +793,7 @@ fn guide_targets_follow_snap_to_options() {
 
 #[test]
 fn percentage_grid_snaps_at_separate_axis_intervals() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 1280, "height": 720})).unwrap();
     app.ui.extras.grid = true;
     app.ui.view.snap_to.grid = true;
@@ -826,12 +826,12 @@ fn grid_snapping_uses_preferences() {
     assert_eq!((sel.x0, sel.y0, sel.x1, sel.y1), (150, 125, 200, 175));
 }
 
-fn free_transform(app: &mut PhotocraftApp, reference_point: bool) {
+fn free_transform(app: &mut LienzoApp, reference_point: bool) {
     app.ui.tool_options.transform_reference_point = reference_point;
     crate::menus::invoke(app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
     crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     crate::canvas::tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, mods);
     crate::canvas::tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, mods);

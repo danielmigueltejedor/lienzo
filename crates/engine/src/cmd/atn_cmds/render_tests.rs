@@ -65,12 +65,12 @@ fn code_spellings_in_text_steps_keep_their_bytes_and_flags() {
         original.actions[0].items[0].dialog_options = 2;
         let bytes = atn::write(&original).unwrap();
         let mut s = Session::new();
-        let loaded = s.execute("actions.load", json!({"data": photocraft_paint::tile::b64_encode(&bytes)})).unwrap();
+        let loaded = s.execute("actions.load", json!({"data": lienzo_paint::tile::b64_encode(&bytes)})).unwrap();
         assert_eq!(loaded["unsupported"].as_array().unwrap().len(), 1, "{:?}", original.actions[0].items[0].event);
         assert_eq!(s.actions.list[0].steps[0].0, PHOTOSHOP_STEP);
         let saved = s.execute("actions.save", json!({"action": "Render"})).unwrap();
         assert_eq!(saved["skipped"], json!([]));
-        let back = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+        let back = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
         assert_eq!(back.actions[0].items, original.actions[0].items);
         let mut compared = original;
         compared.actions[0].items = back.actions[0].items.clone();
@@ -117,7 +117,7 @@ fn clouds_recorded_through_the_dialog_save() {
         s.actions.list.push(Action::new("Render", vec![(id.into(), json!({"seed": 0}))]));
         let saved = s.execute("actions.save", json!({"action": "Render"})).unwrap();
         assert_eq!(saved["skipped"], json!([]), "{id}");
-        let back = import(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+        let back = import(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
         assert_eq!(back.actions[0].steps, vec![(id.into(), json!({}))], "{id}");
     }
 }
@@ -140,10 +140,10 @@ fn render_descriptors_load_and_save_without_losing_values() {
         }
         for event in events {
             let mut s = Session::new();
-            let loaded = s.execute("actions.load", json!({"data": photocraft_paint::tile::b64_encode(&file(event, descriptor.clone()))})).unwrap();
+            let loaded = s.execute("actions.load", json!({"data": lienzo_paint::tile::b64_encode(&file(event, descriptor.clone()))})).unwrap();
             assert_eq!(loaded["unsupported"], json!([]));
             let saved = s.execute("actions.save", json!({"action": "Render"})).unwrap();
-            let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+            let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
             let back = atn::parse(&bytes).unwrap();
             assert_eq!(back.actions[0].items[0].event.id(), code_id);
             assert_eq!(back.actions[0].items[0].descriptor, Some(descriptor.clone()));
@@ -240,12 +240,12 @@ fn duplicate_render_keys_keep_their_bytes_and_flags() {
         original.actions[0].items[0].dialog_options = 2;
         let bytes = atn::write(&original).unwrap();
         let mut s = Session::new();
-        let loaded = s.execute("actions.load", json!({"data": photocraft_paint::tile::b64_encode(&bytes)})).unwrap();
+        let loaded = s.execute("actions.load", json!({"data": lienzo_paint::tile::b64_encode(&bytes)})).unwrap();
         assert_eq!(loaded["unsupported"].as_array().unwrap().len(), 1, "{event}/{key}");
         assert_eq!(s.actions.list[0].steps[0].0, PHOTOSHOP_STEP);
         let saved = s.execute("actions.save", json!({"action": "Render"})).unwrap();
         assert_eq!(saved["skipped"], json!([]));
-        let back = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+        let back = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
         assert_eq!(back.actions[0].items, original.actions[0].items, "{event}/{key}");
         // Keep the original set/action metadata to compare the encoded step bytes.
         let mut compared = original.clone();
@@ -282,9 +282,7 @@ fn render_actions_match_direct_filters_and_undo() {
                     let before_doc = action.active().unwrap().doc.clone();
                     let history = action.active().unwrap().history.past_len();
                     let before = action.execute("document.pixel", json!({"x": 3, "y": 2})).unwrap();
-                    action
-                        .execute("actions.load", json!({"data": photocraft_paint::tile::b64_encode(&file(AtnEvent::Code(*event), descriptor.clone()))}))
-                        .unwrap();
+                    action.execute("actions.load", json!({"data": lienzo_paint::tile::b64_encode(&file(AtnEvent::Code(*event), descriptor.clone()))})).unwrap();
                     let played = action.execute("actions.play", json!({"action": "Render"})).unwrap();
                     assert!(played.get("failed").is_none(), "{played}");
                     direct.execute(id, params.clone()).unwrap();

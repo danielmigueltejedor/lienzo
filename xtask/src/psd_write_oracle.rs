@@ -344,7 +344,7 @@ fn git(root: &Path, args: &[&str]) -> Option<String> {
 /// Execute a batch of recipes against an oracle corpus and write a verification report.
 pub fn run(root: &Path, args: &[&str]) -> Result<(), String> {
     let [recipe_path, corpus, cli, output] = args else {
-        return Err("usage: cargo xtask psd-write-oracle <recipes.json> <corpus-dir> <photocraft-cli> <new-output-dir>".into());
+        return Err("usage: cargo xtask psd-write-oracle <recipes.json> <corpus-dir> <lienzo-cli> <new-output-dir>".into());
     };
     let recipe_bytes = read_limited(Path::new(recipe_path))?;
     let recipes: Recipes = serde_json::from_slice(&recipe_bytes).map_err(|e| format!("invalid recipes: {e}"))?;

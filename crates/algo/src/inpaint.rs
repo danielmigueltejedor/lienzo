@@ -101,7 +101,7 @@ impl Default for CompleteParams {
 /// [`membrane_fill`]).
 pub fn complete(w: usize, h: usize, ch: usize, img: &[f32], hole: &[bool], p: &CompleteParams) -> Option<Vec<f32>> {
     // Never cancelled, so never `Err`.
-    complete_with(w, h, ch, img, hole, p, &photocraft_raster::Interrupt::NONE).unwrap_or(None)
+    complete_with(w, h, ch, img, hole, p, &lienzo_raster::Interrupt::NONE).unwrap_or(None)
 }
 
 /// [`complete`] that can be cancelled (checked per EM iteration, PatchMatch pass and row band)
@@ -113,8 +113,8 @@ pub fn complete_with(
     img: &[f32],
     hole: &[bool],
     p: &CompleteParams,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Option<Vec<f32>>, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Option<Vec<f32>>, lienzo_raster::Cancelled> {
     assert_eq!(hole.len(), w * h);
     let px: Vec<Px> = hole.iter().map(|h| if *h { Px::Hole } else { Px::Source }).collect();
     complete_masked(w, h, ch, img, &px, p, ctl)
@@ -129,8 +129,8 @@ pub fn complete_masked(
     img: &[f32],
     px: &[Px],
     p: &CompleteParams,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Option<Vec<f32>>, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Option<Vec<f32>>, lienzo_raster::Cancelled> {
     Ok(complete_cow(w, h, ch, Cow::Borrowed(img), px, p, ctl)?.ok())
 }
 
@@ -143,8 +143,8 @@ pub fn complete_masked_owned(
     img: Vec<f32>,
     px: &[Px],
     p: &CompleteParams,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Result<Vec<f32>, Vec<f32>>, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Result<Vec<f32>, Vec<f32>>, lienzo_raster::Cancelled> {
     Ok(complete_cow(w, h, ch, Cow::Owned(img), px, p, ctl)?.map_err(Cow::into_owned))
 }
 
@@ -157,8 +157,8 @@ fn complete_cow<'a>(
     img: Cow<'a, [f32]>,
     px: &'a [Px],
     p: &CompleteParams,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Result<Vec<f32>, Cow<'a, [f32]>>, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Result<Vec<f32>, Cow<'a, [f32]>>, lienzo_raster::Cancelled> {
     assert_eq!(img.len(), w * h * ch);
     assert_eq!(px.len(), w * h);
     let Some(hb0) = hole_bounds(w, h, px) else { return Ok(Ok(img.into_owned())) };
@@ -179,7 +179,7 @@ fn complete_cow<'a>(
         let Level { w: lw, h: lh, img: limg, px: lpx } = std::mem::replace(&mut levels[li], Level::EMPTY);
         let hb = boxes[li];
         let tb = hb.grow(r, lw, lh);
-        let valid = valid_sources(lw, lh, r, &lpx, ctl).ok_or(photocraft_raster::Cancelled)?;
+        let valid = valid_sources(lw, lh, r, &lpx, ctl).ok_or(lienzo_raster::Cancelled)?;
         let sources = Sources::new(&valid, lw);
         // Nothing to copy from at the finest level: the caller falls back (and gets its pixels
         // back as they were).
@@ -301,8 +301,8 @@ fn build_pyramid<'a>(
     ch: usize,
     hb0: common::Bounds,
     psz: usize,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Pyramid<'a>, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Pyramid<'a>, lienzo_raster::Cancelled> {
     let thickness = hole_thickness(first.w, hb0, &first.px);
     let mut levels = vec![first];
     let mut boxes = vec![hb0];
@@ -395,8 +395,8 @@ fn seed_matches(
     rng: &mut Rng,
     lw: usize,
     tb: common::Bounds,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<(Vec<(i32, i32)>, bool), photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<(Vec<(i32, i32)>, bool), lienzo_raster::Cancelled> {
     let tw = tb.width();
     let mut nnf = vec![(0i32, 0i32); tb.area()];
     let mut upsampled = false;

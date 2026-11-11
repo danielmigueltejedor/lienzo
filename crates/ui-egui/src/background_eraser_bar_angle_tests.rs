@@ -8,40 +8,40 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DialogKind, Tool};
 use crate::theme::ThemeKind;
 
 const PRESSURE: &str = "Always use pressure for size";
 
-fn bar(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar(tool: Tool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::ProMedium);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::ProMedium);
     h.run_steps(4);
     h
 }
 
-fn angle_field<'a>(h: &'a Harness<'static, PhotocraftApp>) -> Option<egui_kittest::Node<'a>> {
+fn angle_field<'a>(h: &'a Harness<'static, LienzoApp>) -> Option<egui_kittest::Node<'a>> {
     h.query_all_by_role(egui::accesskit::Role::SpinButton).find(|n| n.accesskit_node().description().as_deref() == Some("Set the brush angle"))
 }
 
-fn shown(h: &Harness<'static, PhotocraftApp>) -> String {
+fn shown(h: &Harness<'static, LienzoApp>) -> String {
     angle_field(h).expect("the Angle field").accesskit_node().value().map(|v| v.to_string()).unwrap_or_default()
 }
 
-fn left(h: &Harness<'static, PhotocraftApp>, label: &str) -> f64 {
+fn left(h: &Harness<'static, LienzoApp>, label: &str) -> f64 {
     h.get_by_label(label).accesskit_node().bounding_box().expect(label).x0
 }
 
-fn alerts(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn alerts(h: &Harness<'static, LienzoApp>) -> Vec<String> {
     let dialogs = &h.state().ui.dialogs;
     dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(str::to_owned)).collect()
 }
 
-fn type_angle(h: &mut Harness<'static, PhotocraftApp>, text: &str) -> f32 {
+fn type_angle(h: &mut Harness<'static, LienzoApp>, text: &str) -> f32 {
     angle_field(h).expect("the Angle field").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -173,7 +173,7 @@ fn the_magic_eraser_has_neither() {
 }
 
 /// Focus the field and press `key` `n` times, then Enter.
-fn step_angle(h: &mut Harness<'static, PhotocraftApp>, key: egui::Key, n: usize) -> f32 {
+fn step_angle(h: &mut Harness<'static, LienzoApp>, key: egui::Key, n: usize) -> f32 {
     angle_field(h).expect("the Angle field").click();
     h.run_steps(1);
     for _ in 0..n {
@@ -232,7 +232,7 @@ fn wheel_event(lines: f32) -> egui::Event {
 #[test]
 fn wheel_steps_with_the_focus_stop_at_the_ends_without_the_alert() {
     // As in the app: the focused field takes the wheel before the bar is laid out.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = Tool::BackgroundEraser;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(
@@ -242,7 +242,7 @@ fn wheel_steps_with_the_focus_stop_at_the_ends_without_the_alert() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::ProMedium);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::ProMedium);
     h.run_steps(4);
     type_angle(&mut h, "178");
     angle_field(&h).expect("the Angle field").click();

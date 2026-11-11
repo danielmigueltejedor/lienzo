@@ -1,7 +1,7 @@
-use photocraft_color::{Color, PixelFormat, SampleType};
-use photocraft_doc::TextLayer;
-use photocraft_doc::text::{AntiAlias, Caps, CharStyle, FontFeature, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
-use photocraft_geom::Affine;
+use lienzo_color::{Color, PixelFormat, SampleType};
+use lienzo_doc::TextLayer;
+use lienzo_doc::text::{AntiAlias, Caps, CharStyle, FontFeature, Orientation, ParagraphRun, ParagraphStyle, TextAlign, TextDirection, TextRun, TextShape};
+use lienzo_geom::Affine;
 
 use crate::{TextEngine, fonts};
 
@@ -108,7 +108,7 @@ fn width(l: &crate::TextLayout) -> f32 {
     l.lines.iter().map(|l| l.x1 - l.x0).fold(0.0, f32::max)
 }
 
-fn alpha_sum(s: &photocraft_raster::Surface, r: photocraft_geom::Rect) -> f64 {
+fn alpha_sum(s: &lienzo_raster::Surface, r: lienzo_geom::Rect) -> f64 {
     let n = s.channels();
     s.read_region(r).chunks_exact(n).map(|p| f64::from(p[n - 1])).sum()
 }
@@ -524,7 +524,7 @@ fn styles_change_pixels() {
 /// 33.3% of it, as Photoshop draws them; they used to be drawn as plain text.
 #[test]
 fn superscript_and_subscript_shrink_and_shift_the_run() {
-    use photocraft_doc::text::FontBaseline;
+    use lienzo_doc::text::FontBaseline;
     let mut e = TextEngine::new();
     let base = CharStyle { size_pt: 60.0, ..Default::default() };
     let rect = |e: &mut TextEngine, baseline: FontBaseline| {
@@ -561,7 +561,7 @@ fn faux_bold_keeps_antialiased_edges_at_small_sizes() {
             for x in 0..w {
                 let a = alpha_sum(
                     &r.surface,
-                    photocraft_geom::Rect::new(r.rect.x0 + x as i32, r.rect.y0 + y as i32, r.rect.x0 + x as i32 + 1, r.rect.y0 + y as i32 + 1),
+                    lienzo_geom::Rect::new(r.rect.x0 + x as i32, r.rect.y0 + y as i32, r.rect.x0 + x as i32 + 1, r.rect.y0 + y as i32 + 1),
                 );
                 if a > 0.05 && a < 0.95 {
                     partial += 1;
@@ -786,11 +786,11 @@ fn forced_line_break_starts_a_line_in_the_same_paragraph() {
         let (l, r) = e.render(&TextLayer { transform: Affine::translate(0.0, 40.0), ..point(text, 20.0) }, 72.0, fmt);
         let row = |i: usize| {
             let ln = &l.lines[i];
-            photocraft_geom::Rect::new(-2, (ln.baseline - ln.ascent + 40.0) as i32, 200, (ln.baseline + 40.0) as i32)
+            lienzo_geom::Rect::new(-2, (ln.baseline - ln.ascent + 40.0) as i32, 200, (ln.baseline + 40.0) as i32)
         };
         assert!(alpha_sum(&r.surface, row(0)) > 1.0 && alpha_sum(&r.surface, row(1)) > 1.0, "{fmt:?}");
         let one_end = l.lines[0].x1.ceil() as i32 + 2;
-        assert!(alpha_sum(&r.surface, photocraft_geom::Rect::new(one_end, row(0).y0, 200, row(0).y1)) < 1e-3, "{fmt:?}: ink after the first line's text");
+        assert!(alpha_sum(&r.surface, lienzo_geom::Rect::new(one_end, row(0).y0, 200, row(0).y1)) < 1e-3, "{fmt:?}: ink after the first line's text");
     }
 }
 
@@ -841,18 +841,18 @@ fn depth_is_respected() {
     assert!(r.surface.format().alpha);
 }
 
-/// Visual check: `PHOTOCRAFT_TEXT_DUMP=/tmp/t.ppm cargo test -p photocraft-text dump -- --ignored`.
+/// Visual check: `LIENZO_TEXT_DUMP=/tmp/t.ppm cargo test -p lienzo-text dump -- --ignored`.
 #[test]
 #[ignore]
 fn dump_sample() {
-    use photocraft_doc::text::{Caps, TextAlign};
-    let Some(path) = std::env::var_os("PHOTOCRAFT_TEXT_DUMP") else {
+    use lienzo_doc::text::{Caps, TextAlign};
+    let Some(path) = std::env::var_os("LIENZO_TEXT_DUMP") else {
         return;
     };
-    let mut e = if std::env::var_os("PHOTOCRAFT_TEXT_SYSTEM").is_some() { TextEngine::with_system_fonts() } else { TextEngine::new() };
+    let mut e = if std::env::var_os("LIENZO_TEXT_SYSTEM").is_some() { TextEngine::with_system_fonts() } else { TextEngine::new() };
     let s = CharStyle { size_pt: 28.0, ..Default::default() };
     let text =
-        "Photocraft Type\nBold faux, italic faux, underline\nשלום عربي mixed ✓\nJustified paragraph text wraps inside the box nicely and evenly across lines.";
+        "Lienzo Type\nBold faux, italic faux, underline\nשלום عربي mixed ✓\nJustified paragraph text wraps inside the box nicely and evenly across lines.";
     let runs = vec![
         TextRun { len: 16, style: CharStyle { size_pt: 40.0, color: Color::rgb(0.1, 0.3, 0.9), caps: Caps::Normal, ..s.clone() } },
         TextRun { len: 5, style: CharStyle { faux_bold: true, ..s.clone() } },
@@ -906,7 +906,7 @@ fn variable_font_axes() {
         let s = CharStyle {
             font_family: fam.clone(),
             size_pt: 40.0,
-            variations: vec![photocraft_doc::text::FontVariation { axis: "wght".into(), value: w }],
+            variations: vec![lienzo_doc::text::FontVariation { axis: "wght".into(), value: w }],
             ..Default::default()
         };
         let (_, r) = e.render(&TextLayer { transform: Affine::translate(0.0, 50.0), ..styled("Weight", s) }, 72.0, PixelFormat::RGBA8);
@@ -924,7 +924,7 @@ fn variable_font_axes() {
 /// everywhere.
 #[test]
 fn postscript_name_of_a_variable_instance_lays_out_at_that_instance() {
-    use photocraft_doc::text::FontVariation;
+    use lienzo_doc::text::FontVariation;
     let candidates = [
         ("C:\\Windows\\Fonts\\bahnschrift.ttf", "Bahnschrift-LightCondensed"),
         ("/usr/share/fonts/truetype/ubuntu/UbuntuSans[wdth,wght].ttf", "UbuntuSans-CondensedLight"),
@@ -951,7 +951,7 @@ fn postscript_name_of_a_variable_instance_lays_out_at_that_instance() {
 
 #[test]
 fn warp_bends_rendered_text_and_outlines() {
-    use photocraft_doc::text::TextWarp;
+    use lienzo_doc::text::TextWarp;
     let mut e = TextEngine::new();
     let mut t = point("WARPED TEXT", 24.0);
     t.transform = Affine::translate(20.0, 60.0);
@@ -1016,7 +1016,7 @@ fn txt2_with_styles(text: &str, styles: &[(usize, String)]) -> Vec<u8> {
 fn with_text_index(tysh: &[u8], index: i32) -> Vec<u8> {
     let mut t = crate::psd::parse_tysh(tysh).unwrap();
     t.text.items.retain(|(k, _)| !k.is("TextIndex"));
-    t.text.items.push((photocraft_psd::descriptor::Id::new("TextIndex"), photocraft_psd::descriptor::Value::Integer(index)));
+    t.text.items.push((lienzo_psd::descriptor::Id::new("TextIndex"), lienzo_psd::descriptor::Value::Integer(index)));
     crate::psd::write_tysh(&t)
 }
 
@@ -1024,7 +1024,7 @@ fn with_text_index(tysh: &[u8], index: i32) -> Vec<u8> {
 /// `TextIndex` object still holds the same text.
 #[test]
 fn txt2_carries_optical_kerning() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let t = styled("AVA", CharStyle::default());
     let tysh = with_text_index(&crate::psd::build_tysh(&t, 72.0, None), 0);
     let mut back = crate::psd::text_layer_from_tysh(&tysh, 72.0).unwrap();
@@ -1108,7 +1108,7 @@ fn txt2_carries_opentype_features() {
 /// Metrics, because EngineData's `AutoKerning true` covers both).
 #[test]
 fn build_txt2_round_trips_kerning_modes() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let style = |kerning: Kerning, kern: f32| CharStyle { kerning, kern, ..Default::default() };
     let t = runs_of("AVAT", &[(2, style(Kerning::Optical, 0.0)), (1, style(Kerning::Metrics, 0.0)), (1, style(Kerning::Off, 0.0))]);
     let tysh = with_text_index(&crate::psd::build_tysh(&t, 72.0, None), 0);
@@ -1137,7 +1137,7 @@ fn build_txt2_round_trips_kerning_modes() {
 /// must not write Photoshop's empty stub, which some readers (Photopea) reject.
 #[test]
 fn needs_txt2_for_optical_and_txt2_only_opentype() {
-    use photocraft_doc::text::{FontFeature, Kerning};
+    use lienzo_doc::text::{FontFeature, Kerning};
     let style = |kerning: Kerning| CharStyle { kerning, ..Default::default() };
     let metrics = runs_of("AV", &[(2, style(Kerning::Metrics))]);
     assert!(!crate::psd::needs_txt2(&[(0, &metrics)]));
@@ -1160,13 +1160,13 @@ fn needs_txt2_for_optical_and_txt2_only_opentype() {
 }
 
 /// #10308: the fresh objects, minimal style runs, seeded font list and frame list are only for a
-/// PhotoCraft-native block. A file's own block — here the older Photoshop's, with an empty
+/// Lienzo-native block. A file's own block — here the older Photoshop's, with an empty
 /// numbered `/0` or none at all — gets no `/0` key, frame list or font list it didn't have, and
 /// a layer without a template object gets the stub it always got.
 #[test]
 fn photoshop_blocks_get_no_native_txt2_scaffolding() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::FontFeature;
+    use lienzo_doc::text::FontFeature;
     let style = CharStyle { font_family: "Inter".into(), features: vec![FontFeature { tag: "ss01".into(), value: 1 }], ..Default::default() };
     let t = styled("Hi", style);
     let with_doc = photoshop_era_txt2(&["Line 1"]);
@@ -1187,7 +1187,7 @@ fn photoshop_blocks_get_no_native_txt2_scaffolding() {
 #[test]
 fn fresh_native_txt2_object_has_a_paragraph_run_per_paragraph() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::FontFeature;
+    use lienzo_doc::text::FontFeature;
     let style = CharStyle { features: vec![FontFeature { tag: "ss02".into(), value: 1 }], ..Default::default() };
     let t = styled("Hi\nBy\u{e9}e", style);
     let out = crate::psd::parse_txt2(&crate::psd::build_txt2(&[(0, &t)], None)).unwrap();
@@ -1205,7 +1205,7 @@ fn fresh_native_txt2_object_has_a_paragraph_run_per_paragraph() {
 #[test]
 fn txt2_keeps_a_kept_objects_extras_and_drops_them_with_its_text() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let style = |kerning: Kerning, kern: f32| CharStyle { kerning, kern, ..Default::default() };
     // The file's block: object 0 with `/21 /1` pen positions, a model extra, and a block extra.
     let obj = E::Dict(vec![
@@ -1287,7 +1287,7 @@ fn photoshop_era_txt2(texts: &[&str]) -> Vec<u8> {
 #[test]
 fn edited_text_updates_the_photoshop_era_objects() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let prev = photoshop_era_txt2(&["Line 1\rLine 2"]);
     let before = crate::psd::parse_txt2(&prev).unwrap();
     let t = styled("Hi\nBye", CharStyle { kerning: Kerning::Optical, ..Default::default() });
@@ -1323,7 +1323,7 @@ fn edited_text_updates_the_photoshop_era_objects() {
 #[test]
 fn only_the_edited_photoshop_era_object_changes() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let prev = photoshop_era_txt2(&["One", "Two"]);
     let before = crate::psd::parse_txt2(&prev).unwrap();
     let style = |kerning: Kerning| CharStyle { kerning, ..Default::default() };
@@ -1343,7 +1343,7 @@ fn only_the_edited_photoshop_era_object_changes() {
 #[test]
 fn legacy_file_with_both_object_lists_repairs_the_stale_one() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let mut prev = photoshop_txt2(&[(4, 1)]);
     prev.extend_from_slice(&crate::engine_data::write_bare(&[("DocumentObjects".into(), photoshop_era_objects(&["Old stuff"]))]));
     let before = crate::psd::parse_txt2(&prev).unwrap();
@@ -1367,7 +1367,7 @@ fn legacy_file_with_both_object_lists_repairs_the_stale_one() {
 /// for the older objects too: re-encoding them would only risk Photoshop refusing the file.
 #[test]
 fn unchanged_block_with_both_object_lists_is_byte_identical() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let mut prev = photoshop_txt2(&[(4, 1)]);
     prev.extend_from_slice(&crate::engine_data::write_bare(&[("DocumentObjects".into(), photoshop_era_objects(&["AVA"]))]));
     let t = styled("AVA", CharStyle { kerning: Kerning::Metrics, ..Default::default() });
@@ -1381,7 +1381,7 @@ fn unchanged_block_with_both_object_lists_is_byte_identical() {
 #[test]
 fn odd_photoshop_era_entries_are_left_as_the_file_has_them() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let run = |len: i64| E::Dict(vec![("RunData".into(), E::dict()), ("Length".into(), E::Int(len))]);
     let entry = |model: Vec<(&str, E)>| {
         E::Dict(vec![("Model".into(), E::Dict(model.into_iter().map(|(k, v)| (k.to_string(), v)).collect())), ("View".into(), E::dict())])
@@ -1424,7 +1424,7 @@ fn odd_photoshop_era_entries_are_left_as_the_file_has_them() {
 #[test]
 fn a_text_index_beyond_the_photoshop_era_entries_grows_nothing() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let prev = photoshop_era_txt2(&["Only one"]);
     let was = crate::psd::parse_txt2(&prev).unwrap();
     let t = styled("Whatever", CharStyle { kerning: Kerning::Optical, ..Default::default() });
@@ -1454,7 +1454,7 @@ fn photoshop_txt2(modes: &[(usize, i64)]) -> Vec<u8> {
 /// auto-kern mode, and Photoshop refused to open the file.
 #[test]
 fn unchanged_txt2_is_written_back_byte_for_byte() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let prev = photoshop_txt2(&[(2, 1), (2, 1)]);
     let tysh = with_text_index(&crate::psd::build_tysh(&styled("AVA", CharStyle::default()), 72.0, None), 0);
     let mut t = crate::psd::text_layer_from_tysh(&tysh, 72.0).unwrap();
@@ -1473,7 +1473,7 @@ fn unchanged_txt2_is_written_back_byte_for_byte() {
 #[test]
 fn edited_txt2_keeps_the_files_styles_and_objects() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let prev = photoshop_txt2(&[(4, 1)]);
     let style = |kerning: Kerning| CharStyle { kerning, ..Default::default() };
     let t = runs_of("AVA", &[(1, style(Kerning::Optical)), (2, style(Kerning::Metrics))]);
@@ -1765,7 +1765,7 @@ fn psd_text_fill_is_enabled_in_runs_and_new_default_styles() {
 #[test]
 fn psd_text_fill_is_enabled_after_editing_a_legacy_export() {
     use crate::engine_data::Value as E;
-    // A legacy PhotoCraft export has a normal style and character runs without FillFlag.
+    // A legacy Lienzo export has a normal style and character runs without FillFlag.
     let mut t = point("Before", 40.0);
     let mut legacy = crate::psd::parse_tysh(&crate::psd::build_tysh(&t, 72.0, None)).unwrap();
     fn remove_fill_flags(value: &mut E) {
@@ -1784,7 +1784,7 @@ fn psd_text_fill_is_enabled_after_editing_a_legacy_export() {
     remove_fill_flags(&mut data);
     for (key, value) in &mut legacy.text.items {
         if key.as_bytes() == b"EngineData" {
-            *value = photocraft_psd::descriptor::Value::RawData(crate::engine_data::write(&data));
+            *value = lienzo_psd::descriptor::Value::RawData(crate::engine_data::write(&data));
         }
     }
     t.psd_raw = Some(crate::psd::write_tysh(&legacy).into());
@@ -1802,9 +1802,9 @@ fn psd_text_fill_is_enabled_after_editing_a_legacy_export() {
 /// Photoshop's form (see `psd::pair_runs`).
 #[test]
 fn psd_round_trips_manual_kerning() {
-    use photocraft_doc::text::Kerning::{Metrics as M, Off as O};
+    use lienzo_doc::text::Kerning::{Metrics as M, Off as O};
     let s = CharStyle::default();
-    let cases: Vec<Vec<(usize, photocraft_doc::text::Kerning, f32)>> = vec![
+    let cases: Vec<Vec<(usize, lienzo_doc::text::Kerning, f32)>> = vec![
         vec![(1, O, 100.0), (1, O, -50.0), (2, M, 0.0)],
         vec![(1, M, 0.0), (1, O, 0.0), (2, M, 0.0)],
         vec![(4, O, 0.0)],
@@ -1829,7 +1829,7 @@ fn psd_round_trips_manual_kerning() {
 
 #[test]
 fn psd_round_trips_antialias_opentype_and_warp() {
-    use photocraft_doc::text::{AntiAlias, TextWarp};
+    use lienzo_doc::text::{AntiAlias, TextWarp};
     let style = CharStyle {
         font_family: "Inter".into(),
         size_pt: 20.0,
@@ -1877,7 +1877,7 @@ fn psd_engine_data_keeps_only_oldstyle_among_numeral_tags() {
 /// (the ink box, as Photoshop writes it) both around `anchor` in a remote local space, and a
 /// `transform` that cancels the remote origin.
 fn legacy_tysh(source: &TextLayer, transform: Affine, anchor: [f64; 2], engine: &mut TextEngine) -> Vec<u8> {
-    use photocraft_psd::descriptor::{Descriptor, Id, Value as D};
+    use lienzo_psd::descriptor::{Descriptor, Id, Value as D};
     let layout = engine.layout(source, 72.0);
     let logical = layout.bounds().unwrap().map(f64::from);
     let ink = crate::render::ink_bounds(&layout).unwrap();
@@ -1907,7 +1907,7 @@ fn assert_transform_near(got: Affine, want: Affine, tolerance: f64, what: &str) 
 /// fixed for left, centered and right text through import and a TySh round trip.
 #[test]
 fn legacy_tysh_point_origin_imports_and_round_trips_on_canvas() {
-    use photocraft_psd::descriptor::Value as D;
+    use lienzo_psd::descriptor::Value as D;
 
     let original = Affine { m: [4.1667, 0.0, 0.0, 4.1667, -32375.0, -32887.5] };
     // The file's layout origin (the anchor on the first baseline) in its local space.
@@ -1969,7 +1969,7 @@ fn legacy_origin_lines_up_ink_with_the_ink_bounding_box() {
         let mut imported = crate::psd::text_layer_from_tysh(&data, 72.0).unwrap();
         imported.psd_raw = Some(std::sync::Arc::new(data));
         crate::psd::refine_legacy_point_origin(&mut imported, 72.0, &mut engine, None);
-        let baseline = imported.transform.apply(photocraft_geom::Point::new(0.0, 0.0));
+        let baseline = imported.transform.apply(lienzo_geom::Point::new(0.0, 0.0));
         assert!((baseline.x - 100.0).abs() < 1e-6 && (baseline.y - 450.0).abs() < 1e-6, "{text:?}: {baseline:?}");
     }
 }
@@ -1980,7 +1980,7 @@ fn legacy_origin_uses_the_rendering_engines_registered_face() {
     let mut style = CharStyle { font_family: "JetBrains Mono".into(), font_style: "Regular".into(), size_pt: 100.0, ..Default::default() };
     // This exact-face alias exists only in this engine, like a user-registered font.
     engine.fonts.select_named_face(&mut style);
-    assert!(style.font_family.starts_with(".PhotoCraft-face-"));
+    assert!(style.font_family.starts_with(".Lienzo-face-"));
     let source = with_para(styled("Name", style), ParagraphStyle { align: TextAlign::Right, ..Default::default() });
     let raw = legacy_tysh(&source, Affine::translate(-8000.0, -8000.0), [8100.0, 8200.0], &mut engine);
     let mut imported = crate::psd::text_layer_from_tysh(&raw, 72.0).unwrap();
@@ -1989,7 +1989,7 @@ fn legacy_origin_uses_the_rendering_engines_registered_face() {
     imported.sync_summary();
     imported.psd_raw = Some(std::sync::Arc::new(raw));
     crate::psd::refine_legacy_point_origin(&mut imported, 72.0, &mut engine, None);
-    let placed = imported.transform.apply(photocraft_geom::Point::new(0.0, 0.0));
+    let placed = imported.transform.apply(lienzo_geom::Point::new(0.0, 0.0));
     assert!((placed.x - 100.0).abs() < 1e-6 && (placed.y - 200.0).abs() < 1e-6, "{placed:?}");
 }
 
@@ -2025,7 +2025,7 @@ fn clusters_sit_on_rendered_glyphs() {
         ("plain", styled("HOHOH", big.clone())),
         ("tracking", styled("HOHOH", CharStyle { tracking: 300.0, ..big.clone() })),
         ("hscale", styled("HOHOH", CharStyle { horizontal_scale: 1.6, ..big.clone() })),
-        ("kerned", styled("HOHOH", CharStyle { kern: 250.0, kerning: photocraft_doc::text::Kerning::Optical, ..big.clone() })),
+        ("kerned", styled("HOHOH", CharStyle { kern: 250.0, kerning: lienzo_doc::text::Kerning::Optical, ..big.clone() })),
         ("mixed", mixed),
         ("box", boxed),
     ];
@@ -2036,7 +2036,7 @@ fn clusters_sit_on_rendered_glyphs() {
         for c in l.clusters.iter().filter(|c| !t.text[c.range.clone()].trim().is_empty()) {
             let ln = &l.lines[c.line];
             // Ink under the cluster's middle, between the line's ascent and descent.
-            let col = photocraft_geom::Rect::new(
+            let col = lienzo_geom::Rect::new(
                 (c.x + c.advance * 0.3 + 7.0).floor() as i32,
                 (ln.baseline - ln.ascent + 60.0).floor() as i32,
                 (c.x + c.advance * 0.55 + 7.0).ceil() as i32,
@@ -2059,7 +2059,7 @@ fn runs_of(text: &str, styles: &[(usize, CharStyle)]) -> TextLayer {
 /// Manual kerning (1/1000 em) after a character moves everything after it by kern × size.
 #[test]
 fn manual_kerning_moves_the_next_glyph() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let mut e = TextEngine::new();
     let s = CharStyle { size_pt: 100.0, ..Default::default() };
     let plain = e.layout(&styled("HOH", s.clone()), 72.0);
@@ -2095,7 +2095,7 @@ fn manual_kerning_moves_the_next_glyph() {
 /// than the unkerned advance, about neutral for straight stems, and never absurd.
 #[test]
 fn optical_kerning_tightens_open_pairs() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let mut e = TextEngine::new();
     let s = CharStyle { size_pt: 100.0, ..Default::default() };
     let gap = |e: &mut TextEngine, text: &str, k: Kerning| {
@@ -2125,7 +2125,7 @@ fn optical_kerning_tightens_open_pairs() {
 /// lose their automatic kerning (Photoshop renders it the same way).
 #[test]
 fn kerning_modes_split_pairs() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let mut e = TextEngine::new();
     let s = CharStyle { size_pt: 100.0, ..Default::default() };
     let off = CharStyle { kerning: Kerning::Off, ..s.clone() };
@@ -2559,7 +2559,7 @@ fn txt2_frame_places_point_text_at_its_anchor() {
     let txt2 = crate::psd::parse_txt2(&txt2_with_frame("2", Some([1000.0, 2100.0]), [1.0, 0.0, 0.0, 1.0, 100.0, -50.0])).unwrap();
     let mut l = crate::psd::text_layer_from_tysh(&tysh, 72.0).unwrap();
     crate::psd::apply_txt2_frame(&mut l, &tysh, &txt2);
-    let o = l.transform.apply(photocraft_geom::Point::new(0.0, 0.0));
+    let o = l.transform.apply(lienzo_geom::Point::new(0.0, 0.0));
     assert!((o.x - 100.0).abs() < 1e-3 && (o.y - 50.0).abs() < 1e-3, "anchor at {o:?}");
     // Already folded in (bounds near the origin): unchanged; another text: unchanged.
     let tysh = with_text_index(&crate::psd::build_tysh(&t, 72.0, Some([0.0, -70.0, 60.0, 0.0])), 0);
@@ -2577,7 +2577,7 @@ fn txt2_frame_places_point_text_at_its_anchor() {
 
 /// `tysh` with its text-space `bounds` set to `r` (Photoshop's, where it drew the text).
 fn with_bounds(tysh: &[u8], r: [f64; 4]) -> Vec<u8> {
-    use photocraft_psd::descriptor::{Descriptor, Id, Value};
+    use lienzo_psd::descriptor::{Descriptor, Id, Value};
     let mut t = crate::psd::parse_tysh(tysh).unwrap();
     let mut d = Descriptor::default();
     for (k, v) in ["Left", "Top ", "Rght", "Btom"].iter().zip(r) {
@@ -2603,9 +2603,9 @@ fn txt2_frame_moves_box_text_onto_its_bounds() {
     assert!(matches!(l.shape, TextShape::Box { .. }));
     crate::psd::apply_txt2_frame(&mut l, &tysh, &txt2);
     let TextShape::Box { x, y, .. } = l.shape else { panic!("not a box") };
-    let o = l.transform.apply(photocraft_geom::Point::new(f64::from(x), f64::from(y)));
+    let o = l.transform.apply(lienzo_geom::Point::new(f64::from(x), f64::from(y)));
     assert!((o.x - 260.0).abs() < 1e-3 && (o.y - 0.0).abs() < 1e-3, "box top left at {o:?}");
-    // PhotoCraft's own `TySh` (bounds = the box, frame already folded in): unchanged.
+    // Lienzo's own `TySh` (bounds = the box, frame already folded in): unchanged.
     let mut l = crate::psd::text_layer_from_tysh(&built, 72.0).unwrap();
     let before = l.transform;
     crate::psd::apply_txt2_frame(&mut l, &built, &txt2);
@@ -2665,7 +2665,7 @@ fn translate_tysh_moves_only_the_translation() {
 /// zeros for unwarped type, the text-space bounds for warped type.
 #[test]
 fn tysh_trailing_bounds_are_f32() {
-    use photocraft_doc::text::TextWarp;
+    use lienzo_doc::text::TextWarp;
     let tail = |b: &[u8]| -> [f32; 4] {
         let t = b.get(b.len() - 16..).unwrap();
         std::array::from_fn(|i| f32::from_be_bytes(t[i * 4..i * 4 + 4].try_into().unwrap()))
@@ -2689,7 +2689,7 @@ fn tysh_trailing_bounds_are_f32() {
 /// every mode survives.
 #[test]
 fn engine_data_antialias_numbers_match_photoshop() {
-    use photocraft_doc::text::AntiAlias;
+    use lienzo_doc::text::AntiAlias;
     for (mode, n) in [(AntiAlias::None, 0), (AntiAlias::Crisp, 1), (AntiAlias::Strong, 2), (AntiAlias::Smooth, 3), (AntiAlias::Sharp, 4)] {
         let t = TextLayer { antialias: mode, ..point("Type", 20.0) };
         let mut tysh = crate::psd::parse_tysh(&crate::psd::build_tysh(&t, 72.0, None)).unwrap();
@@ -2704,7 +2704,7 @@ fn engine_data_antialias_numbers_match_photoshop() {
 /// Anti-alias modes must change edge coverage (storytold/photocraft#5902).
 #[test]
 fn antialias_modes_change_edge_fringe() {
-    use photocraft_doc::text::AntiAlias;
+    use lienzo_doc::text::AntiAlias;
 
     let fringe_mass = |mode: AntiAlias| {
         let mut e = TextEngine::new();
@@ -2729,7 +2729,7 @@ fn antialias_modes_change_edge_fringe() {
 /// turned, along a curve it follows the curve, and glyphs beyond the end are not drawn.
 #[test]
 fn type_on_a_path_follows_the_curve() {
-    use photocraft_doc::vector::{Knot, Subpath};
+    use lienzo_doc::vector::{Knot, Subpath};
     let fmt = PixelFormat::RGBA8;
     let mut eng = TextEngine::new();
     let ink = |eng: &mut TextEngine, t: &TextLayer| {
@@ -2752,21 +2752,21 @@ fn type_on_a_path_follows_the_curve() {
         closed: false,
         knots: vec![
             Knot {
-                anchor: photocraft_geom::Point::new(-60.0, 0.0),
-                in_ctrl: photocraft_geom::Point::new(-60.0, 0.0),
-                out_ctrl: photocraft_geom::Point::new(-60.0, -k),
+                anchor: lienzo_geom::Point::new(-60.0, 0.0),
+                in_ctrl: lienzo_geom::Point::new(-60.0, 0.0),
+                out_ctrl: lienzo_geom::Point::new(-60.0, -k),
                 smooth: true,
             },
             Knot {
-                anchor: photocraft_geom::Point::new(0.0, -60.0),
-                in_ctrl: photocraft_geom::Point::new(-k, -60.0),
-                out_ctrl: photocraft_geom::Point::new(k, -60.0),
+                anchor: lienzo_geom::Point::new(0.0, -60.0),
+                in_ctrl: lienzo_geom::Point::new(-k, -60.0),
+                out_ctrl: lienzo_geom::Point::new(k, -60.0),
                 smooth: true,
             },
             Knot {
-                anchor: photocraft_geom::Point::new(60.0, 0.0),
-                in_ctrl: photocraft_geom::Point::new(60.0, -k),
-                out_ctrl: photocraft_geom::Point::new(60.0, 0.0),
+                anchor: lienzo_geom::Point::new(60.0, 0.0),
+                in_ctrl: lienzo_geom::Point::new(60.0, -k),
+                out_ctrl: lienzo_geom::Point::new(60.0, 0.0),
                 smooth: true,
             },
         ],
@@ -2815,7 +2815,7 @@ fn faux_bold_curves_stay_smooth_at_large_sizes() {
     let bumpiness = |e: &mut TextEngine, bold: bool| -> f64 {
         let style = CharStyle { size_pt: 600.0, faux_bold: bold, ..Default::default() };
         let (_, r) = e.render(&TextLayer { transform: Affine::translate(60.0, 640.0), ..styled("O", style) }, 72.0, PixelFormat::RGBA8);
-        let alpha = |x: i32, y: i32| alpha_sum(&r.surface, photocraft_geom::Rect::new(x, y, x + 1, y + 1));
+        let alpha = |x: i32, y: i32| alpha_sum(&r.surface, lienzo_geom::Rect::new(x, y, x + 1, y + 1));
         let h = r.rect.height() as i32;
         let mut edges = Vec::new();
         for y in (r.rect.y0 + h * 15 / 100)..(r.rect.y0 + h * 85 / 100) {
@@ -2839,7 +2839,7 @@ fn faux_bold_keeps_square_corners_square() {
     for bold in [false, true] {
         let style = CharStyle { size_pt: 600.0, faux_bold: bold, ..Default::default() };
         let (_, r) = e.render(&TextLayer { transform: Affine::translate(60.0, 640.0), ..styled("l", style) }, 72.0, PixelFormat::RGBA8);
-        let alpha = |x: i32, y: i32| alpha_sum(&r.surface, photocraft_geom::Rect::new(x, y, x + 1, y + 1));
+        let alpha = |x: i32, y: i32| alpha_sum(&r.surface, lienzo_geom::Rect::new(x, y, x + 1, y + 1));
         // The ink's own top-left and top-right corners (the raster rect pads the ink by a pixel).
         let top = (r.rect.y0..r.rect.y1).find(|&y| (r.rect.x0..r.rect.x1).any(|x| alpha(x, y) > 0.5)).unwrap();
         let left = (r.rect.x0..r.rect.x1).find(|&x| (r.rect.y0..r.rect.y1).any(|y| alpha(x, y) > 0.5)).unwrap();
@@ -2890,7 +2890,7 @@ fn font_metadata_survives_tysh_and_named_style_rewrites() {
     }
     for (key, value) in &mut tysh.text.items {
         if key.as_bytes() == b"EngineData" {
-            *value = photocraft_psd::descriptor::Value::RawData(crate::engine_data::write(&data));
+            *value = lienzo_psd::descriptor::Value::RawData(crate::engine_data::write(&data));
         }
     }
     let raw = crate::psd::write_tysh(&tysh);
@@ -2899,7 +2899,7 @@ fn font_metadata_survives_tysh_and_named_style_rewrites() {
     imported.psd_raw = Some(raw.into());
     imported.text = "Edited".into();
     let rebuilt = crate::psd::build_tysh(&imported, 72.0, None);
-    let styled = crate::psd_styles::write_style_sheets(&rebuilt, &imported, &photocraft_doc::TextStyles::default(), 72.0).unwrap();
+    let styled = crate::psd_styles::write_style_sheets(&rebuilt, &imported, &lienzo_doc::TextStyles::default(), 72.0).unwrap();
     for bytes in [&rebuilt, &styled] {
         let parsed = crate::psd::parse_tysh(bytes).unwrap();
         let actual = crate::psd::engine_data(&parsed.text).unwrap();
@@ -3068,14 +3068,14 @@ fn overflows_says_whether_a_box_holds_its_text() {
 }
 
 /// Closed polygon in text space.
-fn area_poly(pts: &[(f64, f64)]) -> photocraft_doc::vector::Path {
-    photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polygon(pts)])
+fn area_poly(pts: &[(f64, f64)]) -> lienzo_doc::vector::Path {
+    lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polygon(pts)])
 }
 
 /// An ellipse from four kappa curves inside `[x, y, w, h]`.
-fn area_ellipse(x: f64, y: f64, w: f64, h: f64) -> photocraft_doc::vector::Path {
-    use photocraft_doc::vector::{Knot, Subpath};
-    use photocraft_geom::Point;
+fn area_ellipse(x: f64, y: f64, w: f64, h: f64) -> lienzo_doc::vector::Path {
+    use lienzo_doc::vector::{Knot, Subpath};
+    use lienzo_geom::Point;
     let (rx, ry, cx, cy) = (w / 2.0, h / 2.0, x + w / 2.0, y + h / 2.0);
     let (kx, ky) = (0.552_284_75 * rx, 0.552_284_75 * ry);
     let p = Point::new;
@@ -3085,13 +3085,13 @@ fn area_ellipse(x: f64, y: f64, w: f64, h: f64) -> photocraft_doc::vector::Path 
         Knot::smooth(p(cx, y + h), p(cx + kx, y + h), p(cx - kx, y + h)),
         Knot::smooth(p(x, cy), p(x, cy + ky), p(x, cy - ky)),
     ];
-    photocraft_doc::vector::Path::new(vec![Subpath { closed: true, knots, op: Default::default() }])
+    lienzo_doc::vector::Path::new(vec![Subpath { closed: true, knots, op: Default::default() }])
 }
 
 const BUBBLE_TEXT: &str = "Well, that went better than expected. Now where did the cat hide the keys this time?";
 
 /// Every laid-out line sits inside a span of the shape across its band.
-fn assert_lines_inside(l: &crate::TextLayout, path: &photocraft_doc::vector::Path) {
+fn assert_lines_inside(l: &crate::TextLayout, path: &lienzo_doc::vector::Path) {
     let a = crate::area::AreaShape::new(path, false).unwrap();
     for line in &l.lines {
         let spans = a.spans(line.baseline - line.ascent, line.baseline + line.descent, 0.0);
@@ -3201,10 +3201,10 @@ fn horizontally_scaled_area_text_stays_inside_its_spans() {
 
 #[test]
 fn area_rows_split_around_a_hole() {
-    use photocraft_doc::vector::{PathOp, Subpath};
+    use lienzo_doc::vector::{PathOp, Subpath};
     let mut e = TextEngine::new();
     let mut t = point(&BUBBLE_TEXT.repeat(6), 12.0);
-    let path = photocraft_doc::vector::Path::new(vec![
+    let path = lienzo_doc::vector::Path::new(vec![
         Subpath::polygon(&[(0.0, 0.0), (300.0, 0.0), (300.0, 300.0), (0.0, 300.0)]),
         Subpath::polygon(&[(120.0, 100.0), (180.0, 100.0), (180.0, 200.0), (120.0, 200.0)]).with_op(PathOp::Subtract),
     ]);
@@ -3219,7 +3219,7 @@ fn area_rows_split_around_a_hole() {
 
 #[test]
 fn vertical_area_text_stays_inside() {
-    use photocraft_doc::text::Orientation;
+    use lienzo_doc::text::Orientation;
     let mut e = TextEngine::new();
     let mut t = point(BUBBLE_TEXT, 12.0);
     t.orientation = Orientation::Vertical;
@@ -3239,19 +3239,19 @@ fn area_without_room_lays_out_nothing_and_a_bad_path_lays_out_as_point_text() {
     t.shape = TextShape::Area { path: area_poly(&[(0.0, 0.0), (300.0, 0.0), (300.0, 10.0), (0.0, 10.0)]) };
     assert!(e.layout(&t, 72.0).lines.is_empty());
     // An open path encloses nothing (only reachable from a hostile file): point text, no panic.
-    t.shape = TextShape::Area { path: photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polyline(&[(0.0, 0.0), (9.0, 9.0)])]) };
+    t.shape = TextShape::Area { path: lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polyline(&[(0.0, 0.0), (9.0, 9.0)])]) };
     let point_layout = e.layout(&point("Hello", 40.0), 72.0);
     assert_eq!(e.layout(&t, 72.0).lines.len(), point_layout.lines.len());
 }
 
 #[test]
 fn area_word_wider_than_every_span_overflows_instead_of_hiding_the_text() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut e = TextEngine::new();
     // Two 40 px columns 120 px apart: their bounding box is 200 px wide, but no span is wider
     // than 40 px, so no row can ever hold the long word.
     let mut t = point("Wonderfulness is a long word", 12.0);
-    let path = photocraft_doc::vector::Path::new(vec![
+    let path = lienzo_doc::vector::Path::new(vec![
         Subpath::polygon(&[(0.0, 0.0), (40.0, 0.0), (40.0, 200.0), (0.0, 200.0)]),
         Subpath::polygon(&[(160.0, 0.0), (200.0, 0.0), (200.0, 200.0), (160.0, 200.0)]),
     ]);
@@ -3358,7 +3358,7 @@ fn area_justify_fills_each_span_but_the_last_line() {
 /// text; RGB and CMYK), up to float rounding in the coverage sums.
 #[test]
 fn per_colour_passes_match_full_size_passes() {
-    use photocraft_doc::text::TextWarp;
+    use lienzo_doc::text::TextWarp;
     let mut e = TextEngine::new();
     let text = "Many coloured runs of text, one colour a letter, across two lines\nof a point text layer";
     let colours = [Color::rgb(0.9, 0.1, 0.1), Color::rgb(0.1, 0.7, 0.2), Color::rgb(0.1, 0.2, 0.9), Color::rgb(0.6, 0.6, 0.1)];
@@ -3582,7 +3582,7 @@ fn a_two_run_layer_gives_the_photoshop_era_copy_two_style_runs() {
 #[test]
 fn each_photoshop_era_style_run_gets_its_own_values() {
     use crate::engine_data::Value as E;
-    use photocraft_doc::text::{Caps, FontBaseline};
+    use lienzo_doc::text::{Caps, FontBaseline};
     let prev = styled_era_txt2("Hello", "ArialMT", 13.0, 1);
     let base = CharStyle { postscript_name: Some("ArialMT".into()), size_pt: 13.0, ..Default::default() };
     let decorated = CharStyle { baseline_shift_pt: 3.0, caps: Caps::SmallCaps, baseline: FontBaseline::Superscript, underline: true, ..base.clone() };
@@ -3606,7 +3606,7 @@ fn each_photoshop_era_style_run_gets_its_own_values() {
 /// a layer that agrees on all of them leaves the block's bytes alone.
 #[test]
 fn every_legacy_style_key_is_compared() {
-    use photocraft_doc::text::{Caps, FontBaseline, Kerning};
+    use lienzo_doc::text::{Caps, FontBaseline, Kerning};
     let prev = styled_era_txt2("Hello", "ArialMT", 13.0, 1);
     let base = CharStyle { postscript_name: Some("ArialMT".into()), size_pt: 13.0, ..Default::default() };
     let unedited = crate::psd::build_txt2(&[(0, &styled("Hello", base.clone()))], Some(&prev));
@@ -3634,7 +3634,7 @@ fn every_legacy_style_key_is_compared() {
 /// objects, so the layer a legacy file opens as agrees with its legacy copy.
 #[test]
 fn legacy_auto_kern_is_read_on_import() {
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::text::Kerning;
     let t = styled("AVA", CharStyle::default());
     let tysh = with_text_index(&crate::psd::build_tysh(&t, 72.0, None), 0);
     for (mode, want) in [(0, Kerning::Off), (1, Kerning::Metrics), (2, Kerning::Optical)] {
@@ -3695,8 +3695,8 @@ fn glyph_outlines_preserves_style_indices() {
         text: "AB".into(),
         transform: Affine::translate(10.0, 30.0),
         runs: vec![
-            photocraft_doc::text::TextRun { len: 1, style: CharStyle { color: Color::rgb(1.0, 0.0, 0.0), ..Default::default() } },
-            photocraft_doc::text::TextRun { len: 1, style: CharStyle { color: Color::rgb(0.0, 1.0, 0.0), ..Default::default() } },
+            lienzo_doc::text::TextRun { len: 1, style: CharStyle { color: Color::rgb(1.0, 0.0, 0.0), ..Default::default() } },
+            lienzo_doc::text::TextRun { len: 1, style: CharStyle { color: Color::rgb(0.0, 1.0, 0.0), ..Default::default() } },
         ],
         ..Default::default()
     };
@@ -3732,7 +3732,7 @@ fn colour_passes_hold_each_glyph_once() {
 /// Verifies paragraph alignment offsets text along explicit path spans according to measured line advance and alignment factor.
 #[test]
 fn path_range_alignment_uses_measured_advance() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut e = TextEngine::new();
     for closed in [false, true] {
         for flip in [false, true] {
@@ -3760,7 +3760,7 @@ fn path_range_alignment_uses_measured_advance() {
 /// Proves `path_overflows` reports true if and only if any drawable glyph outline is hidden outside the path range.
 #[test]
 fn path_overflow_matches_visible_glyph_clipping() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut engine = TextEngine::new();
     for flip in [false, true] {
         let mut text = point("Overflow", 20.0);
@@ -3782,8 +3782,8 @@ fn path_overflow_matches_visible_glyph_clipping() {
 #[test]
 fn path_decoration_draw_bounds_respect_explicit_ranges() {
     use crate::layout::DecorationRect;
-    use photocraft_doc::vector::Subpath;
-    use photocraft_geom::Affine;
+    use lienzo_doc::vector::Subpath;
+    use lienzo_geom::Affine;
 
     let layout = |x0, x1| crate::TextLayout {
         decorations: vec![DecorationRect { x0, x1, y0: 2.0, y1: 3.0, style: 0 }, DecorationRect { x0, x1, y0: -4.0, y1: -3.0, style: 0 }],
@@ -3805,7 +3805,7 @@ fn path_decoration_draw_bounds_respect_explicit_ranges() {
             let clipped = bounds(&layout(-10.0, 40.0), Some(start + 20.0));
             assert_eq!(clipped, bounds(&layout(0.0, 20.0), Some(start + 20.0)));
             assert_ne!(clipped, bounds(&layout(0.0, 40.0), None));
-            assert_eq!(bounds(&layout(-10.0, 40.0), Some(start)), photocraft_geom::Rect::EMPTY);
+            assert_eq!(bounds(&layout(-10.0, 40.0), Some(start)), lienzo_geom::Rect::EMPTY);
             assert_eq!(bounds(&layout(0.0, 40.0), None), bounds(&layout(0.0, 40.0), Some(start + 40.0)));
         }
     }
@@ -3814,9 +3814,9 @@ fn path_decoration_draw_bounds_respect_explicit_ranges() {
 /// Verifies vertical path text aligns along the curve and advances progressively for left, center, and right alignments.
 #[test]
 fn vertical_path_range_alignment_renders_and_shifts_properly() {
-    use photocraft_doc::text::{Orientation, ParagraphStyle, TextAlign};
-    use photocraft_doc::vector::Subpath;
-    use photocraft_geom::Affine;
+    use lienzo_doc::text::{Orientation, ParagraphStyle, TextAlign};
+    use lienzo_doc::vector::Subpath;
+    use lienzo_geom::Affine;
 
     let mut engine = TextEngine::new();
     let path = Subpath::polyline(&[(0.0, 0.0), (0.0, 500.0)]);
@@ -3847,9 +3847,9 @@ fn vertical_path_range_alignment_renders_and_shifts_properly() {
 /// Verifies flipping vertical path text places glyphs beginning from the opposite curve endpoint.
 #[test]
 fn vertical_path_flip_reverses_placement() {
-    use photocraft_doc::text::Orientation;
-    use photocraft_doc::vector::Subpath;
-    use photocraft_geom::Affine;
+    use lienzo_doc::text::Orientation;
+    use lienzo_doc::vector::Subpath;
+    use lienzo_geom::Affine;
 
     let mut engine = TextEngine::new();
     let path = Subpath::polyline(&[(0.0, 0.0), (0.0, 500.0)]);
@@ -3876,9 +3876,9 @@ fn vertical_path_flip_reverses_placement() {
 /// Proves vertical path text renders across closed seams and projects hit coordinates onto valid character indices.
 #[test]
 fn vertical_path_seam_and_caret_projection() {
-    use photocraft_doc::text::Orientation;
-    use photocraft_doc::vector::Subpath;
-    use photocraft_geom::Affine;
+    use lienzo_doc::text::Orientation;
+    use lienzo_doc::vector::Subpath;
+    use lienzo_geom::Affine;
 
     let mut engine = TextEngine::new();
     let path = Subpath::polygon(&[(0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)]);
@@ -3905,8 +3905,8 @@ fn vertical_path_seam_and_caret_projection() {
 #[test]
 fn vertical_path_decoration_clipping_and_warp() {
     use crate::layout::DecorationRect;
-    use photocraft_doc::vector::Subpath;
-    use photocraft_geom::Affine;
+    use lienzo_doc::vector::Subpath;
+    use lienzo_geom::Affine;
 
     let path = Subpath::polyline(&[(0.0, 0.0), (0.0, 200.0)]);
     let shape = TextShape::Path { path, start: 20.0, end: Some(60.0), flip: false };

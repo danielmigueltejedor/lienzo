@@ -46,7 +46,7 @@ pub(crate) fn has_unretained_samples(bytes: &[u8], offset: u64) -> Result<bool, 
 /// [`DecodeWarning::MorePages`] the page opens with when the file holds more.
 fn open_page(bytes: &[u8], page: Option<usize>) -> Result<(File<'_>, Ifd, Option<DecodeWarning>), CodecError> {
     if camera_raw(bytes) {
-        return Err(CodecError::unsupported(F, "camera raw files (such as CR2, NEF, ARW or DNG) are not flat images; decode them with photocraft-raw"));
+        return Err(CodecError::unsupported(F, "camera raw files (such as CR2, NEF, ARW or DNG) are not flat images; decode them with lienzo-raw"));
     }
     let file = File::parse(bytes).ok_or_else(|| err("not a TIFF or BigTIFF header"))?;
     let info = ifd::info_of(&file)?;
@@ -703,7 +703,7 @@ fn prepare(f: &File<'_>, dir: &Ifd, limits: &Limits, whole: bool) -> Result<Prep
     let invert = photometric == 0;
     let palette = if photometric == 3 { Some(read_palette(f, dir, spp, bits, src)?) } else { None };
     // CIE L*a*b*: CIELab (8; a* and b* signed) and ICCLab (9; a* and b* offset) are handed to the
-    // `tiff` crate as RGB, then labelled Lab with a* and b* in PhotoCraft's encoding
+    // `tiff` crate as RGB, then labelled Lab with a* and b* in Lienzo's encoding
     // (`convert_ab`).
     let lab = matches!(photometric, 8 | 9);
     // YCbCr (6), as scanners and cameras write it (usually JPEG-compressed with subsampled

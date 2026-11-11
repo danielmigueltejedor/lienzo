@@ -1,7 +1,7 @@
 //! #10723: recorded frame edits use the active video layer and the current playhead.
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_psd::{
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Descriptor, UnicodeString, Value as D},
 };
@@ -38,7 +38,7 @@ fn saved(action: &Action) -> AtnItem {
 /// Playback tests require a native mapping, rather than a successfully loaded kept step.
 fn load(s: &mut Session, source: AtnItem) {
     let bytes = file(source);
-    let report = s.execute("actions.load", json!({"data":photocraft_engine::paint::tile::b64_encode(&bytes)})).unwrap();
+    let report = s.execute("actions.load", json!({"data":lienzo_engine::paint::tile::b64_encode(&bytes)})).unwrap();
     assert_eq!(report["unsupported"], json!([]));
 }
 
@@ -60,7 +60,7 @@ fn fixture(depth: u32) -> (Session, LayerId) {
     let doc = Arc::make_mut(&mut state.doc);
     let mut frames = Vec::new();
     for red in [0.25, 0.5, 0.75] {
-        let mut frame = photocraft_raster::Surface::new(doc.pixel_format());
+        let mut frame = lienzo_raster::Surface::new(doc.pixel_format());
         frame.write_pixel(0, 0, &[red, 0.0, 0.0, 1.0]);
         frames.push(frame);
     }
@@ -161,7 +161,7 @@ fn deleting_the_last_frame_keeps_its_pixels() {
     video.original_frames.as_mut().unwrap().truncate(1);
     layer.content = LayerContent::Raster(video.frames[0].clone());
     let t = doc.timeline.as_mut().unwrap();
-    *t = photocraft_doc::video::Timeline::new(1, 24.0);
+    *t = lienzo_doc::video::Timeline::new(1, 24.0);
     let before = pixels(&s, id, false);
     let original = pixels(&s, id, true);
     load(&mut s, item("deleteFrame", Some(Descriptor::default())));

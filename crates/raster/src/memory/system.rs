@@ -1,5 +1,5 @@
 //! Platform measurements of the memory this process can use, shared by the tile residency
-//! budget ([`super::measure`]) and the import admission budget (`photocraft_io::memory`), so
+//! budget ([`super::measure`]) and the import admission budget (`lienzo_io::memory`), so
 //! there is one detector of available RAM.
 //!
 //! - Linux: `/proc/meminfo` `MemAvailable`, capped by the process's memory cgroup (v2
@@ -844,7 +844,7 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     fn fixture(name: &str) -> (PathBuf, PathBuf) {
-        let root = std::env::temp_dir().join(format!("photocraft-cgroup-{}-{name}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("lienzo-cgroup-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join("proc/self")).unwrap();
         std::fs::create_dir_all(root.join("sys/fs/cgroup")).unwrap();

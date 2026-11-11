@@ -2,19 +2,19 @@ use egui_kittest::kittest::Queryable;
 
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app
 }
 
-fn effect(app: &PhotocraftApp) -> &Effect {
+fn effect(app: &LienzoApp) -> &Effect {
     let state = app.session.active().unwrap();
     &state.doc.layer(state.active_layer.unwrap()).unwrap().effects.items[0]
 }
 
-fn fields(app: &PhotocraftApp) -> Map<String, Value> {
+fn fields(app: &LienzoApp) -> Map<String, Value> {
     let state = app.session.active().unwrap();
     initial_fields(state.doc.layer(state.active_layer.unwrap()).unwrap(), Some("gradientOverlay"), 120.0)
 }
@@ -26,7 +26,7 @@ fn method_picker_is_pending_until_confirm_and_survives_reopening() {
     let original = effect(&app).clone();
     let pending_fields = fields(&app);
     let mut harness = egui_kittest::Harness::builder().with_size(vec2(1000.0, 1000.0)).build_ui_state(
-        |ui, state: &mut (PhotocraftApp, Map<String, Value>)| {
+        |ui, state: &mut (LienzoApp, Map<String, Value>)| {
             // The harness draws once before setup_context installs the app fonts.
             if ui.ctx().fonts(|fonts| fonts.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 body(&mut state.0, ui, &mut state.1);
@@ -34,7 +34,7 @@ fn method_picker_is_pending_until_confirm_and_survives_reopening() {
         },
         (app, pending_fields),
     );
-    PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
     harness.run_steps(3);
     harness.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Method").click();
     harness.run_steps(2);
@@ -71,8 +71,8 @@ fn all_four_methods_roundtrip_through_the_dialog() {
 
 #[test]
 fn baked_overlay_is_unchanged_until_method_selection_then_edits_the_whole_curve() {
-    use photocraft_color::Color;
-    use photocraft_io::{GradientMethod, bake_gradient};
+    use lienzo_color::Color;
+    use lienzo_io::{GradientMethod, bake_gradient};
 
     let mut app = app();
     app.run("layer.layerStyle.gradientOverlay", json!({})).unwrap();

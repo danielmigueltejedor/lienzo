@@ -7,13 +7,13 @@ use super::*;
 use crate::canvas::ToolEvent;
 use serde_json::json;
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// A 400 × 300 layer in Warp, entered with Edit › Transform › Warp, and no pointer anywhere.
 fn warping() -> Harness {
-    let app = app_with_square(512, photocraft_geom::Rect::new(56, 56, 456, 356));
+    let app = app_with_square(512, lienzo_geom::Rect::new(56, 56, 456, 356));
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);

@@ -16,7 +16,7 @@ use std::process::Command;
 use crate::{root, run, sha256};
 
 /// Generic User-Agent: no personal details in requests.
-pub const USER_AGENT: &str = "Photocraft-dev";
+pub const USER_AGENT: &str = "Lienzo-dev";
 
 /// One upstream repository contributing files to a corpus.
 pub struct Upstream {

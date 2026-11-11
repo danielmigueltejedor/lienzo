@@ -4,7 +4,7 @@ use super::options_bar::{
     align_glyph, apply_kerning, direction_glyph, direction_items, icon_label, kerning_at, kerning_field, kerning_label, num_field, shown_family, styles_at,
     toggle_cell,
 };
-use super::{Color32, LayerId, PhotocraftApp, Stroke, json, text_layer};
+use super::{Color32, LayerId, LienzoApp, Stroke, json, text_layer};
 
 /// The Character panel's OpenType buttons, in Photoshop's order: (feature tag, command id,
 /// tooltip). The tooltips are the Type › OpenType menu labels.
@@ -22,13 +22,13 @@ pub(crate) const OPENTYPE_BUTTONS: [(&str, &str, &str); 8] = [
 /// Photoshop's OpenType button row: each shows pressed while its feature is on at the type
 /// target (the selection start, else the layer) and toggles it through the Type › OpenType
 /// command, on the same scope as the other Character controls.
-fn opentype_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, c: &photocraft_doc::text::CharStyle, full: f32) {
+fn opentype_row(app: &mut LienzoApp, ui: &mut egui::Ui, c: &lienzo_doc::text::CharStyle, full: f32) {
     let cw = cell_width(full, OPENTYPE_BUTTONS.len());
     let mut clicked = None;
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
         for (tag, id, tip) in OPENTYPE_BUTTONS {
-            let on = photocraft_engine::type_extra_cmds::feature_on(c, tag);
+            let on = lienzo_engine::type_extra_cmds::feature_on(c, tag);
             if toggle_cell(ui, cw, on, tip, |ui, r, col| opentype_glyph(ui.painter(), r, tag, col)) {
                 clicked = Some((id, on));
             }
@@ -42,7 +42,7 @@ fn opentype_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, c: &photocraft_doc::
 /// Runs an OpenType toggle command on the Character panel's scope: the edited layer's selected
 /// characters (or its whole text) while typing, else every selected type layer. The new state
 /// is explicit, so it follows the button the user saw rather than the layer's first run.
-pub(crate) fn toggle_opentype(app: &mut PhotocraftApp, id: &str, shown_on: bool) {
+pub(crate) fn toggle_opentype(app: &mut LienzoApp, id: &str, shown_on: bool) {
     let Some(mut p) = formatting_params(app) else {
         if let Some((tag, _, _)) = OPENTYPE_BUTTONS.iter().find(|(_, command, _)| *command == id) {
             let props = match *tag {
@@ -199,20 +199,20 @@ fn metric_field(
 }
 
 /// Properties panel sections for a type layer: Character, Paragraph and Type Options (#155).
-pub fn type_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn type_properties(app: &mut LienzoApp, ui: &mut egui::Ui) {
     type_sections(app, ui, true, true, false);
     type_options(app, ui);
 }
 
 /// Window › Character / Paragraph (#150): the same controls as Properties, in their own dock
 /// group. Without a type target they edit the defaults for the next Type-tool layer.
-pub fn character_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui, paragraph: bool) {
+pub fn character_panel(app: &mut LienzoApp, ui: &mut egui::Ui, paragraph: bool) {
     type_sections(app, ui, !paragraph, paragraph, true);
 }
 
 /// The Character and/or Paragraph sections, with the shared collapsible headers and fields that
 /// fill the panel width (#155).
-fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, paragraph: bool, show_defaults: bool) {
+fn type_sections(app: &mut LienzoApp, ui: &mut egui::Ui, character: bool, paragraph: bool, show_defaults: bool) {
     use crate::props_layout::{COL_GAP, LABEL_GAP, LABEL_W, field_width, section};
     use crate::theme::ROW_GAP;
     let Some((c, para)) = styles_at(app).or_else(|| show_defaults.then(|| default_styles(app))) else { return };
@@ -339,14 +339,14 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
             (
                 "TT",
                 "All Caps",
-                caps == photocraft_doc::text::Caps::AllCaps,
-                json!({"caps": if caps == photocraft_doc::text::Caps::AllCaps { "normal" } else { "allCaps" }}),
+                caps == lienzo_doc::text::Caps::AllCaps,
+                json!({"caps": if caps == lienzo_doc::text::Caps::AllCaps { "normal" } else { "allCaps" }}),
             ),
             (
                 "Tᴛ",
                 "Small Caps",
-                caps == photocraft_doc::text::Caps::SmallCaps,
-                json!({"caps": if caps == photocraft_doc::text::Caps::SmallCaps { "normal" } else { "smallCaps" }}),
+                caps == lienzo_doc::text::Caps::SmallCaps,
+                json!({"caps": if caps == lienzo_doc::text::Caps::SmallCaps { "normal" } else { "smallCaps" }}),
             ),
             ("T", "Underline", c.underline, json!({"underline": !c.underline})),
             ("T", "Strikethrough", c.strikethrough, json!({"strikethrough": !c.strikethrough})),
@@ -387,7 +387,7 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
         ui.add_space(ROW_GAP);
     }
     if paragraph && section(ui, "paragraph", tl!("Paragraph")) {
-        use photocraft_doc::text::TextAlign as A;
+        use lienzo_doc::text::TextAlign as A;
         let full = ui.available_width();
         let w = field_width(full, 2, LABEL_W);
         let items = [
@@ -413,7 +413,7 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
         .into_iter()
         .any(|layer| {
             let shape = app.session.active().and_then(|s| text_layer(&s.doc, LayerId(layer)).map(|t| t.shape.clone()));
-            !matches!(shape, Some(photocraft_doc::text::TextShape::Box { .. } | photocraft_doc::text::TextShape::Area { .. }))
+            !matches!(shape, Some(lienzo_doc::text::TextShape::Box { .. } | lienzo_doc::text::TextShape::Area { .. }))
         });
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
@@ -475,14 +475,14 @@ fn type_sections(app: &mut PhotocraftApp, ui: &mut egui::Ui, character: bool, pa
 }
 
 /// Type Options: anti-aliasing and orientation of the whole layer (the Type menu's commands).
-fn type_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn type_options(app: &mut LienzoApp, ui: &mut egui::Ui) {
     use crate::props_layout::{COL_GAP, LABEL_GAP};
     let Some((layer, _)) = target(app) else { return };
     let Some((aa, vertical)) = app
         .session
         .active()
         .and_then(|st| text_layer(&st.doc, LayerId(layer)))
-        .map(|t| (photocraft_engine::type_extra_cmds::aa_name(t.antialias).to_string(), t.orientation == photocraft_doc::text::Orientation::Vertical))
+        .map(|t| (lienzo_engine::type_extra_cmds::aa_name(t.antialias).to_string(), t.orientation == lienzo_doc::text::Orientation::Vertical))
     else {
         return;
     };
@@ -505,7 +505,7 @@ fn type_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             let mut cur = aa.clone();
             let opts: Vec<(String, &str)> = ["none", "sharp", "crisp", "strong", "smooth", "windowsLcd", "windows"]
                 .into_iter()
-                .filter_map(|k| photocraft_engine::commands::find(&format!("type.antiAlias.{k}")).map(|c| (k.to_string(), c.label)))
+                .filter_map(|k| lienzo_engine::commands::find(&format!("type.antiAlias.{k}")).map(|c| (k.to_string(), c.label)))
                 .collect();
             if crate::widgets::dropdown(ui, "props-type-aa", tl!("Anti-aliasing method"), &mut cur, &opts, dd_w) {
                 run = Some(format!("type.antiAlias.{cur}"));

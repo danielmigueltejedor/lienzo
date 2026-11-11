@@ -1,4 +1,4 @@
-//! The PhotoCraft engine façade: open documents, history, and the command registry.
+//! The Lienzo engine façade: open documents, history, and the command registry.
 //!
 //! Every user-visible action is a command with a stable id (Photoshop-style, such as
 //! `layer.newAdjustmentLayer.invert`) and JSON parameters. Every frontend goes through the same
@@ -50,14 +50,14 @@ pub use video_cmds::render_video_with;
 
 use std::sync::Arc;
 
-use photocraft_doc::{Document, LayerId};
-use photocraft_ops::{History, LayerTarget};
+use lienzo_doc::{Document, LayerId};
+use lienzo_ops::{History, LayerTarget};
 use serde_json::Value;
 
 pub use commands::{CommandSpec, command_specs};
-pub use photocraft_doc as doc;
-pub use photocraft_paint as paint;
-pub use photocraft_paint::BrushSettings;
+pub use lienzo_doc as doc;
+pub use lienzo_paint as paint;
+pub use lienzo_paint::BrushSettings;
 
 pub mod cmd;
 mod doc_state;
@@ -181,20 +181,20 @@ pub(crate) use session::{carry_visibility, fix_selection, visibility_changes};
 /// that version of the layer, which may differ from the open one or be gone from it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TypeLayerRef {
-    pub doc: photocraft_doc::DocId,
+    pub doc: lienzo_doc::DocId,
     pub layer: LayerId,
     pub first_snapshot: bool,
 }
 
 /// The pixels of a raster layer (typically one a command just created), as an error instead
 /// of a panic if the layer has none.
-pub(crate) fn pixels_mut(l: &mut photocraft_doc::Layer) -> Result<&mut photocraft_raster::Surface> {
+pub(crate) fn pixels_mut(l: &mut lienzo_doc::Layer) -> Result<&mut lienzo_raster::Surface> {
     let id = l.id;
     l.surface_mut().ok_or_else(|| EngineError::Other(format!("layer {id:?} has no pixels")))
 }
 
 /// The active document's active layer, for `enabled` predicates.
-pub(crate) fn active_layer_of(s: &Session) -> std::result::Result<&photocraft_doc::Layer, String> {
+pub(crate) fn active_layer_of(s: &Session) -> std::result::Result<&lienzo_doc::Layer, String> {
     let d = s.active().ok_or("no document open")?;
     d.active_layer.and_then(|id| d.doc.layer(id)).ok_or_else(|| "no active layer".into())
 }
@@ -209,14 +209,14 @@ pub struct Session {
     /// Frozen RAW workflow settings for one noninteractive Batch input.
     pub(crate) batch_raw_open: Option<prefs::RawDefaults>,
     /// Admitted document identities in opening order, independent of visual-tab reordering.
-    open_document_order: Vec<photocraft_doc::DocId>,
+    open_document_order: Vec<lienzo_doc::DocId>,
     active: Option<usize>,
     /// Monotonic counter, bumped whenever a different document becomes active (including a
     /// switch away and back inside one pass). UI work that must not cross documents (control
     /// screenshots, automation input) binds to it.
     active_generation: u64,
     /// The document id [`Self::active_generation`] was last bumped for.
-    active_doc_for_generation: Option<photocraft_doc::DocId>,
+    active_doc_for_generation: Option<lienzo_doc::DocId>,
     /// Change marker: advances at least once whenever the active document or layer changes through
     /// the `Session` API (commands via `execute`, `start` and finished jobs, `select_layer`,
     /// `restore_layer_selection`, `layer_multi_cmds::set_selection`, `set_active_layer`, undo / redo /
@@ -228,7 +228,7 @@ pub struct Session {
     /// Log of executed commands (for action recording and debugging).
     pub journal: Vec<(String, Value)>,
     /// Text layer changed by the last journal entry, for folding Type tool keystrokes.
-    typed_layer: Option<(photocraft_doc::DocId, LayerId)>,
+    typed_layer: Option<(lienzo_doc::DocId, LayerId)>,
     /// Coalescing key of the command being executed.
     coalesce_request: Option<String>,
     /// The outer action's original document/history states, independent of command transactions.
@@ -244,14 +244,14 @@ pub struct Session {
     /// ([`CopiedStyle`]: blend mode, fill opacity, Advanced Blending, Blend If, channels).
     pub style_clipboard: Option<CopiedStyle>,
     /// Shape path context menu: copied vector fill and stroke styles.
-    pub path_fill_clipboard: Option<photocraft_doc::Fill>,
-    pub path_stroke_clipboard: Option<photocraft_doc::ShapeStroke>,
+    pub path_fill_clipboard: Option<lienzo_doc::Fill>,
+    pub path_stroke_clipboard: Option<lienzo_doc::ShapeStroke>,
     /// Colour management: proofing state, monitor profile, display transforms.
     pub color: color_cmds::ColorState,
     /// Open Edit Contents documents and the smart objects they update.
     pub smart_links: Vec<smart_cmds::SmartLink>,
     /// Type › Save Default Type Styles: character and paragraph style new type layers start from.
-    pub type_defaults: Option<(photocraft_doc::text::CharStyle, photocraft_doc::text::ParagraphStyle)>,
+    pub type_defaults: Option<(lienzo_doc::text::CharStyle, lienzo_doc::text::ParagraphStyle)>,
     /// Quick Mask Options (colour, opacity, colour indicates) used when entering Quick Mask.
     pub quick_mask_options: channel_cmds::QuickMaskOptions,
     /// Colour channel the running command may change (a single colour channel is targeted).
@@ -282,7 +282,7 @@ pub struct Session {
     /// Gate for every command the session runs, including the ones a command runs on its own
     /// behalf and `actions.play` steps. Untrusted sessions (MCP, the control channel) install
     /// the same check a top-level request sees. `None` runs everything, which is what a local
-    /// UI and `photocraft-cli run` do.
+    /// UI and `lienzo-cli run` do.
     pub authorize: Option<fn(&str, &serde_json::Value) -> Result<()>>,
     /// A further route for File › Print when neither `lp` nor a CUPS server over IPP is
     /// reachable (the XDG Print portal in a Flatpak); see `print_cmds::Spooler`.
@@ -297,10 +297,10 @@ pub struct Session {
     samplers_removed: usize,
     /// The canvas-geometry map the next [`Session::edit`] applies to the Color Sampler points (crop,
     /// Canvas Size, Image Size, rotation set it just before their edit). Consumed by the edit.
-    sampler_map: Option<photocraft_geom::Affine>,
+    sampler_map: Option<lienzo_geom::Affine>,
     /// The same edit's map in edge coordinates, for the painting symmetry (Image Rotation maps the
     /// samplers' pixel centres instead). Consumed by the edit.
-    symmetry_map: Option<photocraft_geom::Affine>,
+    symmetry_map: Option<lienzo_geom::Affine>,
     /// Each open document's linked smart objects' files: size and modification time when last
     /// seen ([`link_watch`]).
     pub link_stamps: std::collections::HashMap<(u64, String), link_watch::Stamp>,
@@ -326,7 +326,7 @@ pub struct Session {
     next_pending_preflight: u64,
     /// Shared native memory supervision, owned and stopped by the last session using it.
     scratch_runtime: Option<scratch::Runtime>,
-    /// [`photocraft_raster::spill::epoch`] when History's byte limits were last applied: a
+    /// [`lienzo_raster::spill::epoch`] when History's byte limits were last applied: a
     /// scratch disk that pauses or resumes changes the limit ([`Session::sync_scratch_state`]).
     scratch_epoch: u64,
     /// The document before the latest [`Session::edit`] of the running command, which

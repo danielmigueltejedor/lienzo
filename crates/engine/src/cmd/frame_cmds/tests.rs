@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_doc::{Layer, LayerContent};
-use photocraft_geom::Rect;
+use lienzo_doc::{Layer, LayerContent};
+use lienzo_geom::Rect;
 
 fn session() -> (Session, LayerId, LayerId) {
     let mut s = Session::new();
@@ -9,9 +9,9 @@ fn session() -> (Session, LayerId, LayerId) {
         .edit("setup", |doc, _| {
             let fmt = doc.pixel_format();
             let mut a = Layer::raster("A", fmt);
-            a.surface_mut().unwrap().fill_rect(Rect::new(4, 4, 24, 24), &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+            a.surface_mut().unwrap().fill_rect(Rect::new(4, 4, 24, 24), &lienzo_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
             let mut b = Layer::raster("B", fmt);
-            b.surface_mut().unwrap().fill_rect(Rect::new(30, 20, 50, 40), &photocraft_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
+            b.surface_mut().unwrap().fill_rect(Rect::new(30, 20, 50, 40), &lienzo_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
             let (ia, ib) = (a.id, b.id);
             doc.layers.push(a);
             doc.layers.push(b);
@@ -96,7 +96,7 @@ fn new_frame_takes_a_type_layer() {
     let tid = s
         .edit("setup", |doc, _| {
             let cache = doc.layer(a).and_then(|l| l.surface()).cloned();
-            let t = Layer::new("T", LayerContent::Text(photocraft_doc::TextLayer { cache, ..Default::default() }));
+            let t = Layer::new("T", LayerContent::Text(lienzo_doc::TextLayer { cache, ..Default::default() }));
             let id = t.id;
             doc.layers.push(t);
             Ok(id)
@@ -116,10 +116,10 @@ fn needs_a_selected_layer() {
     assert!(s.execute("layer.new.frameFromLayers", json!({})).is_err());
 }
 
-struct TestMask(photocraft_doc::Path);
+struct TestMask(lienzo_doc::Path);
 impl TestMask {
     fn value(&self, x: i32, y: i32) -> f32 {
-        photocraft_vector::path_coverage(&self.0, Rect::new(x, y, x + 1, y + 1))[0]
+        lienzo_vector::path_coverage(&self.0, Rect::new(x, y, x + 1, y + 1))[0]
     }
 }
 
@@ -131,7 +131,7 @@ fn frame_and_smart_image_transform_independently_at_every_depth() {
         let source = s
             .edit("Image", |doc, _| {
                 let mut l = Layer::raster("Photo", doc.pixel_format());
-                l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 80, 60), &photocraft_raster::from_rgba(&doc.pixel_format(), [1., 0., 0., 1.]));
+                l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 80, 60), &lienzo_raster::from_rgba(&doc.pixel_format(), [1., 0., 0., 1.]));
                 let id = l.id;
                 doc.layers.push(l);
                 Ok(id)
@@ -160,11 +160,11 @@ fn frame_and_smart_image_transform_independently_at_every_depth() {
 fn frame_placement_covers_and_replaces_with_one_undo() {
     let (mut s, _, _) = session();
     let id = LayerId(s.execute("layer.new.frame", json!({"x":10,"y":10,"width":40,"height":30})).unwrap()["layer"].as_u64().unwrap());
-    let mut image = Document::new("Image", photocraft_geom::Size::new(20, 10), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut image = Document::new("Image", lienzo_geom::Size::new(20, 10), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let mut l = Layer::raster("Photo", image.pixel_format());
     l.surface_mut().unwrap().fill_rect(image.bounds(), &[0., 0., 1., 1.]);
     image.layers.push(l);
-    let png = photocraft_io::export(&image, "png", &Default::default()).unwrap().bytes;
+    let png = lienzo_io::export(&image, "png", &Default::default()).unwrap().bytes;
     let result = crate::file_cmds::place_bytes(&mut s, "blue.png", png.clone(), None, &json!({"smartObject":false})).unwrap();
     assert_eq!(result["frame"], id.0);
     assert_eq!(result["scale"], 300.0);
@@ -190,11 +190,11 @@ fn frame_shapes_strokes_and_editability_survive_native_and_psd() {
             "path":{"subpaths":[{"closed":true,"knots":[[0,0],[100,0],[50,100]]}]},"stroke":{"color":"#ff0000","width":3,"align":"outside"}});
             let id = LayerId(s.execute("layer.new.frame", p).unwrap()["layer"].as_u64().unwrap());
             let original = &s.active().unwrap().doc;
-            let rendered = photocraft_compose::render(original, original.bounds());
+            let rendered = lienzo_compose::render(original, original.bounds());
             assert!(rendered.px.iter().any(|p| p[0] > 0.9 && p[3] > 0.5), "empty {shape} stroke at {depth}");
             for name in ["pcraft", "psd"] {
-                let bytes = photocraft_io::export(original, name, &Default::default()).unwrap().bytes;
-                let restored = photocraft_io::import(name, &bytes).unwrap().document;
+                let bytes = lienzo_io::export(original, name, &Default::default()).unwrap().bytes;
+                let restored = lienzo_io::import(name, &bytes).unwrap().document;
                 let l = restored
                     .walk()
                     .into_iter()
@@ -208,7 +208,7 @@ fn frame_shapes_strokes_and_editability_survive_native_and_psd() {
                     .2;
                 assert_eq!(l.frame, original.layer(id).unwrap().frame, "{name} {shape} {depth}");
                 assert!(l.children().unwrap().is_empty(), "export-only vector border is not frame content");
-                let after = photocraft_compose::render(&restored, restored.bounds());
+                let after = lienzo_compose::render(&restored, restored.bounds());
                 let error = rendered.px.iter().zip(after.px.iter()).flat_map(|(a, b)| a.iter().zip(b).map(|(a, b)| (a - b).abs())).fold(0.0f32, f32::max);
                 assert!(error < 0.025, "{name} {shape} {depth}: {error}");
             }
@@ -257,11 +257,11 @@ fn converting_a_shape_uses_its_outline_and_leaves_an_empty_frame() {
 fn fitting_transparent_images_uses_their_canvas_and_is_idempotent() {
     let (mut s, _, _) = session();
     let frame = s.execute("layer.new.frame", json!({"x":10,"y":10,"width":40,"height":30})).unwrap()["layer"].as_u64().unwrap();
-    let mut image = Document::new("Transparent", photocraft_geom::Size::new(20, 10), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut image = Document::new("Transparent", lienzo_geom::Size::new(20, 10), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let mut l = Layer::raster("Mark", image.pixel_format());
     l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 4, 4), &[0., 0., 1., 1.]);
     image.layers.push(l);
-    let bytes = photocraft_io::export(&image, "png", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&image, "png", &Default::default()).unwrap().bytes;
     crate::file_cmds::place_bytes(&mut s, "transparent.png", bytes, None, &json!({})).unwrap();
     let child = s.active().unwrap().doc.layer(LayerId(frame)).unwrap().children().unwrap()[0].id;
     let pose = |s: &Session| {
@@ -329,11 +329,11 @@ fn empty_frame_placeholders_do_not_schedule_canvas_sized_composites() {
     let st = s.active().unwrap();
     let layer = st.doc.layer(frame).unwrap();
     assert_eq!(crate::transform_cmds::transform_frame(&st.doc, layer), Rect::new(100, 100, 5900, 3900), "the editable container still has its full geometry");
-    assert_eq!(photocraft_compose::layer_bounds(layer, st.doc.bounds()), Rect::EMPTY);
-    assert_eq!(photocraft_compose::composite_bounds(layer, st.doc.bounds()), Some(Rect::EMPTY));
+    assert_eq!(lienzo_compose::layer_bounds(layer, st.doc.bounds()), Rect::EMPTY);
+    assert_eq!(lienzo_compose::composite_bounds(layer, st.doc.bounds()), Some(Rect::EMPTY));
     s.execute("layer.frame.set", json!({"layer":frame.0,"stroke":{"color":"#ff0000","width":2}})).unwrap();
     let st = s.active().unwrap();
-    assert!(!photocraft_compose::layer_bounds(st.doc.layer(frame).unwrap(), st.doc.bounds()).is_empty());
+    assert!(!lienzo_compose::layer_bounds(st.doc.layer(frame).unwrap(), st.doc.bounds()).is_empty());
 }
 
 #[test]
@@ -344,7 +344,7 @@ fn new_layers_and_outside_placement_do_not_enter_a_frames_image_slot() {
     let new = s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
     assert_eq!(s.active().unwrap().doc.path_of(LayerId(new)).unwrap().len(), 1);
     s.execute("layer.select", json!({"layer":image.0})).unwrap();
-    let bytes = photocraft_io::export(&s.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&s.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
     let placed = crate::file_cmds::place_bytes(&mut s, "outside.png", bytes, None, &json!({"frame":false})).unwrap();
     assert_eq!(placed["frame"], Value::Null);
     let st = s.active().unwrap();
@@ -359,11 +359,11 @@ fn new_layers_and_outside_placement_do_not_enter_a_frames_image_slot() {
 }
 
 fn blue_png(w: u32, h: u32) -> Vec<u8> {
-    let mut image = Document::new("Image", photocraft_geom::Size::new(w, h), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut image = Document::new("Image", lienzo_geom::Size::new(w, h), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let mut l = Layer::raster("Photo", image.pixel_format());
     l.surface_mut().unwrap().fill_rect(image.bounds(), &[0., 0., 1., 1.]);
     image.layers.push(l);
-    photocraft_io::export(&image, "png", &Default::default()).unwrap().bytes
+    lienzo_io::export(&image, "png", &Default::default()).unwrap().bytes
 }
 
 #[test]
@@ -442,7 +442,7 @@ fn moving_a_frame_past_its_limits_keeps_a_plain_masked_group() {
     assert!(l.frame.is_none());
     assert!(l.vector_mask.is_some());
     let mut l = doc.layer(id).unwrap().clone();
-    crate::canvas_geom::transform_layer_geometry(&mut l, &photocraft_geom::Affine::scale(10_000.0), true, 72.0);
+    crate::canvas_geom::transform_layer_geometry(&mut l, &lienzo_geom::Affine::scale(10_000.0), true, 72.0);
     assert!(l.frame.is_none());
     assert!(l.vector_mask.is_some());
 }
@@ -460,8 +460,8 @@ fn linked_layers_keep_their_links_beside_a_frame_in_psd() {
     for id in [b, c] {
         doc.layer_mut(id).unwrap().link_group = Some(5);
     }
-    let bytes = photocraft_io::export(doc, "psd", &Default::default()).unwrap().bytes;
-    let restored = photocraft_io::import("psd", &bytes).unwrap().document;
+    let bytes = lienzo_io::export(doc, "psd", &Default::default()).unwrap().bytes;
+    let restored = lienzo_io::import("psd", &bytes).unwrap().document;
     let links: Vec<_> = restored.walk().iter().map(|(_, _, l)| (l.name.clone(), l.link_group)).filter(|(_, g)| g.is_some()).collect();
     let names: Vec<_> = links.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(names, ["B", "C"], "{links:?}");
@@ -474,8 +474,8 @@ fn a_pcraft_with_unusable_frame_metadata_still_opens() {
     let id = LayerId(s.execute("layer.new.frame", json!({"x":10,"y":10,"width":40,"height":30})).unwrap()["layer"].as_u64().unwrap());
     let mut doc = (*s.active().unwrap().doc).clone();
     doc.layer_mut(id).unwrap().frame.as_mut().unwrap().transform.m[4] = 900_000.0;
-    let bytes = photocraft_io::export(&doc, "pcraft", &Default::default()).unwrap().bytes;
-    let restored = photocraft_io::import("pcraft", &bytes).unwrap().document;
+    let bytes = lienzo_io::export(&doc, "pcraft", &Default::default()).unwrap().bytes;
+    let restored = lienzo_io::import("pcraft", &bytes).unwrap().document;
     let l = restored.layer(id).unwrap();
     assert!(l.frame.is_none());
     assert!(l.vector_mask.is_some(), "the clip survives as the group's vector mask");
@@ -505,8 +505,8 @@ fn image_bounds(s: &Session, child: LayerId) -> Rect {
     sm.cache.as_ref().unwrap().content_bounds()
 }
 
-fn patch_mask(bounds: Rect) -> photocraft_doc::LayerMask {
-    let mut m = photocraft_doc::LayerMask::hide_all();
+fn patch_mask(bounds: Rect) -> lienzo_doc::LayerMask {
+    let mut m = lienzo_doc::LayerMask::hide_all();
     m.surface.fill_rect(bounds, &[1.0]);
     m
 }
@@ -526,8 +526,8 @@ fn fitting_content_moves_a_linked_raster_mask_with_the_image() {
 
 #[test]
 fn fitting_content_moves_a_linked_vector_mask_with_the_image() {
-    let outline = photocraft_doc::Path::new(vec![photocraft_doc::Subpath::polygon(&[(4., 4.), (24., 4.), (24., 24.), (4., 24.)])]);
-    let (mut s, _, child) = fitted(|l| l.vector_mask = Some(photocraft_doc::VectorMask::new(outline.clone())));
+    let outline = lienzo_doc::Path::new(vec![lienzo_doc::Subpath::polygon(&[(4., 4.), (24., 4.), (24., 24.), (4., 24.)])]);
+    let (mut s, _, child) = fitted(|l| l.vector_mask = Some(lienzo_doc::VectorMask::new(outline.clone())));
     let image = image_bounds(&s, child);
     let (x0, y0, x1, y1) = s.active().unwrap().doc.layer(child).unwrap().vector_mask.as_ref().unwrap().path.control_bounds().unwrap();
     assert!(near(Rect::new(x0.round() as i32, y0.round() as i32, x1.round() as i32, y1.round() as i32), image), "{x0} {y0} {x1} {y1} vs {image:?}");

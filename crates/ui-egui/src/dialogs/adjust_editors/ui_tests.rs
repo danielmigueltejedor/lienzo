@@ -6,10 +6,10 @@
 use egui::{Pos2, Rect, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::{Adjustment, LayerContent, LayerId};
+use lienzo_doc::{Adjustment, LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 const ALL_KINDS: [&str; 16] = [
     "brightnessContrast",
@@ -30,23 +30,23 @@ const ALL_KINDS: [&str; 16] = [
     "colorLookup",
 ];
 
-fn app_harness(kind: &str, mode: &str, depth: u32) -> Harness<'static, PhotocraftApp> {
+fn app_harness(kind: &str, mode: &str, depth: u32) -> Harness<'static, LienzoApp> {
     app_harness_stepped(kind, mode, depth, 0.25)
 }
 
 /// [`app_harness`] advancing `step_dt` seconds per frame (double-clicks need real frame times).
-fn app_harness_stepped(kind: &str, mode: &str, depth: u32, step_dt: f32) -> Harness<'static, PhotocraftApp> {
+fn app_harness_stepped(kind: &str, mode: &str, depth: u32, step_dt: f32) -> Harness<'static, LienzoApp> {
     let (kind, mode) = (kind.to_string(), mode.to_string());
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).with_step_dt(step_dt).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut s = photocraft_engine::Session::new();
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 96, "height": 64, "mode": mode, "depth": depth})).unwrap();
         // Two tones so histograms (and Levels' Auto) have something to work with.
         s.execute("select.rect", json!({"x": 0, "y": 0, "width": 48, "height": 64})).unwrap();
         s.execute("edit.fill", json!({"color": "#6a3020"})).unwrap();
         s.execute("select.deselect", json!({})).unwrap();
         s.execute(&format!("layer.newAdjustmentLayer.{kind}"), json!({})).unwrap();
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = LienzoApp::new(s, crate::Services::default());
         // The default Properties group gives way to Layers (#147) and scrolls taller editors;
         // these tests drive every control without scrolling, so they size it like a user would.
         app.ui.dock.heights.insert(crate::dock::Group::Properties, 560.0);
@@ -56,7 +56,7 @@ fn app_harness_stepped(kind: &str, mode: &str, depth: u32, step_dt: f32) -> Harn
     h
 }
 
-fn layer(h: &Harness<'_, PhotocraftApp>) -> (LayerId, Adjustment) {
+fn layer(h: &Harness<'_, LienzoApp>) -> (LayerId, Adjustment) {
     let st = h.state().session.active().unwrap();
     let id = st.active_layer.unwrap();
     match &st.doc.layer(id).unwrap().content {
@@ -65,7 +65,7 @@ fn layer(h: &Harness<'_, PhotocraftApp>) -> (LayerId, Adjustment) {
     }
 }
 
-fn drag(h: &mut Harness<'_, PhotocraftApp>, from: Pos2, to: Pos2) {
+fn drag(h: &mut Harness<'_, LienzoApp>, from: Pos2, to: Pos2) {
     h.hover_at(from);
     h.run_steps(1);
     h.drag_at(from);
@@ -78,7 +78,7 @@ fn drag(h: &mut Harness<'_, PhotocraftApp>, from: Pos2, to: Pos2) {
     h.run_steps(3);
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
+fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2) {
     h.hover_at(at);
     h.run_steps(1);
     h.drag_at(at);
@@ -87,7 +87,7 @@ fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
     h.run_steps(3);
 }
 
-fn label_rect(h: &Harness<'_, PhotocraftApp>, text: &str) -> Option<Rect> {
+fn label_rect(h: &Harness<'_, LienzoApp>, text: &str) -> Option<Rect> {
     // The last caption: the Properties header repeats the kind's name above its controls.
     // `get_by_label` hides a caption that names a control, so ask for the label node itself;
     // a checkbox paints its caption as the control, so fall back to the last matching widget.
@@ -97,7 +97,7 @@ fn label_rect(h: &Harness<'_, PhotocraftApp>, text: &str) -> Option<Rect> {
         .or_else(|| h.query_all_by_label(text).last().map(|n| n.rect()))
 }
 
-fn curves_graph(h: &Harness<'_, PhotocraftApp>, id: LayerId) -> Rect {
+fn curves_graph(h: &Harness<'_, LienzoApp>, id: LayerId) -> Rect {
     h.ctx.data(|d| d.get_temp::<Rect>(egui::Id::unique(("adjust-layer", id.0)).with("curves-graph"))).expect("curves graph drawn")
 }
 
@@ -313,7 +313,7 @@ fn curves_fast_release_commits_one_edit_and_undo_restores_the_curve() {
 }
 
 /// Real pointer input: `n` clicks at `at` with `mods` held (2 = a double-click).
-fn clicks_with(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, n: usize, mods: egui::Modifiers) {
+fn clicks_with(h: &mut Harness<'_, LienzoApp>, at: Pos2, n: usize, mods: egui::Modifiers) {
     // Well past the double-click time since the last gesture.
     h.run_steps(40);
     h.event(egui::Event::ModifiersChanged(mods));
@@ -329,7 +329,7 @@ fn clicks_with(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, n: usize, mods: egu
     h.run_steps(3);
 }
 
-fn wheel_at(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, notches: f32, mods: egui::Modifiers) {
+fn wheel_at(h: &mut Harness<'_, LienzoApp>, at: Pos2, notches: f32, mods: egui::Modifiers) {
     h.event(egui::Event::ModifiersChanged(mods));
     h.hover_at(at);
     h.run_steps(1);
@@ -345,7 +345,7 @@ fn wheel_at(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, notches: f32, mods: eg
     h.run_steps(3);
 }
 
-fn key_with(h: &mut Harness<'_, PhotocraftApp>, key: egui::Key, mods: egui::Modifiers) {
+fn key_with(h: &mut Harness<'_, LienzoApp>, key: egui::Key, mods: egui::Modifiers) {
     h.event(egui::Event::ModifiersChanged(mods));
     for pressed in [true, false] {
         h.event(egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers: mods });
@@ -374,7 +374,7 @@ fn color_balance_sliders_reset_and_step_like_photoshop() {
     h.run_steps(4);
     let label = label_rect(&h, "Cyan  ·  Red").expect("Cyan · Red row");
     let on_track = Pos2::new(label.left() + 60.0, label.bottom() + 14.0);
-    let cb = |h: &Harness<'_, PhotocraftApp>| color_balance_of(&layer(h).1);
+    let cb = |h: &Harness<'_, LienzoApp>| color_balance_of(&layer(h).1);
 
     // A click jumps to the pointer, with or without modifiers.
     clicks_with(&mut h, on_track, 1, egui::Modifiers::NONE);
@@ -443,8 +443,8 @@ fn color_balance_properties_history_and_reset_like_photoshop() {
     h.run_steps(4);
     h.state_mut().session.select_layer(id).unwrap();
     h.run_steps(4);
-    let cb = |h: &Harness<'_, PhotocraftApp>| color_balance_of(&layer(h).1);
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let cb = |h: &Harness<'_, LienzoApp>| color_balance_of(&layer(h).1);
+    let steps = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     let label = label_rect(&h, "Cyan  ·  Red").expect("Cyan · Red row");
     let on_track = Pos2::new(label.left() + 60.0, label.bottom() + 14.0);
     let before = steps(&h);
@@ -482,7 +482,7 @@ fn map_stops(a: &Adjustment) -> Vec<(f32, [u8; 3])> {
     }
 }
 
-fn map_handle(h: &Harness<'_, PhotocraftApp>, at: f32) -> Pos2 {
+fn map_handle(h: &Harness<'_, LienzoApp>, at: f32) -> Pos2 {
     let strip = h.get_by_label("Gradient stops").rect();
     Pos2::new(strip.left() + 8.0 + at * (strip.width() - 16.0), strip.top() + 36.0)
 }
@@ -672,7 +672,7 @@ fn gradient_map_stop_dragged_down_off_the_bar_is_removed_and_dragging_back_cance
     h.run_steps(3);
     let three = layer(&h).1;
     let before_cancel = h.state().session.active().unwrap().history.past_len();
-    let live_stops = |h: &Harness<'_, PhotocraftApp>| h.state().live_adjust.as_ref().and_then(|(_, v)| v["stops"].as_array().map(Vec::len));
+    let live_stops = |h: &Harness<'_, LienzoApp>| h.state().live_adjust.as_ref().and_then(|(_, v)| v["stops"].as_array().map(Vec::len));
     // Off and back: nothing removed.
     let start = map_handle(&h, 0.5);
     let away = start + vec2(0.0, 30.0);
@@ -757,7 +757,7 @@ fn gradient_map_stop_controls_fit_a_narrow_properties_panel_in_every_theme() {
                 },
                 json!({"stops": [[0, "#000000"], [1, "#ffffff"]]}),
             );
-            PhotocraftApp::setup_context(&h.ctx, kind);
+            LienzoApp::setup_context(&h.ctx, kind);
             h.run_steps(4);
             for role in [egui::accesskit::Role::Button, egui::accesskit::Role::ComboBox, egui::accesskit::Role::SpinButton] {
                 for control in h.query_all_by_role(role) {
@@ -774,7 +774,7 @@ fn gradient_map_stop_controls_fit_a_narrow_properties_panel_in_every_theme() {
 /// one history step.
 #[test]
 fn gradient_map_picker_offers_the_gradient_library() {
-    use photocraft_engine::presets::{Group, gradients};
+    use lienzo_engine::presets::{Group, gradients};
     let mut h = app_harness("gradientMap", "rgb", 8);
     // A short library so every row fits the popup: Basics, Blues and a user-saved group.
     let mut lib: Vec<_> = gradients::builtin().into_iter().take(2).collect();
@@ -782,7 +782,7 @@ fn gradient_map_picker_offers_the_gradient_library() {
     lib.push(Group::new("Mine", vec![gradients::GradientPreset::new("My Teal", &["#008080", "#ffee00"])]));
     h.state_mut().session.presets.gradients = lib;
     h.run_steps(2);
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let steps = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     for (name, want) in
         [("Blue 03", vec![(0.0, [0x00, 0xb4, 0xd8]), (1.0, [0x03, 0x04, 0x5e])]), ("My Teal", vec![(0.0, [0x00, 0x80, 0x80]), (1.0, [0xff, 0xee, 0x00])])]
     {
@@ -798,7 +798,7 @@ fn gradient_map_picker_offers_the_gradient_library() {
     }
 }
 
-fn import_gradients_from_picker(h: &mut Harness<'_, PhotocraftApp>) {
+fn import_gradients_from_picker(h: &mut Harness<'_, LienzoApp>) {
     let preset = label_rect(h, "Preset:").unwrap();
     click(h, Pos2::new(preset.right() + 60.0, preset.center().y));
     h.get_by_label("Gradient Preset Options").click();
@@ -809,13 +809,13 @@ fn import_gradients_from_picker(h: &mut Harness<'_, PhotocraftApp>) {
 
 #[test]
 fn gradient_map_picker_imports_grd_without_editing_the_map() {
-    use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop};
+    use lienzo_psd::grd::{GrdColor, GrdGradient, GrdStop};
     let mut h = app_harness("gradientMap", "rgb", 16);
     h.state_mut().session.presets.gradients.truncate(1);
     let before = layer(&h);
     let history = h.state().session.active().unwrap().history.past_len();
     let tool = h.state().session.presets.gradient.clone();
-    let bytes = photocraft_psd::grd::write(&[GrdGradient {
+    let bytes = lienzo_psd::grd::write(&[GrdGradient {
         name: "Imported Teal".into(),
         stops: vec![
             GrdStop { location: 0.0, midpoint: 0.5, color: GrdColor::Rgb([0.0, 0.5, 0.5]) },
@@ -851,12 +851,9 @@ fn gradient_map_picker_import_cancel_and_errors_preserve_state() {
         None,
         Some(FileDialogAnswer::Contents("broken.grd".into(), b"invalid".to_vec())),
         Some(FileDialogAnswer::Contents("old.grd".into(), b"8BGR\0\x03".to_vec())),
-        Some(FileDialogAnswer::Contents(
-            "noise.grd".into(),
-            photocraft_psd::grd::write(&[photocraft_psd::grd::GrdGradient { noise: true, ..Default::default() }]),
-        )),
+        Some(FileDialogAnswer::Contents("noise.grd".into(), lienzo_psd::grd::write(&[lienzo_psd::grd::GrdGradient { noise: true, ..Default::default() }]))),
         Some(FileDialogAnswer::Contents("wrong.abr".into(), Vec::new())),
-        Some(FileDialogAnswer::Paths(vec!["/nonexistent/photocraft-gradients.grd".into()])),
+        Some(FileDialogAnswer::Paths(vec!["/nonexistent/lienzo-gradients.grd".into()])),
         Some(FileDialogAnswer::Unavailable("dialog unavailable".into())),
     ] {
         let mut h = app_harness("gradientMap", "rgb", 8);
@@ -894,7 +891,7 @@ fn gradient_map_dialog_import_preserves_pending_settings() {
 }
 
 /// Document point (x, y) on screen in the app's first view.
-fn doc_on_screen(h: &Harness<'_, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn doc_on_screen(h: &Harness<'_, LienzoApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     let xf = crate::canvas::ViewXform {
@@ -932,7 +929,7 @@ fn properties_white_point_eyedropper_edits_the_layer(kind: &str) {
     // The left half is #6a3020: the white point moves to it, so it composites white.
     let at = doc_on_screen(&h, 10.0, 10.0);
     click(&mut h, at);
-    let pixel = |h: &mut Harness<'_, PhotocraftApp>| -> Vec<f32> {
+    let pixel = |h: &mut Harness<'_, LienzoApp>| -> Vec<f32> {
         serde_json::from_value(h.state_mut().run("document.pixel", json!({"x": 10, "y": 10})).unwrap()).unwrap()
     };
     let px = pixel(&mut h);
@@ -966,7 +963,7 @@ fn editor_harness(kind: &'static str, params: serde_json::Value) -> Harness<'sta
         },
         params,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
@@ -994,7 +991,7 @@ fn hue_saturation_bars_fill_the_panel_width() {
             },
             json!({}),
         );
-        PhotocraftApp::setup_context(&h.ctx, Default::default());
+        LienzoApp::setup_context(&h.ctx, Default::default());
         h.run_steps(4);
         let bars = h.ctx.data(|d| d.get_temp::<Rect>(egui::Id::unique("hs").with("hs-bars"))).expect("bars drawn");
         let avail = h.ctx.data(|d| d.get_temp::<f32>(egui::Id::unique("hs-avail"))).unwrap();
@@ -1073,7 +1070,7 @@ fn photo_filter_color(a: &Adjustment) -> [f32; 3] {
 }
 
 /// Click the Photo Filter swatch, wait for its Color Picker and show `hex` in it.
-fn photo_filter_picker_shows(h: &mut Harness<'_, PhotocraftApp>, hex: &str) {
+fn photo_filter_picker_shows(h: &mut Harness<'_, LienzoApp>, hex: &str) {
     h.get_by_label("Color Picker (Photo Filter)").click();
     h.run_steps(3);
     let d = h.state().ui.dialogs.last().expect("the swatch opens the Color Picker");
@@ -1093,7 +1090,7 @@ fn photo_filter_colour_picker_previews_live_cancel_restores_and_ok_is_one_step()
     h.get_by_label("Color:").click();
     h.run_steps(3);
     let start = photo_filter_color(&layer(&h).1);
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let steps = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     let before = steps(&h);
 
     // While the picker is open, the canvas previews its colour; nothing is committed yet.
@@ -1133,7 +1130,7 @@ fn gradient_map_stop_picker_closed_without_a_colour_changes_nothing() {
     h.state_mut().run("layer.setAdjustment", json!({"layer": id.0, "stops": [[0, "#000000"], [fine, "#ff0000"], [1, "#ffffff"]]})).unwrap();
     h.run_steps(4);
     let before = layer(&h).1;
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let steps = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     let history = steps(&h);
     for button in ["Cancel", "OK"] {
         h.get_by_label("Color Picker (Stop Color)").click();
@@ -1161,7 +1158,7 @@ fn hue_saturation_range_zones_drag_their_handles() {
     let bars: Rect = h.ctx.data(|d| d.get_temp(mem.with("hs-range-bars"))).expect("the range bars");
     let x = |deg: f32| bars.left() + deg / 360.0 * bars.width();
     let y = bars.center().y;
-    let greens = |h: &Harness<'_, PhotocraftApp>| match layer(h).1 {
+    let greens = |h: &Harness<'_, LienzoApp>| match layer(h).1 {
         Adjustment::HueSaturation { ranges, .. } => ranges[2].bounds,
         other => panic!("{other:?}"),
     };
@@ -1254,7 +1251,7 @@ fn hue_saturation_range_zone_drags_across_the_seam() {
     let bars: Rect = h.ctx.data(|d| d.get_temp(mem.with("hs-range-bars"))).expect("the range bars");
     let x = |deg: f32| bars.left() + deg / 360.0 * bars.width();
     let y = bars.center().y;
-    let reds = |h: &Harness<'_, PhotocraftApp>| match layer(h).1 {
+    let reds = |h: &Harness<'_, LienzoApp>| match layer(h).1 {
         Adjustment::HueSaturation { ranges, .. } => ranges[0].bounds,
         other => panic!("{other:?}"),
     };
@@ -1287,7 +1284,7 @@ fn selective_color_properties_switch_colour_without_committing() {
     let mut h = app_harness("selectiveColor", "rgb", 8);
     let (_, before) = layer(&h);
     let steps = h.state().session.active().unwrap().history.past_len();
-    let nudge = |h: &mut Harness<'static, PhotocraftApp>| {
+    let nudge = |h: &mut Harness<'static, LienzoApp>| {
         let r =
             h.query_all_by_role(egui::accesskit::Role::Slider).rfind(|n| n.accesskit_node().label().as_deref() == Some("Cyan")).expect("Cyan slider").rect();
         drag(h, r.center(), Pos2::new(r.right() + 40.0, r.center().y));
@@ -1336,9 +1333,9 @@ fn selective_color_properties_switch_colour_without_committing() {
 #[test]
 fn selective_color_properties_method_radios_commit() {
     let mut h = app_harness("selectiveColor", "rgb", 8);
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let steps = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     let start = steps(&h);
-    let radio = |h: &mut Harness<'static, PhotocraftApp>, text: &str| {
+    let radio = |h: &mut Harness<'static, LienzoApp>, text: &str| {
         let at = h.query_all_by_role_and_label(egui::accesskit::Role::RadioButton, text).last().expect("method radio").rect().center();
         click(h, at);
     };

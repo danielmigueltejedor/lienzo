@@ -4,9 +4,7 @@
 
 use super::open::{Target, commit_open_raw, open_raw_with, return_on_failure};
 use super::sidecar::read_sidecar;
-use super::{
-    Align2, CameraRaw, CameraRawDialog, Color32, ERect, FontId, PhotocraftApp, RawOpen, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2, widgets,
-};
+use super::{Align2, CameraRaw, CameraRawDialog, Color32, ERect, FontId, LienzoApp, RawOpen, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2, widgets};
 
 /// The filmstrip column, shown when more than one raw is being opened.
 pub(super) const FILM_W: f32 = 150.0;
@@ -26,14 +24,14 @@ pub struct HeldRaw {
 }
 
 impl HeldRaw {
-    pub(super) fn new(app: &PhotocraftApp, raw: RawOpen) -> Self {
+    pub(super) fn new(app: &LienzoApp, raw: RawOpen) -> Self {
         let thumb = super::open::document_index(app, raw.document).and_then(|i| thumbnail(app, i));
         HeldRaw { raw, kept: None, thumb, tex: None }
     }
 }
 
 /// A filmstrip thumbnail of document `index` (a just-developed raw: its first pixel layer).
-fn thumbnail(app: &PhotocraftApp, index: usize) -> Option<egui::ColorImage> {
+fn thumbnail(app: &LienzoApp, index: usize) -> Option<egui::ColorImage> {
     let doc = &app.session.documents().get(index)?.doc;
     let surf = doc.layers.iter().find_map(|l| l.surface())?;
     let area = doc.bounds();
@@ -78,7 +76,7 @@ fn shrink(px: &[[f32; 4]], w: usize, h: usize) -> (Vec<[f32; 4]>, usize, usize) 
 
 /// Shows raw `i` of the filmstrip, with the settings it was left with (its sidecar's, the
 /// Camera Raw Defaults' Auto, or the defaults the first time).
-pub(super) fn open_held(app: &mut PhotocraftApp, ctx: &egui::Context, i: usize) -> Result<(), String> {
+pub(super) fn open_held(app: &mut LienzoApp, ctx: &egui::Context, i: usize) -> Result<(), String> {
     let held = app.raw_shelf.get(i).ok_or("no raw file at that place in the filmstrip")?;
     let (raw, kept) = (held.raw.clone(), held.kept.clone());
     open_raw_with(app, ctx, raw, kept)
@@ -86,7 +84,7 @@ pub(super) fn open_held(app: &mut PhotocraftApp, ctx: &egui::Context, i: usize) 
 
 /// Shows raw `to` of the filmstrip; the one being left keeps its settings, and its thumbnail
 /// shows them.
-pub(super) fn show_raw(app: &mut PhotocraftApp, ctx: &egui::Context, to: usize) -> Result<(), String> {
+pub(super) fn show_raw(app: &mut LienzoApp, ctx: &egui::Context, to: usize) -> Result<(), String> {
     let Some(d) = app.camera_raw.as_ref() else { return Ok(()) };
     let current = d.raw_open.as_ref().map(|r| r.document);
     if d.target != Target::OpenRaw || app.raw_shelf.get(to).is_none_or(|h| Some(h.raw.document) == current) {
@@ -107,7 +105,7 @@ pub(super) fn show_raw(app: &mut PhotocraftApp, ctx: &egui::Context, to: usize) 
 
 /// Stores the dialog's settings (and demosaic choice) on its filmstrip raw, and refreshes the
 /// raw's thumbnail from the preview.
-pub(super) fn keep_settings(app: &mut PhotocraftApp) {
+pub(super) fn keep_settings(app: &mut LienzoApp) {
     let Some(d) = app.camera_raw.as_ref() else { return };
     let Some(raw) = &d.raw_open else { return };
     let Some(held) = app.raw_shelf.iter_mut().find(|h| h.raw.document == raw.document) else { return };
@@ -125,7 +123,7 @@ pub(super) fn keep_settings(app: &mut PhotocraftApp) {
 
 /// The settings Open develops a never-shown filmstrip raw with, and what they started from:
 /// its sidecar's, else the Camera Raw Defaults' Auto when that is on, else the defaults.
-pub(super) fn first_settings(app: &PhotocraftApp, raw: &RawOpen) -> (CameraRaw, Option<CameraRaw>) {
+pub(super) fn first_settings(app: &LienzoApp, raw: &RawOpen) -> (CameraRaw, Option<CameraRaw>) {
     if let Some((loaded, _, _)) = raw.path.as_deref().and_then(read_sidecar) {
         return (loaded.clone(), Some(loaded));
     }
@@ -137,7 +135,7 @@ pub(super) fn first_settings(app: &PhotocraftApp, raw: &RawOpen) -> (CameraRaw, 
         && let Ok((area, w, h)) = super::convert::preview_area(st.doc.bounds(), surf)
     {
         let (proxy, ..) = super::convert::box_proxy(surf, area, w, h);
-        photocraft_algo::camera_raw::auto_tone(&proxy, &mut p);
+        lienzo_algo::camera_raw::auto_tone(&proxy, &mut p);
     }
     (p, None)
 }
@@ -146,9 +144,9 @@ pub(super) fn first_settings(app: &PhotocraftApp, raw: &RawOpen) -> (CameraRaw, 
 /// its own settings. One reply for one raw, `{"opened": [...]}` for several. A raw leaves the
 /// filmstrip once it has opened or its background develop has started: one that fails stays or
 /// comes back there with its settings, so the dialog returns for it (or Cancel still closes it).
-pub(super) fn open_all(app: &mut PhotocraftApp, params: &CameraRaw, raw: &RawOpen, original: &CameraRaw) -> Result<Value, String> {
+pub(super) fn open_all(app: &mut LienzoApp, params: &CameraRaw, raw: &RawOpen, original: &CameraRaw) -> Result<Value, String> {
     keep_settings(app);
-    let others: Vec<photocraft_doc::DocId> = app.raw_shelf.iter().map(|h| h.raw.document).filter(|id| *id != raw.document).collect();
+    let others: Vec<lienzo_doc::DocId> = app.raw_shelf.iter().map(|h| h.raw.document).filter(|id| *id != raw.document).collect();
     let first = commit_open_raw(app, params, raw, Some(original));
     if let Ok(v) = &first {
         return_on_failure(app, v, original);
@@ -191,7 +189,7 @@ pub(super) fn open_all(app: &mut PhotocraftApp, params: &CameraRaw, raw: &RawOpe
 
 /// Done: saves each raw's settings to its sidecar, as Camera Raw's Done does, and opens none of
 /// them (they close again).
-pub(super) fn done(app: &mut PhotocraftApp) -> Value {
+pub(super) fn done(app: &mut LienzoApp) -> Value {
     use super::sidecar::Stored;
     keep_settings(app);
     let Some(d) = app.camera_raw.as_ref() else { return Value::Null };
@@ -234,7 +232,7 @@ pub(super) fn done(app: &mut PhotocraftApp) -> Value {
 
 /// The filmstrip of raws being opened: a thumbnail and name each, the shown one outlined, a dot
 /// on edited ones. Returns the one clicked.
-pub(super) fn filmstrip(ui: &mut egui::Ui, rect: ERect, shelf: &mut [HeldRaw], current: Option<photocraft_doc::DocId>, t: &Tokens) -> Option<usize> {
+pub(super) fn filmstrip(ui: &mut egui::Ui, rect: ERect, shelf: &mut [HeldRaw], current: Option<lienzo_doc::DocId>, t: &Tokens) -> Option<usize> {
     let mut clicked = None;
     let mut film = ui.new_child(egui::UiBuilder::new().max_rect(rect.shrink2(vec2(6.0, 6.0))));
     film.set_clip_rect(rect.intersect(ui.clip_rect()));

@@ -21,6 +21,8 @@ Rules (see the config file for this repository's):
     skip = ["glob", ...]                     files left alone entirely (licence notices...)
     [[pin]]  file = "...", pattern = "regex" the first match in `file` takes the value it has in the
                                             --pin-from checkout (this app's own version number)
+    after = [["cmd", "arg", ...], ...]       run in DIR after `apply` (a formatter: shorter names
+                                            change how lines wrap and imports sort)
 
 A line containing the marker `rebrand: keep` is never changed, for compatibility code that has to
 name the old product on purpose.
@@ -48,6 +50,7 @@ class Rules:
         self.keep = [re.compile(k) for k in data.get("keep", [])]
         self.skip = list(data.get("skip", []))
         self.pins = [(p["file"], re.compile(p["pattern"], re.M)) for p in data.get("pin", [])]
+        self.after = [list(c) for c in data.get("after", [])]
         sources = "|".join(re.escape(f) for f, _ in self.pairs)
         self.any_source = re.compile(sources)
 
@@ -177,6 +180,8 @@ def main() -> int:
     status = apply(rules, root)
     if a.pin_from is not None:
         pin(rules, root, a.pin_from.resolve())
+    for cmd in rules.after:
+        subprocess.run(cmd, cwd=root, check=True)
     return status
 
 

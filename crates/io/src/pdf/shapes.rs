@@ -2,8 +2,8 @@
 
 use std::fmt::Write as _;
 
-use photocraft_color::ColorMode;
-use photocraft_doc::{Fill, FillRule, LineCap, LineJoin, PathOp, ShapeLayer, StrokeAlign};
+use lienzo_color::ColorMode;
+use lienzo_doc::{Fill, FillRule, LineCap, LineJoin, PathOp, ShapeLayer, StrokeAlign};
 
 /// Return a PDF path and fill operator for a directly representable shape.
 /// Coordinates remain in document pixels with y increasing down; the caller applies transforms.
@@ -103,20 +103,20 @@ pub(super) fn shape_path(layer: &ShapeLayer, mode: ColorMode) -> Option<String> 
     Some(out)
 }
 
-fn point_finite(p: photocraft_geom::Point) -> bool {
+fn point_finite(p: lienzo_geom::Point) -> bool {
     p.x.is_finite() && p.y.is_finite()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::{Knot, Path, Subpath};
-    use photocraft_geom::Point;
+    use lienzo_doc::{Knot, Path, Subpath};
+    use lienzo_geom::Point;
 
     #[test]
     fn closed_cubic_emits_path_and_fill() {
         let layer = ShapeLayer {
-            fill: Some(Fill::Solid(photocraft_color::Color::rgb(1.0, 0.0, 0.0))),
+            fill: Some(Fill::Solid(lienzo_color::Color::rgb(1.0, 0.0, 0.0))),
             path: Path::new(vec![Subpath {
                 closed: true,
                 knots: vec![Knot::smooth(Point::new(0.0, 0.0), Point::new(-1.0, 0.0), Point::new(1.0, 0.0)), Knot::corner(10.0, 0.0)],
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn rejects_open_path_and_mismatched_mode() {
         let mut layer = ShapeLayer {
-            fill: Some(Fill::Solid(photocraft_color::Color::rgb(1.0, 0.0, 0.0))),
+            fill: Some(Fill::Solid(lienzo_color::Color::rgb(1.0, 0.0, 0.0))),
             path: Path::new(vec![Subpath::polyline(&[(0.0, 0.0), (1.0, 1.0)])]),
             ..Default::default()
         };
@@ -144,16 +144,16 @@ mod tests {
     #[test]
     fn centered_stroke_keeps_its_width_color_and_dash_pattern() {
         let layer = ShapeLayer {
-            fill: Some(Fill::Solid(photocraft_color::Color::rgb(1.0, 0.0, 0.0))),
+            fill: Some(Fill::Solid(lienzo_color::Color::rgb(1.0, 0.0, 0.0))),
             path: Path::new(vec![Subpath::polygon(&[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])]),
-            stroke: Some(photocraft_doc::ShapeStroke { width: 2.0, dashes: vec![2.0, 1.0], ..Default::default() }),
+            stroke: Some(lienzo_doc::ShapeStroke { width: 2.0, dashes: vec![2.0, 1.0], ..Default::default() }),
             ..Default::default()
         };
         let ops = shape_path(&layer, ColorMode::Rgb).unwrap();
         assert!(ops.contains("0 0 0 RG\n"));
         assert!(ops.contains("2 w 0 J 0 j 100 M\n[4 2 ] 0 d\n"));
         assert!(ops.ends_with("h\nB\n"));
-        let inside = ShapeLayer { stroke: Some(photocraft_doc::ShapeStroke { align: StrokeAlign::Inside, ..Default::default() }), ..layer };
+        let inside = ShapeLayer { stroke: Some(lienzo_doc::ShapeStroke { align: StrokeAlign::Inside, ..Default::default() }), ..layer };
         assert!(shape_path(&inside, ColorMode::Rgb).is_none());
     }
 
@@ -161,7 +161,7 @@ mod tests {
     fn stroke_only_emits_stroke_operator() {
         let layer = ShapeLayer {
             path: Path::new(vec![Subpath::polygon(&[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])]),
-            stroke: Some(photocraft_doc::ShapeStroke { width: 1.0, ..Default::default() }),
+            stroke: Some(lienzo_doc::ShapeStroke { width: 1.0, ..Default::default() }),
             ..Default::default()
         };
         let ops = shape_path(&layer, ColorMode::Rgb).unwrap();

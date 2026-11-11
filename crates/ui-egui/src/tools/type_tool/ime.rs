@@ -1,6 +1,6 @@
 use super::editing::edit_home;
 use super::ime_edit::{ime_geometry, reconcile_preedit};
-use super::{Arc, HashMap, ImeContextTracker, ImeMutationStamp, ImeTarget, LayerId, PhotocraftApp, TextEdit, ViewXform, active_doc_id, current_text};
+use super::{Arc, HashMap, ImeContextTracker, ImeMutationStamp, ImeTarget, LayerId, LienzoApp, TextEdit, ViewXform, active_doc_id, current_text};
 
 /// Per-editor IME owner/generation bookkeeping for the custom Type tool.
 ///
@@ -161,23 +161,23 @@ impl ImeState {
 ///
 /// The document, layer and viewport identify the target; the edit session is the replacement
 /// epoch, so committing and editing the same layer again cannot reuse the old generation.
-pub(super) fn ime_target(app: &PhotocraftApp, ed: &TextEdit, viewport: egui::ViewportId) -> Option<ImeTarget> {
+pub(super) fn ime_target(app: &LienzoApp, ed: &TextEdit, viewport: egui::ViewportId) -> Option<ImeTarget> {
     let document = ed.document.or_else(|| active_doc_id(app))?;
     // A Type Mask session is a distinct owner: its hidden working layer can have the same id as
     // a regular type layer in another tool session. The session epoch replaces the context when
     // an owner is recreated.
-    let owner = egui::Id::unique(("photocraft-type-ime", document, ed.layer, ed.mask, viewport.0.value()));
-    let epoch = egui::Id::unique(("photocraft-type-ime-session", &ed.session)).value().max(1);
+    let owner = egui::Id::unique(("lienzo-type-ime", document, ed.layer, ed.mask, viewport.0.value()));
+    let epoch = egui::Id::unique(("lienzo-type-ime-session", &ed.session)).value().max(1);
     Some(ImeTarget::new(owner, epoch))
 }
 
-fn incoming_selection(app: &PhotocraftApp, viewport: egui::ViewportId) -> Option<IncomingSelection> {
+fn incoming_selection(app: &LienzoApp, viewport: egui::ViewportId) -> Option<IncomingSelection> {
     let ed = app.ui.text_edit.as_ref()?;
     Some(IncomingSelection { target: ime_target(app, ed, viewport)?, caret: ed.caret, anchor: ed.anchor, revision: app.session.active()?.revision })
 }
 
 /// Settle the already-visible preview where it was typed, never replay it at a moved caret.
-pub(super) fn interrupt_incoming(app: &mut PhotocraftApp) {
+pub(super) fn interrupt_incoming(app: &mut LienzoApp) {
     if !matches!(app.type_ime.incoming, Some(IncomingComposition::Active(_) | IncomingComposition::TerminalPending(_))) {
         return;
     }
@@ -189,7 +189,7 @@ pub(super) fn interrupt_incoming(app: &mut PhotocraftApp) {
     app.type_ime.request_interrupt();
 }
 
-pub(super) fn interrupt_action(app: &mut PhotocraftApp, viewport: egui::ViewportId) {
+pub(super) fn interrupt_action(app: &mut LienzoApp, viewport: egui::ViewportId) {
     let guarded = reset_guarded(app, viewport);
     interrupt_incoming(app);
     if guarded {
@@ -197,7 +197,7 @@ pub(super) fn interrupt_action(app: &mut PhotocraftApp, viewport: egui::Viewport
     }
 }
 
-pub(super) fn sync_incoming(app: &mut PhotocraftApp, viewport: egui::ViewportId) {
+pub(super) fn sync_incoming(app: &mut LienzoApp, viewport: egui::ViewportId) {
     let destination = incoming_selection(app, viewport);
     if app.type_ime.resets.get(&viewport).is_some_and(|phase| match phase {
         ResetPhase::Awaiting { destination: old, .. } | ResetPhase::AllocationFailed { destination: old, .. } => Some(*old) != destination,
@@ -229,7 +229,7 @@ pub(super) fn sync_incoming(app: &mut PhotocraftApp, viewport: egui::ViewportId)
 }
 
 /// Accepted IME mutations update provenance without canceling their own Delete→Commit chain.
-pub(super) fn remember_incoming(app: &mut PhotocraftApp, preedit_empty: Option<bool>) {
+pub(super) fn remember_incoming(app: &mut LienzoApp, preedit_empty: Option<bool>) {
     let viewport = app.type_ime.frame.map_or(egui::ViewportId::ROOT, |frame| frame.viewport);
     let Some(expected) = incoming_selection(app, viewport) else { return };
     let next = match (preedit_empty, app.type_ime.incoming) {
@@ -242,7 +242,7 @@ pub(super) fn remember_incoming(app: &mut PhotocraftApp, preedit_empty: Option<b
 
 /// A host may recreate its Context while retaining the application. Old pass counters and
 /// output keys are not evidence of publication in that new Context.
-pub(super) fn bind_reset_context(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(super) fn bind_reset_context(app: &mut LienzoApp, ctx: &egui::Context) {
     // `on_begin_pass` callbacks registered during this pass cannot mark the pass already
     // running. Reinstall here so a replacement Context is ready for its next pass, and rely on
     // the host's creator/`setup_context` having installed before the very first `run_ui`.
@@ -264,27 +264,27 @@ pub(super) fn bind_reset_context(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 fn ui_mode_id(viewport: egui::ViewportId) -> egui::Id {
-    egui::Id::unique(("photocraft-type-reset-ui", viewport))
+    egui::Id::unique(("lienzo-type-reset-ui", viewport))
 }
 
 /// Install before the first UI pass on every Context, including a replacement. These callbacks
 /// retain neither the app nor its Context. Calling this from inside a running pass only affects
 /// subsequent passes: egui's begin-pass callback list is already being iterated.
 pub(crate) fn install_reset_hooks(ctx: &egui::Context) {
-    let installed = egui::Id::unique("photocraft-type-reset-hooks");
+    let installed = egui::Id::unique("lienzo-type-reset-hooks");
     if ctx.data(|data| data.get_temp::<bool>(installed)).unwrap_or(false) {
         return;
     }
     ctx.data_mut(|data| data.insert_temp(installed, true));
     ctx.on_begin_pass(
-        "photocraft type reset UI mode",
+        "lienzo type reset UI mode",
         Arc::new(|ui| {
             let key = ui_mode_id(ui.ctx().viewport_id());
             ui.ctx().data_mut(|data| data.insert_temp(key, true));
         }),
     );
     ctx.on_end_pass(
-        "photocraft type reset UI mode end",
+        "lienzo type reset UI mode end",
         Arc::new(|ui| {
             let key = ui_mode_id(ui.ctx().viewport_id());
             ui.ctx().data_mut(|data| data.insert_temp(key, false));
@@ -297,11 +297,11 @@ pub(crate) fn in_ui_pass(ctx: &egui::Context) -> bool {
     ctx.data(|data| data.get_temp::<bool>(key)).unwrap_or(false)
 }
 
-pub(super) fn reset_guarded(app: &PhotocraftApp, viewport: egui::ViewportId) -> bool {
+pub(super) fn reset_guarded(app: &LienzoApp, viewport: egui::ViewportId) -> bool {
     app.type_ime.needs_request || app.type_ime.resets.contains_key(&viewport) || matches!(app.type_ime.incoming, Some(IncomingComposition::Stale))
 }
 
-pub(super) fn reset_route_eligible(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
+pub(super) fn reset_route_eligible(app: &LienzoApp, ctx: &egui::Context) -> bool {
     // The actual app draws only after `logic_frame` marks fonts ready; `ui_frame` early-returns
     // on the first frame. Direct handler tests that have not run the first logic frame use the
     // pre-styled app state and are not an actual UI route.
@@ -317,13 +317,13 @@ pub(super) fn reset_route_eligible(app: &PhotocraftApp, ctx: &egui::Context) -> 
 /// Whether this input can be attributed to a visible custom descriptor right now. Completion
 /// arrives before the final descriptor exists, so use the last canvas mapping and the current
 /// model: requiring this pass's final output here would deadlock the ordered suffix.
-fn reset_geometry_available(app: &mut PhotocraftApp, viewport: egui::ViewportId) -> bool {
+fn reset_geometry_available(app: &mut LienzoApp, viewport: egui::ViewportId) -> bool {
     let Some(ed) = app.ui.text_edit.clone() else { return false };
     let Some(view) = app.type_ime.view.filter(|view| view.viewport == viewport) else { return false };
     ime_geometry(app, &ed, view.xf).is_some()
 }
 
-pub(super) fn suspend_reset(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(super) fn suspend_reset(app: &mut LienzoApp, ctx: &egui::Context) {
     let viewport = ctx.viewport_id();
     if reset_guarded(app, viewport) {
         app.type_ime.resets.insert(viewport, ResetPhase::Suspended);
@@ -332,7 +332,7 @@ pub(super) fn suspend_reset(app: &mut PhotocraftApp, ctx: &egui::Context) {
     app.type_ime.last_custom.remove(&viewport);
 }
 
-fn allocate_reset(app: &mut PhotocraftApp, ctx: &egui::Context, destination: IncomingSelection, context: Option<ResetContext>) {
+fn allocate_reset(app: &mut LienzoApp, ctx: &egui::Context, destination: IncomingSelection, context: Option<ResetContext>) {
     let viewport = ctx.viewport_id();
     let phase = match ctx.request_ime_reset(viewport) {
         Some(id) => ResetPhase::Awaiting { id, destination, context },
@@ -343,7 +343,7 @@ fn allocate_reset(app: &mut PhotocraftApp, ctx: &egui::Context, destination: Inc
 }
 
 /// Reconcile before the next raw element, not merely at descriptor publication.
-pub(super) fn prepare_reset(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(super) fn prepare_reset(app: &mut LienzoApp, ctx: &egui::Context) {
     let viewport = ctx.viewport_id();
     sync_incoming(app, viewport);
     if app.type_ime.needs_request {
@@ -354,7 +354,7 @@ pub(super) fn prepare_reset(app: &mut PhotocraftApp, ctx: &egui::Context) {
     // must never inherit a speculative custom-editor reset request.
 }
 
-pub(super) fn complete_reset(app: &mut PhotocraftApp, ctx: &egui::Context, request_id: egui::ImeResetId) {
+pub(super) fn complete_reset(app: &mut LienzoApp, ctx: &egui::Context, request_id: egui::ImeResetId) {
     let viewport = ctx.viewport_id();
     let Some(ResetPhase::Awaiting { id, destination, context }) = app.type_ime.resets.get(&viewport).copied() else { return };
     if request_id != id
@@ -381,14 +381,14 @@ pub(super) fn complete_reset(app: &mut PhotocraftApp, ctx: &egui::Context, reque
     }
 }
 
-pub(super) fn claim_raw_pass(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub(super) fn claim_raw_pass(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     let viewport = ctx.viewport_id();
     let pass = ctx.cumulative_pass_nr_for(viewport);
     app.type_ime.raw_pass.insert(viewport, pass) != Some(pass)
 }
 
 /// The exclusive route when no custom editor may mutate. Do not consume stock text/keys.
-pub(crate) fn controls_only(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn controls_only(app: &mut LienzoApp, ctx: &egui::Context) {
     bind_reset_context(app, ctx);
     if !claim_raw_pass(app, ctx) {
         return;
@@ -405,7 +405,7 @@ pub(crate) fn controls_only(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// True outer UI tail, including discarded/early-return passes and host-side mutations.
-pub(crate) fn finish_reset_pass(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn finish_reset_pass(app: &mut LienzoApp, ctx: &egui::Context) {
     bind_reset_context(app, ctx);
     let viewport = ctx.viewport_id();
     if app.type_ime.raw_pass.get(&viewport).copied() != Some(ctx.cumulative_pass_nr_for(viewport)) {
@@ -443,7 +443,7 @@ pub(crate) fn finish_reset_pass(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-pub(crate) fn finish_reset_logic(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn finish_reset_logic(app: &mut LienzoApp, ctx: &egui::Context) {
     bind_reset_context(app, ctx);
     if !in_ui_pass(ctx) {
         sync_incoming(app, ctx.viewport_id());

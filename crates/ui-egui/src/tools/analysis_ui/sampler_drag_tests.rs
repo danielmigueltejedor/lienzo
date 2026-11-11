@@ -9,43 +9,43 @@ const NONE: Modifiers = Modifiers::NONE;
 const ALT: Modifiers = Modifiers { alt: true, ctrl: false, shift: false, mac_cmd: false, command: false };
 
 /// A 200 × 100 document with the Color Sampler tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.ui.tool = Tool::ColorSampler;
     app
 }
 
-fn down(app: &mut PhotocraftApp, x: f64, y: f64, m: Modifiers) {
+fn down(app: &mut LienzoApp, x: f64, y: f64, m: Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
 }
 
-fn mv(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn mv(app: &mut LienzoApp, x: f64, y: f64) {
     crate::canvas::tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, NONE);
 }
 
-fn up(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn up(app: &mut LienzoApp, x: f64, y: f64) {
     crate::canvas::tool_event(app, ToolEvent::Up { x, y }, NONE);
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     down(app, from[0], from[1], NONE);
     mv(app, (from[0] + to[0]) / 2.0, (from[1] + to[1]) / 2.0);
     mv(app, to[0], to[1]);
     up(app, to[0], to[1]);
 }
 
-fn samplers(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn samplers(app: &LienzoApp) -> Vec<[f64; 2]> {
     app.session.active().unwrap().color_samplers.clone()
 }
 
 /// The pixel each point sits on (the stored position floors to it).
-fn pixels(app: &PhotocraftApp) -> Vec<[i64; 2]> {
+fn pixels(app: &LienzoApp) -> Vec<[i64; 2]> {
     samplers(app).iter().map(|p| [p[0].floor() as i64, p[1].floor() as i64]).collect()
 }
 
 /// Escape through the app's shortcut handling, as the canvas gets it.
-fn escape(app: &mut PhotocraftApp) {
+fn escape(app: &mut LienzoApp) {
     let ctx = egui::Context::default();
     let raw = egui::RawInput {
         events: vec![
@@ -174,7 +174,7 @@ fn the_dragged_and_the_new_marker_are_drawn_at_the_pointer() {
         aspect: 1.0,
     };
     // The marker numbers the overlay paints, with where they are.
-    let numbers_at = |app: &PhotocraftApp| -> Vec<(String, egui::Pos2)> {
+    let numbers_at = |app: &LienzoApp| -> Vec<(String, egui::Pos2)> {
         let mut o = ctx.run_ui(Default::default(), |ui| draw_overlay(app, ui.painter(), &xf));
         o.textures_delta.clear();
         o.shapes

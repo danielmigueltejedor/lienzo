@@ -5,7 +5,7 @@
 //! layer (or group) between a base and its clipped layers never becomes their (empty) base.
 //! Artboards are never nested or clipped: a new one goes to the top level.
 
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, LayerPath, MAX_GROUP_DEPTH};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, LayerPath, MAX_GROUP_DEPTH};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Place {
@@ -101,7 +101,7 @@ pub fn insert_new(doc: &mut Document, anchor: Option<LayerId>, mut layer: Layer,
 /// (halving each first put 9..11 at 9) and the sum is floored, not truncated toward zero (which
 /// put -4..3, whose middle is -0.5, at 0, inside a board starting there); in i64, so it can't
 /// overflow. The middle of two i32 edges is itself an i32.
-pub(crate) fn centre(bounds: photocraft_geom::Rect) -> (i32, i32) {
+pub(crate) fn centre(bounds: lienzo_geom::Rect) -> (i32, i32) {
     let mid = |a: i32, b: i32| i32::try_from((i64::from(a) + i64::from(b)).div_euclid(2)).unwrap_or(a);
     (mid(bounds.x0, bounds.x1), mid(bounds.y0, bounds.y1))
 }
@@ -123,7 +123,7 @@ fn takes_new_layers(target: &Layer, depth: usize, layer: &Layer) -> bool {
 
 /// Is `layer`'s content centred on the board at `rect`? A layer with no content is (it can go
 /// anywhere).
-fn on_board(layer: &Layer, rect: photocraft_geom::Rect) -> bool {
+fn on_board(layer: &Layer, rect: lienzo_geom::Rect) -> bool {
     crate::layer_multi_cmds::layer_bounds(layer).is_none_or(|b| {
         let (cx, cy) = centre(b);
         rect.contains(cx, cy)

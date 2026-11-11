@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// The cases of a long sweep that this run covers. By default a run takes one of `parts` slices,
 /// chosen by the UTC date, so every case runs at least once every `parts` days.
-/// `PHOTOCRAFT_FULL_SWEEP=1` runs every case, and `PHOTOCRAFT_SWEEP_PART=<n>` replays slice `n`;
+/// `LIENZO_FULL_SWEEP=1` runs every case, and `LIENZO_SWEEP_PART=<n>` replays slice `n`;
 /// [`Sweep::new`] prints the slice it picked.
 #[derive(Debug, Clone, Copy)]
 pub struct Sweep {
@@ -14,20 +14,20 @@ pub struct Sweep {
 
 impl Sweep {
     pub fn new(parts: u64) -> Self {
-        if std::env::var_os("PHOTOCRAFT_FULL_SWEEP").is_some_and(|v| v == "1") {
-            eprintln!("full sweep (PHOTOCRAFT_FULL_SWEEP=1)");
+        if std::env::var_os("LIENZO_FULL_SWEEP").is_some_and(|v| v == "1") {
+            eprintln!("full sweep (LIENZO_FULL_SWEEP=1)");
             return Self { part: 0, parts: 1 };
         }
         let parts = parts.max(1);
-        let part = match std::env::var("PHOTOCRAFT_SWEEP_PART") {
+        let part = match std::env::var("LIENZO_SWEEP_PART") {
             Ok(v) => {
                 let p = v.parse::<u64>().unwrap_or(u64::MAX);
-                assert!(p < parts, "PHOTOCRAFT_SWEEP_PART={v:?} is not a part number below {parts}");
+                assert!(p < parts, "LIENZO_SWEEP_PART={v:?} is not a part number below {parts}");
                 p
             }
             Err(_) => SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() / 86_400).unwrap_or_default() % parts,
         };
-        eprintln!("sweep part {part} of {parts}: replay with PHOTOCRAFT_SWEEP_PART={part}, run every part with PHOTOCRAFT_FULL_SWEEP=1");
+        eprintln!("sweep part {part} of {parts}: replay with LIENZO_SWEEP_PART={part}, run every part with LIENZO_FULL_SWEEP=1");
         Self { part, parts }
     }
 

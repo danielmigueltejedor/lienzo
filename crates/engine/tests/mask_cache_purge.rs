@@ -1,12 +1,12 @@
 //! One integration-test process keeps its global mask cache isolated from parallel unit tests.
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_compose::masks;
-use photocraft_doc::{Layer, LayerMask};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_compose::masks;
+use lienzo_doc::{Layer, LayerMask};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::json;
 
 #[test]

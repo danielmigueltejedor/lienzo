@@ -10,7 +10,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::adjust_editors::{self, EditorCx};
 use crate::tone::{self, HistSource};
 
@@ -20,8 +20,8 @@ const CURVE_PICKER_BASE: &str = "__curvePickerBase";
 /// Set once a Photo Filter dialog has drawn: its editor memory was refreshed for this opening.
 const PHOTO_FILTER_FRESH: &str = "__photoFilterFresh";
 
-fn picker(value: Option<&Value>) -> Option<photocraft_engine::adjust_params::CurvesEyedropper> {
-    use photocraft_engine::adjust_params::CurvesEyedropper;
+fn picker(value: Option<&Value>) -> Option<lienzo_engine::adjust_params::CurvesEyedropper> {
+    use lienzo_engine::adjust_params::CurvesEyedropper;
     match value.and_then(Value::as_str) {
         Some("black") => Some(CurvesEyedropper::Black),
         Some("gray") => Some(CurvesEyedropper::NeutralGray),
@@ -30,9 +30,9 @@ fn picker(value: Option<&Value>) -> Option<photocraft_engine::adjust_params::Cur
     }
 }
 
-pub(crate) fn picker_supported(mode: photocraft_doc::ColorMode, eyedropper: photocraft_engine::adjust_params::CurvesEyedropper) -> bool {
-    use photocraft_engine::adjust_params::CurvesEyedropper;
-    mode == photocraft_doc::ColorMode::Rgb || (mode == photocraft_doc::ColorMode::Grayscale && eyedropper != CurvesEyedropper::NeutralGray)
+pub(crate) fn picker_supported(mode: lienzo_doc::ColorMode, eyedropper: lienzo_engine::adjust_params::CurvesEyedropper) -> bool {
+    use lienzo_engine::adjust_params::CurvesEyedropper;
+    mode == lienzo_doc::ColorMode::Rgb || (mode == lienzo_doc::ColorMode::Grayscale && eyedropper != CurvesEyedropper::NeutralGray)
 }
 
 /// The kind of an adjustment dialog with Set Black/Neutral Gray/White Point eyedroppers (Levels,
@@ -42,7 +42,7 @@ fn picker_kind(fields: &Map<String, Value>) -> Option<&str> {
 }
 
 /// Whether the top modal has a supported Levels or Curves eyedropper armed.
-pub fn picker_armed(app: &PhotocraftApp) -> bool {
+pub fn picker_armed(app: &LienzoApp) -> bool {
     let Some(dialog) = app.ui.dialogs.last().filter(|d| picker_kind(&d.fields).is_some()) else { return false };
     let Some(eyedropper) = picker(dialog.fields.get(CURVE_PICKER)) else { return false };
     app.session.active().is_some_and(|s| picker_supported(s.doc.mode, eyedropper))
@@ -51,7 +51,7 @@ pub fn picker_armed(app: &PhotocraftApp) -> bool {
 /// Sample the committed merged document through the regular canvas sampler and update only the
 /// open Levels or Curves dialog. Returns true when an armed picker consumed the pointer event,
 /// even if the point was outside the image or transparent.
-pub fn sample_at(app: &mut PhotocraftApp, x: f64, y: f64) -> bool {
+pub fn sample_at(app: &mut LienzoApp, x: f64, y: f64) -> bool {
     let Some((id, kind, eyedropper, base)) = app.ui.dialogs.last().and_then(|dialog| {
         let kind = picker_kind(&dialog.fields)?.to_string();
         let eyedropper = picker(dialog.fields.get(CURVE_PICKER))?;
@@ -65,8 +65,8 @@ pub fn sample_at(app: &mut PhotocraftApp, x: f64, y: f64) -> bool {
         return true;
     }
     let Some(sample) = crate::canvas::composite_color(app, x, y) else { return true };
-    let params = match photocraft_engine::adjust_params::adjustment_eyedropper(&kind, &base, eyedropper, sample, mode) {
-        Ok(adjustment) => photocraft_engine::adjust_params::to_params(&adjustment),
+    let params = match lienzo_engine::adjust_params::adjustment_eyedropper(&kind, &base, eyedropper, sample, mode) {
+        Ok(adjustment) => lienzo_engine::adjust_params::to_params(&adjustment),
         Err(error) => {
             app.ui.status = error.to_string();
             return true;
@@ -82,7 +82,7 @@ pub fn sample_at(app: &mut PhotocraftApp, x: f64, y: f64) -> bool {
 }
 
 /// Whether the top modal is the Curves dialog.
-pub fn curves_on_top(app: &PhotocraftApp) -> bool {
+pub fn curves_on_top(app: &LienzoApp) -> bool {
     app.ui.dialogs.last().is_some_and(|d| d.fields.get("__adjust").and_then(Value::as_str) == Some("curves"))
 }
 
@@ -94,7 +94,7 @@ pub fn curves_on_top(app: &PhotocraftApp) -> bool {
 /// The pixel comes from the same merged composite as the eyedroppers. Returns true when Curves is
 /// on top: the click is the dialog's even when nothing is added (pencil curve, Lab or CMYK, a mask
 /// or saved channel target, outside the image, a full curve).
-pub fn add_point_at(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64, every_channel: bool) -> bool {
+pub fn add_point_at(app: &mut LienzoApp, ctx: &egui::Context, x: f64, y: f64, every_channel: bool) -> bool {
     if !curves_on_top(app) {
         return false;
     }
@@ -106,7 +106,7 @@ pub fn add_point_at(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64
         return true;
     }
     let Some(mode) = app.session.active().map(|s| s.doc.mode) else { return true };
-    if !matches!(mode, photocraft_doc::ColorMode::Rgb | photocraft_doc::ColorMode::Grayscale) {
+    if !matches!(mode, lienzo_doc::ColorMode::Rgb | lienzo_doc::ColorMode::Grayscale) {
         app.ui.status = tl!("Unavailable in this color mode").into();
         return true;
     }
@@ -115,10 +115,10 @@ pub fn add_point_at(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64
         app.session
             .active()
             .and_then(|st| {
-                photocraft_engine::color_channels::explicit(&values, photocraft_engine::channel_cmds::color_count(&st.doc))
+                lienzo_engine::color_channels::explicit(&values, lienzo_engine::channel_cmds::color_count(&st.doc))
                     .ok()
                     .flatten()
-                    .and_then(|colors| photocraft_engine::channel_cmds::curve_channel_for_colors(&st.doc, colors))
+                    .and_then(|colors| lienzo_engine::channel_cmds::curve_channel_for_colors(&st.doc, colors))
             })
             .or_else(|| isolated(app))
     } else {
@@ -132,7 +132,7 @@ pub fn add_point_at(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64
     let (shown, shown_key) = match &isolated {
         Some(c) if c.components.is_some() => {
             let ch: usize = ctx.data(|d| d.get_temp(dialog_mem("curves").with("curves-ch"))).unwrap_or(0);
-            let keys = photocraft_engine::adjust_params::channel_keys(adjust_editors::space_of(&values));
+            let keys = lienzo_engine::adjust_params::channel_keys(adjust_editors::space_of(&values));
             let key = ch.checked_sub(1).and_then(|i| c.components.and_then(|colors| colors.indices().nth(i))).and_then(|i| keys.get(i)).copied().unwrap_or("");
             (ch, key)
         }
@@ -159,8 +159,8 @@ pub fn add_point_at(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64
         let input = (level.clamp(0.0, 1.0) * 255.0).round();
         let field = if key.is_empty() { "points" } else { key };
         let mut pts = adjust_editors::read_curve(&values, field);
-        let curve: Vec<_> = pts.iter().map(|q| photocraft_doc::adjust::CurvePoint { input: q[0] / 255.0, output: q[1] / 255.0 }).collect();
-        let lut = photocraft_compose::adjust::curve_lut(&curve);
+        let curve: Vec<_> = pts.iter().map(|q| lienzo_doc::adjust::CurvePoint { input: q[0] / 255.0, output: q[1] / 255.0 }).collect();
+        let lut = lienzo_compose::adjust::curve_lut(&curve);
         let at = (input / 255.0 * lut.len().saturating_sub(1) as f32).round() as usize;
         let Some(output) = lut.get(at).map(|o| (o * 255.0).round()) else { continue };
         let before = pts.len();
@@ -206,8 +206,8 @@ pub(crate) fn picker_button(ui: &mut egui::Ui, selected: bool, enabled: bool, to
     response
 }
 
-fn picker_controls(ui: &mut egui::Ui, fields: &mut Map<String, Value>, mode: photocraft_doc::ColorMode) {
-    use photocraft_engine::adjust_params::CurvesEyedropper;
+fn picker_controls(ui: &mut egui::Ui, fields: &mut Map<String, Value>, mode: lienzo_doc::ColorMode) {
+    use lienzo_engine::adjust_params::CurvesEyedropper;
     let current = picker(fields.get(CURVE_PICKER));
     let mut chosen = None;
     ui.horizontal(|ui| {
@@ -225,7 +225,7 @@ fn picker_controls(ui: &mut egui::Ui, fields: &mut Map<String, Value>, mode: pho
                 chosen = Some((id, eyedropper));
             }
         }
-        if !matches!(mode, photocraft_doc::ColorMode::Rgb | photocraft_doc::ColorMode::Grayscale) {
+        if !matches!(mode, lienzo_doc::ColorMode::Rgb | lienzo_doc::ColorMode::Grayscale) {
             ui.label(egui::RichText::new(tl!("Unavailable in this color mode")).color(tokens.text_faint).size(11.0));
         }
     });
@@ -259,7 +259,7 @@ pub fn resets(fields: &Map<String, Value>) -> bool {
 
 /// Alt+Cancel (Reset): engine defaults for the kind; Color Balance keeps Preserve Luminosity and
 /// shows Midtones (Photoshop 25.4). Dialog stays open.
-pub fn reset(app: &PhotocraftApp, ctx: &egui::Context, fields: &mut Map<String, Value>) {
+pub fn reset(app: &LienzoApp, ctx: &egui::Context, fields: &mut Map<String, Value>) {
     if !owns(fields) {
         return;
     }
@@ -267,8 +267,8 @@ pub fn reset(app: &PhotocraftApp, ctx: &egui::Context, fields: &mut Map<String, 
     let mode = curve_mode_for_fields(app, &kind, fields);
     // Color Balance: Photoshop keeps the user's Preserve Luminosity across Reset.
     let preserve = if kind == "colorBalance" { fields.get("preserveLuminosity").cloned() } else { None };
-    let Ok(defaults) = photocraft_engine::adjust_params::default_for(&kind, mode) else { return };
-    let values = photocraft_engine::adjust_params::to_params(&defaults);
+    let Ok(defaults) = lienzo_engine::adjust_params::default_for(&kind, mode) else { return };
+    let values = lienzo_engine::adjust_params::to_params(&defaults);
     // Replace parameter keys; keep private `__` chrome (preview, command, …).
     fields.retain(|k, _| k.starts_with("__") || k == "target");
     if let Value::Object(v) = values {
@@ -292,7 +292,7 @@ const KEEPS_LAST: &[(&str, &str)] = &[("photoFilter", "preserveLuminosity")];
 
 /// Opens the dialog for `command` at the kind's neutral settings, except the [`KEEPS_LAST`] ones,
 /// which keep their last confirmed value.
-pub fn open(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
+pub fn open(app: &mut LienzoApp, command: &str) -> Option<u64> {
     let id = open_neutral(app, command)?;
     let kind = command.strip_prefix(PREFIX).unwrap_or_default();
     let kept: Vec<(String, Value)> = match app.session.prefs().dialogs.get(command) {
@@ -310,25 +310,25 @@ pub fn open(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
 }
 
 /// Opens the dialog for `command` with the kind's neutral settings.
-pub fn open_neutral(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
+pub fn open_neutral(app: &mut LienzoApp, command: &str) -> Option<u64> {
     let kind = command.strip_prefix(PREFIX).filter(|k| adjust_editors::has_editor(k))?;
-    let spec = photocraft_engine::commands::find(command)?;
+    let spec = lienzo_engine::commands::find(command)?;
     let mode = curve_mode(app, kind);
-    let defaults = photocraft_engine::adjust_params::default_for(kind, mode).ok()?;
+    let defaults = lienzo_engine::adjust_params::default_for(kind, mode).ok()?;
     let mut fields = Map::new();
     fields.insert("__command".into(), json!(command));
     fields.insert("__label".into(), json!(spec.label));
     fields.insert("__adjust".into(), json!(kind));
     fields.insert("__filter".into(), json!(true));
     fields.insert("__preview".into(), json!(true));
-    if let Value::Object(p) = photocraft_engine::adjust_params::to_params(&defaults) {
+    if let Value::Object(p) = lienzo_engine::adjust_params::to_params(&defaults) {
         fields.extend(p);
     }
-    if app.filter_mask_targeted() && photocraft_engine::channel_cmds::follows_filter_mask(command) {
+    if app.filter_mask_targeted() && lienzo_engine::channel_cmds::follows_filter_mask(command) {
         fields.insert("target".into(), json!("filterMask"));
     } else if app.layer_mask_targeted() {
         fields.insert("target".into(), json!("mask"));
-    } else if let Some(colors) = photocraft_engine::color_channels::selected(&app.session) {
+    } else if let Some(colors) = lienzo_engine::color_channels::selected(&app.session) {
         fields.insert("target".into(), colors.params());
     }
     Some(app.ui.open_dialog(crate::state::DialogKind::Command, fields))
@@ -338,10 +338,10 @@ pub fn open_neutral(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
 /// document, so the controls show it and OK keeps it. Laid over the dialog's defaults instead, a
 /// default can be read over a recorded key that means the same setting (a Lab `lightness` over
 /// `points`). Settings the engine can't read are left as they are, for OK to report on.
-pub(crate) fn seed_from_recorded(fields: &mut Map<String, Value>, recorded: &Value, mode: photocraft_doc::ColorMode) {
+pub(crate) fn seed_from_recorded(fields: &mut Map<String, Value>, recorded: &Value, mode: lienzo_doc::ColorMode) {
     let Some(kind) = fields.get("__adjust").and_then(Value::as_str) else { return };
-    let Ok(adjustment) = photocraft_engine::adjust_params::from_params(kind, recorded, None, mode) else { return };
-    if let Value::Object(mut values) = photocraft_engine::adjust_params::to_params(&adjustment) {
+    let Ok(adjustment) = lienzo_engine::adjust_params::from_params(kind, recorded, None, mode) else { return };
+    if let Value::Object(mut values) = lienzo_engine::adjust_params::to_params(&adjustment) {
         // Selective Color's chosen row is editor state, absent from the normalized adjustment.
         // Keep it so an older single-colour record reopens on the colour the user edited.
         if kind == "selectiveColor"
@@ -362,28 +362,28 @@ pub(crate) fn seed_from_recorded(fields: &mut Map<String, Value>, recorded: &Val
 /// Whether the dialog's captured target is a set of several Lab components, whose Levels and
 /// Curves settings are kept as a separate combined record.
 fn combined_lab_target(fields: &Map<String, Value>) -> bool {
-    photocraft_engine::color_channels::explicit(&crate::filter_dialog::params_of(fields), 3).ok().flatten().is_some_and(|c| c.len() > 1)
+    lienzo_engine::color_channels::explicit(&crate::filter_dialog::params_of(fields), 3).ok().flatten().is_some_and(|c| c.len() > 1)
 }
 
 /// Opens the dialog for `command` at the settings last confirmed in it (Photoshop's ⌥ plus the
 /// adjustment's shortcut, ⌥⌘L / ⌥⌘M, #8900), or at the neutral ones when there are none or they
 /// don't fit the current colour mode.
-pub fn open_last(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
+pub fn open_last(app: &mut LienzoApp, command: &str) -> Option<u64> {
     let id = open_neutral(app, command)?;
     let kind = command.strip_prefix(PREFIX).unwrap_or_default();
     let mode = curve_mode(app, kind);
     let Some(last) = app.session.prefs().dialogs.get(command).cloned() else { return Some(id) };
-    let Ok(adjustment) = photocraft_engine::adjust_params::from_params(kind, &last, None, mode) else { return Some(id) };
-    let mut restored = photocraft_engine::adjust_params::to_params(&adjustment);
+    let Ok(adjustment) = lienzo_engine::adjust_params::from_params(kind, &last, None, mode) else { return Some(id) };
+    let mut restored = lienzo_engine::adjust_params::to_params(&adjustment);
     // The target `open` captured, as `remember` reads it: a viewed layer mask wins over the
     // Channels panel's colour set, so its settings are restored as saved.
     let captured_set = app.ui.dialog_mut(id).is_some_and(|d| combined_lab_target(&d.fields));
-    if mode == photocraft_doc::ColorMode::Lab && matches!(kind, "levels" | "curves") && captured_set {
+    if mode == lienzo_doc::ColorMode::Lab && matches!(kind, "levels" | "curves") && captured_set {
         // The parser validates all records, but ordinary Lab serialization aliases the master
         // to Lightness. A partial set keeps the separately saved combined record.
-        let neutral = photocraft_engine::adjust_params::default_for(kind, photocraft_doc::ColorMode::Grayscale)
+        let neutral = lienzo_engine::adjust_params::default_for(kind, lienzo_doc::ColorMode::Grayscale)
             .ok()
-            .map(|a| photocraft_engine::adjust_params::to_params(&a))
+            .map(|a| lienzo_engine::adjust_params::to_params(&a))
             .unwrap_or(Value::Null);
         let combined = if last.get("__combinedLab").and_then(Value::as_bool) == Some(true) { &last } else { &neutral };
         for key in ["points", "inBlack", "inWhite", "gamma", "outBlack", "outWhite"] {
@@ -404,12 +404,12 @@ pub fn open_last(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
 /// dialog's neutral one. Every recorded value is kept as it was (a round trip through the engine
 /// would rewrite them: float colours as hex, a pencil curve smoothed again). `None` when nothing
 /// needs adding, or for params the engine rejects.
-pub(crate) fn complete_params(app: &PhotocraftApp, command: &str, params: &Value) -> Option<Value> {
+pub(crate) fn complete_params(app: &LienzoApp, command: &str, params: &Value) -> Option<Value> {
     let kind = command.strip_prefix(PREFIX).filter(|k| *k == "photoFilter")?;
     // A `null` colour reads as none, as the engine reads it.
     let recorded = params.as_object().filter(|p| p.contains_key("filter") && p.get("color").is_none_or(Value::is_null))?;
-    let adjustment = photocraft_engine::adjust_params::from_params(kind, params, None, curve_mode(app, kind)).ok()?;
-    let color = photocraft_engine::adjust_params::to_params(&adjustment).get("color").cloned()?;
+    let adjustment = lienzo_engine::adjust_params::from_params(kind, params, None, curve_mode(app, kind)).ok()?;
+    let color = lienzo_engine::adjust_params::to_params(&adjustment).get("color").cloned()?;
     let mut done = recorded.clone();
     done.insert("color".into(), color);
     Some(Value::Object(done))
@@ -417,7 +417,7 @@ pub(crate) fn complete_params(app: &PhotocraftApp, command: &str, params: &Value
 
 /// Remember an adjustment dialog's settings after a successful OK, for [`open_last`]. Editing a
 /// smart filter's settings is not a use of the dialog's own (as `filter_dialog::remember`).
-pub(crate) fn remember(app: &mut PhotocraftApp, fields: &Map<String, Value>) {
+pub(crate) fn remember(app: &mut LienzoApp, fields: &Map<String, Value>) {
     if fields.contains_key("__smartFilter") {
         return;
     }
@@ -426,7 +426,7 @@ pub(crate) fn remember(app: &mut PhotocraftApp, fields: &Map<String, Value>) {
     if let Some(o) = values.as_object_mut() {
         o.remove("target");
     }
-    if app.session.active().is_some_and(|st| st.doc.mode == photocraft_doc::ColorMode::Lab)
+    if app.session.active().is_some_and(|st| st.doc.mode == lienzo_doc::ColorMode::Lab)
         && combined_lab_target(fields)
         && matches!(command.strip_prefix(PREFIX), Some("levels" | "curves"))
     {
@@ -438,37 +438,37 @@ pub(crate) fn remember(app: &mut PhotocraftApp, fields: &Map<String, Value>) {
 /// The Curves dialog's single-channel target: the Channels panel's, plus the Layers panel's mask
 /// selection — both ways of selecting a mask must give the same dropdown (#5335). A targeted
 /// filter mask is a gray plane too (FILE-215-3).
-fn isolated(app: &PhotocraftApp) -> Option<photocraft_engine::channel_cmds::IsolatedCurveChannel> {
+fn isolated(app: &LienzoApp) -> Option<lienzo_engine::channel_cmds::IsolatedCurveChannel> {
     let st = app.session.active()?;
     if app.filter_mask_targeted() {
-        return photocraft_engine::channel_cmds::filter_mask_curve_channel(st);
+        return lienzo_engine::channel_cmds::filter_mask_curve_channel(st);
     }
-    photocraft_engine::channel_cmds::isolated_curve_channel_for(st, app.layer_mask_targeted())
+    lienzo_engine::channel_cmds::isolated_curve_channel_for(st, app.layer_mask_targeted())
 }
 
 /// The colour mode the Levels/Curves dialog seeds and parses in: a mask, saved channel or
 /// Quick Mask holds gray levels whatever the document's mode, so its curve is a neutral one
 /// and the fields carry no Lab or CMYK records (#5335).
-fn curve_mode(app: &PhotocraftApp, kind: &str) -> photocraft_doc::ColorMode {
-    let mode = app.session.active().map_or(photocraft_doc::ColorMode::Rgb, |s| s.doc.mode);
-    if kind == "curves" && isolated(app).is_some_and(|c| c.gray.is_some()) { photocraft_doc::ColorMode::Grayscale } else { mode }
+fn curve_mode(app: &LienzoApp, kind: &str) -> lienzo_doc::ColorMode {
+    let mode = app.session.active().map_or(lienzo_doc::ColorMode::Rgb, |s| s.doc.mode);
+    if kind == "curves" && isolated(app).is_some_and(|c| c.gray.is_some()) { lienzo_doc::ColorMode::Grayscale } else { mode }
 }
 
 /// A dialog keeps its captured space even if the Channels panel changes before Reset or repaint.
-fn curve_mode_for_fields(app: &PhotocraftApp, kind: &str, fields: &Map<String, Value>) -> photocraft_doc::ColorMode {
+fn curve_mode_for_fields(app: &LienzoApp, kind: &str, fields: &Map<String, Value>) -> lienzo_doc::ColorMode {
     if kind == "curves"
         && let Some(target) = fields.get("target")
     {
         if matches!(target.as_str(), Some("mask" | "filterMask" | "quickMask")) || target.get("channel").is_some() {
-            return photocraft_doc::ColorMode::Grayscale;
+            return lienzo_doc::ColorMode::Grayscale;
         }
-        return app.session.active().map_or(photocraft_doc::ColorMode::Rgb, |st| st.doc.mode);
+        return app.session.active().map_or(lienzo_doc::ColorMode::Rgb, |st| st.doc.mode);
     }
     curve_mode(app, kind)
 }
 
 /// Dialog body: the kind's editor over the fields, then the Preview checkbox.
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
     let kind = fields.get("__adjust").and_then(Value::as_str).unwrap_or_default().to_string();
     let mask = fields.get("target").and_then(Value::as_str) == Some("mask");
     let filter_mask = fields.get("target").and_then(Value::as_str) == Some("filterMask");
@@ -488,20 +488,20 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, fields: &mut Map<String,
         .get("__smartFilter")
         .and_then(|f| f.get("layer"))
         .and_then(Value::as_u64)
-        .map(photocraft_doc::LayerId)
+        .map(lienzo_doc::LayerId)
         .or_else(|| app.session.active().and_then(|s| s.active_layer));
     let isolated_curve = if fields.contains_key("__smartFilter") {
         None
     } else if filter_mask {
-        app.session.active().and_then(photocraft_engine::channel_cmds::filter_mask_curve_channel)
+        app.session.active().and_then(lienzo_engine::channel_cmds::filter_mask_curve_channel)
     } else if mask {
-        app.session.active().and_then(photocraft_engine::channel_cmds::layer_mask_curve_channel)
+        app.session.active().and_then(lienzo_engine::channel_cmds::layer_mask_curve_channel)
     } else if fields.contains_key("target") {
         app.session.active().and_then(|st| {
-            photocraft_engine::color_channels::explicit(&crate::filter_dialog::params_of(fields), photocraft_engine::channel_cmds::color_count(&st.doc))
+            lienzo_engine::color_channels::explicit(&crate::filter_dialog::params_of(fields), lienzo_engine::channel_cmds::color_count(&st.doc))
                 .ok()
                 .flatten()
-                .and_then(|colors| photocraft_engine::channel_cmds::curve_channel_for_colors(&st.doc, colors))
+                .and_then(|colors| lienzo_engine::channel_cmds::curve_channel_for_colors(&st.doc, colors))
                 .or_else(|| isolated(app))
         })
     } else {

@@ -565,7 +565,7 @@ pub(crate) fn feather_reach(radius: f32) -> usize {
 /// Select › Modify › Feather: Gaussian blur of the mask with `σ = radius`, the kernel truncated
 /// at `⌈3σ⌉` and normalized, zero beyond the canvas. Photoshop's feather radius is the Gaussian's
 /// σ (measured on Photoshop 27.11; the same mapping the mask feather uses, fitted on the
-/// psd-tools corpus in `photocraft_compose::masks::feather_sigma`). It was `radius / 2`: half
+/// psd-tools corpus in `lienzo_compose::masks::feather_sigma`). It was `radius / 2`: half
 /// as wide as Photoshop's.
 pub(crate) fn feather(m: &[f32], w: usize, h: usize, radius: f32) -> Vec<f32> {
     let n = w.saturating_mul(h);

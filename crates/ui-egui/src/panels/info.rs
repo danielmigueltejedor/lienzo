@@ -1,14 +1,14 @@
-use super::{PhotocraftApp, RichText, Tokens, Value, empty, json, theme, widgets};
+use super::{LienzoApp, RichText, Tokens, Value, empty, json, theme, widgets};
 
 /// The active document's pixel under the pointer, if the pointer is over the image.
-pub(crate) fn hover_pixel(app: &PhotocraftApp) -> Option<(i32, i32)> {
+pub(crate) fn hover_pixel(app: &LienzoApp) -> Option<(i32, i32)> {
     let size = app.session.active()?.doc.size;
     app.hover_doc.map(|p| (p[0].floor() as i32, p[1].floor() as i32)).filter(|(x, y)| *x >= 0 && *y >= 0 && *x < size.width as i32 && *y < size.height as i32)
 }
 
 /// The colour the Info panel reads at document pixel `(x, y)`, straight RGBA 0..1: averaged over
 /// the Eyedropper's Sample Size, as in Photoshop (#1649), and cached per pixel and revision.
-pub(crate) fn pointer_sample(app: &mut PhotocraftApp, (x, y): (i32, i32)) -> Option<[f32; 4]> {
+pub(crate) fn pointer_sample(app: &mut LienzoApp, (x, y): (i32, i32)) -> Option<[f32; 4]> {
     let rev = app.session.active()?.revision;
     let sample_size = app.ui.tool_options.eyedropper_size;
     if let Some(((cx, cy, cr, cs), v)) = app.info_sample
@@ -25,19 +25,19 @@ pub(crate) fn pointer_sample(app: &mut PhotocraftApp, (x, y): (i32, i32)) -> Opt
 
 /// The Info panel's W and H for a size of `wh` px (the selection's or the pending crop frame's):
 /// both go through the ruler unit's formatter at `dpi`, percent of the document's `extent`.
-pub(crate) fn wh_readout(ur: &photocraft_engine::prefs::UnitsAndRulers, dpi: f64, extent: [f64; 2], wh: [f64; 2]) -> [String; 2] {
+pub(crate) fn wh_readout(ur: &lienzo_engine::prefs::UnitsAndRulers, dpi: f64, extent: [f64; 2], wh: [f64; 2]) -> [String; 2] {
     [ur.format(wh[0], dpi, extent[0]), ur.format(wh[1], dpi, extent[1])]
 }
 
 /// Photoshop's Info panel: colour under the pointer (RGB and CMYK), position, selection size.
-pub(super) fn info_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn info_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
         empty(ui, tl!("No document"));
         return;
     };
     let (size, origin) = (st.doc.size, st.doc.ruler_origin);
-    let cmyk_space = photocraft_compose::cmyk_space(&st.doc);
+    let cmyk_space = lienzo_compose::cmyk_space(&st.doc);
     // Positions and sizes in the ruler unit (Preferences › Units & Rulers).
     let units = app.session.prefs().units_and_rulers.clone();
     let dpi = st.doc.resolution_dpi as f64;
@@ -45,7 +45,7 @@ pub(super) fn info_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let units_y = app.session.prefs().units_and_rulers.clone();
     let units_wh = app.session.prefs().units_and_rulers.clone();
     let fy = move |px: f64| units_y.format(px, dpi, size.height as f64);
-    let sel = st.doc.selection.as_ref().map(photocraft_compose::bounds::content_bounds).map(|r| [r.width() as f64, r.height() as f64]);
+    let sel = st.doc.selection.as_ref().map(lienzo_compose::bounds::content_bounds).map(|r| [r.width() as f64, r.height() as f64]);
     // With the Crop tool, W and H are the pending frame's, as in Photoshop (#3145).
     let crop = crate::crop_ui::info_size(app);
     let wh = crop.or(sel);
@@ -73,8 +73,7 @@ pub(super) fn info_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         row(&mut cols[0], "B:", rgba.map_or_else(dash, |c| q(c[2]).to_string()));
         // Colour-managed CMYK in percent like Photoshop's readout, through the same conversion as
         // the Color Picker (#8101) and the Color Sampler readout (`sampler_cmds::device_cmyk`).
-        let cmyk =
-            rgba.map(|c| photocraft_color::convert::with_cmyk_space(cmyk_space.as_ref(), || photocraft_engine::sampler_cmds::device_cmyk(c[0], c[1], c[2])));
+        let cmyk = rgba.map(|c| lienzo_color::convert::with_cmyk_space(cmyk_space.as_ref(), || lienzo_engine::sampler_cmds::device_cmyk(c[0], c[1], c[2])));
         for (i, k) in ["C:", "M:", "Y:", "K:"].iter().enumerate() {
             row(&mut cols[1], k, cmyk.map_or_else(dash, |c| format!("{}%", c[i])));
         }
@@ -128,12 +127,12 @@ pub(super) fn info_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// The Info panel's Color Sampler readouts and the (document, revision) they were composited for.
-pub(crate) type SamplerReadouts = ((photocraft_doc::DocId, u64), std::sync::Arc<Vec<Value>>);
+pub(crate) type SamplerReadouts = ((lienzo_doc::DocId, u64), std::sync::Arc<Vec<Value>>);
 
 /// The Color Sampler readouts of the active document, composited once per revision (#4528):
 /// adding, moving or deleting a sampler and every pixel edit bump the revision, so between them
 /// the Info panel reuses them instead of compositing each point through the stack every frame.
-pub(crate) fn sampler_readouts(app: &mut PhotocraftApp) -> std::sync::Arc<Vec<Value>> {
+pub(crate) fn sampler_readouts(app: &mut LienzoApp) -> std::sync::Arc<Vec<Value>> {
     let Some(key) = app.session.active().map(|s| (s.doc.id, s.revision)) else { return std::sync::Arc::default() };
     if let Some((k, v)) = &app.info_samplers
         && *k == key

@@ -4,16 +4,16 @@
 //! frame with Auto Center Preview off: the frame keeps its size where it fits the turned image,
 //! else moves the shortest way into it, else shrinks about its centre keeping its proportions.
 //! With Ctrl (⌘) held the frame isn't adjusted and the uncovered corners get the Fill.
-//! PhotoCraft never adjusted the frame, so ↵ filled the corners with the background colour.
+//! Lienzo never adjusted the frame, so ↵ filled the corners with the background colour.
 //!
 //! Driven as an agent does, through `ui.pointer` (document px as the view showed them at the
 //! press).
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::ViewXform;
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
-use photocraft_ui_egui::crop_mode::kept_inside;
-use photocraft_ui_egui::crop_ui::{angle, center, corners};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::crop_mode::kept_inside;
+use lienzo_ui_egui::crop_ui::{angle, center, corners};
 use serde_json::{Value, json};
 
 /// The document's size.
@@ -26,8 +26,8 @@ const CANVAS: [f64; 4] = [0.0, 0.0, W, H];
 /// mode with Auto Center Preview off, and `frame` as the pending crop frame: the default frame
 /// when it is the whole canvas, else drawn from its bottom-right corner to its top-left one (a
 /// press on the default frame's corner handle would resize it).
-fn app(frame: [f64; 4]) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(frame: [f64; 4]) -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": W, "height": H, "background": "white"})).expect("new");
     app.run("tools.setColors", json!({"background": "#1050e0"})).expect("colors");
@@ -36,7 +36,7 @@ fn app(frame: [f64; 4]) -> (PhotocraftApp, egui::Context) {
     app.ui.view.show.smart_guides = false;
     app.ui.tool_options.crop_shield.auto_center_preview = false;
     control(&mut app, &ctx, "ui.set", json!({"tool": "crop", "zoom": 1.0, "center": [W / 2.0, H / 2.0]}));
-    photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+    lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
     assert!(!app.ui.tool_options.crop_shield.classic_mode, "Photoshop's default mode");
     if frame != CANVAS {
         let events = json!([
@@ -51,7 +51,7 @@ fn app(frame: [f64; 4]) -> (PhotocraftApp, egui::Context) {
 }
 
 /// Runs one control-channel request, which must succeed.
-fn control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) {
+fn control(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) {
     let (req, _rx) = ControlRequest::new(method, params.clone());
     assert!(matches!(handle(app, ctx, &req), Outcome::Done(_)), "{method} {params}");
 }
@@ -68,7 +68,7 @@ fn around(frame: [f64; 4], deg: f64) -> [f64; 2] {
 /// A turn of the image: a press outside `frame`, then for each `(deg, modifiers)` step a move to
 /// `deg` with those modifiers held (one `ui.pointer` call each, so a key can be pressed during
 /// the drag); `each` runs after every step. Releases at the last step's point with its modifiers.
-fn turn(app: &mut PhotocraftApp, ctx: &egui::Context, frame: [f64; 4], steps: &[(f64, Value)], mut each: impl FnMut(&PhotocraftApp, f64)) {
+fn turn(app: &mut LienzoApp, ctx: &egui::Context, frame: [f64; 4], steps: &[(f64, Value)], mut each: impl FnMut(&LienzoApp, f64)) {
     let p = around(frame, 0.0);
     control(app, ctx, "ui.pointer", json!({"events": [{"kind": "down", "x": p[0], "y": p[1]}]}));
     for (deg, mods) in steps {
@@ -87,32 +87,32 @@ fn plain() -> Value {
 }
 
 /// The pending frame.
-fn frame(app: &PhotocraftApp) -> [f64; 4] {
+fn frame(app: &LienzoApp) -> [f64; 4] {
     app.ui.crop_rect.expect("a frame")
 }
 
 /// The pending frame's corners, turned with it, all lie on the canvas.
-fn inside(app: &PhotocraftApp) -> bool {
+fn inside(app: &LienzoApp) -> bool {
     corners(frame(app), angle(app)).iter().all(|c| (-1e-6..=W + 1e-6).contains(&c[0]) && (-1e-6..=H + 1e-6).contains(&c[1]))
 }
 
 /// Where the frame's centre shows on screen.
-fn on_screen(app: &PhotocraftApp) -> egui::Pos2 {
+fn on_screen(app: &LienzoApp) -> egui::Pos2 {
     let c = center(frame(app));
     ViewXform::active(app).expect("a view").to_screen(c[0] as f32, c[1] as f32)
 }
 
 /// ↵: commits the crop and returns the document's new size.
-fn committed(app: &mut PhotocraftApp) -> (u32, u32) {
-    photocraft_ui_egui::canvas::commit_crop(app);
+fn committed(app: &mut LienzoApp) -> (u32, u32) {
+    lienzo_ui_egui::canvas::commit_crop(app);
     let size = app.session.active().expect("document").doc.size;
     (size.width, size.height)
 }
 
 /// The flattened document's four corner pixels and its middle one.
-fn corners_and_middle(app: &PhotocraftApp) -> [[f32; 4]; 5] {
+fn corners_and_middle(app: &LienzoApp) -> [[f32; 4]; 5] {
     let doc = &app.session.active().expect("document").doc;
-    let flat = photocraft_compose::flatten(doc);
+    let flat = lienzo_compose::flatten(doc);
     let (w, h) = (doc.size.width as usize, doc.size.height as usize);
     let px = |x: usize, y: usize| flat.px[y * w + x];
     [px(0, 0), px(w - 1, 0), px(w - 1, h - 1), px(0, h - 1), px(w / 2, h / 2)]

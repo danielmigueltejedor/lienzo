@@ -21,9 +21,9 @@
 //! flipped type is still written into the path itself (see [`frame_path`]) and a file's flag is
 //! read as the same range on the path run backwards.
 
-use photocraft_doc::text::TextShape;
-use photocraft_doc::vector::{Knot, PathOp, Subpath};
-use photocraft_geom::{Affine, Point};
+use lienzo_doc::text::TextShape;
+use lienzo_doc::vector::{Knot, PathOp, Subpath};
+use lienzo_geom::{Affine, Point};
 
 use crate::engine_data::Value as E;
 
@@ -372,7 +372,7 @@ fn starting_at(path: &Subpath, s: f64) -> Subpath {
 
 /// The path a frame is written with for `TextShape::Path { path, start, flip }` with its range
 /// left at the default: flipped type is the path run backwards and a moved start the path from
-/// there on (exactly how PhotoCraft lays type on a path out), so the reference editor, which
+/// there on (exactly how Lienzo lays type on a path out), so the reference editor, which
 /// starts at the path's beginning, sets the same type.
 pub(crate) fn frame_path(path: &Subpath, start: f32, flip: bool) -> Subpath {
     let path = if flip { reversed(path) } else { path.clone() };

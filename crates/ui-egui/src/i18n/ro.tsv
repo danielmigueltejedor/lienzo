@@ -3865,7 +3865,7 @@ layerLabel	No Color	Fără culoare
 	Mezzotint	Mezzotintă
 	Mosaic	Mozaic
 	Motion Blur	Neclaritate mișcare
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tragerea și plasarea nativă a fișierelor nu este încă suportată pe Wayland. Utilizați Fișier › Deschidere, sau porniți Lienzo prin XWayland cu `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Tragerea și plasarea nativă a fișierelor nu este încă suportată pe Wayland. Utilizați Fișier › Deschidere, sau porniți Lienzo prin XWayland cu `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Strălucire neon
 	New Guide Layout	Aranjament nou de ghidaje
 	New Video Layer from File	Strat video nou din fișier

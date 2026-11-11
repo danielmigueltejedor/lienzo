@@ -1,5 +1,5 @@
 //! Choose an existing mapped menu event without borrowing current command settings.
-use crate::{PhotocraftApp, state::DialogKind};
+use crate::{LienzoApp, state::DialogKind};
 use serde_json::{Map, Value, json};
 const COMMAND: &str = "actions.insertMenuItem";
 const MARK: &str = "__insertMenuItem";
@@ -19,12 +19,12 @@ pub(crate) fn owns(fields: &Map<String, Value>) -> bool {
 }
 
 /// Whether this dialog id still owns a deferred panel operation.
-pub(crate) fn owns_dialog(app: &PhotocraftApp, dialog: u64) -> bool {
+pub(crate) fn owns_dialog(app: &LienzoApp, dialog: u64) -> bool {
     app.held_insert_menu.as_ref().is_some_and(|held| held.dialog == dialog)
 }
 
 /// Open without recording a step or sampling the selected command's current settings.
-pub(super) fn open(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub(super) fn open(app: &mut LienzoApp) -> Result<Value, String> {
     if app.held_insert_menu.is_some() {
         return Err(tl!("Confirm or cancel the pending menu item first.").into());
     }
@@ -43,7 +43,7 @@ pub(crate) fn body(ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
     ui.label(tl!("Choose a menu command. Playback asks for its settings when needed."));
     let mut id = fields.get("id").and_then(Value::as_str).unwrap_or("image.imageSize").to_string();
     craft_ui::ComboBox::from_id_salt("actions-insert-menu").selected_text(super::label_of(&id)).show_ui(ui, |ui| {
-        for command in photocraft_engine::atn_cmds::menu_item_commands() {
+        for command in lienzo_engine::atn_cmds::menu_item_commands() {
             ui.selectable_value(&mut id, command.to_string(), super::label_of(command));
         }
     });
@@ -51,7 +51,7 @@ pub(crate) fn body(ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
 }
 
 /// Consent inserts only into the captured action and uses both retained and current authority.
-pub(crate) fn confirm(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String, Value>) -> Result<Value, String> {
+pub(crate) fn confirm(app: &mut LienzoApp, dialog: u64, fields: &Map<String, Value>) -> Result<Value, String> {
     if app.held_insert_menu.as_ref().is_none_or(|h| h.dialog != dialog) {
         return Err(tl!("No menu item belongs to this chooser.").into());
     }
@@ -80,7 +80,7 @@ pub(crate) fn confirm(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String,
 }
 
 /// Only its own Cancel may release the chooser's target.
-pub(crate) fn cancel(app: &mut PhotocraftApp, dialog: u64) {
+pub(crate) fn cancel(app: &mut LienzoApp, dialog: u64) {
     if app.held_insert_menu.as_ref().is_some_and(|h| h.dialog == dialog) {
         app.held_insert_menu = None;
     }

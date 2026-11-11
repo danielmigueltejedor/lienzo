@@ -3,7 +3,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 const W: u32 = 24;
 const H: u32 = 16;
@@ -334,7 +334,7 @@ fn dds_depth_probe_refuses_unretained_slices_without_volume_flags() {
 /// Header-only inspection protects unretained source payloads while allowing stills and thumbnails.
 #[test]
 fn additional_images_probe_uses_container_structure_without_decoding_pixels() {
-    use photocraft_codecs::has_unretained_source_data;
+    use lienzo_codecs::has_unretained_source_data;
     let frames: Vec<_> = COLOURS.iter().take(2).map(|&c| solid(c)).collect();
     for (bytes, multiple) in [
         (gif(1), false),

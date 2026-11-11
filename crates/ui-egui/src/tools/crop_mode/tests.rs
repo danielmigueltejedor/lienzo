@@ -2,17 +2,17 @@ use super::*;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::crop_ui::{CropDrag, corners};
 use egui::{Modifiers, Pos2, pos2};
-use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
 use serde_json::json;
 
 const NONE: Modifiers = Modifiers::NONE;
 
 /// A 200 × 100 document in a 800 × 600 canvas at 100 %, centred, the Crop tool in default mode.
-fn app() -> PhotocraftApp {
+fn app() -> LienzoApp {
     let doc = Document::with_background("crop", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.sync_views();
     app.ui.tool = Tool::Crop;
     app.ui.extras.snap = false;
@@ -25,14 +25,14 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn xf(app: &PhotocraftApp) -> ViewXform {
+fn xf(app: &LienzoApp) -> ViewXform {
     ViewXform::active(app).unwrap()
 }
 
 /// A drag through screen points, each mapped through the view as it is at that moment (as the
 /// canvas does every frame).
-fn screen_drag(app: &mut PhotocraftApp, pts: &[Pos2], mods: Modifiers) {
-    let at = |app: &PhotocraftApp, p: Pos2| xf(app).to_doc(p);
+fn screen_drag(app: &mut LienzoApp, pts: &[Pos2], mods: Modifiers) {
+    let at = |app: &LienzoApp, p: Pos2| xf(app).to_doc(p);
     let d = at(app, pts[0]);
     tool_event(app, ToolEvent::Down { x: d[0], y: d[1], pressure: 1.0 }, mods);
     for p in &pts[1..] {
@@ -43,7 +43,7 @@ fn screen_drag(app: &mut PhotocraftApp, pts: &[Pos2], mods: Modifiers) {
     tool_event(app, ToolEvent::Up { x: d[0], y: d[1] }, mods);
 }
 
-fn screen_box(app: &PhotocraftApp) -> [Pos2; 4] {
+fn screen_box(app: &LienzoApp) -> [Pos2; 4] {
     let x = xf(app);
     corners(app.ui.crop_rect.unwrap(), crate::crop_ui::angle(app)).map(|p| x.to_screen(p[0] as f32, p[1] as f32))
 }
@@ -58,7 +58,7 @@ fn close(a: [Pos2; 4], b: [Pos2; 4]) -> bool {
 }
 
 /// A real (not default) frame [40, 30, 100, 70], centred at (70, 50) = screen (370, 300).
-fn with_frame(app: &mut PhotocraftApp) {
+fn with_frame(app: &mut LienzoApp) {
     crate::crop_ui::ensure_frame(app);
     app.ui.crop_rect = Some([40.0, 30.0, 100.0, 70.0]);
     app.crop.default_frame = false;
@@ -142,7 +142,7 @@ fn a_move_never_recentres_the_box() {
 /// Moves the image under the box from document point `from` by `d` (both in the view at the
 /// press), checks the snap lines before release, and returns where the box's centre started
 /// on screen.
-fn image_drag(app: &mut PhotocraftApp, from: [f32; 2], d: [f32; 2], line: Option<(bool, f64)>) -> Pos2 {
+fn image_drag(app: &mut LienzoApp, from: [f32; 2], d: [f32; 2], line: Option<(bool, f64)>) -> Pos2 {
     let (a, b) = (xf(app).to_screen(from[0], from[1]), xf(app).to_screen(from[0] + d[0], from[1] + d[1]));
     let mid = mid_of(screen_box(app));
     let p = xf(app).to_doc(a);
@@ -160,7 +160,7 @@ fn image_drag(app: &mut PhotocraftApp, from: [f32; 2], d: [f32; 2], line: Option
     mid
 }
 
-fn assert_frame(app: &PhotocraftApp, want: [f64; 4], what: &str) {
+fn assert_frame(app: &LienzoApp, want: [f64; 4], what: &str) {
     let r = app.ui.crop_rect.unwrap();
     assert!(r.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-3), "{what}: {r:?}, want {want:?}");
 }
@@ -249,7 +249,7 @@ fn box_undo_and_redo_keep_the_box_put() {
         let moved = app.ui.crop_rect;
         assert_ne!(moved, turned);
         let want = if auto { pos2(400.0, 300.0) } else { pos2(370.0, 300.0) };
-        let check = |app: &PhotocraftApp, what: &str| {
+        let check = |app: &LienzoApp, what: &str| {
             let q = screen_box(app);
             assert_upright(q);
             assert!(mid_of(q).distance(want) < 0.05, "auto={auto} {what}: the box moved on screen to {:?}", mid_of(q));
@@ -288,7 +288,7 @@ fn dragging_inside_moves_the_image_under_the_box() {
     screen_drag(&mut app, &[pos2(450.0, 300.0), pos2(370.0 + 80.0 * 30f32.to_radians().cos(), 300.0 + 80.0 * 30f32.to_radians().sin())], NONE);
     assert!((crate::crop_ui::angle(&app) - -30.0).abs() < 0.01);
     let (before, c0) = (screen_box(&app), crate::crop_ui::center(app.ui.crop_rect.unwrap()));
-    let img = |app: &PhotocraftApp| xf(app).to_screen(0.0, 0.0);
+    let img = |app: &LienzoApp| xf(app).to_screen(0.0, 0.0);
     let origin = img(&app);
     screen_drag(&mut app, &[pos2(370.0, 300.0), pos2(400.0, 300.0)], NONE);
     assert!(close(screen_box(&app), before), "box put");
@@ -326,7 +326,7 @@ fn the_readout_is_the_images_turn_clockwise_positive() {
     let mut app = app();
     with_frame(&mut app);
     // A 30° clockwise sweep on screen, held mid-drag.
-    let d = |app: &PhotocraftApp, p: Pos2| xf(app).to_doc(p);
+    let d = |app: &LienzoApp, p: Pos2| xf(app).to_doc(p);
     let a = 30f32.to_radians();
     let (p0, p1) = (pos2(450.0, 300.0), pos2(370.0 + 80.0 * a.cos(), 300.0 + 80.0 * a.sin()));
     let s = d(&app, p0);
@@ -364,7 +364,7 @@ fn auto_center_keeps_the_box_centred_while_a_handle_is_dragged() {
         // The box's right edge on screen, dragged 10 then 20 further right.
         let right = pos2(q[1].x, (q[1].y + q[2].y) / 2.0);
         assert_eq!(crate::crop_ui::cursor(&app, xf(&app).to_doc(right)), Some(egui::CursorIcon::ResizeHorizontal), "screen-space arrow");
-        let at = |app: &PhotocraftApp, p: Pos2| xf(app).to_doc(p);
+        let at = |app: &LienzoApp, p: Pos2| xf(app).to_doc(p);
         let s = at(&app, right);
         tool_event(&mut app, ToolEvent::Down { x: s[0], y: s[1], pressure: 1.0 }, NONE);
         for dx in [10.0, 20.0] {
@@ -570,7 +570,7 @@ fn picking_the_crop_tool_turns_a_rotated_view_upright() {
     assert_eq!((app.ui.crop_rect, app.ui.crop_angle), (Some([40.0, 30.0, 100.0, 70.0]), 12.0), "the frame is unchanged");
     // P switches modes without bringing the R turn back: default mode turns the view with the
     // frame, Classic Mode puts the camera upright again.
-    let press_p = |app: &mut PhotocraftApp| {
+    let press_p = |app: &mut LienzoApp| {
         let ctx = egui::Context::default();
         ctx.input_mut(|i| i.events.push(egui::Event::Key { key: egui::Key::P, physical_key: None, pressed: true, repeat: false, modifiers: NONE }));
         assert!(crate::crop_shield::keys(app, &ctx));
@@ -586,7 +586,7 @@ fn picking_the_crop_tool_turns_a_rotated_view_upright() {
     assert_eq!(view_rotation(&app), 0.0, "Esc in Classic Mode: still upright");
 }
 
-fn key(app: &mut PhotocraftApp, key: egui::Key, modifiers: Modifiers) {
+fn key(app: &mut LienzoApp, key: egui::Key, modifiers: Modifiers) {
     let ctx = egui::Context::default();
     ctx.input_mut(|i| i.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }));
     crate::shortcuts::handle(app, &ctx);
@@ -600,7 +600,7 @@ fn arrows_nudge_the_image_shift_by_ten_and_x_recentres() {
     app.ui.crop_angle = -90.0;
     crate::crop_ui::ensure_frame(&mut app);
     let before = screen_box(&app);
-    let img = |app: &PhotocraftApp| xf(app).to_screen(0.0, 0.0);
+    let img = |app: &LienzoApp| xf(app).to_screen(0.0, 0.0);
     let origin = img(&app);
     key(&mut app, egui::Key::ArrowRight, NONE);
     assert!(close(screen_box(&app), before), "the box stays put");
@@ -639,7 +639,7 @@ fn classic_mode_shows_the_cropped_area_and_h_does_nothing() {
 fn p_toggles_classic_mode_while_a_crop_is_in_progress() {
     let mut app = app();
     with_frame(&mut app);
-    let press = |app: &mut PhotocraftApp| {
+    let press = |app: &mut LienzoApp| {
         let ctx = egui::Context::default();
         ctx.input_mut(|i| i.events.push(egui::Event::Key { key: egui::Key::P, physical_key: None, pressed: true, repeat: false, modifiers: NONE }));
         crate::shortcuts::handle(app, &ctx);
@@ -654,7 +654,7 @@ fn p_toggles_classic_mode_while_a_crop_is_in_progress() {
     ctx.input_mut(|i| i.events.push(egui::Event::Key { key: egui::Key::P, physical_key: None, pressed: true, repeat: false, modifiers: NONE }));
     assert!(!crate::crop_shield::keys(&mut app, &ctx));
     assert!(!classic(&app));
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.tool = Tool::Crop;
     press(&mut app);
     assert_ne!(app.ui.tool, Tool::Crop);
@@ -707,7 +707,7 @@ fn ui_pointer_drives_the_default_mode_in_press_coordinates() {
     app.ui.tool_options.crop_shield.auto_center_preview = false;
     with_frame(&mut app);
     let ctx = egui::Context::default();
-    let pointer = |app: &mut PhotocraftApp, pts: [[f64; 2]; 2]| {
+    let pointer = |app: &mut LienzoApp, pts: [[f64; 2]; 2]| {
         let ev = json!([
             {"kind": "down", "x": pts[0][0], "y": pts[0][1]},
             {"kind": "move", "x": pts[1][0], "y": pts[1][1]},
@@ -758,7 +758,7 @@ fn degenerate_input_never_panics() {
     assert_eq!(pivot_center([1.0, 2.0], [f64::NAN, 0.0], 0.0, 90.0, false), [1.0, 2.0]);
     assert_eq!(pivot_center([1.0, 2.0], [0.0, 0.0], f32::NAN, 90.0, true), [1.0, 2.0]);
     // No view at all (no document).
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.tool = Tool::Crop;
     app.ui.crop_rect = Some([0.0, 0.0, 10.0, 10.0]);
     app.crop.editing = true;
@@ -836,12 +836,9 @@ fn a_recrop_handle_snaps_exactly_to_the_hidden_pixels_edge() {
                     tool_event(&mut app, ToolEvent::Down { x: d[0], y: d[1], pressure: 1.0 }, NONE);
                     // Drag outward a screen pixel at a time; let go once the moving edges show
                     // the snap to the hidden pixels' edges (as the user would).
-                    let snapped = |app: &PhotocraftApp| {
+                    let snapped = |app: &LienzoApp| {
                         let on = |vertical: bool, pos: f64| {
-                            app.prefs_rt
-                                .snap_lines
-                                .iter()
-                                .any(|l| l.vertical == vertical && l.pos == pos && l.kind == photocraft_engine::snap::SnapKind::LayerEdge)
+                            app.prefs_rt.snap_lines.iter().any(|l| l.vertical == vertical && l.pos == pos && l.kind == lienzo_engine::snap::SnapKind::LayerEdge)
                         };
                         (hx == 0 || on(true, if hx < 0 { hidden[0] } else { hidden[2] })) && (hy == 0 || on(false, if hy < 0 { hidden[1] } else { hidden[3] }))
                     };
@@ -870,7 +867,7 @@ fn a_recrop_handle_snaps_exactly_to_the_hidden_pixels_edge() {
                     let st = app.session.active().unwrap();
                     assert_eq!((st.doc.size.width, st.doc.size.height), ((x1 - x0) as u32, (y1 - y0) as u32), "{what}");
                     let layer = st.doc.walk().into_iter().map(|(_, _, l)| l.id).next().unwrap();
-                    let r = photocraft_engine::snap::layer_rect(&st.doc, layer).unwrap();
+                    let r = lienzo_engine::snap::layer_rect(&st.doc, layer).unwrap();
                     assert_eq!(r, [hidden[0] - x0, hidden[1] - y0, hidden[2] - x0, hidden[3] - y0], "{what}: no transparent strip");
                 }
             }

@@ -17,15 +17,15 @@
 use std::sync::Arc;
 
 use egui::{Color32, Pos2, Stroke, TextureHandle, pos2};
-use photocraft_algo::transform::Homography;
-use photocraft_algo::vanishing::{Edge, PlaneCheck, Scene, VpPlane, clone_dabs_from, clone_source};
-use photocraft_doc::{DocId, Document, Layer, LayerContent, LayerId};
-use photocraft_engine::vp_cmds::{CloneSpec, MAX_CLONE_DABS, MAX_CLONE_STROKES, VP, copy_changed, over, paste_onto, visible_image};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::transform::Homography;
+use lienzo_algo::vanishing::{Edge, PlaneCheck, Scene, VpPlane, clone_dabs_from, clone_source};
+use lienzo_doc::{DocId, Document, Layer, LayerContent, LayerId};
+use lienzo_engine::vp_cmds::{CloneSpec, MAX_CLONE_DABS, MAX_CLONE_STROKES, VP, copy_changed, over, paste_onto, visible_image};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::edit_history::{EditHistory, Step};
 
@@ -783,7 +783,7 @@ fn slid_quad(h: &Homography, u0: f64, v0: f64, u1: f64, v1: f64) -> Option<[[f64
 }
 
 /// Starts Vanishing Point on the active pixel layer.
-pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     if app.ui.transform.is_some() {
         return Err("finish Free Transform first".into());
     }
@@ -847,7 +847,7 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
 
 /// OK: runs `filter.vanishingPoint` with the planes (and the paste and the clone strokes). An
 /// invalid plane keeps the mode open; with nothing to paste or clone the mode just closes.
-pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn commit(app: &mut LienzoApp) -> Result<Value, String> {
     let Some(s) = app.distort.vanishing.as_ref() else { return Ok(Value::Null) };
     let center = s.center();
     if s.planes.iter().any(|p| p.check(center) == PlaneCheck::Invalid) {
@@ -879,7 +879,7 @@ pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Control channel: `filter.vanishingPoint {"ui": {...}}` while the mode is active.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut LienzoApp, ui: &Value) -> Result<Value, String> {
     if ui.get("commit").and_then(Value::as_bool) == Some(true) {
         return commit(app);
     }
@@ -922,7 +922,7 @@ pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
         s.aligned_ref = None;
     }
     if let Some(c) = ui.get("clone") {
-        s.strokes = photocraft_engine::vp_cmds::clone_specs(&json!({"clone": c})).map_err(|e| e.to_string())?;
+        s.strokes = lienzo_engine::vp_cmds::clone_specs(&json!({"clone": c})).map_err(|e| e.to_string())?;
         s.drag = None;
         s.rev += 1;
     }
@@ -997,7 +997,7 @@ fn parse_planes(v: &Value) -> Result<(Vec<VpPlane>, Vec<Option<Torn>>), String> 
 
 /// Brings the stamp preview up to date with the strokes (and repaints it after the planes
 /// changed, once no plane is being dragged).
-pub(crate) fn sync_preview(app: &mut PhotocraftApp) {
+pub(crate) fn sync_preview(app: &mut LienzoApp) {
     let Some(s) = app.distort.vanishing.as_mut() else { return };
     if let Some(st) = app.session.active() {
         s.rebase(&st.doc, st.revision);
@@ -1011,7 +1011,7 @@ pub(crate) fn sync_preview(app: &mut PhotocraftApp) {
 
 /// What changed between stamp preview (or document) key `seen` and `now` of document `doc` at
 /// `revision`: the areas the strokes painted. `None` when either key isn't the session's.
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, seen: u64, now: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, seen: u64, now: u64) -> Option<Rect> {
     let s = app.distort.vanishing.as_ref().filter(|s| s.base.id == doc && s.doc_revision == revision)?;
     let keys = &s.preview.as_ref()?.keys;
     let at = |k: u64| if k == 0 { Some(0) } else { keys.iter().position(|e| PREVIEW_KEY + e.0 == k).map(|i| i + 1) };
@@ -1022,7 +1022,7 @@ pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, seen: u64, 
     Some(keys.get(a.min(b)..a.max(b))?.iter().fold(Rect::EMPTY, |r, k| union(r, k.1)))
 }
 
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) {
     let tol = crate::distort_ui::tolerance(app);
     let Some(s) = app.distort.vanishing.as_mut() else { return };
     match ev {
@@ -1042,7 +1042,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
 }
 
 /// Keys while the mode is active (↩ and Esc are handled by `distort_ui::keys`).
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) {
     use egui::{Key, Modifiers};
     if ctx.memory(|m| m.focused().is_some()) {
         return;
@@ -1065,7 +1065,7 @@ pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Esc: drops a half-clicked plane first, then leaves the mode.
-pub fn escape(app: &mut PhotocraftApp) {
+pub fn escape(app: &mut LienzoApp) {
     match app.distort.vanishing.as_mut() {
         Some(s) if !s.pending.is_empty() => s.pending.clear(),
         _ => app.distort.vanishing = None,
@@ -1227,7 +1227,7 @@ fn draw_paste(painter: &egui::Painter, scr: &dyn Fn([f64; 2]) -> Pos2, h: &Homog
     painter.add(mesh);
 }
 
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // New Layer toggled last frame repaints the stamp preview.
     sync_preview(app);
     let Some(s) = app.distort.vanishing.as_mut() else { return };

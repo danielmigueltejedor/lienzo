@@ -1,10 +1,10 @@
-use photocraft_cms::{Builtin, Intent, Profile, Transform};
-use photocraft_codecs::{ChannelLayout, SampleType as CodecSample, decode};
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, LayerMask};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, document_to_image, export};
-use photocraft_raster::Surface;
+use lienzo_cms::{Builtin, Intent, Profile, Transform};
+use lienzo_codecs::{ChannelLayout, SampleType as CodecSample, decode};
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent, LayerMask};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, document_to_image, export};
+use lienzo_raster::Surface;
 
 fn document(depth: SampleType, alpha: f32) -> Document {
     let mut doc = Document::new("CMYK composite", Size::new(8, 8), ColorMode::Cmyk, depth);
@@ -102,7 +102,7 @@ fn flat_and_layered_tiff_agree_for_mixed_cmyk_regions() {
     compare_flat_and_layered_mixed_cmyk_regions();
 }
 
-fn assert_tiff_layout(image: &photocraft_codecs::Image, bytes: &[u8], opaque: bool, sample: CodecSample, context: &str) {
+fn assert_tiff_layout(image: &lienzo_codecs::Image, bytes: &[u8], opaque: bool, sample: CodecSample, context: &str) {
     assert_eq!(image.dimensions(), (48, 16), "{context}");
     assert_eq!(image.layout(), if opaque { ChannelLayout::Cmyk } else { ChannelLayout::CmykA }, "{context}");
     assert_eq!(image.sample_type(), sample, "{context}");
@@ -123,7 +123,7 @@ fn assert_mixed_region_alpha(samples: &[f32], tolerance: f32, context: &str) {
 }
 
 fn compare_flat_and_layered_mixed_cmyk_regions() {
-    let custom = photocraft_cms::synth::cmyk_profile(&photocraft_cms::synth::CmykParams {
+    let custom = lienzo_cms::synth::cmyk_profile(&lienzo_cms::synth::CmykParams {
         description: "Mixed regions uncoated".into(),
         tvi: [0.26, 0.26, 0.26, 0.3],
         grid_a2b: 5,
@@ -163,7 +163,7 @@ fn compare_flat_and_layered_mixed_cmyk_regions() {
                 if !opaque {
                     assert_mixed_region_alpha(&actual, tolerance, &context);
                 }
-                let back = photocraft_io::import("regions.tiff", &flat.bytes).unwrap().document;
+                let back = lienzo_io::import("regions.tiff", &flat.bytes).unwrap().document;
                 assert_eq!((back.mode, back.depth), (ColorMode::Cmyk, depth), "{context}");
                 assert_eq!(back.resolution_dpi, 300.0, "{context}");
             }
@@ -178,7 +178,7 @@ fn psd_keeps_cmyk_mode_depth_and_profile_when_composited() {
 
         let result = export(&doc, "psd", &ExportOptions::default()).unwrap();
 
-        let back = photocraft_io::import("composite.psd", &result.bytes).unwrap().document;
+        let back = lienzo_io::import("composite.psd", &result.bytes).unwrap().document;
         assert_eq!(back.mode, ColorMode::Cmyk);
         assert_eq!(back.depth, depth);
         assert_eq!(back.icc_profile, doc.icc_profile);
@@ -223,21 +223,21 @@ fn jpeg_keeps_four_components_profile_and_zero_ink_matte_when_composited() {
 
 #[test]
 fn composite_uses_distinctive_document_profile_on_every_worker() {
-    let params = photocraft_cms::synth::CmykParams {
+    let params = lienzo_cms::synth::CmykParams {
         description: "Export synthetic uncoated".into(),
         tvi: [0.26, 0.26, 0.26, 0.3],
         grid_a2b: 5,
         grid_b2a: 9,
         ..Default::default()
     };
-    let profile = photocraft_cms::synth::cmyk_profile(&params);
+    let profile = lienzo_cms::synth::cmyk_profile(&params);
     let mut doc = document(SampleType::F32, 0.5);
     doc.size = Size::new(64, 64);
     doc.icc_profile = Some(profile.to_bytes());
     // Hue mixes channels, so the stack is composited in RGB and converted back through the
     // profile (the empty layer leaves the composite as it is): the path under test.
     doc.layers[1].blend = BlendMode::Hue;
-    let rgb = photocraft_compose::flatten(&doc);
+    let rgb = lienzo_compose::flatten(&doc);
     let transform = Transform::new(Builtin::Srgb.profile(), &profile, Intent::RelativeColorimetric, true).unwrap();
     let fallback = Transform::new(Builtin::Srgb.profile(), Builtin::CoatedCmyk.profile(), Intent::RelativeColorimetric, true).unwrap();
     let mut expected = [0.0; 4];
@@ -245,7 +245,7 @@ fn composite_uses_distinctive_document_profile_on_every_worker() {
     let mut wrong = [0.0; 4];
     fallback.eval_fast(&rgb.px[0][..3], &mut wrong);
     assert!(expected.iter().zip(wrong).any(|(a, b)| (a - b).abs() > 0.02));
-    assert!(photocraft_io::pixels::bands(rgb.px.len()).len() > 1);
+    assert!(lienzo_io::pixels::bands(rgb.px.len()).len() > 1);
 
     let image = document_to_image(&doc, &mut Vec::new()).unwrap();
 
@@ -311,16 +311,15 @@ fn native_samples_are_preserved_without_composite_roundtrip() {
 #[test]
 fn rgb_only_export_uses_direct_composite_not_reseparated_cmyk() {
     let doc = document(SampleType::U16, 0.5);
-    let rgb = photocraft_compose::flatten(&doc);
+    let rgb = lienzo_compose::flatten(&doc);
     let expected =
-        photocraft_codecs::Image::from_normalized(8, 8, ChannelLayout::Rgba, CodecSample::U16, &rgb.into_px().into_iter().flatten().collect::<Vec<_>>())
-            .unwrap();
+        lienzo_codecs::Image::from_normalized(8, 8, ChannelLayout::Rgba, CodecSample::U16, &rgb.into_px().into_iter().flatten().collect::<Vec<_>>()).unwrap();
 
     let result = export(&doc, "png", &ExportOptions::default()).unwrap();
 
     let image = decode(&result.bytes).unwrap();
     assert_eq!(image.data(), expected.data());
-    assert_eq!(Profile::parse(image.icc.as_ref().unwrap()).unwrap().color_space, photocraft_cms::ColorSpace::Rgb);
+    assert_eq!(Profile::parse(image.icc.as_ref().unwrap()).unwrap().color_space, lienzo_cms::ColorSpace::Rgb);
 }
 
 #[test]
@@ -343,13 +342,13 @@ fn layered_tiff_keeps_its_existing_cmyk_psd_composite_path() {
 /// tagged CMYK files were 95–100% off before).
 #[test]
 fn merged_composite_of_a_tagged_cmyk_file_reads_through_its_profile() {
-    use photocraft_cms::synth::{CmykParams, cmyk_profile};
-    use photocraft_color::convert::{CmykSpace, cmyk_to_rgb, with_cmyk_space};
+    use lienzo_cms::synth::{CmykParams, cmyk_profile};
+    use lienzo_color::convert::{CmykSpace, cmyk_to_rgb, with_cmyk_space};
     let mut doc = Document::new("tagged", Size::new(6, 4), ColorMode::Cmyk, SampleType::U8);
     let profile =
         cmyk_profile(&CmykParams { description: "Merged Test CMYK".into(), tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() });
     doc.icc_profile = Some(profile.to_bytes());
-    let mut surface = Surface::new(photocraft_color::PixelFormat::new(ColorMode::Cmyk, SampleType::U8, false));
+    let mut surface = Surface::new(lienzo_color::PixelFormat::new(ColorMode::Cmyk, SampleType::U8, false));
     for x in 0..6 {
         for y in 0..4 {
             surface.write_pixel(x, y, &[x as f32 / 5.0, y as f32 / 3.0, 0.4, (x * y) as f32 / 15.0]);
@@ -357,8 +356,8 @@ fn merged_composite_of_a_tagged_cmyk_file_reads_through_its_profile() {
     }
     doc.layers.push(Layer::new("Background", LayerContent::Raster(surface)));
     let psd = export(&doc, "psd", &ExportOptions::default()).unwrap();
-    let file = photocraft_psd::PsdFile::from_bytes(&psd.bytes).unwrap();
-    let merged = photocraft_io::merged_composite(&file).unwrap();
+    let file = lienzo_psd::PsdFile::from_bytes(&psd.bytes).unwrap();
+    let merged = lienzo_io::merged_composite(&file).unwrap();
     // The merged image's own inks (planar, 255 = no ink), shown through the file's profile.
     let raw = file.decode_merged().unwrap();
     let plane = 6 * 4;

@@ -16,10 +16,10 @@
 //!   display unchanged: the canvas texture is clamped to 0–1, so there is nothing above white
 //!   to compress.
 
-use photocraft_cms::{Builtin, Intent, Lut3d, Transform};
-use photocraft_color::SampleType;
-use photocraft_color::convert::{linear_to_srgb, srgb_to_linear};
-use photocraft_doc::Document;
+use lienzo_cms::{Builtin, Intent, Lut3d, Transform};
+use lienzo_color::SampleType;
+use lienzo_color::convert::{linear_to_srgb, srgb_to_linear};
+use lienzo_doc::Document;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -157,7 +157,7 @@ pub fn display_lut_with(c: &ColorState, doc: &Document, size: usize, include_hdr
     if kind == ProofKind::Profile && hdr.is_none() {
         return Ok(None);
     }
-    let err = |e: photocraft_cms::CmsError| EngineError::Other(format!("colour management: {e}"));
+    let err = |e: lienzo_cms::CmsError| EngineError::Other(format!("colour management: {e}"));
     let src = c.canvas_display_for(doc, display)?.source.clone();
     let mon = c.monitor_for(display);
     let srgb = Builtin::Srgb.profile();
@@ -245,7 +245,7 @@ pub fn set_kind(s: &mut Session, kind: ProofKind) -> Result<Value> {
     let st = s.active().ok_or(EngineError::NoDocument)?;
     let (id, doc) = (st.doc.id, st.doc.clone());
     let plates = matches!(kind, ProofKind::Plate(_) | ProofKind::CmyPlate);
-    let working = if plates { Some(s.color.resolve("working-cmyk", Some(&doc), Some(photocraft_color::ColorMode::Cmyk))?) } else { None };
+    let working = if plates { Some(s.color.resolve("working-cmyk", Some(&doc), Some(lienzo_color::ColorMode::Cmyk))?) } else { None };
     let pv = s.color.proof_mut(id);
     if let Some(w) = working {
         pv.setup.profile = w;

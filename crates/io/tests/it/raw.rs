@@ -1,10 +1,10 @@
 //! Camera raw import: synthetic DNG / CR2 develop into a 16-bit ProPhoto
 //! document; unsupported raw variants fall back to the embedded preview.
 
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image};
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_io::{IoError, import};
-use photocraft_raw::testgen::{Cr2Spec, DngSpec, TiffBuilder, Val, mosaic, scene};
+use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_io::{IoError, import};
+use lienzo_raw::testgen::{Cr2Spec, DngSpec, TiffBuilder, Val, mosaic, scene};
 
 #[test]
 fn dng_opens_as_16_bit_prophoto() {
@@ -18,7 +18,7 @@ fn dng_opens_as_16_bit_prophoto() {
     assert_eq!(d.depth, SampleType::U16);
     assert_eq!(d.layers.len(), 1);
     let icc = d.icc_profile.as_ref().expect("profile");
-    assert_eq!(icc.as_slice(), &photocraft_cms::Builtin::ProPhotoCompat.profile().to_bytes()[..]);
+    assert_eq!(icc.as_slice(), &lienzo_cms::Builtin::ProPhotoCompat.profile().to_bytes()[..]);
     assert!(r.warnings.iter().any(|w| w.contains("DNG") && w.contains("ProPhoto")), "{:?}", r.warnings);
 }
 
@@ -26,7 +26,7 @@ fn dng_opens_as_16_bit_prophoto() {
 /// replaced by a preview). The test codestream is an integer one the reader takes as floats.
 #[test]
 fn floating_point_jpeg_xl_dng_is_developed() {
-    use photocraft_raw::testgen::DngStorage;
+    use lienzo_raw::testgen::DngStorage;
     use zune_core::{bit_depth::BitDepth, colorspace::ColorSpace, options::EncoderOptions};
     let (w, h) = (24, 16);
     let data: Vec<u16> = scene(w, h).iter().flat_map(|p| p.map(|v| (v * 20000.0) as u16)).collect();
@@ -77,13 +77,13 @@ fn a_developed_raw_keeps_its_exif() {
     let spec =
         Cr2Spec { width: w, height: h, data, precision: 14, components: 2, slices: vec![24, 24], borders: None, wb_rggb: None, orientation: 6, model_id: None };
     let r = import("IMG_0001.CR2", &spec.build()).unwrap();
-    assert!(r.warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE)), "developed, not a preview: {:?}", r.warnings);
+    assert!(r.warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE)), "developed, not a preview: {:?}", r.warnings);
     let exif = r.document.metadata.exif.as_deref().expect("the raw's EXIF");
-    let camera = photocraft_algo::exif::read(exif);
+    let camera = lienzo_algo::exif::read(exif);
     assert_eq!(camera.make.as_deref(), Some("Canon"));
     assert_eq!(camera.model.as_deref(), Some("Canon EOS Synthetic"));
     assert_eq!(camera.exposure_time, Some(0.01));
-    assert_eq!(photocraft_codecs::exif_orientation(exif), 1, "no orientation to apply a second time");
+    assert_eq!(lienzo_codecs::exif_orientation(exif), 1, "no orientation to apply a second time");
     assert_eq!((r.document.size.width, r.document.size.height), (16, 48));
 }
 
@@ -105,7 +105,7 @@ fn a_developed_rw2_keeps_its_exif() {
     let (w, h, bits) = (20usize, 12usize, 12u32);
     let data: Vec<u16> = (0..w * h).map(|i| (i * 13 % 4000) as u16 + 200).collect();
     let mut t = TiffBuilder::default();
-    let raw = t.blob(photocraft_raw::testgen::rw2_pack(&data, w, bits));
+    let raw = t.blob(lienzo_raw::testgen::rw2_pack(&data, w, bits));
     let exif = t.ifd(vec![(33434, Val::Rational(vec![(1, 60)])), (40962, Val::Long(vec![w as u32])), (40963, Val::Long(vec![h as u32]))]);
     let white = ((1u32 << bits) - 1) as u16;
     let ifd0 = t.ifd(vec![
@@ -131,9 +131,9 @@ fn a_developed_rw2_keeps_its_exif() {
     let mut bytes = t.build();
     bytes[2..4].copy_from_slice(b"U\0");
     let r = import("P1000001.RW2", &bytes).unwrap();
-    assert!(r.warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE)), "developed, not a preview: {:?}", r.warnings);
+    assert!(r.warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE)), "developed, not a preview: {:?}", r.warnings);
     let exif = r.document.metadata.exif.as_deref().expect("the raw's EXIF");
-    let camera = photocraft_algo::exif::read(exif);
+    let camera = lienzo_algo::exif::read(exif);
     assert_eq!((camera.make.as_deref(), camera.model.as_deref()), (Some("Panasonic"), Some("DC-Synthetic")));
     assert!(camera.exposure_time.is_some_and(|t| (t - 1.0 / 60.0).abs() < 1e-9));
     let tags = exif_ifd_tags(exif);
@@ -148,7 +148,7 @@ fn a_developed_raw_keeps_its_camera_when_the_exif_directory_empties() {
     let (w, h, bits) = (20usize, 12usize, 12u32);
     let data: Vec<u16> = (0..w * h).map(|i| (i * 13 % 4000) as u16 + 200).collect();
     let mut t = TiffBuilder::default();
-    let raw = t.blob(photocraft_raw::testgen::rw2_pack(&data, w, bits));
+    let raw = t.blob(lienzo_raw::testgen::rw2_pack(&data, w, bits));
     let exif = t.ifd(vec![(40962, Val::Long(vec![w as u32])), (40963, Val::Long(vec![h as u32]))]);
     let white = ((1u32 << bits) - 1) as u16;
     let ifd0 = t.ifd(vec![
@@ -175,7 +175,7 @@ fn a_developed_raw_keeps_its_camera_when_the_exif_directory_empties() {
     bytes[2..4].copy_from_slice(b"U\0");
     let r = import("P1000001.RW2", &bytes).unwrap();
     let exif = r.document.metadata.exif.as_deref().expect("the raw's camera, without an Exif directory");
-    let camera = photocraft_algo::exif::read(exif);
+    let camera = lienzo_algo::exif::read(exif);
     assert_eq!((camera.make.as_deref(), camera.model.as_deref()), (Some("Panasonic"), Some("DC-Synthetic")));
     assert_eq!(camera.exposure_time, None);
 }
@@ -190,7 +190,7 @@ fn nef_with_preview() -> Vec<u8> {
 /// Uncalibrated, InteropIndex "R03"), as on a Sony body, and the JPEG carries no profile.
 fn nef_with_preview_exif(adobe_rgb: bool) -> Vec<u8> {
     let img = Image::from_u8(32, 20, ChannelLayout::Rgb, vec![180; 32 * 20 * 3]).unwrap();
-    let jpeg = photocraft_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
+    let jpeg = lienzo_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
     let mut t = TiffBuilder::default();
     let strip = t.blob(vec![0; 64]);
     let preview = t.blob(jpeg.clone());
@@ -225,8 +225,8 @@ fn nef_with_preview_exif(adobe_rgb: bool) -> Vec<u8> {
 fn a_preview_fallback_keeps_the_colour_space_the_raw_states() {
     let tagged = import("DSC_0001.NEF", &nef_with_preview_exif(true)).unwrap();
     let icc = tagged.document.icc_profile.as_deref().expect("an Adobe RGB preview opens tagged");
-    let profile = photocraft_cms::Profile::parse(icc).unwrap();
-    assert!(profile.same_colors(photocraft_cms::Builtin::AdobeRgbCompat.profile()));
+    let profile = lienzo_cms::Profile::parse(icc).unwrap();
+    assert!(profile.same_colors(lienzo_cms::Builtin::AdobeRgbCompat.profile()));
     // Unstated: untagged sRGB, as before.
     assert!(import("DSC_0001.NEF", &nef_with_preview()).unwrap().document.icc_profile.is_none());
 }
@@ -244,7 +244,7 @@ fn unsupported_raw_falls_back_to_the_embedded_preview() {
 fn dng_with_jxl_preview() -> Vec<u8> {
     use zune_core::{bit_depth::BitDepth, colorspace::ColorSpace, options::EncoderOptions};
     let thumb = Image::from_u8(8, 6, ChannelLayout::Rgb, vec![90; 8 * 6 * 3]).unwrap();
-    let thumb = photocraft_codecs::encode(&thumb, Format::Jpeg, &EncodeOptions::default()).unwrap();
+    let thumb = lienzo_codecs::encode(&thumb, Format::Jpeg, &EncodeOptions::default()).unwrap();
     let (w, h) = (40usize, 30usize);
     let rgb: Vec<u8> = (0..w * h).flat_map(|i| [(i % w * 6) as u8, (i / w * 8) as u8, 120]).collect();
     let mut preview = Vec::new();
@@ -326,8 +326,8 @@ fn unsupported_raw_without_preview_is_a_clear_error() {
 #[test]
 fn cr3_opens_its_upright_camera_jpeg_with_explicit_preview_warning() {
     let img = Image::from_u8(32, 20, ChannelLayout::Rgb, vec![180; 32 * 20 * 3]).unwrap();
-    let jpeg = photocraft_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
-    let raw = photocraft_raw::testgen::cr3_preview(&jpeg, 6);
+    let jpeg = lienzo_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
+    let raw = lienzo_raw::testgen::cr3_preview(&jpeg, 6);
     let r = import("shot.cr3", &raw).unwrap();
     assert_eq!((r.document.size.width, r.document.size.height), (20, 32));
     assert_eq!(r.document.depth, SampleType::U8);
@@ -337,9 +337,9 @@ fn cr3_opens_its_upright_camera_jpeg_with_explicit_preview_warning() {
 
 #[test]
 fn damaged_raw_opens_its_camera_jpeg_with_a_warning() {
-    use photocraft_raw::testgen::{RafPacking, RafSpec, XTRANS};
+    use lienzo_raw::testgen::{RafPacking, RafSpec, XTRANS};
     let img = Image::from_u8(32, 20, ChannelLayout::Rgb, vec![120; 32 * 20 * 3]).unwrap();
-    let jpeg = photocraft_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
+    let jpeg = lienzo_codecs::encode(&img, Format::Jpeg, &EncodeOptions::default()).unwrap();
     // A lossless compressed RAF (all-zero samples) with a real camera JPEG.
     let mut spec = RafSpec::new(780, 18, vec![0; 780 * 18], XTRANS.to_vec());
     spec.packing = RafPacking::Compressed { lossy: false };
@@ -410,7 +410,7 @@ fn camera_rendering(cam: &[[f32; 3]], w: usize, h: usize) -> Vec<u8> {
 }
 
 fn jpeg(img: Image) -> Vec<u8> {
-    photocraft_codecs::encode(&img, Format::Jpeg, &EncodeOptions { jpeg_quality: 95, ..Default::default() }).unwrap()
+    lienzo_codecs::encode(&img, Format::Jpeg, &EncodeOptions { jpeg_quality: 95, ..Default::default() }).unwrap()
 }
 
 /// An uncompressed NEF-like raw of `cam` with an optional JPEG preview in IFD0.
@@ -478,8 +478,8 @@ fn uncalibrated_raw_takes_its_colour_from_the_camera_jpeg() {
 /// upright: the developed frame is cropped to the same sensor pixels, whichever way it is turned.
 #[test]
 fn camera_raw_tuning_crops_in_the_stored_orientation() {
-    use photocraft_io::camera_raw_xmp::Crop;
-    use photocraft_io::raw::{RawTuning, import_raw_tuned};
+    use lienzo_io::camera_raw_xmp::Crop;
+    use lienzo_io::raw::{RawTuning, import_raw_tuned};
     let (w, h) = (40, 24);
     // Stored pixels x 4..24, y 6..18; then the upright frame's size and the same pixels in it.
     let crop = Crop { top: 0.25, left: 0.1, bottom: 0.75, right: 0.6 };
@@ -495,8 +495,8 @@ fn camera_raw_tuning_crops_in_the_stored_orientation() {
         assert_eq!((full.document.size.width, full.document.size.height), size, "orientation {orientation}");
         assert_eq!((cut.document.size.width, cut.document.size.height), (x1 - x0, y1 - y0), "orientation {orientation}");
         assert!(cut.warnings.iter().any(|n| n.contains(&format!("cropped to {}×{}", x1 - x0, y1 - y0))), "{:?}", cut.warnings);
-        let full = photocraft_io::document_to_image(&full.document, &mut Vec::new()).unwrap();
-        let cut = photocraft_io::document_to_image(&cut.document, &mut Vec::new()).unwrap();
+        let full = lienzo_io::document_to_image(&full.document, &mut Vec::new()).unwrap();
+        let cut = lienzo_io::document_to_image(&cut.document, &mut Vec::new()).unwrap();
         // 16-bit RGB: 6 bytes a pixel.
         let row = |y: u32| &full.data()[((y * size.0 + x0) * 6) as usize..((y * size.0 + x1) * 6) as usize];
         let expected: Vec<u8> = (y0..y1).flat_map(|y| row(y).to_vec()).collect();
@@ -506,8 +506,8 @@ fn camera_raw_tuning_crops_in_the_stored_orientation() {
 
 #[test]
 fn camera_raw_tuning_keeps_the_default_look_and_applies_user_gains_after_fitting() {
-    use photocraft_io::raw::{RawTuning, fit_preview_look, import_raw_tuned};
-    use photocraft_raw::{DevelopOptions, WhiteBalance, decode, develop_sensor};
+    use lienzo_io::raw::{RawTuning, fit_preview_look, import_raw_tuned};
+    use lienzo_raw::{DevelopOptions, WhiteBalance, decode, develop_sensor};
 
     let (w, h) = (480, 320);
     let cam: Vec<_> = patches(w, h).into_iter().map(|c| c.map(|v| v * 0.6)).collect();
@@ -526,7 +526,7 @@ fn camera_raw_tuning_keeps_the_default_look_and_applies_user_gains_after_fitting
         assert!(applied && fitted(&got.warnings) && !fallback(&got.warnings), "{:?}", got.warnings);
         assert_eq!(got.document.depth, SampleType::U16);
         assert_eq!((got.document.size.width, got.document.size.height), (w as u32, h as u32));
-        let gains = photocraft_algo::camera_raw::white_balance_gains(tuning.temperature, tuning.tint).map(f64::from);
+        let gains = lienzo_algo::camera_raw::white_balance_gains(tuning.temperature, tuning.tint).map(f64::from);
         let expected = develop_sensor(
             &sensor,
             &DevelopOptions {
@@ -538,10 +538,10 @@ fn camera_raw_tuning_keeps_the_default_look_and_applies_user_gains_after_fitting
         )
         .unwrap();
         let expected_bytes: Vec<_> = expected.rgb.iter().flat_map(|v| v.to_ne_bytes()).collect();
-        let actual = photocraft_io::document_to_image(&got.document, &mut Vec::new()).unwrap();
+        let actual = lienzo_io::document_to_image(&got.document, &mut Vec::new()).unwrap();
         assert_eq!(actual.data(), expected_bytes, "tuning {tuning:?} must not refit away the user controls");
         if tuning == RawTuning::default() {
-            let original = photocraft_io::document_to_image(&normal.document, &mut Vec::new()).unwrap();
+            let original = lienzo_io::document_to_image(&normal.document, &mut Vec::new()).unwrap();
             assert_eq!(actual.data(), original.data());
         }
     }
@@ -573,8 +573,7 @@ fn unusable_previews_keep_the_neutral_fallback() {
         let bytes = nef_uncompressed(&cam, w, h, p);
         let r = import("DSC_0003.NEF", &bytes).unwrap();
         assert!(fallback(&r.warnings) && !fitted(&r.warnings), "preview {i}: {:?}", r.warnings);
-        let (tuned, wb) =
-            photocraft_io::raw::import_raw_tuned("DSC_0003.NEF", &bytes, &photocraft_io::raw::RawTuning { exposure: 0.5, ..Default::default() }).unwrap();
+        let (tuned, wb) = lienzo_io::raw::import_raw_tuned("DSC_0003.NEF", &bytes, &lienzo_io::raw::RawTuning { exposure: 0.5, ..Default::default() }).unwrap();
         assert!(!wb && fallback(&tuned.warnings) && !fitted(&tuned.warnings), "preview {i}: {:?}", tuned.warnings);
         assert_eq!(tuned.document.depth, SampleType::U16);
     }
@@ -587,7 +586,7 @@ fn truncated_raws_with_a_fittable_preview_do_not_panic() {
     let b = nef_uncompressed(&cam, w, h, Some(camera_rendering(&cam, w, h)));
     for n in (0..b.len()).step_by(211) {
         let _ = import("x.nef", &b[..n]);
-        let _ = photocraft_io::raw::import_raw_tuned("x.nef", &b[..n], &Default::default());
+        let _ = lienzo_io::raw::import_raw_tuned("x.nef", &b[..n], &Default::default());
     }
 }
 
@@ -600,16 +599,16 @@ fn a_re_develop_keeps_the_fitted_look() {
     let cam = patches(w, h);
     let nef = nef_uncompressed(&cam, w, h, Some(camera_rendering(&cam, w, h)));
     let opened = import("DSC_0003.NEF", &nef).unwrap();
-    let (again, _) = photocraft_io::raw::import_raw_tuned("DSC_0003.NEF", &nef, &Default::default()).unwrap();
+    let (again, _) = lienzo_io::raw::import_raw_tuned("DSC_0003.NEF", &nef, &Default::default()).unwrap();
     assert!(fitted(&again.warnings), "{:?}", again.warnings);
-    let pixels = |d: &photocraft_doc::Document| {
+    let pixels = |d: &lienzo_doc::Document| {
         let s = d.layers[0].surface().unwrap();
         let mut px = vec![[0.0f32; 4]; w * h];
-        s.read_rgba_into(photocraft_geom::Rect::new(0, 0, w as i32, h as i32), &mut px);
+        s.read_rgba_into(lienzo_geom::Rect::new(0, 0, w as i32, h as i32), &mut px);
         px
     };
     assert_eq!(pixels(&opened.document), pixels(&again.document));
-    let curve = photocraft_io::raw::tone_curve(&nef);
+    let curve = lienzo_io::raw::tone_curve(&nef);
     assert!(curve.len() > 2 && curve.windows(2).all(|k| k[1][0] > k[0][0] && k[1][1] >= k[0][1]), "{curve:?}");
     // The camera's brightening curve: mid-grey comes out lighter.
     let mid = curve.iter().find(|k| k[0] >= 0.18).unwrap();

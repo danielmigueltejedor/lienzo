@@ -15,9 +15,9 @@
 
 use std::io::Write as _;
 
-use photocraft_psd::compression::{PlaneLayout, encode_planes, predict};
-use photocraft_psd::{ChannelData, Compression, PsdError};
-use photocraft_raster::Surface;
+use lienzo_psd::compression::{PlaneLayout, encode_planes, predict};
+use lienzo_psd::{ChannelData, Compression, PsdError};
+use lienzo_raster::Surface;
 
 use super::Ex;
 use super::stage::Parts;
@@ -64,7 +64,7 @@ struct Channel {
 
 impl Ex<'_> {
     /// The channels of `s` over `r` (non-empty), alpha first, encoded band by band.
-    pub(super) fn banded_channels(&self, s: &Surface, r: photocraft_geom::Rect) -> Vec<ChannelData> {
+    pub(super) fn banded_channels(&self, s: &Surface, r: lienzo_geom::Rect) -> Vec<ChannelData> {
         // RLE fails only on a row too long for its count (not within PSD/PSB limits); then the
         // layer is written raw, as a channel encoded whole falls back to.
         match self.banded_pass(s, r, self.compression()) {
@@ -76,7 +76,7 @@ impl Ex<'_> {
         }
     }
 
-    fn banded_pass(&self, s: &Surface, r: photocraft_geom::Rect, compression: Compression) -> photocraft_psd::Result<Vec<ChannelData>> {
+    fn banded_pass(&self, s: &Surface, r: lienzo_geom::Rect, compression: Compression) -> lienzo_psd::Result<Vec<ChannelData>> {
         let (w, h) = (r.width() as usize, r.height() as usize);
         let bpp = s.format().bytes_per_pixel();
         let band_rows = (band_bytes() / (w * bpp).max(1)).max(1);
@@ -100,13 +100,13 @@ impl Ex<'_> {
             let rows = band_rows.min(h - y);
             let top = r.y0 + y as i32;
             let pieces = crate::pixels::par_map(crate::pixels::bands(rows), |b| {
-                s.to_interleaved(photocraft_geom::Rect::new(r.x0, top + b.start as i32, r.x1, top + b.end as i32))
+                s.to_interleaved(lienzo_geom::Rect::new(r.x0, top + b.start as i32, r.x1, top + b.end as i32))
             });
             let mut bytes = Vec::with_capacity(w * rows * bpp);
             for piece in pieces {
                 bytes.extend_from_slice(&piece);
             }
-            if self.fmt.mode == photocraft_color::ColorMode::Lab && self.fmt.sample == photocraft_color::SampleType::U16 {
+            if self.fmt.mode == lienzo_color::ColorMode::Lab && self.fmt.sample == lienzo_color::SampleType::U16 {
                 crate::pixels::lab16_chroma(&mut bytes, self.cc + 1, false);
             }
             let mut planes: Vec<Option<Vec<u8>>> = deinterleave(&bytes, self.cc + 1, self.fmt.sample, &invert).into_iter().map(Some).collect();
@@ -115,7 +115,7 @@ impl Ex<'_> {
             // Alpha (planes[cc]) is channel 0, then the colour channels; each on its own thread.
             let work: Vec<(&mut Channel, Vec<u8>)> =
                 channels.iter_mut().enumerate().map(|(k, c)| (c, planes[if k == 0 { self.cc } else { k - 1 }].take().unwrap_or_default())).collect();
-            let done = crate::pixels::par_map(work, |(c, mut plane)| -> photocraft_psd::Result<()> {
+            let done = crate::pixels::par_map(work, |(c, mut plane)| -> lienzo_psd::Result<()> {
                 check()?;
                 match compression {
                     Compression::Rle => {
@@ -135,7 +135,7 @@ impl Ex<'_> {
                 }
                 Ok(())
             });
-            done.into_iter().collect::<photocraft_psd::Result<()>>()?;
+            done.into_iter().collect::<lienzo_psd::Result<()>>()?;
             #[cfg(test)]
             BANDS_DONE.set(BANDS_DONE.get() + 1);
         }

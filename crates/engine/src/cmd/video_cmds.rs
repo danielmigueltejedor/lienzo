@@ -4,8 +4,8 @@
 //! writes it back into the playhead's frame before anything re-syncs. Headless and scriptable. Frame persistence in `.pcraft` is a
 //! follow-up; a saved document keeps the current frame as the layer's content.
 
-use photocraft_doc::{Document, Layer, LayerContent, Timeline, VideoData};
-use photocraft_raster::Surface;
+use lienzo_doc::{Document, Layer, LayerContent, Timeline, VideoData};
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -136,7 +136,7 @@ fn edit_video(s: &mut Session, label: &str, f: impl FnOnce(&mut VideoData, usize
     Ok(json!({"frames": count}))
 }
 
-fn blank_of(fmt: photocraft_color::PixelFormat) -> Surface {
+fn blank_of(fmt: lienzo_color::PixelFormat) -> Surface {
     Surface::new(fmt)
 }
 
@@ -295,12 +295,9 @@ fn fps_from_delays(delays: &[u32]) -> Option<f32> {
     best.map(|(d, _)| 1000.0 / d as f32)
 }
 
-/// `photocraft_io::import_gif_frames` / `import_webp_frames`.
-type ImportFrames = fn(
-    &str,
-    &[u8],
-    &mut dyn FnMut(photocraft_doc::Document, u32) -> std::result::Result<(), photocraft_io::IoError>,
-) -> std::result::Result<usize, photocraft_io::IoError>;
+/// `lienzo_io::import_gif_frames` / `import_webp_frames`.
+type ImportFrames =
+    fn(&str, &[u8], &mut dyn FnMut(lienzo_doc::Document, u32) -> std::result::Result<(), lienzo_io::IoError>) -> std::result::Result<usize, lienzo_io::IoError>;
 
 /// Frame storage one footage import may keep (whole tiles, all frames together).
 const MAX_FOOTAGE_BYTES: u64 = 2 << 30;
@@ -317,10 +314,10 @@ fn footage_byte_limit() -> u64 {
 
 /// Import options for footage files. A test scope may lower the PSD/layered-TIFF memory limit,
 /// which the user's preferences do not expose, to reach an admission refusal on a small file.
-fn footage_import_options(s: &Session) -> photocraft_io::ImportOptions {
+fn footage_import_options(s: &Session) -> lienzo_io::ImportOptions {
     #[cfg(test)]
     if let Some(limit) = limits::psd_max_pixel_bytes() {
-        return photocraft_io::ImportOptions { psd_max_pixel_bytes: limit, ..crate::jobs::import_options(s.prefs()) };
+        return lienzo_io::ImportOptions { psd_max_pixel_bytes: limit, ..crate::jobs::import_options(s.prefs()) };
     }
     crate::jobs::import_options(s.prefs())
 }
@@ -378,9 +375,9 @@ mod limits {
 /// The engine error for a failed page of a multi-page TIFF. A memory refusal keeps its typed form,
 /// so the UI, control channel and agents still get the required and limit fields they need to
 /// offer approval or explain the hard limit; any other failure keeps the page's text.
-fn tiff_page_error(display: &std::path::Path, name: &str, page: usize, error: photocraft_io::IoError) -> EngineError {
+fn tiff_page_error(display: &std::path::Path, name: &str, page: usize, error: lienzo_io::IoError) -> EngineError {
     match error {
-        photocraft_io::IoError::PsdApprovalRequired { .. } | photocraft_io::IoError::PsdImportBudget { .. } => crate::error::io_open_error(name, error),
+        lienzo_io::IoError::PsdApprovalRequired { .. } | lienzo_io::IoError::PsdImportBudget { .. } => crate::error::io_open_error(name, error),
         error => EngineError::Other(format!("`{}` page {}: {error}", display.display(), page + 1)),
     }
 }
@@ -388,7 +385,7 @@ fn tiff_page_error(display: &std::path::Path, name: &str, page: usize, error: ph
 /// Load frames from `path`: a single image (1 frame, or every frame of an animated GIF or WebP), or a
 /// directory of images (sorted = an image sequence). Each becomes a full raster frame in the
 /// document's format.
-fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft_io::ImportOptions) -> Result<Footage> {
+fn load_frames(path: &str, fmt: lienzo_color::PixelFormat, opts: &lienzo_io::ImportOptions) -> Result<Footage> {
     let p = std::path::Path::new(path);
     let is_img = |f: &std::path::Path| {
         matches!(
@@ -420,7 +417,7 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
         if frames.len() >= crate::timeline_cmds::MAX_DURATION {
             return Err(format!("the footage has more than {} frames", crate::timeline_cmds::MAX_DURATION));
         }
-        let tile = u64::from(photocraft_geom::TILE_SIZE.unsigned_abs()).pow(2) * surface.format().bytes_per_pixel() as u64;
+        let tile = u64::from(lienzo_geom::TILE_SIZE.unsigned_abs()).pow(2) * surface.format().bytes_per_pixel() as u64;
         kept_bytes = kept_bytes.saturating_add(tile.saturating_mul(surface.tile_count() as u64));
         if kept_bytes > max_footage_bytes {
             return Err(format!("the footage needs more than {} MiB of frames", max_footage_bytes >> 20));
@@ -432,9 +429,9 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
         let bytes = std::fs::read(f).map_err(|e| EngineError::Other(format!("read `{}`: {e}", f.display())))?;
         let name = f.to_string_lossy();
         // A GIF (a still one is its only frame) or an animated WebP brings every frame.
-        let animation = match photocraft_codecs::detect(&bytes) {
-            Some(photocraft_codecs::Format::Gif) => Some(photocraft_io::import_gif_frames as ImportFrames),
-            Some(photocraft_codecs::Format::WebP) if photocraft_codecs::webp_is_animated(&bytes) => Some(photocraft_io::import_webp_frames as ImportFrames),
+        let animation = match lienzo_codecs::detect(&bytes) {
+            Some(lienzo_codecs::Format::Gif) => Some(lienzo_io::import_gif_frames as ImportFrames),
+            Some(lienzo_codecs::Format::WebP) if lienzo_codecs::webp_is_animated(&bytes) => Some(lienzo_io::import_webp_frames as ImportFrames),
             _ => None,
         };
         if let Some(import) = animation {
@@ -442,7 +439,7 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
             let done = import(&name, &bytes, &mut |doc, delay_ms| {
                 if let Err(msg) = keep(&mut frames, crate::file_cmds::flattened(&doc, fmt)) {
                     over = Some(msg);
-                    return Err(photocraft_io::IoError::Cancelled);
+                    return Err(lienzo_io::IoError::Cancelled);
                 }
                 delays.push(delay_ms);
                 Ok(())
@@ -455,7 +452,7 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
         }
         // A multi-page TIFF: every full-resolution page of the main chain, in order, as the
         // GIF's frames are (#6379). Thumbnails, reduced-resolution copies and masks are left out.
-        if photocraft_codecs::detect(&bytes) == Some(photocraft_codecs::Format::Tiff) {
+        if lienzo_codecs::detect(&bytes) == Some(lienzo_codecs::Format::Tiff) {
             let (pages, complete) = tiff_pages(&bytes);
             if pages.len() > 1 {
                 // A damaged or looping page chain, or one past the 10,000-directory limit, lists
@@ -470,7 +467,7 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
                 for page in pages {
                     // Same admission policy, caller limit and import settings as any other TIFF
                     // page import: a multi-page TIFF is not a way around the memory budget.
-                    let doc = photocraft_io::import_tiff_page_with_options(&name, &bytes, Some(page), opts, &photocraft_raster::Interrupt::NONE)
+                    let doc = lienzo_io::import_tiff_page_with_options(&name, &bytes, Some(page), opts, &lienzo_raster::Interrupt::NONE)
                         .map_err(|e| tiff_page_error(f, &name, page, e))?
                         .document;
                     // The page is flattened before admission of the next one, so the retained
@@ -484,7 +481,7 @@ fn load_frames(path: &str, fmt: photocraft_color::PixelFormat, opts: &photocraft
         let mut doc = crate::file_cmds::import_with_options(&name, &bytes, opts)?;
         // A Targa's alpha opens as a channel (as in Photoshop); a frame's alpha is transparency.
         if f.extension().is_some_and(|e| e.eq_ignore_ascii_case("tga")) {
-            photocraft_io::tga_alpha_channel_to_transparency(&mut doc);
+            lienzo_io::tga_alpha_channel_to_transparency(&mut doc);
         }
         keep(&mut frames, crate::file_cmds::flattened_checked(&doc, fmt, "layer.videoLayers.newVideoLayerFromFile")?)
             .map_err(|msg| EngineError::Other(format!("`{}`: {msg}", f.display())))?;
@@ -516,7 +513,7 @@ fn new_from_file(s: &mut Session, p: &Value) -> Result<Value> {
         let mut l = Layer::raster(name, fmt);
         let mut v = VideoData::new(frames, fps);
         v.original_frames = Some(v.frames.clone());
-        v.source = photocraft_doc::VideoSource::File { path: path.clone() };
+        v.source = lienzo_doc::VideoSource::File { path: path.clone() };
         // The first frame is the layer's content before it is placed: an active artboard takes
         // the layer only when its content is on the board, as `frames_to_layers` does.
         if let (Some(first), LayerContent::Raster(surf)) = (v.frames.first(), &mut l.content) {
@@ -542,7 +539,7 @@ fn replace_footage(s: &mut Session, p: &Value) -> Result<Value> {
     edit_video(s, "Replace Footage", move |v, _| {
         v.original_frames = Some(frames.clone());
         v.frames = frames;
-        v.source = photocraft_doc::VideoSource::File { path: path.clone() };
+        v.source = lienzo_doc::VideoSource::File { path: path.clone() };
         Ok(())
     })
 }
@@ -569,7 +566,7 @@ fn reload_frame(s: &mut Session, _p: &Value) -> Result<Value> {
             .ok_or_else(|| EngineError::BadParams { cmd: "layer.videoLayers.reloadFrame".into(), msg: "not a video layer".into() })?;
         (v.source.clone(), st.doc.pixel_format())
     };
-    let photocraft_doc::VideoSource::File { path } = src else {
+    let lienzo_doc::VideoSource::File { path } = src else {
         return Err(EngineError::BadParams { cmd: "layer.videoLayers.reloadFrame".into(), msg: "this layer has no file source to reload".into() });
     };
     // The footage path is stored in the document.
@@ -583,11 +580,11 @@ fn reload_frame(s: &mut Session, _p: &Value) -> Result<Value> {
 }
 
 /// The pages of a TIFF that are pages of the document: full-resolution directories of the main
-/// chain (not SubIFDs, thumbnails or masks), by index into [`photocraft_codecs::tiff_info`]'s
+/// chain (not SubIFDs, thumbnails or masks), by index into [`lienzo_codecs::tiff_info`]'s
 /// pages, and whether the walk listed every directory. Empty when the file can't be listed.
 fn tiff_pages(bytes: &[u8]) -> (Vec<usize>, bool) {
-    let Ok(info) = photocraft_codecs::tiff_info(bytes) else { return (Vec::new(), true) };
-    let pages = info.pages.iter().enumerate().filter(|(_, p)| p.parent.is_none() && p.kind == photocraft_codecs::TiffPageKind::Page).map(|(i, _)| i).collect();
+    let Ok(info) = lienzo_codecs::tiff_info(bytes) else { return (Vec::new(), true) };
+    let pages = info.pages.iter().enumerate().filter(|(_, p)| p.parent.is_none() && p.kind == lienzo_codecs::TiffPageKind::Page).map(|(i, _)| i).collect();
     (pages, info.complete)
 }
 
@@ -688,7 +685,7 @@ pub fn render_video_with(
                 return Err(cancelled());
             }
         }
-        let gif = photocraft_codecs::web::encode_gif_animated(w as u32, h as u32, &gframes, true).map_err(|e| EngineError::Other(e.to_string()))?;
+        let gif = lienzo_codecs::web::encode_gif_animated(w as u32, h as u32, &gframes, true).map_err(|e| EngineError::Other(e.to_string()))?;
         let name = format!("{stem}.gif");
         write(&name, &gif)?;
         if !progress(frames, frames) {
@@ -700,7 +697,7 @@ pub fn render_video_with(
 
     // Image sequence.
     // PSD / PSB frames would embed the files linked smart objects name: not for a restricted session.
-    let opts = photocraft_io::ExportOptions { read_linked_files: s.authorize.is_none(), ..Default::default() };
+    let opts = lienzo_io::ExportOptions { read_linked_files: s.authorize.is_none(), ..Default::default() };
     let mut files = Vec::new();
     for f in 0..frames {
         let mut doc = base.clone();
@@ -709,7 +706,7 @@ pub fn render_video_with(
         }
         sync(&mut doc);
         let path = format!("{stem}_{f:04}.{format}");
-        let bytes = photocraft_io::export(&doc, format, &opts).map(|r| r.bytes).map_err(|e| EngineError::Other(format!("render frame {f}: {e}")))?;
+        let bytes = lienzo_io::export(&doc, format, &opts).map(|r| r.bytes).map_err(|e| EngineError::Other(format!("render frame {f}: {e}")))?;
         write(&path, &bytes)?;
         files.push(path);
         if !progress(f + 1, frames) {
@@ -722,8 +719,8 @@ pub fn render_video_with(
 /// One animated GIF frame from straight RGBA pixels, as Save for Web's GIF does (#3061): pixels
 /// under 50 % opacity get the frame's transparent index, the rest are drawn opaque, and the
 /// palette is built from the visible pixels with one entry kept for transparency.
-fn gif_frame(mut px: Vec<[f32; 4]>, w: usize, delay_cs: u16) -> Result<photocraft_codecs::web::GifFrame> {
-    use photocraft_algo::quantize::{self, Dither, Forced, PaletteKind};
+fn gif_frame(mut px: Vec<[f32; 4]>, w: usize, delay_cs: u16) -> Result<lienzo_codecs::web::GifFrame> {
+    use lienzo_algo::quantize::{self, Dither, Forced, PaletteKind};
     let transparent = px.iter().any(|p| p[3] < 0.5);
     let visible: Vec<[f32; 4]> = px.iter().filter(|p| p[3] >= 0.5).map(|p| [p[0], p[1], p[2], 1.0]).collect();
     // A fully transparent frame still needs a palette.
@@ -735,7 +732,7 @@ fn gif_frame(mut px: Vec<[f32; 4]>, w: usize, delay_cs: u16) -> Result<photocraf
         pal.len() - 1
     });
     let indices = quantize::quantize(&mut px, w, &pal, Dither::None, 1.0, t);
-    Ok(photocraft_codecs::web::GifFrame { indices, palette: pal, transparent: t.map(|i| i as u8), delay_cs })
+    Ok(lienzo_codecs::web::GifFrame { indices, palette: pal, transparent: t.map(|i| i as u8), delay_cs })
 }
 
 macro_rules! spec {

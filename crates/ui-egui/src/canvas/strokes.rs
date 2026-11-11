@@ -2,12 +2,12 @@ use super::display::{canvas_display, display_image};
 use super::drag::Drag;
 use super::textures::{canvas_texture_options, shown_as_document};
 use super::view_xform::ViewXform;
-use super::{Color32, DRect, PhotocraftApp, Pos2, Stroke, Tool, json, pos2};
+use super::{Color32, DRect, LienzoApp, Pos2, Stroke, Tool, json, pos2};
 
 pub(crate) struct ClonePreviewCache {
     pub(super) key: String,
     /// The brush a clipped overlay took its coverage from: a hardness or tip change redraws it.
-    pub(super) brush: Option<photocraft_paint::BrushSettings>,
+    pub(super) brush: Option<lienzo_paint::BrushSettings>,
     /// The document area the texture covers.
     pub(super) rect: DRect,
     pub(super) texture: egui::TextureHandle,
@@ -26,14 +26,10 @@ const CLONE_PREVIEW_MAX_SIDE: u32 = 1024;
 /// it covers and its `width × height` coverage values in 0..1. A very large soft tip, or a source
 /// the Clone Source panel scales down (which reads a larger area than it covers), is cropped
 /// around `at` to the sampling budget, keeping the middle of the dab.
-fn clone_dab_coverage(
-    brush: &photocraft_paint::BrushSettings,
-    at: [f64; 2],
-    map: &photocraft_engine::presets::clone_source::Mapping,
-) -> Option<(DRect, Vec<f32>)> {
-    let brush = photocraft_paint::BrushSettings { opacity: 1.0, flow: 1.0, erase: false, ..brush.clone() };
-    let stroke = photocraft_paint::Stroke { brush, points: vec![photocraft_paint::StrokePoint::new(at[0], at[1], 1.0)] };
-    let (rect, cov) = photocraft_paint::retouch::stroke_coverage_within(&stroke, CLONE_PREVIEW_MAX_PIXELS)?;
+fn clone_dab_coverage(brush: &lienzo_paint::BrushSettings, at: [f64; 2], map: &lienzo_engine::presets::clone_source::Mapping) -> Option<(DRect, Vec<f32>)> {
+    let brush = lienzo_paint::BrushSettings { opacity: 1.0, flow: 1.0, erase: false, ..brush.clone() };
+    let stroke = lienzo_paint::Stroke { brush, points: vec![lienzo_paint::StrokePoint::new(at[0], at[1], 1.0)] };
+    let (rect, cov) = lienzo_paint::retouch::stroke_coverage_within(&stroke, CLONE_PREVIEW_MAX_PIXELS)?;
     let fits = |r: DRect| r.width() <= CLONE_PREVIEW_MAX_SIDE && r.height() <= CLONE_PREVIEW_MAX_SIDE;
     let (cx, cy) = (at[0].floor() as i32, at[1].floor() as i32);
     let around = |half: i32| rect.intersect(&DRect::new(cx.saturating_sub(half), cy.saturating_sub(half), cx.saturating_add(half), cy.saturating_add(half)));
@@ -68,8 +64,8 @@ fn clone_dab_coverage(
 
 /// A transient source image beneath the brush outline; never part of the document render. The
 /// Clone Source panel drives the Clone Stamp and the Healing Brush alike, so both show it.
-pub(super) fn draw_clone_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, at: [f64; 2], output: Option<u32>) {
-    use photocraft_engine::presets::clone_source::{Mapping, overlay_blend, transform_matrix};
+pub(super) fn draw_clone_preview(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform, at: [f64; 2], output: Option<u32>) {
+    use lienzo_engine::presets::clone_source::{Mapping, overlay_blend, transform_matrix};
     let overlay = app.session.presets.clone.overlay.clone();
     let tool = app.ui.tool;
     if !matches!(tool, Tool::CloneStamp | Tool::Healing) || !overlay.show || (overlay.auto_hide && app.drag.is_some()) {
@@ -117,7 +113,7 @@ pub(super) fn draw_clone_preview(app: &mut PhotocraftApp, painter: &egui::Painte
                 None,
             ),
         };
-        let Ok(mut buf) = photocraft_engine::retouch_cmds::clone_preview_periodic(&app.session, rect, &map, &app.ui.tool_options.clone_sample, wrap) else {
+        let Ok(mut buf) = lienzo_engine::retouch_cmds::clone_preview_periodic(&app.session, rect, &map, &app.ui.tool_options.clone_sample, wrap) else {
             return;
         };
         if overlay.invert {
@@ -131,7 +127,7 @@ pub(super) fn draw_clone_preview(app: &mut PhotocraftApp, painter: &egui::Painte
         // composite, whatever Sample reads), so Difference turns black where they line up.
         if overlay.blend != "normal" {
             let here = Mapping { source: (0.0, 0.0), anchor: (0.0, 0.0), m: [1.0, 0.0, 0.0, 1.0] };
-            let Ok(under) = photocraft_engine::retouch_cmds::clone_preview_periodic(&app.session, rect, &here, "all", wrap) else {
+            let Ok(under) = lienzo_engine::retouch_cmds::clone_preview_periodic(&app.session, rect, &here, "all", wrap) else {
                 return;
             };
             for (px, d) in buf.px.iter_mut().zip(&under.px) {
@@ -174,10 +170,10 @@ pub(super) fn draw_clone_preview(app: &mut PhotocraftApp, painter: &egui::Painte
 /// The engine's live stroke of a tool: the Brush, Pencil and Eraser paint dabs; the Clone Stamp,
 /// Healing Brush and History Brush composite their source.
 pub(super) enum EngineStroke {
-    Brush(Box<photocraft_engine::brush_cmds::LiveStroke>),
-    Retouch(Box<photocraft_engine::retouch_cmds::LiveRetouch>),
-    Dab(Box<photocraft_engine::retouch_cmds::LiveDab>),
-    Mixer(Box<photocraft_engine::brush_cmds::mixer_live::LiveMixer>),
+    Brush(Box<lienzo_engine::brush_cmds::LiveStroke>),
+    Retouch(Box<lienzo_engine::retouch_cmds::LiveRetouch>),
+    Dab(Box<lienzo_engine::retouch_cmds::LiveDab>),
+    Mixer(Box<lienzo_engine::brush_cmds::mixer_live::LiveMixer>),
 }
 
 impl EngineStroke {
@@ -191,7 +187,7 @@ impl EngineStroke {
         }
     }
 
-    pub(super) fn doc(&self) -> &std::sync::Arc<photocraft_doc::Document> {
+    pub(super) fn doc(&self) -> &std::sync::Arc<lienzo_doc::Document> {
         match self {
             Self::Brush(s) => &s.doc,
             Self::Retouch(s) => &s.doc,
@@ -207,7 +203,7 @@ impl EngineStroke {
             Self::Mixer(s) => s.bounds(),
         }
     }
-    fn push(&mut self, pts: &[photocraft_engine::paint::StrokePoint]) -> photocraft_engine::Result<DRect> {
+    fn push(&mut self, pts: &[lienzo_engine::paint::StrokePoint]) -> lienzo_engine::Result<DRect> {
         match self {
             Self::Brush(s) => s.push(pts),
             Self::Retouch(s) => s.push(pts),
@@ -231,7 +227,7 @@ impl EngineStroke {
 pub(crate) struct LiveStroke {
     pub(super) preview_failed: bool,
     pub(super) stroke: EngineStroke,
-    pub(super) doc: photocraft_doc::DocId,
+    pub(super) doc: lienzo_doc::DocId,
     revision: u64,
     /// Preview key of the stroke; step `n` displays as `key + n`.
     pub(super) key: u64,
@@ -257,20 +253,20 @@ impl LiveStroke {
 /// holds exactly the live stroke's last step, so a cache that showed step `n` of it only misses
 /// the steps after `n` (step 0 = the document before the stroke: everything).
 pub(crate) struct CommittedStroke {
-    pub(crate) doc: photocraft_doc::DocId,
+    pub(crate) doc: lienzo_doc::DocId,
     pub(crate) revision: u64,
     key: u64,
     damage: Vec<DRect>,
     /// What the commit repaints beyond the stroke whatever a cache showed: the layer's whole
     /// composite when effects laid out over its frame moved with it (a Gradient Overlay spans the
-    /// grown layer, #4053; `photocraft_compose::relayout_damage`).
+    /// grown layer, #4053; `lienzo_compose::relayout_damage`).
     pub(super) relayout: DRect,
 }
 
 impl CommittedStroke {
     #[cfg(test)]
     pub(crate) fn for_test(key: u64, damage: Vec<DRect>) -> Self {
-        Self { doc: photocraft_doc::DocId(0), revision: 0, key, damage, relayout: DRect::EMPTY }
+        Self { doc: lienzo_doc::DocId(0), revision: 0, key, damage, relayout: DRect::EMPTY }
     }
 
     /// The raw preview key of the live stroke's last step: what a cache showed at release.
@@ -287,7 +283,7 @@ impl CommittedStroke {
 }
 
 /// The live stroke on document `idx`, while it is current.
-pub(super) fn live_stroke(app: &PhotocraftApp, idx: usize) -> Option<&LiveStroke> {
+pub(super) fn live_stroke(app: &LienzoApp, idx: usize) -> Option<&LiveStroke> {
     let st = app.session.documents().get(idx)?;
     app.live_stroke.as_ref().filter(|l| app.drag.is_some() && l.doc == st.doc.id && l.revision == st.revision)
 }
@@ -295,7 +291,7 @@ pub(super) fn live_stroke(app: &PhotocraftApp, idx: usize) -> Option<&LiveStroke
 /// `paint.stroke` params for a Brush/Eraser drag (shared by the live preview and the commit). The
 /// stroke smoothing is the session brush's (the options bar's Smoothing %), except on a ⇧-click
 /// line, which isn't smoothed (#11887).
-pub(super) fn stroke_params(app: &PhotocraftApp, d: &Drag, points: &[Vec<f64>]) -> serde_json::Value {
+pub(super) fn stroke_params(app: &LienzoApp, d: &Drag, points: &[Vec<f64>]) -> serde_json::Value {
     let tool = d.tool;
     let mut p = json!({ "points": points, "erase": d.erase, "zoom": app.point_zoom(), "target": paint_target(app) });
     unsmoothed_line(&mut p, d.line);
@@ -359,32 +355,32 @@ pub(super) fn live_retouch_command(tool: Tool) -> Option<&'static str> {
 
 /// The command a live-stroking tool commits: the Pencil's (and the Pencil- or Block-mode
 /// Eraser's) `paint.pencil`, else `paint.stroke`.
-pub(crate) fn stroke_command(app: &PhotocraftApp, tool: Tool) -> &'static str {
+pub(crate) fn stroke_command(app: &LienzoApp, tool: Tool) -> &'static str {
     if tool == Tool::Pencil || crate::eraser_ui::pencil_mode(app, tool) || crate::eraser_ui::block_mode(app, tool) { "paint.pencil" } else { "paint.stroke" }
 }
 
 /// Starts the live preview of the current drag, from the params its tool commits. `None` without
 /// an active document or drag, or when the tool's preview can't begin.
-pub(super) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
+pub(super) fn begin_live_stroke(app: &LienzoApp) -> Option<LiveStroke> {
     static STROKES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let st = app.session.active()?;
     let d = app.drag.as_ref()?;
     let stroke = if d.tool == Tool::MixerBrush {
         let points = app.stylus.stroke_points(&d.points);
         let p = stroke_params(app, d, points.get(..1)?);
-        EngineStroke::Mixer(Box::new(photocraft_engine::brush_cmds::mixer_live::LiveMixer::begin(&app.session, &p).ok()?))
+        EngineStroke::Mixer(Box::new(lienzo_engine::brush_cmds::mixer_live::LiveMixer::begin(&app.session, &p).ok()?))
     } else if d.tool == Tool::ColorReplacement {
         // The params `retouch_ui::finish_stroke` commits.
         let mut p = crate::retouch_ui::color_replacement_params(app);
         p["points"] = json!(d.points);
         unsmoothed_line(&mut p, d.line);
-        EngineStroke::Dab(Box::new(photocraft_engine::brush_cmds::live_color_replacement(&app.session, &p).ok()?))
+        EngineStroke::Dab(Box::new(lienzo_engine::brush_cmds::live_color_replacement(&app.session, &p).ok()?))
     } else if let Some((cmd, mut p)) = crate::retouch_ui::dab_params(app, d.tool) {
         // The params `retouch_ui::finish_stroke` commits; Sample All Layers isn't previewed.
         p["points"] = json!(d.points);
         p["target"] = paint_target(app);
         unsmoothed_line(&mut p, d.line);
-        EngineStroke::Dab(Box::new(photocraft_engine::retouch_cmds::LiveDab::begin(&app.session, cmd, &p).ok()?))
+        EngineStroke::Dab(Box::new(lienzo_engine::retouch_cmds::LiveDab::begin(&app.session, cmd, &p).ok()?))
     } else if d.tool == Tool::PatternStamp {
         // The params `retouch_ui::finish_stroke` commits.
         let mut p = crate::retouch_ui::pattern_stamp_params(app, &d.points);
@@ -392,15 +388,15 @@ pub(super) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
         p["target"] = paint_target(app);
         unsmoothed_line(&mut p, d.line);
         if app.ui.tool_options.pattern_stamp_impressionist {
-            EngineStroke::Dab(Box::new(photocraft_engine::retouch_cmds::live_pattern_impressionist(&app.session, &p).ok()?))
+            EngineStroke::Dab(Box::new(lienzo_engine::retouch_cmds::live_pattern_impressionist(&app.session, &p).ok()?))
         } else {
-            EngineStroke::Retouch(Box::new(photocraft_engine::retouch_cmds::LiveRetouch::begin(&app.session, "paint.patternStamp", &p).ok()?))
+            EngineStroke::Retouch(Box::new(lienzo_engine::retouch_cmds::LiveRetouch::begin(&app.session, "paint.patternStamp", &p).ok()?))
         }
     } else if d.tool == Tool::BackgroundEraser {
         // The params `eraser_ui::finish_stroke` commits (layer pixels only).
         let mut p = crate::eraser_ui::background_eraser_params(app, &d.points);
         unsmoothed_line(&mut p, d.line);
-        EngineStroke::Dab(Box::new(photocraft_engine::eraser_cmds::live_background_eraser(&app.session, &p).ok()?))
+        EngineStroke::Dab(Box::new(lienzo_engine::eraser_cmds::live_background_eraser(&app.session, &p).ok()?))
     } else if let Some(cmd) = live_retouch_command(d.tool) {
         // The params `retouch_ui::finish_stroke` commits.
         let mut p = if d.tool == Tool::HistoryBrush {
@@ -411,10 +407,10 @@ pub(super) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
         p["points"] = json!(d.points);
         p["target"] = paint_target(app);
         unsmoothed_line(&mut p, d.line);
-        EngineStroke::Retouch(Box::new(photocraft_engine::retouch_cmds::LiveRetouch::begin(&app.session, cmd, &p).ok()?))
+        EngineStroke::Retouch(Box::new(lienzo_engine::retouch_cmds::LiveRetouch::begin(&app.session, cmd, &p).ok()?))
     } else {
         let p = stroke_params(app, d, &app.stylus.stroke_points(&d.points));
-        EngineStroke::Brush(Box::new(photocraft_engine::brush_cmds::LiveStroke::begin_with(&app.session, stroke_command(app, d.tool), &p).ok()?))
+        EngineStroke::Brush(Box::new(lienzo_engine::brush_cmds::LiveStroke::begin_with(&app.session, stroke_command(app, d.tool), &p).ok()?))
     };
     let n = STROKES.fetch_add(1, std::sync::atomic::Ordering::Relaxed) & 0xff_ffff;
     let damage = vec![stroke.bounds()];
@@ -430,7 +426,7 @@ pub(super) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
 }
 
 /// Cancel uncommitted mixer paint when its document, tool or input context goes away.
-pub(crate) fn cancel_mixer_on_context_change(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub(crate) fn cancel_mixer_on_context_change(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if !app.drag.as_ref().is_some_and(|drag| drag.tool == Tool::MixerBrush) {
         return false;
     }
@@ -446,7 +442,7 @@ pub(crate) fn cancel_mixer_on_context_change(app: &mut PhotocraftApp, ctx: &egui
 
 /// Render the drag points the live stroke hasn't seen yet, with the pen pressure, tilt and
 /// rotation the commit's `paint.stroke` gets for them.
-pub(super) fn feed_live_stroke(app: &mut PhotocraftApp) {
+pub(super) fn feed_live_stroke(app: &mut LienzoApp) {
     // A batched move replays several samples in one frame and calls this once at the end, so the
     // per-sample calls from `tool_event` are skipped (see `canvas_view`).
     if app.defer_live_stroke {
@@ -463,7 +459,7 @@ pub(super) fn feed_live_stroke(app: &mut PhotocraftApp) {
         .filter_map(|i| {
             let p = d.points.get(i)?;
             let t = pose.get(i).or(pose.last()).copied().unwrap_or_default();
-            let mut sp = photocraft_engine::paint::StrokePoint::new(p[0], p[1], p[2] as f32);
+            let mut sp = lienzo_engine::paint::StrokePoint::new(p[0], p[1], p[2] as f32);
             (sp.tilt_x, sp.tilt_y, sp.rotation) = (t[0], t[1], t[2]);
             sp.time = app.stylus.point_ms(i) - t0;
             Some(sp)
@@ -493,7 +489,7 @@ pub(super) fn feed_live_stroke(app: &mut PhotocraftApp) {
 
 /// The points the live retouching stroke has rendered.
 #[cfg(test)]
-pub(crate) fn live_retouch_points(app: &PhotocraftApp) -> Option<Vec<photocraft_engine::paint::StrokePoint>> {
+pub(crate) fn live_retouch_points(app: &LienzoApp) -> Option<Vec<lienzo_engine::paint::StrokePoint>> {
     match &app.live_stroke.as_ref()?.stroke {
         EngineStroke::Retouch(l) => Some(l.points().to_vec()),
         _ => None,
@@ -504,13 +500,13 @@ pub(crate) fn live_retouch_points(app: &PhotocraftApp) -> Option<Vec<photocraft_
 /// or Smudge one, with the drag points it hasn't rendered yet, to the command
 /// `retouch_ui::finish_stroke` commits, which then takes its pixels instead of rendering the
 /// stroke again.
-pub(super) fn offer_live_retouch(app: &mut PhotocraftApp, d: &Drag) {
+pub(super) fn offer_live_retouch(app: &mut LienzoApp, d: &Drag) {
     let dab = crate::retouch_ui::dab_params(app, d.tool).is_some();
     if !dab && !matches!(d.tool, Tool::CloneStamp | Tool::HistoryBrush) {
         return;
     }
     let Some(LiveStroke { stroke, fed, .. }) = app.live_stroke.take() else { return };
-    let rest: Vec<_> = d.points.get(fed..).unwrap_or_default().iter().map(|q| photocraft_engine::paint::StrokePoint::new(q[0], q[1], q[2] as f32)).collect();
+    let rest: Vec<_> = d.points.get(fed..).unwrap_or_default().iter().map(|q| lienzo_engine::paint::StrokePoint::new(q[0], q[1], q[2] as f32)).collect();
     // A refused offer (the brush changed mid-stroke, say) leaves the commit to render the stroke.
     match stroke {
         EngineStroke::Retouch(mut live) if !dab => {
@@ -530,7 +526,7 @@ pub(super) fn offer_live_retouch(app: &mut PhotocraftApp, d: &Drag) {
 /// A pen tap (a drag still at its one press point when released) paints its dab at the highest
 /// pressure the pen reached during the contact, not just the first sample's (#1798). A mouse is
 /// unchanged at full pressure.
-pub(super) fn tap_at_peak_pressure(app: &mut PhotocraftApp) {
+pub(super) fn tap_at_peak_pressure(app: &mut LienzoApp) {
     if app.stylus.sample().is_none() {
         return;
     }
@@ -553,7 +549,7 @@ pub(super) const HOLD_REPEAT_MS: f64 = 16.0;
 
 /// Is the live stroke one that changes while the pointer is held still (airbrush Build-up, or
 /// smoothing catching up)? Only then does a held pointer repeat its point and keep repainting.
-pub(super) fn stroke_wants_time(app: &PhotocraftApp) -> bool {
+pub(super) fn stroke_wants_time(app: &LienzoApp) -> bool {
     app.live_stroke.as_ref().is_some_and(|l| l.stroke.wants_time())
 }
 
@@ -644,7 +640,7 @@ pub(super) fn draw_smoothing_string(painter: &egui::Painter, xf: &ViewXform, (br
 /// Commit a Brush, Pencil or Eraser drag. The live stroke already rendered it: its pixels are
 /// offered to the commit (`Session::offer_live_stroke`), so release costs no second render, and
 /// the canvas then refreshes only what it hadn't shown yet (`CommittedStroke`).
-pub(super) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
+pub(super) fn commit_brush_stroke(app: &mut LienzoApp, d: &Drag) {
     let live = app.live_stroke.take();
     let mut p = stroke_params(app, d, &app.stylus.stroke_points(&d.points));
     if let Some(seed) = live.as_ref().and_then(|l| l.stroke.seed()) {
@@ -660,7 +656,7 @@ pub(super) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
         .filter_map(|i| {
             let q = d.points.get(i)?;
             let t = app.stylus.stroke.get(i).or(app.stylus.stroke.last()).copied().unwrap_or_default();
-            let mut sp = photocraft_engine::paint::StrokePoint::new(q[0], q[1], q[2] as f32);
+            let mut sp = lienzo_engine::paint::StrokePoint::new(q[0], q[1], q[2] as f32);
             (sp.tilt_x, sp.tilt_y, sp.rotation) = (t[0], t[1], t[2]);
             sp.time = app.stylus.point_ms(i) - t0;
             Some(sp)
@@ -692,7 +688,7 @@ pub(super) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
     if r.get("fromLive").and_then(serde_json::Value::as_bool) == Some(true)
         && let Some((revision, after)) = after
     {
-        let relayout = before.map_or(DRect::EMPTY, |b| photocraft_compose::relayout_damage(&b, &after));
+        let relayout = before.map_or(DRect::EMPTY, |b| lienzo_compose::relayout_damage(&b, &after));
         app.committed_stroke = Some(CommittedStroke { doc, revision, key, damage, relayout });
     } else {
         // Rendered again from scratch: the commit's damage rect refreshes the stroke.
@@ -704,19 +700,19 @@ pub(super) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
 
 /// Pencil (and a Pencil-mode Eraser) dabs sit on the pixel grid. Clicks anywhere inside one
 /// pixel must produce the same point, or a ⇧-click line changes with the sub-pixel position.
-pub(super) fn snap_aliased_tip(app: &PhotocraftApp, tool: Tool, x: f64, y: f64) -> (f64, f64) {
+pub(super) fn snap_aliased_tip(app: &LienzoApp, tool: Tool, x: f64, y: f64) -> (f64, f64) {
     let pencil = tool == Tool::Pencil || crate::eraser_ui::pencil_mode(app, tool);
     if !pencil {
         return (x, y);
     }
-    let (cx, cy) = photocraft_engine::paint::grid_center(x, y, app.session.tools.brush.size);
+    let (cx, cy) = lienzo_engine::paint::grid_center(x, y, app.session.tools.brush.size);
     (f64::from(cx), f64::from(cy))
 }
 
 /// "mask" when the Layers panel targets (or the canvas shows) the active layer's mask, or the layer
 /// is an adjustment layer with one (it has no pixels: #4298), else "pixels".
-pub fn paint_target(app: &PhotocraftApp) -> serde_json::Value {
-    use photocraft_engine::channel_cmds::ChannelTarget;
+pub fn paint_target(app: &LienzoApp) -> serde_json::Value {
+    use lienzo_engine::channel_cmds::ChannelTarget;
     let Some(st) = app.session.active() else { return json!("pixels") };
     // A targeted alpha channel (Channels panel) or Quick Mask mode wins over the layer.
     match st.channel_view.target {
@@ -724,14 +720,14 @@ pub fn paint_target(app: &PhotocraftApp) -> serde_json::Value {
         ChannelTarget::Composite if st.doc.quick_mask.is_some() => return json!("quickMask"),
         ChannelTarget::LayerMask => return json!("mask"),
         ChannelTarget::Color(_) => {
-            if let Some(view) = photocraft_engine::mask_view_cmds::current(st) {
+            if let Some(view) = lienzo_engine::mask_view_cmds::current(st) {
                 return json!(if view.filter { "filterMask" } else { "mask" });
             }
             // A colour set edits a raster layer's own pixels. The rows stay selected across layer
             // switches, so an adjustment layer's mask and a layer that needs rasterizing first
             // keep the layer's own target below.
-            let raster = st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, photocraft_doc::LayerContent::Raster(_)));
-            if raster && let Some(colors) = photocraft_engine::color_channels::selected(&app.session) {
+            let raster = st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, lienzo_doc::LayerContent::Raster(_)));
+            if raster && let Some(colors) = lienzo_engine::color_channels::selected(&app.session) {
                 return colors.params();
             }
         }
@@ -743,16 +739,16 @@ pub fn paint_target(app: &PhotocraftApp) -> serde_json::Value {
     }
     let has_mask = st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| l.mask.is_some());
     // Viewing the mask (⌥-click its thumbnail, #196) paints the mask.
-    let viewing = photocraft_engine::mask_view_cmds::current(st).is_some_and(|v| !v.filter);
+    let viewing = lienzo_engine::mask_view_cmds::current(st).is_some_and(|v| !v.filter);
     let mask = app.ui.mask_target || viewing || crate::adjustment_layer_active(st);
     json!(if mask && has_mask { "mask" } else { "pixels" })
 }
 
 /// Colour rows can remain selected behind a viewed mask; restrictions follow what is edited.
 /// Several rows stop Move and transforms on any layer, which the engine refuses there too.
-pub(crate) fn multiple_color_target(app: &PhotocraftApp) -> bool {
+pub(crate) fn multiple_color_target(app: &LienzoApp) -> bool {
     let Some(st) = app.session.active() else { return false };
-    matches!(st.channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Color(_))
-        && photocraft_engine::mask_view_cmds::current(st).is_none()
-        && photocraft_engine::color_channels::selected(&app.session).is_some_and(|colors| colors.len() > 1)
+    matches!(st.channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Color(_))
+        && lienzo_engine::mask_view_cmds::current(st).is_none()
+        && lienzo_engine::color_channels::selected(&app.session).is_some_and(|colors| colors.len() > 1)
 }

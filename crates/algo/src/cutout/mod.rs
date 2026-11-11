@@ -26,7 +26,7 @@
 //! Each stage is its own module: [`regions`] (1–2), [`edges`] (3), [`curves`] (4) and [`fill`]
 //! (5); [`trace`] runs them in turn.
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 use crate::par;
 

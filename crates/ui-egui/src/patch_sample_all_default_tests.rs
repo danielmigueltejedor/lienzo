@@ -4,13 +4,13 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{SampleAllLayers, Tool, ToolOptions};
 
-fn app() -> PhotocraftApp {
-    let mut s = photocraft_engine::Session::new();
+fn app() -> LienzoApp {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
-    PhotocraftApp::new(s, crate::Services::default())
+    LienzoApp::new(s, crate::Services::default())
 }
 
 #[test]

@@ -1,7 +1,7 @@
 //! The command's mask read, algorithm input/output and tiled replacement share this window.
 
-use photocraft_doc::Document;
-use photocraft_geom::{Rect, TILE_SIZE};
+use lienzo_doc::Document;
+use lienzo_geom::{Rect, TILE_SIZE};
 
 pub(super) fn area(doc: &Document, radius: f32) -> Rect {
     let canvas = doc.bounds();

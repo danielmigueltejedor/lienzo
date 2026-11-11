@@ -1,8 +1,8 @@
 //! Recorded Calculations Make forms, using the measured reference and ScriptListener types.
-use photocraft_engine::actions_cmds::Action;
-use photocraft_engine::{Session, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
+use lienzo_engine::actions_cmds::Action;
+use lienzo_engine::{Session, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
 use serde_json::{Value, json};
 
 fn class(id: &str) -> Class {
@@ -60,7 +60,7 @@ fn fixture(depth: u32) -> Session {
         let format = surface.format();
         let pixels: Vec<f32> = [[0.125, 0.25, 0.5, 1.0], [0.25, 0.5, 0.125, 1.0], [0.5, 0.125, 0.25, 1.0]]
             .into_iter()
-            .flat_map(|v| photocraft_raster::from_rgba(&format, v))
+            .flat_map(|v| lienzo_raster::from_rgba(&format, v))
             .collect();
         surface.write_region(area, &pixels);
         Ok(())
@@ -80,7 +80,7 @@ fn play(s: &mut Session, action: Action) -> Value {
 }
 
 fn saved(s: &Session) -> Vec<u8> {
-    photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
+    lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn atn_calculations_add_creates_alpha_with_expected_pixels_and_undo() {
     for depth in [8, 16, 32] {
         let mut s = fixture(depth);
         let before = saved(&s);
-        let original = photocraft_compose::flatten(&s.active().unwrap().doc).into_px();
+        let original = lienzo_compose::flatten(&s.active().unwrap().doc).into_px();
         assert_eq!(play(&mut s, action.clone())["ran"], 1);
         let doc = &s.active().unwrap().doc;
         assert_eq!(doc.channels.len(), 1);
@@ -98,7 +98,7 @@ fn atn_calculations_add_creates_alpha_with_expected_pixels_and_undo() {
         for (got, rgba) in alpha(&s, 0).iter().zip(&original) {
             assert!((got - (rgba[0] + rgba[1]).min(1.0)).abs() < 2.0 / 255.0, "{depth}: {got} {rgba:?}");
         }
-        assert_eq!(photocraft_compose::flatten(&s.active().unwrap().doc).px, original);
+        assert_eq!(lienzo_compose::flatten(&s.active().unwrap().doc).px, original);
         s.execute("edit.undo", json!({})).unwrap();
         assert_eq!(saved(&s), before);
     }
@@ -167,7 +167,7 @@ fn atn_calculations_explicit_merged_transparency_reads_composite_alpha() {
             let area = doc.bounds();
             let surface = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
             let format = surface.format();
-            let pixels: Vec<_> = alphas.into_iter().flat_map(|a| photocraft_raster::from_rgba(&format, [0.5, 0.25, 0.125, a])).collect();
+            let pixels: Vec<_> = alphas.into_iter().flat_map(|a| lienzo_raster::from_rgba(&format, [0.5, 0.25, 0.125, a])).collect();
             surface.write_region(area, &pixels);
             Ok(())
         })
@@ -292,7 +292,7 @@ fn atn_calculations_valid_scale_and_offset_roundtrip_and_pixels() {
         using.items.iter_mut().find(|(k, _)| k.is("Ofst")).unwrap().1 = D::Integer(offset);
         let action = roundtrip(d);
         let mut s = fixture(32);
-        let input = photocraft_compose::flatten(&s.active().unwrap().doc).into_px();
+        let input = lienzo_compose::flatten(&s.active().unwrap().doc).into_px();
         assert_eq!(play(&mut s, action)["ran"], 1);
         for (got, rgba) in alpha(&s, 0).iter().zip(input) {
             let expected = ((rgba[0] + rgba[1]) / scale as f32 + offset as f32 / 255.0).clamp(0.0, 1.0);

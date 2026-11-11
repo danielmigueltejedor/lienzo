@@ -5,10 +5,10 @@
 
 use std::sync::{Mutex, PoisonError};
 
-use photocraft_color::PixelFormat;
-use photocraft_doc::{SmartFilter, SmartObject};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::PixelFormat;
+use lienzo_doc::{SmartFilter, SmartObject};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 /// blake3 of a stage's inputs: the source contents, the placement and the filters so far.
 pub(super) type StageKey = [u8; 32];

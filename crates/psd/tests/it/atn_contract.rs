@@ -1,7 +1,7 @@
 //! Public-API contract for the `.atn` parser, against independently encoded wire fixtures.
-use photocraft_psd::PsdError;
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Class, Descriptor, Id, MAX_DEPTH, ObjectArray, ReferenceItem, UnicodeString, Value};
+use lienzo_psd::PsdError;
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Class, Descriptor, Id, MAX_DEPTH, ObjectArray, ReferenceItem, UnicodeString, Value};
 
 #[path = "common/atn_roundtrip.rs"]
 mod atn_roundtrip;

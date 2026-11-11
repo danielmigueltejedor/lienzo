@@ -2,8 +2,8 @@
 //! A separate point-by-point convolution also checks normalization and sampling.
 use super::*;
 use crate::{FilterParams, apply_tiled, kernel};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_raster::Surface;
 
 const SHAPES: [BlurShape; 9] = [
     BlurShape::Circle,
@@ -217,7 +217,7 @@ fn shape_tile_overrides_and_cancel_preserve_input() {
         for tile in [i32::MIN, -1, 0, 256, i32::MAX] {
             exact(&apply_tiled(&s, &p, r, r, None, tile, Some(r)).read_region(r), &before);
         }
-        let ctl = photocraft_raster::Interrupt::cancel_only(&|| true);
+        let ctl = lienzo_raster::Interrupt::cancel_only(&|| true);
         assert!(crate::apply_tiled_with(&s, &p, r, r, None, 256, Some(r), &ctl).is_none());
         exact(&s.read_region(r), &before);
     }
@@ -237,7 +237,7 @@ fn direct_36mp_image_with_small_output_is_not_rejected() {
 #[test]
 fn custom_shape_coverage_matches_point_convolution_without_mirroring() {
     let mask = Image { rect: Rect::new(0, 0, 3, 3), ch: 1, data: vec![1.0, 0.25, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0] };
-    let prepared = crate::shape_blur::Prepared::custom(1.0, &mask, &photocraft_raster::Interrupt::NONE).unwrap();
+    let prepared = crate::shape_blur::Prepared::custom(1.0, &mask, &lienzo_raster::Interrupt::NONE).unwrap();
     for (channels, alpha) in [(1, false), (4, true)] {
         let src = image(Rect::new(-2, -2, 5, 5), channels, alpha);
         let ctx = Ctx { bounds: src.rect, mode: ColorMode::Rgb, alpha };
@@ -306,7 +306,7 @@ fn invalid_custom_kernels_are_refused_without_allocating_their_declared_size() {
         Image { rect: Rect::new(0, 0, 3, 3), ch: 1, data: vec![1.0] },
         Image { rect: Rect::new(i32::MIN, i32::MIN, i32::MAX, i32::MAX), ch: 1, data: vec![] },
     ] {
-        assert!(crate::shape_blur::Prepared::custom(1.0, &mask, &photocraft_raster::Interrupt::NONE).is_none());
+        assert!(crate::shape_blur::Prepared::custom(1.0, &mask, &lienzo_raster::Interrupt::NONE).is_none());
     }
 }
 
@@ -370,7 +370,7 @@ fn nonuniform_custom_kernel_matches_weighted_reference_through_kernel_and_tiles(
 #[test]
 fn fragmented_large_custom_kernels_are_refused_before_convolution() {
     use crate::shape_blur::{Prepared, max_spans};
-    let none = photocraft_raster::Interrupt::NONE;
+    let none = lienzo_raster::Interrupt::NONE;
     let size = 2001usize;
     let alternating = Image { rect: Rect::new(0, 0, size as i32, size as i32), ch: 1, data: (0..size * size).map(|i| (i % 2) as f32).collect() };
     assert!(size * size / 2 > max_spans(size));
@@ -397,8 +397,8 @@ fn fragmented_large_custom_kernels_are_refused_before_convolution() {
 #[test]
 fn custom_kernel_preparation_and_convolution_stop_when_cancelled() {
     use crate::shape_blur::Prepared;
-    let none = photocraft_raster::Interrupt::NONE;
-    let cancelled = photocraft_raster::Interrupt::cancel_only(&|| true);
+    let none = lienzo_raster::Interrupt::NONE;
+    let cancelled = lienzo_raster::Interrupt::cancel_only(&|| true);
     let mask = Image { rect: Rect::new(0, 0, 3, 3), ch: 1, data: vec![1.0, 0.25, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5] };
     assert!(Prepared::custom(1.0, &mask, &cancelled).is_none());
     let prepared = Prepared::custom(1.0, &mask, &none).unwrap();

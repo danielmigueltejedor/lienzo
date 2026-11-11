@@ -1,20 +1,20 @@
 use super::defaults::apply;
-use super::{Arc, HashMap, PhotocraftApp, PoisonError, json};
+use super::{Arc, HashMap, LienzoApp, PoisonError, json};
 
-/// Font families: bundled, system, and those the host serves (`photocraft_text::served`, fetched
+/// Font families: bundled, system, and those the host serves (`lienzo_text::served`, fetched
 /// when picked). Cached until the shared engine registers fonts or the served catalog changes.
 pub fn families() -> Arc<Vec<String>> {
     type Cached = Option<((u64, u64), Arc<Vec<String>>)>;
     static FAMILIES: std::sync::Mutex<Cached> = std::sync::Mutex::new(None);
-    let key = (photocraft_text::fonts::shared_generation(), photocraft_text::served::generation());
+    let key = (lienzo_text::fonts::shared_generation(), lienzo_text::served::generation());
     let mut cached = FAMILIES.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some((k, v)) = cached.as_ref()
         && *k == key
     {
         return v.clone();
     }
-    let mut v = photocraft_text::shared().lock().map(|mut e| e.fonts.families()).unwrap_or_default();
-    for f in photocraft_text::served::families() {
+    let mut v = lienzo_text::shared().lock().map(|mut e| e.fonts.families()).unwrap_or_default();
+    for f in lienzo_text::served::families() {
         if !v.contains(&f) {
             v.push(f);
         }
@@ -27,7 +27,7 @@ pub fn families() -> Arc<Vec<String>> {
 
 /// Where [`sync_font_names`] leaves the font menus' localized labels for this frame.
 pub(super) fn font_labels_id() -> egui::Id {
-    egui::Id::unique("photocraft-font-menu-localized-names")
+    egui::Id::unique("lienzo-font-menu-localized-names")
 }
 
 /// Preferences ▸ Type ▸ Show Font Names in English: when off, font menus list a family that has a
@@ -48,14 +48,14 @@ pub fn sync_font_names(ctx: &egui::Context, show_in_english: bool) {
 fn localized_families() -> Arc<HashMap<String, String>> {
     type Cached = Option<(u64, Arc<HashMap<String, String>>)>;
     static LOCALIZED: std::sync::Mutex<Cached> = std::sync::Mutex::new(None);
-    let key = photocraft_text::fonts::shared_generation();
+    let key = lienzo_text::fonts::shared_generation();
     let mut cached = LOCALIZED.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some((k, v)) = cached.as_ref()
         && *k == key
     {
         return v.clone();
     }
-    let v = Arc::new(photocraft_text::shared().lock().map(|mut e| e.fonts.localized_family_names()).unwrap_or_default());
+    let v = Arc::new(lienzo_text::shared().lock().map(|mut e| e.fonts.localized_family_names()).unwrap_or_default());
     *cached = Some((key, v.clone()));
     v
 }
@@ -106,7 +106,7 @@ fn weight_name(w: f32) -> &'static str {
 /// Style names available for a family: each face's actual OpenType subfamily (including numeric
 /// and nonstandard ones), plus the standard weights a variable face's `wght` axis covers.
 pub fn styles(family: &str) -> Vec<String> {
-    let faces = photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.faces(family);
+    let faces = lienzo_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.faces(family);
     let v = style_names(&faces);
     if v.is_empty() { vec!["Regular".into()] } else { v }
 }
@@ -114,7 +114,7 @@ pub fn styles(family: &str) -> Vec<String> {
 /// [`styles`] of these faces, lightest first. A variable face reports only its default instance
 /// (Montserrat's is Thin), yet the layout draws any weight its `wght` axis covers, so the standard
 /// weights in that range are listed too.
-pub(super) fn style_names(faces: &[photocraft_text::FaceInfo]) -> Vec<String> {
+pub(super) fn style_names(faces: &[lienzo_text::FaceInfo]) -> Vec<String> {
     let label = |weight: f32, italic: bool| {
         let name = match (weight_name(weight), italic) {
             ("Regular", true) => "Italic".to_string(),
@@ -139,12 +139,12 @@ pub(super) fn style_names(faces: &[photocraft_text::FaceInfo]) -> Vec<String> {
     names
 }
 
-/// A variable-font axis: (tag, min, default, max), as [`photocraft_text::FaceInfo::axes`].
+/// A variable-font axis: (tag, min, default, max), as [`lienzo_text::FaceInfo::axes`].
 pub(crate) type Axis = (String, f32, f32, f32);
 
 /// The axes the Character section shows as sliders (#2985): those of the faces matching the
 /// style's italic, else of any face. Optical size has none: it follows the type size.
-pub(crate) fn slider_axes(faces: &[photocraft_text::FaceInfo], italic: bool) -> Vec<Axis> {
+pub(crate) fn slider_axes(faces: &[lienzo_text::FaceInfo], italic: bool) -> Vec<Axis> {
     let pick = |want: Option<bool>| {
         let mut v: Vec<Axis> = Vec::new();
         for f in faces.iter().filter(|f| want.is_none_or(|w| f.italic == w)) {
@@ -163,7 +163,7 @@ pub(crate) fn slider_axes(faces: &[photocraft_text::FaceInfo], italic: bool) -> 
 
 /// The value an axis slider shows: the style's own value for the axis, else what the layout
 /// draws (the style's weight on `wght`, the axis default otherwise), within the axis range.
-pub(crate) fn axis_value(c: &photocraft_doc::text::CharStyle, (tag, min, default, max): &Axis) -> f32 {
+pub(crate) fn axis_value(c: &lienzo_doc::text::CharStyle, (tag, min, default, max): &Axis) -> f32 {
     let v = c.variations.iter().find(|v| &v.axis == tag).map(|v| v.value).unwrap_or_else(|| match tag.as_str() {
         "wght" => f32::from(c.weight),
         "ital" if c.italic => *max,
@@ -186,9 +186,9 @@ fn axis_label(tag: &str) -> String {
 }
 
 /// One slider row per variable-font axis of the style's font, below the font style (#2985).
-pub(super) fn axis_sliders(app: &mut PhotocraftApp, ui: &mut egui::Ui, c: &photocraft_doc::text::CharStyle) {
+pub(super) fn axis_sliders(app: &mut LienzoApp, ui: &mut egui::Ui, c: &lienzo_doc::text::CharStyle) {
     // Drawn every frame: no sliders until the background font scan is done (#3021).
-    let Some(engine) = photocraft_text::try_shared() else { return };
+    let Some(engine) = lienzo_text::try_shared() else { return };
     let axes = {
         let faces = engine.lock().unwrap_or_else(PoisonError::into_inner).fonts.faces(&c.font_family);
         slider_axes(&faces, c.italic)
@@ -220,10 +220,10 @@ pub(super) fn axis_sliders(app: &mut PhotocraftApp, ui: &mut egui::Ui, c: &photo
 }
 
 /// PSD text can identify a face only by its PostScript name. Show its real subfamily too.
-pub(crate) fn selected_style(style: &photocraft_doc::text::CharStyle) -> String {
+pub(crate) fn selected_style(style: &lienzo_doc::text::CharStyle) -> String {
     // Drawn every frame: while the font scan runs, the stored style name stands in.
     if let Some(ps) = &style.postscript_name
-        && let Some(engine) = photocraft_text::try_shared()
+        && let Some(engine) = lienzo_text::try_shared()
     {
         let faces = engine.lock().unwrap_or_else(|e| e.into_inner()).fonts.faces(&style.font_family);
         if let Some(face) = faces.into_iter().find(|f| f.postscript_name.as_ref() == Some(ps)) {
@@ -243,15 +243,15 @@ pub fn style_label(style: &str) -> String {
 /// Starts scanning the installed fonts on a background thread (desktop start-up), so choosing
 /// the Type tool doesn't stall the UI while they are read (#3021). Does nothing on the web.
 pub fn warm_fonts() {
-    photocraft_text::warm_shared();
+    lienzo_text::warm_shared();
 }
 
 /// Whether the font database is ready. The installed fonts are scanned on a background thread
-/// from launch (`photocraft_text::warm_shared`); until that finishes, font menus draw this
+/// from launch (`lienzo_text::warm_shared`); until that finishes, font menus draw this
 /// disabled "Loading fonts…" box `width` wide instead of blocking the UI, and a repaint picks the
 /// menus up once the scan is done.
 pub(crate) fn fonts_ready(ui: &mut egui::Ui, width: f32) -> bool {
-    if photocraft_text::try_shared().is_some() {
+    if lienzo_text::try_shared().is_some() {
         return true;
     }
     let label = tl!("Loading fonts…").to_string();
@@ -260,7 +260,7 @@ pub(crate) fn fonts_ready(ui: &mut egui::Ui, width: f32) -> bool {
     false
 }
 
-/// The font menu's local library (`photocraft_engine::font_library_cmds`): the recent fonts it
+/// The font menu's local library (`lienzo_engine::font_library_cmds`): the recent fonts it
 /// lists first and the favourites it stars, read before the menu is drawn, plus the font whose
 /// star was clicked, starred or un-starred by [`FontLibrary::finish`] afterwards, and the style
 /// picked from a family's expanded styles.
@@ -282,7 +282,7 @@ pub(crate) struct FontLibrary {
 /// The text the font menu's preview sets: the selected characters while typing, else the type
 /// target's whole text, on one line and at most 60 characters. `None` without a type target or
 /// with blank text (the preview then shows its sample).
-pub(super) fn preview_text(app: &PhotocraftApp) -> Option<String> {
+pub(super) fn preview_text(app: &LienzoApp) -> Option<String> {
     let (layer, range) = defaults::target(app)?;
     let text = &crate::type_tool::text_layer(&app.session.active()?.doc, crate::type_tool::LayerId(layer))?.text;
     use crate::type_tool::defaults;
@@ -297,9 +297,9 @@ pub(super) fn preview_text(app: &PhotocraftApp) -> Option<String> {
 }
 
 impl FontLibrary {
-    pub(crate) fn of(app: &PhotocraftApp) -> Self {
-        use photocraft_engine::font_library_cmds as lib;
-        // The recent fonts are the shell's (`PhotocraftApp::note_recent_font`), the favourites the engine's.
+    pub(crate) fn of(app: &LienzoApp) -> Self {
+        use lienzo_engine::font_library_cmds as lib;
+        // The recent fonts are the shell's (`LienzoApp::note_recent_font`), the favourites the engine's.
         Self { recent: app.ui.recent_fonts.clone(), favorites: lib::favorite_fonts(&app.session), ..Default::default() }
     }
 
@@ -312,7 +312,7 @@ impl FontLibrary {
     }
 
     /// Star or un-star the clicked font, through the engine command.
-    pub(crate) fn finish(self, app: &mut PhotocraftApp) {
+    pub(crate) fn finish(self, app: &mut LienzoApp) {
         if let Some(family) = self.toggled
             && let Err(e) = app.run("type.font.favorite", json!({"family": family}))
         {
@@ -324,7 +324,7 @@ impl FontLibrary {
 
 /// Searchable font-family combo box, with the recent and favourite fonts of `app`. `Some` when a
 /// family was picked, holding the style when it was picked from the family's expanded styles.
-pub(super) fn font_picker(app: &mut PhotocraftApp, ui: &mut egui::Ui, current: &mut String, width: f32) -> Option<Option<String>> {
+pub(super) fn font_picker(app: &mut LienzoApp, ui: &mut egui::Ui, current: &mut String, width: f32) -> Option<Option<String>> {
     let preview = app.session.prefs().type_.font_preview;
     let mut library = FontLibrary { preview_text: preview_text(app), ..FontLibrary::of(app) };
     let changed = family_picker_in(ui, "type-font", current, width, &families(), preview, &mut library);
@@ -333,7 +333,7 @@ pub(super) fn font_picker(app: &mut PhotocraftApp, ui: &mut egui::Ui, current: &
     if !changed {
         return None;
     }
-    // Each family applied is recorded, an arrow step too, as `PhotocraftApp::note_recent_font` says.
+    // Each family applied is recorded, an arrow step too, as `LienzoApp::note_recent_font` says.
     app.note_recent_font(current);
     Some(style)
 }
@@ -366,7 +366,7 @@ pub(super) fn font_picker_in(
     current: &mut String,
     width: f32,
     families: &[String],
-    preview: photocraft_engine::prefs::FontPreview,
+    preview: lienzo_engine::prefs::FontPreview,
     recents: &[String],
 ) -> bool {
     family_picker_in(ui, "type-font", current, width, families, preview, &mut FontLibrary { recent: recents.to_vec(), ..FontLibrary::default() })
@@ -403,7 +403,7 @@ pub(crate) fn family_picker_in(
     current: &mut String,
     width: f32,
     families: &[String],
-    preview: photocraft_engine::prefs::FontPreview,
+    preview: lienzo_engine::prefs::FontPreview,
     library: &mut FontLibrary,
 ) -> bool {
     let field = ui.make_persistent_id(egui::IdSalt::new(salt));
@@ -569,7 +569,7 @@ pub(crate) fn family_picker_in(
             if let Some((f, shown)) = rows.get(next) {
                 changed = **f != *current;
                 current.clone_from(f);
-                photocraft_text::served::request(f);
+                lienzo_text::served::request(f);
                 edit.text = (*shown).to_string();
                 edit.row = Some(next);
                 selected = Some(next);
@@ -585,7 +585,7 @@ pub(crate) fn family_picker_in(
                 // mixed selection's representative already has this family (as row clicks do).
                 changed = true;
                 current.clone_from(f);
-                photocraft_text::served::request(f);
+                lienzo_text::served::request(f);
                 picked = true;
                 ui.close();
             }
@@ -725,7 +725,7 @@ pub(crate) fn family_picker_in(
                             changed = true;
                             current.clone_from(f);
                             // A served family not fetched yet: start now, before any text needs it.
-                            photocraft_text::served::request(f);
+                            lienzo_text::served::request(f);
                             picked = true;
                             hovered = None;
                             ui.close();
@@ -747,7 +747,7 @@ pub(crate) fn family_picker_in(
                             if style_row.clicked() {
                                 changed = true;
                                 current.clone_from(f);
-                                photocraft_text::served::request(f);
+                                lienzo_text::served::request(f);
                                 library.picked_style = Some(style.clone());
                                 picked = true;
                                 hovered = None;
@@ -809,7 +809,7 @@ pub(crate) fn family_picker_in(
             && **f != *current
         {
             current.clone_from(f);
-            photocraft_text::served::request(f);
+            lienzo_text::served::request(f);
             changed = true;
             select_all |= had_focus;
         }

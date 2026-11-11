@@ -11,10 +11,10 @@
 //! on that document point ([`center_at`], #9648).
 
 use egui::{Color32, Rect, Sense, Stroke, Vec2, pos2, vec2};
-use photocraft_doc::Document;
+use lienzo_doc::Document;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::filter_dialog::FilterPreviewKey;
 use crate::theme::Tokens;
 
@@ -31,7 +31,7 @@ const CENTER_Y_FIELD: &str = "__pvCy";
 
 /// Draw the filter dialog's in-dialog preview window below its parameters (its `fields` `f`). A
 /// no-op for dialogs without a preview and for Select and Mask, which has its own view.
-pub(crate) fn window(app: &PhotocraftApp, dialog: u64, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(crate) fn window(app: &LienzoApp, dialog: u64, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     if !shows(f) {
         return;
     }
@@ -156,7 +156,7 @@ pub(crate) fn window(app: &PhotocraftApp, dialog: u64, ui: &mut egui::Ui, f: &mu
 /// The top dialog, when it has the preview window: the image under it is then the preview's
 /// locator (another dialog opened over it takes the input). Not while the image is something else
 /// of the dialog's: the Blur Gallery's pins (`blur_pins`) or Replace Color's armed eyedropper.
-pub(crate) fn locator(app: &PhotocraftApp) -> Option<u64> {
+pub(crate) fn locator(app: &LienzoApp) -> Option<u64> {
     if crate::filter_dialog::color_eyedropper_armed(app) {
         return None;
     }
@@ -167,7 +167,7 @@ pub(crate) fn locator(app: &PhotocraftApp) -> Option<u64> {
 /// click on the image does in Photoshop's filter dialogs (#9648). Only the dialog's private view
 /// fields change: no command runs, the document and its history are untouched. `false` when no
 /// dialog with a preview window is on top or the point is not finite.
-pub(crate) fn center_at(app: &mut PhotocraftApp, x: f64, y: f64) -> bool {
+pub(crate) fn center_at(app: &mut LienzoApp, x: f64, y: f64) -> bool {
     let Some(id) = locator(app) else { return false };
     if !(x.is_finite() && y.is_finite()) {
         return false;
@@ -258,7 +258,7 @@ fn document_size(proxy: [u32; 2], k: u32) -> Vec2 {
 }
 
 /// A composite as monitor pixels, matching the canvas (`canvas::display_image`).
-fn upload(ctx: &egui::Context, app: &PhotocraftApp, name: &str, doc: &Document) -> egui::TextureHandle {
+fn upload(ctx: &egui::Context, app: &LienzoApp, name: &str, doc: &Document) -> egui::TextureHandle {
     // Reduce only the display texture when a full-resolution result exceeds the device limit.
     // The cached document and the window's document-pixel zoom coordinates stay at full size.
     let factor = texture_factor(doc.size.width, doc.size.height, ctx.input(|i| i.max_texture_side));
@@ -270,7 +270,7 @@ fn upload(ctx: &egui::Context, app: &PhotocraftApp, name: &str, doc: &Document) 
         let image = egui::ColorImage::new([width as usize, height as usize], pixels);
         return ctx.load_texture(name, image, egui::TextureOptions::LINEAR);
     }
-    let buf = if factor == 1 { photocraft_compose::flatten(doc) } else { photocraft_compose::render_reduced(doc, width, height) };
+    let buf = if factor == 1 { lienzo_compose::flatten(doc) } else { lienzo_compose::render_reduced(doc, width, height) };
     let (display, _) = crate::canvas::canvas_display(app, doc, None);
     let img = crate::canvas::display_image(display.as_deref(), &buf);
     ctx.load_texture(name, img, egui::TextureOptions::LINEAR)
@@ -286,7 +286,7 @@ pub(crate) fn texture_factor(w: u32, h: u32, max_side: usize) -> u32 {
 #[derive(Clone, PartialEq)]
 enum TexKey {
     Filtered(FilterPreviewKey),
-    Original(photocraft_doc::DocId, u64, u32),
+    Original(lienzo_doc::DocId, u64, u32),
 }
 
 #[derive(Clone)]
@@ -302,7 +302,7 @@ struct CachedTex {
 struct Cache {
     filtered: Option<CachedTex>,
     original: Option<CachedTex>,
-    view: Option<(photocraft_engine::channel_cmds::ChannelView, bool, Option<photocraft_doc::LayerId>)>,
+    view: Option<(lienzo_engine::channel_cmds::ChannelView, bool, Option<lienzo_doc::LayerId>)>,
 }
 
 #[cfg(test)]
@@ -314,14 +314,14 @@ mod tests {
         let ctx = egui::Context::default();
         let limit = ctx.input(|i| i.max_texture_side) as u32;
         let width = limit + 2;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": width, "height": 2})).unwrap();
         for alpha in [false, true] {
             if alpha {
                 app.run("channel.new", json!({"name": "Alpha", "fill": "black"})).unwrap();
                 app.session
                     .edit("Fixture", |doc, _| {
-                        doc.channels[0].surface.fill_rect(photocraft_geom::Rect::new(0, 0, (width / 2) as i32, 2), &[1.0]);
+                        doc.channels[0].surface.fill_rect(lienzo_geom::Rect::new(0, 0, (width / 2) as i32, 2), &[1.0]);
                         Ok(())
                     })
                     .unwrap();
@@ -342,14 +342,14 @@ mod tests {
 
     #[test]
     fn uploaded_preview_shows_the_filtered_alpha_at_every_depth_and_proxy_scale() {
-        use photocraft_engine::channel_cmds::ChannelTarget;
+        use lienzo_engine::channel_cmds::ChannelTarget;
         for depth in [8, 16, 32] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 16, "height": 16, "depth": depth})).unwrap();
             app.run("channel.new", json!({"name": "Alpha", "fill": "black"})).unwrap();
             app.session
                 .edit("Fixture", |doc, _| {
-                    doc.channels[0].surface.fill_rect(photocraft_geom::Rect::new(0, 0, 8, 16), &[1.0]);
+                    doc.channels[0].surface.fill_rect(lienzo_geom::Rect::new(0, 0, 8, 16), &[1.0]);
                     Ok(())
                 })
                 .unwrap();
@@ -386,8 +386,8 @@ mod tests {
 
     #[test]
     fn original_texture_refreshes_when_the_channel_view_changes_without_an_edit() {
-        use photocraft_engine::channel_cmds::ChannelTarget;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        use lienzo_engine::channel_cmds::ChannelTarget;
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
         app.run("channel.new", json!({"name": "White", "fill": "white"})).unwrap();
         app.run("channel.new", json!({"name": "Black", "fill": "black"})).unwrap();
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn a_point_on_the_image_centres_the_top_preview_window() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         // No dialog, or one without a preview window: nothing to centre.
         assert!(!center_at(&mut app, 10.0, 10.0));
@@ -544,7 +544,7 @@ mod tests {
         let id = crate::filter_dialog::open(&mut app, "filter.sharpen.smartSharpen").expect("Smart Sharpen opens a dialog");
         assert_eq!(locator(&app), Some(id), "Smart Sharpen has the preview window");
         let (revision, history) = (app.session.active().unwrap().revision, app.session.active().unwrap().history.past_len());
-        let centre = |app: &PhotocraftApp| {
+        let centre = |app: &LienzoApp| {
             let f = &app.ui.dialogs.last().unwrap().fields;
             (f.get(CENTER_X_FIELD).cloned(), f.get(CENTER_Y_FIELD).cloned())
         };
@@ -574,7 +574,7 @@ mod tests {
 
     #[test]
     fn the_window_defaults_its_view_and_never_panics() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         let id = crate::filter_dialog::open(&mut app, "filter.stylize.emboss").expect("Emboss opens a dialog");
         let mut f = app.ui.dialogs.iter().find(|d| d.id == id).expect("the dialog is open").fields.clone();

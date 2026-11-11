@@ -1,6 +1,6 @@
 use super::*;
 
-fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
+fn frame(app: &mut LienzoApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
     let mut out = ctx.run_ui(
         egui::RawInput { time: Some(time), events, screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(1200.0, 1800.0))), ..Default::default() },
         |ui| toolbar(app, ui),
@@ -10,10 +10,10 @@ fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<eg
 
 #[test]
 fn long_press_type_button_selects_type_then_vertical_from_the_flyout() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert_ne!(app.ui.tool, Tool::Type);
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Type)).unwrap();
@@ -50,10 +50,10 @@ fn long_press_type_button_selects_type_then_vertical_from_the_flyout() {
 /// Change Screen Mode is greyed out: a click sends no viewport command.
 #[test]
 fn screen_mode_button_is_inert_without_a_document() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -91,11 +91,11 @@ fn screen_mode_button_is_inert_without_a_document() {
 /// cycling the mode on release; a plain click still cycles, and right-click still opens it.
 #[test]
 fn long_press_screen_mode_opens_the_modes_without_cycling() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     // A document open: Full Screen Mode needs one (#9349), so without it a click can't cycle.
     app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -112,7 +112,7 @@ fn long_press_screen_mode_opens_the_modes_without_cycling() {
         })
         .unwrap()
         .center();
-    let standard = |app: &PhotocraftApp| crate::view_cmds::checked(app, "view.screenMode.standard") == Some(true);
+    let standard = |app: &LienzoApp| crate::view_cmds::checked(app, "view.screenMode.standard") == Some(true);
     let menu_open = |ctx: &egui::Context| egui::Popup::is_any_open(ctx);
     let pointer = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
     assert!(standard(&app));
@@ -149,7 +149,7 @@ fn long_press_screen_mode_opens_the_modes_without_cycling() {
 }
 
 /// Every text drawn in one toolbar frame.
-fn frame_texts(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) -> Vec<String> {
+fn frame_texts(app: &mut LienzoApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) -> Vec<String> {
     fn collect(shape: &egui::Shape, out: &mut Vec<String>) {
         match shape {
             egui::Shape::Text(t) => out.push(t.galley.text().to_string()),
@@ -171,9 +171,9 @@ fn frame_texts(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: 
 /// held tool or any other; a plain hover still shows its tooltip.
 #[test]
 fn no_tooltips_over_an_open_tool_flyout() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -221,9 +221,9 @@ fn no_tooltips_over_an_open_tool_flyout() {
 /// #4932: so does a click on its own tool button.
 #[test]
 fn a_drag_outside_closes_the_tool_flyout() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Brush)).unwrap();
@@ -243,7 +243,7 @@ fn a_drag_outside_closes_the_tool_flyout() {
     let secondary = |pressed| egui::Event::PointerButton { pos: at, button: egui::PointerButton::Secondary, pressed, modifiers: Default::default() };
     let primary = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() };
     // A right-click on the button of an open flyout closes it (#4932), so open only a closed one.
-    let open = |app: &mut PhotocraftApp, t: f64| {
+    let open = |app: &mut LienzoApp, t: f64| {
         if !flyout(&ctx) {
             frame(app, &ctx, t, vec![egui::Event::PointerMoved(at), secondary(true)]);
             frame(app, &ctx, t + 0.05, vec![secondary(false)]);
@@ -305,9 +305,9 @@ fn art_history_is_in_the_y_flyout() {
 
 #[test]
 fn long_press_clone_stamp_selects_pattern_stamp() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::CloneStamp)).unwrap();
@@ -341,9 +341,9 @@ fn long_press_clone_stamp_selects_pattern_stamp() {
 
 #[test]
 fn long_press_brush_selects_color_replacement() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Brush)).unwrap();
@@ -395,9 +395,9 @@ fn pro_toolbar_glyphs_fill_two_thirds_of_the_button() {
 
 #[test]
 fn long_press_y_button_selects_art_history() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::HistoryBrush)).unwrap();
@@ -474,11 +474,11 @@ fn slot_tool_is_the_current_tool_else_the_slots_last_else_its_first() {
 /// a click picks that tool, not the slot's first.
 #[test]
 fn slots_come_back_on_their_last_tool_after_a_restart() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.prefs.edit(|p| p.group_tools = json!(["PolygonLasso", "PaintBucket", "Pencil", "Sharpen", "SingleRowMarquee"]));
     crate::tool_memory::restore(&mut app);
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -530,9 +530,9 @@ fn visible_sections_drop_hidden_tools_from_alt_click_slots() {
 /// Photoshop: Alt/Option-click a toolbar button cycles its flyout tools without opening the menu.
 #[test]
 fn alt_click_cycles_the_tool_flyout_slot() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::RectMarquee)).unwrap();
@@ -581,10 +581,10 @@ fn alt_click_cycles_the_tool_flyout_slot() {
 /// #10301 CodeRabbit: two rapid Alt-clicks on Hand ↔ RotateView must not fit-on-screen.
 #[test]
 fn rapid_alt_clicks_on_hand_slot_do_not_fit_on_screen() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Hand)).unwrap();
@@ -620,14 +620,14 @@ fn rapid_alt_clicks_on_hand_slot_do_not_fit_on_screen() {
 /// #10301 CodeRabbit: plain click after Alt-click within the double-click window must not fit.
 #[test]
 fn plain_click_after_alt_on_hand_slot_does_not_fit_on_screen() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     // Far from fit-on-screen so a real Hand double-click is observable.
     if let Some(v) = app.ui.views.first_mut() {
         v.zoom = 4.0;
     }
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Hand)).unwrap();
@@ -647,7 +647,7 @@ fn plain_click_after_alt_on_hand_slot_does_not_fit_on_screen() {
     let none = egui::Modifiers::default();
     let pointer = |pos, pressed, modifiers| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers };
     app.ui.tool = Tool::RotateView;
-    let zoom_of = |app: &PhotocraftApp| app.ui.views.first().map(|v| v.zoom).unwrap_or(1.0);
+    let zoom_of = |app: &LienzoApp| app.ui.views.first().map(|v| v.zoom).unwrap_or(1.0);
     assert_eq!(zoom_of(&app), 4.0);
     // Alt-click cycles to Hand; a plain click soon after is egui's "second" click of a double.
     frame(&mut app, &ctx, 1.0, vec![egui::Event::ModifiersChanged(alt), egui::Event::PointerMoved(at), pointer(at, true, alt)]);

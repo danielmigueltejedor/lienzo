@@ -110,7 +110,7 @@ pub(super) enum Key {
     /// An integer clamped to `min..=max` on import, as Photoshop clamps it; `default` when the
     /// step leaves it out.
     Int { key: &'static str, param: &'static str, min: i32, max: i32, default: i32 },
-    /// An enumeration (`ty`, Photoshop ↔ PhotoCraft values); `default` is Photoshop's value when
+    /// An enumeration (`ty`, Photoshop ↔ Lienzo values); `default` is Photoshop's value when
     /// the step leaves it out. An unknown value, or one of another type, keeps the step.
     Enum { key: &'static str, param: &'static str, ty: &'static str, table: &'static [(&'static str, &'static str)], default: &'static str },
 }
@@ -219,15 +219,11 @@ const WAVE: &[Key] = &[
 const WAVE_UNDEFINED: &[(&str, &str)] = &[("RptE", "repeat"), ("WrpA", "wrap")];
 
 /// `filter.distort.wave`'s own limits where the command plays narrower than Photoshop's 1..999
-/// (the renderer draws at most [`photocraft_algo::MAX_WAVE_GENERATORS`] generators). A value
+/// (the renderer draws at most [`lienzo_algo::MAX_WAVE_GENERATORS`] generators). A value
 /// Photoshop plays but the command rejects or plays differently keeps the step on import and
 /// refuses it on export, rather than mapping a step that fails or differs when it plays.
-const WAVE_COMMAND_LIMITS: &[(&str, f64, f64)] = &[
-    ("generators", 1.0, photocraft_algo::MAX_WAVE_GENERATORS as f64),
-    ("wavelengthMin", 1.0, 998.0),
-    ("wavelengthMax", 2.0, 999.0),
-    ("amplitudeMin", 1.0, 998.0),
-];
+const WAVE_COMMAND_LIMITS: &[(&str, f64, f64)] =
+    &[("generators", 1.0, lienzo_algo::MAX_WAVE_GENERATORS as f64), ("wavelengthMin", 1.0, 998.0), ("wavelengthMax", 2.0, 999.0), ("amplitudeMin", 1.0, 998.0)];
 
 /// Whether every value `p` sets for a key of [`WAVE_COMMAND_LIMITS`] is within the command's limits.
 fn wave_command_takes(p: &Map<String, Value>) -> bool {

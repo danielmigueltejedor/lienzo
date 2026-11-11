@@ -467,31 +467,31 @@ fn transform_presets_turn_about_the_selection() {
 
 /// A two-knot path whose Bézier handles reach past its anchors on every side, so a flip about
 /// the anchors' bounds and one about the control bounds differ.
-fn asymmetric_vector_path() -> photocraft_doc::Path {
-    use photocraft_doc::{Knot, Path, Subpath};
-    use photocraft_geom::Point;
+fn asymmetric_vector_path() -> lienzo_doc::Path {
+    use lienzo_doc::{Knot, Path, Subpath};
+    use lienzo_geom::Point;
     Path::new(vec![Subpath {
         closed: false,
         knots: vec![
             Knot { anchor: Point::new(10.0, 20.0), in_ctrl: Point::new(8.0, 18.0), out_ctrl: Point::new(12.0, 22.0), smooth: false },
             Knot { anchor: Point::new(30.0, 30.0), in_ctrl: Point::new(28.0, 28.0), out_ctrl: Point::new(34.0, 34.0), smooth: false },
         ],
-        op: photocraft_doc::PathOp::Combine,
+        op: lienzo_doc::PathOp::Combine,
     }])
 }
 
-fn vector_mask_session(linked: bool, path: photocraft_doc::Path) -> (Session, LayerId) {
+fn vector_mask_session(linked: bool, path: lienzo_doc::Path) -> (Session, LayerId) {
     let mut s = session(8);
     let id = s.active().unwrap().active_layer.unwrap();
     s.edit("vector mask", |doc, _| {
-        doc.layer_mut(id).unwrap().vector_mask = Some(photocraft_doc::VectorMask { linked, ..photocraft_doc::VectorMask::new(path) });
+        doc.layer_mut(id).unwrap().vector_mask = Some(lienzo_doc::VectorMask { linked, ..lienzo_doc::VectorMask::new(path) });
         Ok(())
     })
     .unwrap();
     (s, id)
 }
 
-fn mask_path(s: &Session, id: LayerId) -> photocraft_doc::Path {
+fn mask_path(s: &Session, id: LayerId) -> lienzo_doc::Path {
     s.active().unwrap().doc.layer(id).unwrap().vector_mask.as_ref().unwrap().path.clone()
 }
 
@@ -499,7 +499,7 @@ fn mask_path(s: &Session, id: LayerId) -> photocraft_doc::Path {
 /// handles), on a layer with no pixels, whether the mask is linked or unlinked.
 #[test]
 fn transform_presets_flip_a_targeted_vector_mask_about_its_control_bounds() {
-    use photocraft_geom::Point;
+    use lienzo_geom::Point;
     let xy = |p: Point| (p.x, p.y);
     for linked in [true, false] {
         let (mut s, id) = vector_mask_session(linked, asymmetric_vector_path());
@@ -539,7 +539,7 @@ fn transform_presets_flip_a_targeted_vector_mask_about_its_control_bounds() {
 /// counterclockwise presets must move every anchor and handle in the expected direction.
 #[test]
 fn transform_presets_rotate_vector_masks_about_fractional_control_bounds() {
-    let path = asymmetric_vector_path().transform(&photocraft_geom::Affine::translate(0.25, 0.5));
+    let path = asymmetric_vector_path().transform(&lienzo_geom::Affine::translate(0.25, 0.5));
     assert_eq!(path.control_bounds(), Some((8.25, 18.5, 34.25, 34.5)));
     let cases = [
         ("rotate180", [[(32.25, 32.5), (34.25, 34.5), (30.25, 30.5)], [(12.25, 22.5), (14.25, 24.5), (8.25, 18.5)]]),
@@ -616,7 +616,7 @@ fn a_targeted_vector_mask_on_a_shape_layer_leaves_the_shape_path_and_cache_alone
     let mut s = session(8);
     let id = LayerId(s.execute("shape.create", json!({"kind": "rect", "rect": [2, 2, 20, 20], "fill": "#ff0000"})).unwrap()["layer"].as_u64().unwrap());
     s.edit("vector mask", |doc, _| {
-        doc.layer_mut(id).unwrap().vector_mask = Some(photocraft_doc::VectorMask::new(asymmetric_vector_path()));
+        doc.layer_mut(id).unwrap().vector_mask = Some(lienzo_doc::VectorMask::new(asymmetric_vector_path()));
         Ok(())
     })
     .unwrap();
@@ -663,7 +663,7 @@ fn a_targeted_vector_mask_flip_leaves_layer_pixels_alone() {
     let id = s.active().unwrap().active_layer.unwrap();
     paint_square(&mut s, Rect::new(2, 2, 6, 6), [1.0, 0.0, 0.0, 1.0]);
     s.edit("vector mask", |doc, _| {
-        doc.layer_mut(id).unwrap().vector_mask = Some(photocraft_doc::VectorMask::new(asymmetric_vector_path()));
+        doc.layer_mut(id).unwrap().vector_mask = Some(lienzo_doc::VectorMask::new(asymmetric_vector_path()));
         Ok(())
     })
     .unwrap();
@@ -682,7 +682,7 @@ fn a_whole_layer_flip_carries_only_a_linked_vector_mask() {
         let id = s.active().unwrap().active_layer.unwrap();
         paint_square(&mut s, Rect::new(2, 2, 6, 6), [1.0, 0.0, 0.0, 1.0]);
         s.edit("vector mask", |doc, _| {
-            doc.layer_mut(id).unwrap().vector_mask = Some(photocraft_doc::VectorMask { linked, ..photocraft_doc::VectorMask::new(asymmetric_vector_path()) });
+            doc.layer_mut(id).unwrap().vector_mask = Some(lienzo_doc::VectorMask { linked, ..lienzo_doc::VectorMask::new(asymmetric_vector_path()) });
             Ok(())
         })
         .unwrap();
@@ -700,7 +700,7 @@ fn a_whole_layer_flip_carries_only_a_linked_vector_mask() {
 /// An empty targeted vector mask is refused before anything is recorded, so history is unchanged.
 #[test]
 fn an_empty_targeted_vector_mask_refuses_without_history() {
-    let (mut s, id) = vector_mask_session(true, photocraft_doc::Path::default());
+    let (mut s, id) = vector_mask_session(true, lienzo_doc::Path::default());
     let before = s.active().unwrap().doc.clone();
     let past = s.active().unwrap().history.past_len();
     let err = s.execute("edit.transform.flipHorizontal", json!({"target": "vectorMask"})).unwrap_err();

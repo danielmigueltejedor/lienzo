@@ -1,6 +1,6 @@
 //! The commands the app's shell carries out itself (view, panels, windows: they change no
 //! document), and the tools, as data: what they're called and which keys they have by default.
-//! The shell implements them (`photocraft_ui_egui::menus::UI_COMMANDS`, its `Tool`); the engine
+//! The shell implements them (`lienzo_ui_egui::menus::UI_COMMANDS`, its `Tool`); the engine
 //! knows them so a headless session sees every bindable command: Edit › Keyboard Shortcuts'
 //! list, conflicts, `.kys` import and export all work without the UI (the UI is a layer on
 //! top). The app's tests keep these tables equal to its own.

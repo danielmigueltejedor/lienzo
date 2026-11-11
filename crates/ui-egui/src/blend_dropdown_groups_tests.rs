@@ -6,16 +6,16 @@ use egui::accesskit::Role;
 use egui::{Pos2, Rect, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::BlendMode;
+use lienzo_doc::BlendMode;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// The app at 1440×900 with a new document and a pixel layer above the Background, active.
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app
@@ -25,26 +25,26 @@ fn harness() -> Harness<'static, PhotocraftApp> {
 }
 
 /// The Layers panel's dropdown: the lowest one (the options bar and the title bar have some too).
-fn dropdown(h: &Harness<'_, PhotocraftApp>) -> Rect {
+fn dropdown(h: &Harness<'_, LienzoApp>) -> Rect {
     h.query_all_by_role(Role::ComboBox).map(|n| n.rect()).max_by(|a, b| a.top().total_cmp(&b.top())).unwrap()
 }
 
 /// The open list's rect (the one foreground area: no other popup is open).
-fn open_list(h: &Harness<'_, PhotocraftApp>) -> Option<Rect> {
+fn open_list(h: &Harness<'_, LienzoApp>) -> Option<Rect> {
     h.ctx.memory(|m| m.layer_ids().filter(|l| l.order == egui::Order::Foreground).find_map(|l| m.area_rect(l.id)))
 }
 
-fn blend(h: &Harness<'_, PhotocraftApp>) -> BlendMode {
+fn blend(h: &Harness<'_, LienzoApp>) -> BlendMode {
     let st = h.state().session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().blend
 }
 
-fn steps(h: &Harness<'_, PhotocraftApp>) -> usize {
+fn steps(h: &Harness<'_, LienzoApp>) -> usize {
     h.state().session.active().unwrap().history.past_len()
 }
 
 /// Presses at `at`, holds for `held` frames and releases there.
-fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, held: usize) {
+fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2, held: usize) {
     h.hover_at(at);
     h.run_steps(1);
     for (pressed, frames) in [(true, held), (false, 4)] {

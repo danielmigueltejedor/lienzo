@@ -4,7 +4,7 @@ use super::drag::Drag;
 use super::gesture::{finish_release, polygon_click, selection_mode};
 use super::selection::finish_selection_drag;
 use super::strokes::{HOLD_REPEAT_MS, begin_live_stroke, feed_live_stroke, paint_target, snap_aliased_tip, stroke_params, strokes_live};
-use super::{PhotocraftApp, Tool, json, multiple_color_target};
+use super::{LienzoApp, Tool, json, multiple_color_target};
 
 /// Abstract tool event, produced by the mouse or by automation (`ui.pointer`).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,7 +17,7 @@ pub enum ToolEvent {
 /// The body of a `Move` for every tool: tracked position, ⇧ constraint, the moving layer, and so
 /// on. It does not feed the live stroke, so the canvas can push a whole frame's recovered samples
 /// and update the live stroke once (see `canvas_view`).
-fn tool_move(app: &mut PhotocraftApp, x: f64, y: f64, pressure: f32, mods: egui::Modifiers) {
+fn tool_move(app: &mut LienzoApp, x: f64, y: f64, pressure: f32, mods: egui::Modifiers) {
     let tool = app.active_tool();
     if tool.is_type() && app.drag.is_none() {
         crate::type_tool::pointer_move(app, x, y, mods);
@@ -53,7 +53,7 @@ fn tool_move(app: &mut PhotocraftApp, x: f64, y: f64, pressure: f32, mods: egui:
     }
 }
 
-fn preflight_tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> Option<(bool, egui::Modifiers)> {
+fn preflight_tool_event(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) -> Option<(bool, egui::Modifiers)> {
     // A press anywhere but on a guide deselects the selected guide (`guide_select`).
     if let ToolEvent::Down { x, y, .. } = ev
         && app.ui.selected_guide.is_some()
@@ -133,7 +133,7 @@ impl<'a> ToolViewContext<'a> {
 /// one of them handled it; otherwise the event as it came and as filtered (snapped, the Move
 /// tool's axis lock), and the modifiers with the sticky keys applied.
 fn filter_event_before_tool(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ev: ToolEvent,
     mods: egui::Modifiers,
     armed: bool,
@@ -149,7 +149,7 @@ fn filter_event_before_tool(
     // plain selection-tool press on it, which moves the outline only (#11368). The Move tool (⌘
     // with a painting tool too, `event_tool`) drags it from anywhere.
     if let ToolEvent::Down { x, y, .. } = raw
-        && app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some())
+        && app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some())
         && !crate::move_ui::moves_selected_pixels_with(app, event_tool(app, mods))
         && selection_drag_kind(app, app.ui.tool, [x, y], mods) != Some(true)
     {
@@ -261,7 +261,7 @@ fn filter_event_before_tool(
 /// Remember a Move-way pick that changed the active layer (with the engine's change count after it, so
 /// any later change invalidates the marker), so the Layers panel's
 /// reveal can honour Expand layer group on click (layer_reveal.rs).
-fn note_move_pick(app: &mut PhotocraftApp, active_before: Option<photocraft_doc::LayerId>) {
+fn note_move_pick(app: &mut LienzoApp, active_before: Option<lienzo_doc::LayerId>) {
     let active_after = app.session.active().and_then(|st| st.active_layer);
     if active_after != active_before {
         app.move_pick = active_after.map(|id| (id, app.session.active_layer_changes()));
@@ -271,7 +271,7 @@ fn note_move_pick(app: &mut PhotocraftApp, active_before: Option<photocraft_doc:
 /// Handle Move-specific pointer events and report whether the event was consumed. Auto-Select
 /// picks on press so snapping and dragging use the resulting layer selection. When a locked-only
 /// hit starts a marquee, Shift preserves the selection that the marquee adds to.
-fn handle_move_pointer(app: &mut PhotocraftApp, ev: ToolEvent, tool: Tool, mods: egui::Modifiers) -> bool {
+fn handle_move_pointer(app: &mut LienzoApp, ev: ToolEvent, tool: Tool, mods: egui::Modifiers) -> bool {
     match ev {
         ToolEvent::Down { x, y, pressure } if tool == Tool::Move => {
             if let Some((vertical, i)) = crate::rulers::guide_at(app, x, y) {
@@ -325,7 +325,7 @@ fn handle_move_pointer(app: &mut PhotocraftApp, ev: ToolEvent, tool: Tool, mods:
                     let locked_hit = !move_auto_select
                         && probe.as_ref().ok().and_then(|v| v["layer"].as_u64()).is_some_and(|id| {
                             app.session.active().is_some_and(|st| {
-                                let id = photocraft_doc::LayerId(id);
+                                let id = lienzo_doc::LayerId(id);
                                 let locks = st.doc.effective_locks(id);
                                 locks.position || locks.all || st.doc.is_background(id)
                             })
@@ -352,7 +352,7 @@ fn handle_move_pointer(app: &mut PhotocraftApp, ev: ToolEvent, tool: Tool, mods:
             // With a selection: cut the selected pixels (⌥ copies them) and drag them as a floating
             // piece, from anywhere, as a marquee ⌘-drag does.
             if crate::move_ui::moves_selected_pixels_with(app, tool) {
-                let before = app.session.active().and_then(photocraft_engine::float_cmds::floating).cloned();
+                let before = app.session.active().and_then(lienzo_engine::float_cmds::floating).cloned();
                 if crate::move_ui::float_selected_for_drag(app, mods.alt) {
                     let mut d = Drag::new(tool, [x, y], vec![[x, y, pressure as f64]], mods, false);
                     d.sel_move = Some(true);
@@ -381,7 +381,7 @@ fn handle_move_pointer(app: &mut PhotocraftApp, ev: ToolEvent, tool: Tool, mods:
     false
 }
 
-fn consumes_cancelled_vector_event(app: &mut PhotocraftApp, ev: ToolEvent) -> bool {
+fn consumes_cancelled_vector_event(app: &mut LienzoApp, ev: ToolEvent) -> bool {
     cancel_stale_vector_drag(app);
     if app.cancelled_vector_drag {
         match ev {
@@ -396,7 +396,7 @@ fn consumes_cancelled_vector_event(app: &mut PhotocraftApp, ev: ToolEvent) -> bo
     false
 }
 
-fn handle_eyedropper_event(app: &mut PhotocraftApp, tool: Tool, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+fn handle_eyedropper_event(app: &mut LienzoApp, tool: Tool, ev: ToolEvent, mods: egui::Modifiers) -> bool {
     if tool != Tool::Eyedropper {
         return false;
     }
@@ -409,8 +409,8 @@ fn handle_eyedropper_event(app: &mut PhotocraftApp, tool: Tool, ev: ToolEvent, m
 
 /// A Mixer Brush press the engine refused: Indexed Color and Bitmap documents answer it with the
 /// reference's alert (#11958); anything else goes to the status bar, as before.
-fn mixer_press_failed(app: &mut PhotocraftApp, message: String) {
-    use photocraft_engine::brush_cmds::mixer_live::{BITMAP_REFUSAL, INDEXED_REFUSAL};
+fn mixer_press_failed(app: &mut LienzoApp, message: String) {
+    use lienzo_engine::brush_cmds::mixer_live::{BITMAP_REFUSAL, INDEXED_REFUSAL};
     if message == INDEXED_REFUSAL || message == BITMAP_REFUSAL {
         // One alert, even if more presses arrive while it is open (`ui.pointer` can send them).
         let shown =
@@ -429,7 +429,7 @@ fn mixer_press_failed(app: &mut PhotocraftApp, message: String) {
 /// (#11897): at the press of a Brush stroke on the Background's own pixels, Clear (chosen in the
 /// options bar, not a held `~`) is turned off, so the stroke is sent as Normal. A Background whose
 /// pixels are locked refuses the stroke, so Clear stays chosen there.
-fn clear_off_on_background(app: &mut PhotocraftApp, tool: Tool) {
+fn clear_off_on_background(app: &mut LienzoApp, tool: Tool) {
     let on_background = app.session.active().is_some_and(|st| {
         st.active_layer.is_some_and(|id| {
             st.doc.is_background(id) && {
@@ -444,12 +444,12 @@ fn clear_off_on_background(app: &mut PhotocraftApp, tool: Tool) {
 }
 
 /// Tool state machine. Shared by mouse input and automation.
-pub fn tool_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn tool_event(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) {
     tool_event_with_view(app, ev, mods, None);
 }
 
 /// Dispatches a tool event through preflight, pre-tool overlays, and tool handlers within an explicit view context.
-pub(super) fn tool_event_with_view(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers, view: Option<ToolViewContext<'_>>) {
+pub(super) fn tool_event_with_view(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers, view: Option<ToolViewContext<'_>>) {
     if consumes_cancelled_vector_event(app, ev) {
         return;
     }
@@ -517,7 +517,7 @@ pub(super) fn tool_event_with_view(app: &mut PhotocraftApp, ev: ToolEvent, mods:
                 if cut
                     && mods.alt
                     && mods.command
-                    && app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some())
+                    && app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some())
                     && let Err(e) = app.run("select.drop", json!({}))
                 {
                     app.ui.status = e;
@@ -525,7 +525,7 @@ pub(super) fn tool_event_with_view(app: &mut PhotocraftApp, ev: ToolEvent, mods:
                     return;
                 }
                 if cut
-                    && app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_none())
+                    && app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_none())
                     && let Err(e) = app.run("select.float", json!({"dx": 0, "dy": 0, "copy": mods.alt}))
                 {
                     app.ui.status = e;
@@ -647,7 +647,7 @@ pub(super) fn tool_event_with_view(app: &mut PhotocraftApp, ev: ToolEvent, mods:
             }
             app.live_stroke = if strokes_live(tool) { begin_live_stroke(app) } else { None };
             if tool == Tool::MixerBrush && app.live_stroke.is_none() {
-                use photocraft_engine::brush_cmds::mixer_live::LiveMixer;
+                use lienzo_engine::brush_cmds::mixer_live::LiveMixer;
                 let p = app.drag.as_ref().map(|d| stroke_params(app, d, &app.stylus.stroke_points(&d.points)));
                 // A tip above the preview size keeps the drag: `finish_gesture` renders it on release.
                 // Otherwise the first dab itself is invalid. Do not queue an unexpected release edit.
@@ -737,7 +737,7 @@ fn at_press(d: &Drag, p: [f64; 2]) -> bool {
 }
 
 /// Records on the drag that pointer move `raw` (before snapping) left the press (`Drag::left_press`).
-fn note_left_press(app: &mut PhotocraftApp, raw: ToolEvent) {
+fn note_left_press(app: &mut LienzoApp, raw: ToolEvent) {
     if let ToolEvent::Move { x, y, .. } = raw
         && let Some(d) = app.drag.as_mut()
     {
@@ -760,7 +760,7 @@ fn selection_release(d: &Drag, raw: ToolEvent, p: [f64; 2]) -> (bool, [f64; 2]) 
 
 /// Why a press with `tool` must not start: it would paint on or move a hidden target layer (the
 /// engine refuses the command; refusing the press keeps the live stroke from drawing first).
-fn hidden_target(app: &PhotocraftApp, tool: Tool) -> Option<&'static str> {
+fn hidden_target(app: &LienzoApp, tool: Tool) -> Option<&'static str> {
     let cmd = match tool {
         Tool::Move => "layer.translate",
         // The live Gradient makes a new Gradient Fill layer above the target, which Photoshop
@@ -770,13 +770,13 @@ fn hidden_target(app: &PhotocraftApp, tool: Tool) -> Option<&'static str> {
         t if t.is_brushlike() || matches!(t, Tool::Gradient | Tool::PaintBucket | Tool::MagicEraser) => "paint.stroke",
         _ => return None,
     };
-    photocraft_engine::hidden_target::refusal(&app.session, cmd, &json!({}))
+    lienzo_engine::hidden_target::refusal(&app.session, cmd, &json!({}))
 }
 
 /// The press-time refusals: a hidden target layer (#571), and for the Brush a locked layer or a
 /// group's pixels. The Brush says why in an alert, as in Photoshop (#11898); the other tools say
 /// a hidden target in the status bar. True when the press is refused.
-fn press_refused(app: &mut PhotocraftApp, tool: Tool) -> bool {
+fn press_refused(app: &mut LienzoApp, tool: Tool) -> bool {
     let hidden = hidden_target(app, tool);
     if let Some(message) = crate::brush_refusal::alert(app, tool, hidden.is_some()) {
         crate::brush_refusal::prompt(app, &message);
@@ -791,12 +791,12 @@ fn press_refused(app: &mut PhotocraftApp, tool: Tool) -> bool {
 }
 
 /// Is document point `p` inside the active document's selection?
-fn inside_selection(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+fn inside_selection(app: &LienzoApp, p: [f64; 2]) -> bool {
     app.session.active().and_then(|st| st.doc.selection.as_ref()).is_some_and(|sel| covers(sel, p))
 }
 
 /// Does selection surface `sel` cover document point `p`?
-fn covers(sel: &photocraft_raster::Surface, p: [f64; 2]) -> bool {
+fn covers(sel: &lienzo_raster::Surface, p: [f64; 2]) -> bool {
     let mut v = [0.0f32];
     sel.read_pixel(p[0].floor() as i32, p[1].floor() as i32, &mut v);
     v[0] > 0.0
@@ -810,7 +810,7 @@ fn covers(sel: &photocraft_raster::Surface, p: [f64; 2]) -> bool {
 /// / Single Column Marquee drag the outline too (#11392); a click without moving, inside the
 /// selection or on a floating piece (dropped first), still selects the line under the pointer
 /// (`finish_gesture`).
-pub fn selection_drag_kind(app: &PhotocraftApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> Option<bool> {
+pub fn selection_drag_kind(app: &LienzoApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> Option<bool> {
     // Click-driven selection tools (a press places a point or samples): only ⌘ drags the
     // selection, and not while a polygon is being drawn.
     let clicky = matches!(tool, Tool::PolygonLasso | Tool::MagicWand);
@@ -820,7 +820,7 @@ pub fn selection_drag_kind(app: &PhotocraftApp, tool: Tool, p: [f64; 2], mods: e
     }
     // ⌘ cuts, ⌘⌥ copies (`select.float`'s `copy`).
     let cut = mods.command && !mods.shift;
-    if let Some(f) = app.session.active().and_then(photocraft_engine::float_cmds::floating) {
+    if let Some(f) = app.session.active().and_then(lienzo_engine::float_cmds::floating) {
         // A ⌘ press on the piece's outline (where its ants are) drags it; a plain one drags the
         // outline, dropping the piece where it is first (`filter_event_before_tool`, #11368); one
         // in the margin the cut left of the selection starts a new selection (#7538).
@@ -846,7 +846,7 @@ pub fn selection_drag_kind(app: &PhotocraftApp, tool: Tool, p: [f64; 2], mods: e
 /// The tool a pointer event with `mods` goes to: ⌘ held is the Move tool (`hold_keys::cmd_moves`).
 /// The canvas resolves the held key before the event (`tool_override`); automation and tests send
 /// the modifier with the event.
-pub(crate) fn event_tool(app: &PhotocraftApp, mods: egui::Modifiers) -> Tool {
+pub(crate) fn event_tool(app: &LienzoApp, mods: egui::Modifiers) -> Tool {
     match app.active_tool() {
         t if app.tool_override.is_none() && mods.command && crate::hold_keys::cmd_moves(t) && app.ui.transform.is_none() && app.ui.text_edit.is_none() => {
             Tool::Move
@@ -858,9 +858,9 @@ pub(crate) fn event_tool(app: &PhotocraftApp, mods: egui::Modifiers) -> Tool {
 /// Does a ⌘ (⌘⌥) press with selection tool `tool` at `p` move the whole layer (a duplicate with
 /// ⌥), as the Move tool would? Outside the selection or without one; inside it, ⌘ drags the
 /// selected pixels instead (`selection_drag_kind`).
-pub(crate) fn command_moves_layer(app: &PhotocraftApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> bool {
+pub(crate) fn command_moves_layer(app: &LienzoApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> bool {
     let selection_tool = matches!(tool, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso | Tool::PolygonLasso | Tool::MagicWand);
-    let floating = app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
+    let floating = app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
     selection_tool && mods.command && !mods.shift && !floating && app.ui.polygon.is_empty() && !inside_selection(app, p)
 }
 
@@ -869,7 +869,7 @@ pub(crate) fn command_moves_layer(app: &PhotocraftApp, tool: Tool, p: [f64; 2], 
 /// selected pixels. The selection tools, and every tool on which ⌘ is the Move tool
 /// (`hold_keys::cmd_moves`, #6288); the canvas shows the guide cursor where this finds a guide.
 /// Not while a polygon or lasso outline, a stroke, Free Transform or type editing is under way.
-pub(crate) fn command_guide_at(app: &PhotocraftApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> Option<(bool, usize)> {
+pub(crate) fn command_guide_at(app: &LienzoApp, tool: Tool, p: [f64; 2], mods: egui::Modifiers) -> Option<(bool, usize)> {
     let selection_tool = matches!(tool, Tool::RectMarquee | Tool::EllipseMarquee | Tool::Lasso | Tool::PolygonLasso | Tool::MagicWand);
     let moves = selection_tool || crate::hold_keys::cmd_moves(tool);
     let idle = app.ui.polygon.is_empty() && !crate::lasso_ui::active(app) && app.ui.transform.is_none() && app.ui.text_edit.is_none() && app.drag.is_none();

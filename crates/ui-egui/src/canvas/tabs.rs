@@ -1,10 +1,10 @@
 use super::start_screen::start_screen;
 use super::textures::retain_gpu_documents;
-use super::{Color32, PhotocraftApp, Pos2, Rect, Sense, Stroke, TextureOptions, canvas_view, fmt_zoom, json, mode_label, pos2};
+use super::{Color32, LienzoApp, Pos2, Rect, Sense, Stroke, TextureOptions, canvas_view, fmt_zoom, json, mode_label, pos2};
 
 /// Tabs + canvas for the active document, or the start screen; then drops layers dragged onto
 /// another document (`layer_transfer`).
-pub fn document_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn document_area(app: &mut LienzoApp, ui: &mut egui::Ui) {
     if crate::jobs_ui::batch_preview(app, ui) {
         return;
     }
@@ -22,8 +22,8 @@ pub fn document_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 /// Where each docked document is drawn under Window › Arrange: its index and the cell it gets,
 /// at the border positions the user has dragged them to. `None` with no docked document, or when
 /// the arrangement is the plain single canvas. With more documents than the layout has cells, the
-/// shown run starts at [`PhotocraftApp::arrange_start`] and always includes the active one.
-pub(crate) fn arranged_cells(app: &PhotocraftApp, rect: Rect) -> Option<Vec<(usize, Rect)>> {
+/// shown run starts at [`LienzoApp::arrange_start`] and always includes the active one.
+pub(crate) fn arranged_cells(app: &LienzoApp, rect: Rect) -> Option<Vec<(usize, Rect)>> {
     let documents = docked_document_indices(app);
     let n = documents.len();
     if n == 0 {
@@ -41,7 +41,7 @@ pub(crate) fn arranged_cells(app: &PhotocraftApp, rect: Rect) -> Option<Vec<(usi
 /// plus those of open document windows): they split the display texture budget, and the
 /// textures of the others are freed first. Only a change of that set (or a document's size)
 /// re-splits it, so switching between shown documents or windows moves no texture.
-pub(crate) fn publish_shown(app: &PhotocraftApp) {
+pub(crate) fn publish_shown(app: &LienzoApp) {
     let Some(gpu) = &app.gpu else { return };
     let docs = app.session.documents();
     let mut shown: Vec<usize> = match arranged_cells(app, app.last_canvas_rect) {
@@ -55,7 +55,7 @@ pub(crate) fn publish_shown(app: &PhotocraftApp) {
     gpu.show_documents(&shown);
 }
 
-fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn documents(app: &mut LienzoApp, ui: &mut egui::Ui) {
     app.drop_canvas_rect = None;
     app.tab_strip = None;
     retain_gpu_documents(app);
@@ -146,7 +146,7 @@ fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// Window › Arrange: the borders between the documents are dragged to give one more room, as in
 /// Photoshop (#10101). Laid out after the canvases, so a grip over a cell's edge takes the press.
-fn drag_borders(app: &mut PhotocraftApp, ui: &egui::Ui, rect: Rect) {
+fn drag_borders(app: &mut LienzoApp, ui: &egui::Ui, rect: Rect) {
     let n = docked_document_indices(app).len();
     let layout = app.ui.view.arrange.clone();
     for (border, grip) in border_grips(app, rect) {
@@ -163,7 +163,7 @@ fn drag_borders(app: &mut PhotocraftApp, ui: &egui::Ui, rect: Rect) {
 }
 
 /// The arrangement's borders, each with the strip either side of it that grabs it.
-fn border_grips(app: &PhotocraftApp, rect: Rect) -> Vec<(crate::view_cmds::Border, Rect)> {
+fn border_grips(app: &LienzoApp, rect: Rect) -> Vec<(crate::view_cmds::Border, Rect)> {
     let n = docked_document_indices(app).len();
     crate::view_cmds::borders(&app.ui.view.arrange, rect, n, &app.ui.view.arrange_splits)
         .into_iter()
@@ -172,7 +172,7 @@ fn border_grips(app: &PhotocraftApp, rect: Rect) -> Vec<(crate::view_cmds::Borde
 }
 
 /// The tab strip; returns where its document tabs are.
-pub(super) fn tabs(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> TabStrip {
+pub(super) fn tabs(app: &mut LienzoApp, ui: &mut egui::Ui) -> TabStrip {
     let t = crate::theme::Tokens::get(ui.ctx());
     if t.pro {
         return pro_tabs(app, ui);
@@ -459,7 +459,7 @@ fn tab_drag(ui: &egui::Ui, resp: &egui::Response, i: usize, r: Rect, strip: Rect
 }
 
 /// Float a torn-off tab's document in its own window (`window.arrange.floatInWindow`).
-fn float_torn_off(app: &mut PhotocraftApp, ctx: &egui::Context, tear_off: Option<(usize, Option<[f32; 2]>)>) {
+fn float_torn_off(app: &mut LienzoApp, ctx: &egui::Context, tear_off: Option<(usize, Option<[f32; 2]>)>) {
     let Some((doc, at)) = tear_off else { return };
     let params = match at {
         Some(at) => json!({"document": doc, "position": at}),
@@ -499,10 +499,10 @@ fn tab_drop_line(ui: &egui::Ui, placed: &[(usize, Rect)], x: f32, t: &crate::the
 /// Apply tab-strip clicks: a document tab shows that document, an opening tab its progress, and
 /// an opening tab's × cancels the open (closing the half-open tab).
 fn open_tab_clicks(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     activate: Option<usize>,
-    focus_open: Option<photocraft_engine::jobs::JobId>,
-    cancel_open: Option<photocraft_engine::jobs::JobId>,
+    focus_open: Option<lienzo_engine::jobs::JobId>,
+    cancel_open: Option<lienzo_engine::jobs::JobId>,
 ) {
     if let Some(i) = activate {
         app.session.set_active(i);
@@ -535,13 +535,13 @@ fn fit_doc_tabs(natural: &[f32], selected: usize, avail: f32) -> crate::tab_stri
 
 /// Photoshop's tab title: "name @ 50% (Layer 1, RGB/8)", "(Layer 1, Layer Mask/8)" when the mask
 /// is targeted, "(Quick Mask/8)" in Quick Mask mode; the Background layer's name is omitted.
-pub(super) fn pro_tab_title(app: &PhotocraftApp, i: usize) -> String {
+pub(super) fn pro_tab_title(app: &LienzoApp, i: usize) -> String {
     tab_title_at(app, i, app.ui.views.get(i).map_or(100.0, |v| v.zoom * 100.0))
 }
 
 /// [`pro_tab_title`] at `zoom` percent (a workspace with its own view, such as Select and Mask).
-pub(crate) fn tab_title_at(app: &PhotocraftApp, i: usize, zoom: f32) -> String {
-    use photocraft_engine::channel_cmds::ChannelTarget;
+pub(crate) fn tab_title_at(app: &LienzoApp, i: usize, zoom: f32) -> String {
+    use lienzo_engine::channel_cmds::ChannelTarget;
     let Some(st) = app.session.documents().get(i) else { return String::new() };
     // Quick Mask mode targets the mask, not the layer (see `paint_target`): painting and Free
     // Transform change the red overlay, so the tab says so, as Photoshop's does.
@@ -562,7 +562,7 @@ pub(crate) fn tab_title_at(app: &PhotocraftApp, i: usize, zoom: f32) -> String {
 }
 
 /// The Studio strip's tab name: "name *" when unsaved, "name * - Saving 45%" while it saves (#3389).
-fn studio_tab_name(app: &PhotocraftApp, st: &photocraft_engine::DocState) -> String {
+fn studio_tab_name(app: &LienzoApp, st: &lienzo_engine::DocState) -> String {
     let saving = crate::jobs_ui::save_progress(app, st.doc.id).map(|s| format!(" - {s}")).unwrap_or_default();
     format!("{}{}{saving}", st.doc.name, if st.is_dirty() { " *" } else { "" })
 }
@@ -570,7 +570,7 @@ fn studio_tab_name(app: &PhotocraftApp, st: &photocraft_engine::DocState) -> Str
 /// Photoshop document tabs: "name @ 33.3% (RGB/8)" on a dark strip; active tab matches panels.
 /// Tabs keep their whole titles, and the ones that don't fit move into a » menu at the end of the
 /// strip; the active document's tab always stays on the strip (#1276, #4487).
-fn pro_tabs(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> TabStrip {
+fn pro_tabs(app: &mut LienzoApp, ui: &mut egui::Ui) -> TabStrip {
     let t = crate::theme::Tokens::get(ui.ctx());
     let documents = docked_document_indices(app);
     let active_doc = app.session.active_index().filter(|_| app.jobs.focus.is_none());
@@ -733,7 +733,7 @@ impl TabStrip {
 }
 
 /// While files are dragged over the tab strip, an insertion line where they would open.
-fn drop_slot_line(app: &mut PhotocraftApp, ui: &egui::Ui) {
+fn drop_slot_line(app: &mut LienzoApp, ui: &egui::Ui) {
     if ui.input(|i| i.raw.hovered_files.is_empty()) {
         return;
     }
@@ -795,14 +795,14 @@ pub(super) fn paint_dots(ui: &egui::Ui, rect: Rect, enabled: bool) {
 /// With no document open, double-clicking the empty workspace shows File › Open, as in Photoshop
 /// (#5367), and so does the Home screen's blank background. Registered before anything drawn over
 /// `area`, so the buttons and links there keep their own clicks; not a keyboard focus stop.
-pub(super) fn open_on_double_click(app: &mut PhotocraftApp, ui: &egui::Ui, area: Rect) {
+pub(super) fn open_on_double_click(app: &mut LienzoApp, ui: &egui::Ui, area: Rect) {
     if app.session.documents().is_empty() && ui.interact(area, ui.scope_id().with("empty-workspace"), Sense::CLICK).double_clicked() {
         let _ = app.open_dialog_file();
     }
 }
 
 /// Extra OS windows showing documents (multi-window / multi-monitor).
-pub fn extra_windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn extra_windows(app: &mut LienzoApp, ctx: &egui::Context) {
     let wins = app.ui.windows.clone();
     for w in wins.into_iter().filter(|w| w.open) {
         let Some(st) = app.session.documents().get(w.document) else { continue };
@@ -847,11 +847,11 @@ pub fn extra_windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Window › Arrange tiles: each document shown with its tile in `rect`, or `None` when the
 /// active document fills the area.
-pub(super) fn docked_document_indices(app: &PhotocraftApp) -> Vec<usize> {
+pub(super) fn docked_document_indices(app: &LienzoApp) -> Vec<usize> {
     (0..app.session.documents().len()).filter(|&doc| !crate::view_cmds::document_is_floating(app, doc)).collect()
 }
 
-pub(super) fn main_canvas_document(app: &PhotocraftApp) -> Option<usize> {
+pub(super) fn main_canvas_document(app: &LienzoApp) -> Option<usize> {
     let active = app.session.active_index()?;
     if !crate::view_cmds::document_is_floating(app, active) {
         return Some(active);

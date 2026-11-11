@@ -3,7 +3,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 // ---------------------------------------------------------------------------
 // Symmetric guarantee
@@ -211,7 +211,7 @@ fn detect_magic_iff() {
     assert_eq!(from_extension("art.ilbm"), Some(Format::Iff));
     assert!(caps(Format::Iff).read && caps(Format::Iff).write, "IFF is read and written");
     assert!(caps(Format::Iff).alpha);
-    assert!(caps(Format::Iff).layouts.contains(&photocraft_codecs::ChannelLayout::Rgba));
+    assert!(caps(Format::Iff).layouts.contains(&lienzo_codecs::ChannelLayout::Rgba));
     assert!(!ASYMMETRIC_EXCEPTIONS.iter().any(|(f, _)| *f == Format::Iff));
     assert_eq!(Format::Iff.max_dimensions(), Some((65535, 65535)));
     // A bare FORM without a bitmap type is not IFF.

@@ -1,7 +1,7 @@
 //! High-quality separable resampling of surfaces (Image Size).
 
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::Surface;
+use lienzo_geom::{Rect, TILE_SIZE};
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 use crate::image::{premultiply, unpremultiply};
@@ -364,7 +364,7 @@ fn resize(s: &Surface, sx: f64, sy: f64, filter: Resample, canvas: Option<Rect>)
 /// the intermediate image is never larger than the result when an axis grows, but is when both
 /// shrink ([`largest_resize_rect`]).
 fn resize_with_budget(s: &Surface, sx: f64, sy: f64, filter: Resample, canvas: Option<Rect>, budget: usize) -> Surface {
-    resize_controlled(s, sx, sy, filter, canvas, budget, &photocraft_raster::Interrupt::NONE)
+    resize_controlled(s, sx, sy, filter, canvas, budget, &lienzo_raster::Interrupt::NONE)
 }
 
 /// Resize with cancellation between passes and bounded groups of output bands.
@@ -374,15 +374,15 @@ pub fn resize_surface_with_interrupt(
     sx: f64,
     sy: f64,
     filter: Resample,
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<Surface, photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<Surface, lienzo_raster::Cancelled> {
     ctl.check()?;
     let out = resize_controlled(s, sx, sy, filter, None, READ_BUDGET, ctl);
     ctl.check()?;
     Ok(out)
 }
 
-fn resize_controlled(s: &Surface, sx: f64, sy: f64, filter: Resample, canvas: Option<Rect>, budget: usize, ctl: &photocraft_raster::Interrupt) -> Surface {
+fn resize_controlled(s: &Surface, sx: f64, sy: f64, filter: Resample, canvas: Option<Rect>, budget: usize, ctl: &lienzo_raster::Interrupt) -> Surface {
     let mut cur: Option<Surface> = None;
     let mut canvas = canvas;
     for p in plan(filter, sx, sy) {
@@ -562,7 +562,7 @@ impl PassState {
 
 /// One pass. With `canvas`, the content and the canvas repeat their edge outwards (see
 /// [`resize_surface_in_canvas`]).
-fn resize_pass(s: &Surface, pass: Pass, canvas: Option<Rect>, budget: usize, ctl: &photocraft_raster::Interrupt) -> Surface {
+fn resize_pass(s: &Surface, pass: Pass, canvas: Option<Rect>, budget: usize, ctl: &lienzo_raster::Interrupt) -> Surface {
     let mut out = Surface::with_default(s.format(), &s.default_pixel());
     let Some(st) = PassState::new(s, pass, canvas, budget) else { return out };
     let bands: Vec<usize> = (0..st.bands()).collect();
@@ -605,7 +605,7 @@ pub struct ResizeSteps {
     scale: (f64, f64),
     run: Option<PassRun>,
     /// Final pruning must yield too: sparse output can contain many default-filled tiles.
-    prune: Option<photocraft_raster::PruneCursor>,
+    prune: Option<lienzo_raster::PruneCursor>,
 }
 
 /// The pass being computed by [`ResizeSteps`].

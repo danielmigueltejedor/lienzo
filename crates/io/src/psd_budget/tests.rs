@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_psd::{ColorMode, Compression, Version, testgen};
+use lienzo_psd::{ColorMode, Compression, Version, testgen};
 
 #[test]
 fn retained_storage_is_summed_but_workspace_is_reused() {
@@ -58,9 +58,9 @@ fn large_off_canvas_layer_is_rejected_without_decoding_its_tiny_data() {
         // Unknown memory keeps a conservative automatic allowance, so this file is refused
         // pending approval (or by the hard platform limit on 32-bit) before any pixel decode.
         assert!(matches!(crate::import("huge.psd", &bytes), Err(IoError::PsdApprovalRequired { .. } | IoError::PsdImportBudget { .. })));
-        let source = photocraft_psd::Source::new(bytes);
+        let source = lienzo_psd::Source::new(bytes);
         assert!(matches!(
-            crate::import_source_for_open_with("huge.psd", source, &photocraft_raster::Interrupt::NONE),
+            crate::import_source_for_open_with("huge.psd", source, &lienzo_raster::Interrupt::NONE),
             Err(IoError::PsdApprovalRequired { .. } | IoError::PsdImportBudget { .. })
         ));
     });
@@ -71,7 +71,7 @@ fn user_mask_bounds_count_even_when_the_layer_is_small() {
     let mut file = testgen::small(Version::Psd, Compression::Raw);
     let before = estimate(&file);
     // The generator's first record has a user mask. Modify its parsed mask in place.
-    if let photocraft_psd::layer::MaskData::Mask(mask) = &mut file.layers_mut()[0].mask {
+    if let lienzo_psd::layer::MaskData::Mask(mask) = &mut file.layers_mut()[0].mask {
         mask.rect = Rect::from_xywh(0, 0, 20_000, 20_000);
     } else {
         panic!("fixture needs a parsed mask");
@@ -115,8 +115,8 @@ fn accepted_off_canvas_pixels_and_depths_are_preserved() {
             assert_eq!(doc.depth, crate::pixels::sample_for_depth(depth));
             let bytes = file.to_bytes().unwrap();
             let opened = crate::import("small.psd", &bytes).unwrap().document;
-            let rect = photocraft_geom::Rect::new(-8, -8, 32, 24);
-            assert_eq!(photocraft_compose::render(&opened, rect), photocraft_compose::render(&doc, rect));
+            let rect = lienzo_geom::Rect::new(-8, -8, 32, 24);
+            assert_eq!(lienzo_compose::render(&opened, rect), lienzo_compose::render(&doc, rect));
         }
     }
 }
@@ -133,8 +133,8 @@ fn legacy_conversion_reports_a_rejected_import_instead_of_decoding_it() {
     });
 }
 
-fn pattern_block(mode: u32, depth: u16, width: u32, height: u32) -> photocraft_psd::TaggedBlock {
-    use photocraft_psd::patterns::{PsdPattern, mode_channels, write_pattern_block};
+fn pattern_block(mode: u32, depth: u16, width: u32, height: u32) -> lienzo_psd::TaggedBlock {
+    use lienzo_psd::patterns::{PsdPattern, mode_channels, write_pattern_block};
     let len = (width as usize * depth as usize).div_ceil(8) * height as usize;
     let p = PsdPattern {
         mode,
@@ -147,7 +147,7 @@ fn pattern_block(mode: u32, depth: u16, width: u32, height: u32) -> photocraft_p
         channels: vec![vec![0; len]; mode_channels(mode)],
         alpha: None,
     };
-    photocraft_psd::TaggedBlock::new(*b"Patt", write_pattern_block(&[p]).unwrap())
+    lienzo_psd::TaggedBlock::new(*b"Patt", write_pattern_block(&[p]).unwrap())
 }
 
 #[test]
@@ -190,15 +190,15 @@ fn an_unknown_color_mode_pays_for_the_layers_it_imports_as_rgb() {
     let rgb = testgen::small(Version::Psd, Compression::Raw);
     assert!(!rgb.layers().is_empty() && !super::super::psd_import::merged_needed(&rgb), "the fixture must import its layers alone");
     let mut unknown = rgb.clone();
-    unknown.header.color_mode = photocraft_psd::ColorMode::Unknown(5);
+    unknown.header.color_mode = lienzo_psd::ColorMode::Unknown(5);
     assert!(unknown.header.validate().is_ok());
     let required = estimate(&unknown);
     assert!(required >= estimate(&rgb), "the layers import as RGB and are counted");
     let bytes = unknown.to_bytes().unwrap();
     let opts = crate::ImportOptions { psd_max_pixel_bytes: required - 1, ..Default::default() };
     assert!(matches!(crate::import_with_options("mode5.psd", &bytes, &opts), Err(IoError::PsdImportBudget { .. })));
-    let source = photocraft_psd::Source::new(bytes);
-    let refused = crate::import_source_with_limit("mode5.psd", source, &photocraft_raster::Interrupt::NONE, required - 1);
+    let source = lienzo_psd::Source::new(bytes);
+    let refused = crate::import_source_with_limit("mode5.psd", source, &lienzo_raster::Interrupt::NONE, required - 1);
     assert!(matches!(refused, Err(IoError::PsdImportBudget { .. })), "{:?}", refused.map(|(r, _)| r.warnings));
 }
 
@@ -426,7 +426,7 @@ fn test_memory_scope_propagates_the_estimate_charge_to_a_worker() {
 #[test]
 fn nested_imports_consume_from_shared_allowance_and_do_not_reset_parent() {
     let gb = 1u64 << 30;
-    let ctl = photocraft_raster::Interrupt::NONE;
+    let ctl = lienzo_raster::Interrupt::NONE;
     let _guard = crate::psd_gate::acquire_decode_admission(&ctl).unwrap();
     // Simulate top-level attempt authorized total of 5 GB with 2 GB remaining allowance
     crate::psd_gate::set_active_attempt_budget(2 * gb);
@@ -446,7 +446,7 @@ fn nested_imports_consume_from_shared_allowance_and_do_not_reset_parent() {
 #[test]
 fn nested_tiff_layer_import_consumes_composite_and_estimate_without_resetting_parent() {
     let gb = 1u64 << 30;
-    let ctl = photocraft_raster::Interrupt::NONE;
+    let ctl = lienzo_raster::Interrupt::NONE;
     let _guard = crate::psd_gate::acquire_decode_admission(&ctl).unwrap();
     crate::psd_gate::set_active_attempt_budget(3 * gb);
 
@@ -519,7 +519,7 @@ fn memory_drop_while_waiting_for_the_gate_refuses_before_decoding() {
     let bytes = file.to_bytes().unwrap();
 
     // Hold the gate so the worker stops after its first admission check.
-    let _guard = crate::psd_gate::acquire_decode_admission(&photocraft_raster::Interrupt::NONE).expect("active decode");
+    let _guard = crate::psd_gate::acquire_decode_admission(&lienzo_raster::Interrupt::NONE).expect("active decode");
 
     let available = Arc::new(AtomicU64::new(32 * gb));
     let prechecked = Arc::new(AtomicBool::new(false));

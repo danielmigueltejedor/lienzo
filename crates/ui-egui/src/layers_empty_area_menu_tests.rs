@@ -6,33 +6,33 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::LayerThumbnailSize;
 
 const SIZES: [&str; 4] = ["No Thumbnails", "Small Thumbnails", "Medium Thumbnails", "Large Thumbnails"];
 const CLIPS: [&str; 2] = ["Clip Thumbnails to Layer Bounds", "Clip Thumbnails to Document Bounds"];
 
-fn panel(open_document: bool) -> Harness<'static, PhotocraftApp> {
-    let mut s = photocraft_engine::Session::new();
+fn panel(open_document: bool) -> Harness<'static, LienzoApp> {
+    let mut s = lienzo_engine::Session::new();
     if open_document {
         s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
     }
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(6);
     h
 }
 
 /// A point in the Layers panel well below its last row (above the panel's bottom buttons).
-fn empty_point(h: &Harness<'static, PhotocraftApp>) -> Pos2 {
+fn empty_point(h: &Harness<'static, LienzoApp>) -> Pos2 {
     let button = h.get_by_label("Create a new layer").rect();
     pos2(button.center().x - 20.0, button.top() - 80.0)
 }
 
-fn click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, button: PointerButton) {
+fn click(h: &mut Harness<'static, LienzoApp>, p: Pos2, button: PointerButton) {
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: p, button, pressed: true, modifiers: egui::Modifiers::NONE });
@@ -41,29 +41,29 @@ fn click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, button: PointerButton
     h.run_steps(3);
 }
 
-fn open_menu(h: &mut Harness<'static, PhotocraftApp>) {
+fn open_menu(h: &mut Harness<'static, LienzoApp>) {
     let p = empty_point(h);
     click(h, p, PointerButton::Secondary);
 }
 
-fn pick(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn pick(h: &mut Harness<'static, LienzoApp>, label: &str) {
     h.get_by_label(label).click();
     h.run_steps(4);
 }
 
-fn menu_open(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn menu_open(h: &Harness<'static, LienzoApp>) -> bool {
     SIZES.iter().chain(CLIPS.iter()).any(|l| h.query_by_label(l).is_some())
 }
 
-fn checked(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn checked(h: &Harness<'static, LienzoApp>, label: &str) -> bool {
     h.get_by_label(label).accesskit_node().toggled() == Some(egui::accesskit::Toggled::True)
 }
 
-fn size(h: &Harness<'static, PhotocraftApp>) -> LayerThumbnailSize {
+fn size(h: &Harness<'static, LienzoApp>) -> LayerThumbnailSize {
     h.state().ui.layers_panel_options.thumbnail_size
 }
 
-fn clip(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn clip(h: &Harness<'static, LienzoApp>) -> bool {
     h.state().session.prefs().interface.clip_thumbnails_to_layer_bounds
 }
 
@@ -131,7 +131,7 @@ fn picking_the_checked_size_closes_the_menu_and_changes_nothing() {
     h.state_mut().ui.layers_panel_options.thumbnail_size = LayerThumbnailSize::Large;
     h.run_steps(2);
     crate::panels::layers_panel_ui::persist_options(h.state_mut());
-    let saved = |h: &Harness<'static, PhotocraftApp>| h.state().session.prefs().dialogs.get("ui.layersPanelOptions").cloned();
+    let saved = |h: &Harness<'static, LienzoApp>| h.state().session.prefs().dialogs.get("ui.layersPanelOptions").cloned();
     let before = saved(&h);
     assert!(before.is_some(), "an entry is saved to begin with");
     open_menu(&mut h);
@@ -152,7 +152,7 @@ fn picking_the_checked_size_restores_a_missing_saved_entry() {
     h.state_mut().session.prefs.edit(|p| {
         p.dialogs.remove("ui.layersPanelOptions");
     });
-    let saved = |h: &Harness<'static, PhotocraftApp>| h.state().session.prefs().dialogs.get("ui.layersPanelOptions").cloned();
+    let saved = |h: &Harness<'static, LienzoApp>| h.state().session.prefs().dialogs.get("ui.layersPanelOptions").cloned();
     assert!(saved(&h).is_none(), "the saved entry is gone");
     open_menu(&mut h);
     assert!(checked(&h, "Large Thumbnails"));
@@ -181,7 +181,7 @@ fn each_clip_pick_sets_the_preference() {
 #[test]
 fn a_left_click_on_the_empty_area_still_deselects_and_a_right_click_does_not() {
     let mut h = panel(true);
-    let selected = |h: &Harness<'static, PhotocraftApp>| h.state().session.active().unwrap().selected_layers().len();
+    let selected = |h: &Harness<'static, LienzoApp>| h.state().session.active().unwrap().selected_layers().len();
     h.run_steps(3);
     let before = selected(&h);
     assert!(before > 0);

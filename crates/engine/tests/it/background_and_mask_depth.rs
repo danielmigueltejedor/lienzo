@@ -1,5 +1,5 @@
-use photocraft_color::SampleType;
-use photocraft_engine::Session;
+use lienzo_color::SampleType;
+use lienzo_engine::Session;
 use serde_json::{Value, json};
 
 const STYLES: [&str; 10] =
@@ -74,10 +74,10 @@ fn frame_clips_and_remove_background_masks_match_the_document_depth() {
                 let frame = st.doc.layer(st.active_layer.unwrap()).unwrap();
                 assert!(frame.frame.as_ref().is_some_and(|f| f.valid()));
                 assert!(frame.vector_mask.is_some() && frame.mask.is_none(), "frames retain vector geometry at every depth");
-                let output = photocraft_compose::flatten_to_surface(&st.doc, st.doc.pixel_format(), None);
+                let output = lienzo_compose::flatten_to_surface(&st.doc, st.doc.pixel_format(), None);
                 assert_eq!(output.format().sample, want);
                 if cmd == "layer.new.frameFromLayers" {
-                    let image = photocraft_compose::render_layer_in(&st.doc, frame, st.doc.bounds());
+                    let image = lienzo_compose::render_layer_in(&st.doc, frame, st.doc.bounds());
                     assert!(image.px.iter().any(|p| p[3] > 0.), "framed image remains visible");
                 }
             }

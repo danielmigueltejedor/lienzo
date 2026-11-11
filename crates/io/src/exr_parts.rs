@@ -3,11 +3,11 @@
 //! file listed for a chooser ([`entries`]), and the chosen ones imported as the layers of
 //! one document ([`import`]), with an optional additive beauty precomp from the AOVs.
 
-use photocraft_cms::Builtin;
-use photocraft_codecs::{self as codecs, ChannelLayout, DecodeOptions, Image, SampleType};
-use photocraft_color::{ColorMode, SampleType as DocSample};
-use photocraft_doc::{Document, Layer, LayerContent, Size};
-use photocraft_raster::Surface;
+use lienzo_cms::Builtin;
+use lienzo_codecs::{self as codecs, ChannelLayout, DecodeOptions, Image, SampleType};
+use lienzo_color::{ColorMode, SampleType as DocSample};
+use lienzo_doc::{Document, Layer, LayerContent, Size};
+use lienzo_raster::Surface;
 
 use crate::{ImportResult, IoError, flat::image_surface};
 
@@ -273,7 +273,7 @@ pub fn import(name: &str, bytes: &[u8], sel: &Selection) -> Result<ImportResult,
     doc.layers = layers;
     // OpenEXR holds linear, scene-referred values (Y is linear luminance): use the profile
     // matching the selected parts' mode, as File › Open does.
-    doc.icc_profile = Some(if gray_only { photocraft_cms::builtin::linear_gray().to_bytes() } else { Builtin::LinearSrgb.profile().to_bytes() });
+    doc.icc_profile = Some(if gray_only { lienzo_cms::builtin::linear_gray().to_bytes() } else { Builtin::LinearSrgb.profile().to_bytes() });
     Ok(ImportResult { document: doc, warnings, source_read_only: false, preview_only: false })
 }
 

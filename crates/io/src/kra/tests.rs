@@ -1,9 +1,9 @@
 use super::tiles::{Space, lzf_decompress};
 use super::*;
-use photocraft_codecs::{ChannelLayout, Format, Image, SampleType as CSample};
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_format::zip::ZipWriter;
-use photocraft_geom::Rect;
+use lienzo_codecs::{ChannelLayout, Format, Image, SampleType as CSample};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_format::zip::ZipWriter;
+use lienzo_geom::Rect;
 
 const T: usize = 4; // small tiles keep the fixtures short
 
@@ -179,7 +179,7 @@ fn raw_tiles_hold_interleaved_pixels() {
 
 fn merged_png() -> Vec<u8> {
     let img = Image::from_raw(12, 8, ChannelLayout::Rgba, CSample::U8, vec![90; 12 * 8 * 4]).unwrap();
-    photocraft_codecs::encode(&img, Format::Png, &Default::default()).unwrap()
+    lienzo_codecs::encode(&img, Format::Png, &Default::default()).unwrap()
 }
 
 #[test]

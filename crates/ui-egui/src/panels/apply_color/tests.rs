@@ -1,16 +1,16 @@
 //! A new foreground colour recolours the selected type or shape layers, as the tool in hand says.
 
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use lienzo_doc::{Fill, LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 /// Two type layers and two shape layers (black, the default colours), all selected.
-fn app(tool: Tool) -> (PhotocraftApp, Vec<LayerId>, Vec<LayerId>) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> (LienzoApp, Vec<LayerId>, Vec<LayerId>) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 200})).unwrap();
     app.sync_views();
     app.run("tools.setColors", json!({"foreground": "#000000"})).unwrap();
@@ -30,7 +30,7 @@ fn app(tool: Tool) -> (PhotocraftApp, Vec<LayerId>, Vec<LayerId>) {
     (app, texts, shapes)
 }
 
-fn text_rgb(app: &PhotocraftApp, id: LayerId) -> [f32; 3] {
+fn text_rgb(app: &LienzoApp, id: LayerId) -> [f32; 3] {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Text(t) => {
             let c = t.char_runs().into_iter().next().map_or(t.color, |r| r.style.color);
@@ -40,7 +40,7 @@ fn text_rgb(app: &PhotocraftApp, id: LayerId) -> [f32; 3] {
     }
 }
 
-fn fill_rgb(app: &PhotocraftApp, id: LayerId) -> Option<[f32; 3]> {
+fn fill_rgb(app: &LienzoApp, id: LayerId) -> Option<[f32; 3]> {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Shape(sh) => match &sh.fill {
             Some(Fill::Solid(c)) => Some([c.c[0], c.c[1], c.c[2]]),
@@ -54,11 +54,11 @@ fn red(c: [f32; 3]) -> bool {
     (c[0] - 1.0).abs() < 1e-3 && c[1].abs() < 1e-3 && c[2].abs() < 1e-3
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-fn pick(app: &mut PhotocraftApp, c: [f32; 4], gesture: Option<&str>) {
+fn pick(app: &mut LienzoApp, c: [f32; 4], gesture: Option<&str>) {
     app.session.tools.foreground = c;
     super::foreground_changed(app, gesture.map(str::to_string));
 }
@@ -122,7 +122,7 @@ fn a_color_panel_drag_is_one_history_step_and_a_new_pick_another() {
 #[test]
 fn a_swatch_and_the_color_picker_go_through_it() {
     let (mut app, _, shapes) = app(Tool::Rectangle);
-    let same = |app: &PhotocraftApp, id: LayerId| {
+    let same = |app: &LienzoApp, id: LayerId| {
         let f = app.session.tools.foreground;
         fill_rgb(app, id).is_some_and(|c| (0..3).all(|i| (c[i] - f[i]).abs() < 1e-3))
     };

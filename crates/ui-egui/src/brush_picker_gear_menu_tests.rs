@@ -43,14 +43,14 @@ const LIVE: &[&str] = &["New Brush Preset…", "Rename Brush…", "Delete Brush�
 /// The entries that act on the selected preset.
 const NEEDS_PRESET: &[&str] = &["Rename Brush…", "Delete Brush…", "Export Selected Brushes…"];
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = Tool::Brush;
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -59,13 +59,13 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
 /// [`harness`] with the first preset picked, as after a click on it.
-fn harness_with_preset() -> Harness<'static, PhotocraftApp> {
+fn harness_with_preset() -> Harness<'static, LienzoApp> {
     let mut h = harness();
     let first = h.state().session.tools.presets.first().map(|p| p.name.clone()).expect("the default presets");
     h.state_mut().run("tools.setBrush", json!({ "preset": first })).unwrap();
@@ -74,7 +74,7 @@ fn harness_with_preset() -> Harness<'static, PhotocraftApp> {
 }
 
 /// Open the picker near the canvas's top left (room below for the whole menu), then its gear.
-fn open_gear(h: &mut Harness<'static, PhotocraftApp>) {
+fn open_gear(h: &mut Harness<'static, LienzoApp>) {
     let r = h.state().last_canvas_rect;
     h.state_mut().ui.brush_picker = Some([r.left() + 20.0, r.top() + 10.0]);
     h.run_steps(2);
@@ -124,7 +124,7 @@ fn the_picker_starts_without_the_brush_tip_and_with_the_search_bar() {
 
 #[test]
 fn a_saved_brush_tip_still_wins_and_an_empty_card_gets_the_defaults_back() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.prefs.edit(|p| p.brush_picker = json!({"showTip": true, "showSearch": false}));
     restore(&mut app);
     assert!(app.ui.brush_picker_list.show_tip && !app.ui.brush_picker_list.show_search);
@@ -139,7 +139,7 @@ fn a_saved_brush_tip_still_wins_and_an_empty_card_gets_the_defaults_back() {
 fn show_search_bar_hides_the_search_field_and_is_remembered() {
     let mut h = harness();
     open_gear(&mut h);
-    let fields = |h: &Harness<'static, PhotocraftApp>| h.query_all_by_role(Role::TextInput).count();
+    let fields = |h: &Harness<'static, LienzoApp>| h.query_all_by_role(Role::TextInput).count();
     let shown = fields(&h);
     h.state_mut().ui.brush_picker_list.filter = "zzz".into();
     h.get_by_label("Show Search Bar").click();

@@ -157,7 +157,7 @@ fn curves_parts(a: &Adjustment) -> (&[CurvePoint], &[Vec<CurvePoint>; 3]) {
 }
 
 fn tone_output(adjustment: &Adjustment, sample: [f32; 3]) -> [f32; 3] {
-    let luts = photocraft_compose::adjust::tone_luts(adjustment);
+    let luts = lienzo_compose::adjust::tone_luts(adjustment);
     std::array::from_fn(|channel| {
         let row = &luts[channel];
         let position = sample[channel].clamp(0.0, 1.0) * (row.len().saturating_sub(1)) as f32;
@@ -403,7 +403,7 @@ fn layer_eyedropper_samples_below_the_curves_layer() {
     assert!(px.iter().take(3).all(|v| *v > 0.99), "the sample becomes white: {px:?}");
     let curve = s.active().unwrap().doc.clone();
     s.execute("layer.setAdjustment", pick).unwrap();
-    let same = |a: &photocraft_doc::Document, b: &photocraft_doc::Document| a.layers.last().map(|l| &l.content) == b.layers.last().map(|l| &l.content);
+    let same = |a: &lienzo_doc::Document, b: &lienzo_doc::Document| a.layers.last().map(|l| &l.content) == b.layers.last().map(|l| &l.content);
     assert!(same(&curve, &s.active().unwrap().doc), "sampled below the layer, not through it");
     s.execute("edit.undo", json!({})).unwrap();
     s.execute("edit.undo", json!({})).unwrap();
@@ -598,7 +598,7 @@ fn cmyk_and_lab_documents_use_their_channels() {
     s.execute("layer.newAdjustmentLayer.curves", json!({})).unwrap();
     let id = s.active().unwrap().active_layer.unwrap();
     let l = s.active().unwrap().doc.layer(id).unwrap().clone();
-    assert!(matches!(l.content, photocraft_doc::LayerContent::Adjustment(Adjustment::Curves { space: ToneSpace::Cmyk, .. })));
+    assert!(matches!(l.content, lienzo_doc::LayerContent::Adjustment(Adjustment::Curves { space: ToneSpace::Cmyk, .. })));
 }
 
 #[test]
@@ -608,7 +608,7 @@ fn set_adjustment_merges_and_resets() {
     s.execute("layer.setAdjustment", json!({"highlights": [0, 0, -20]})).unwrap();
     let id = s.active().unwrap().active_layer.unwrap();
     let adj = |s: &crate::Session| match &s.active().unwrap().doc.layer(id).unwrap().content {
-        photocraft_doc::LayerContent::Adjustment(a) => a.clone(),
+        lienzo_doc::LayerContent::Adjustment(a) => a.clone(),
         _ => panic!(),
     };
     assert!(matches!(adj(&s), Adjustment::ColorBalance { midtones: [30.0, 0.0, 0.0], highlights: [0.0, 0.0, -20.0], .. }));

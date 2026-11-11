@@ -7,8 +7,8 @@ use serde_json::json;
 const GUIDE: Color32 = Color32::from_rgb(0x4a, 0xff, 0xff);
 
 /// A document with guides on all four edges of a rectangular selection, as in the report.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 600, "height": 400})).unwrap();
     for (orientation, position) in [("vertical", 100), ("vertical", 300), ("horizontal", 100), ("horizontal", 260)] {
         app.run("view.newGuide", json!({"orientation": orientation, "position": position})).unwrap();
@@ -22,9 +22,9 @@ fn app() -> PhotocraftApp {
 }
 
 /// The painted shapes' order in one frame: the indices of the guide lines and of the ants' meshes.
-fn painted(app: &mut PhotocraftApp, ppp: f32, zoom: f32, primary: bool) -> (Vec<usize>, Vec<usize>) {
+fn painted(app: &mut LienzoApp, ppp: f32, zoom: f32, primary: bool) -> (Vec<usize>, Vec<usize>) {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     ctx.set_pixels_per_point(ppp);
     let rect = Rect::from_min_size(Pos2::ZERO, vec2(700.0, 500.0));
     let view = View { zoom, center: [300.0, 200.0], doc_size: [600, 400], fit_pending: false, ..Default::default() };

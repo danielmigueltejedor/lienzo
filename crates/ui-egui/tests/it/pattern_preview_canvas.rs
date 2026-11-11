@@ -2,17 +2,17 @@
 //! GPU canvas and on the CPU canvas (flipped views draw through the CPU path), and nothing past
 //! the document while it is off. Skips when no GPU adapter exists (like `color_managed_canvas.rs`).
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::ViewXform;
 use serde_json::json;
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 fn harness() -> Option<Harness> {
     let built = std::panic::catch_unwind(|| {
         egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -40,10 +40,10 @@ fn sample(h: &mut Harness, at: [f32; 2]) -> [u8; 3] {
 
 /// View › Pattern Preview, as the menu runs it.
 fn toggle(h: &mut Harness) {
-    let (request, _) = photocraft_ui_egui::control::ControlRequest::new("ui.menu.invoke", json!({"id": "view.patternPreview"}));
+    let (request, _) = lienzo_ui_egui::control::ControlRequest::new("ui.menu.invoke", json!({"id": "view.patternPreview"}));
     let ctx = h.ctx.clone();
-    let response = photocraft_ui_egui::control::handle(h.state_mut(), &ctx, &request);
-    assert!(matches!(response, photocraft_ui_egui::control::Outcome::Done(_)));
+    let response = lienzo_ui_egui::control::handle(h.state_mut(), &ctx, &request);
+    assert!(matches!(response, lienzo_ui_egui::control::Outcome::Done(_)));
 }
 
 fn near(a: [u8; 3], b: [u8; 3]) -> bool {
@@ -52,7 +52,7 @@ fn near(a: [u8; 3], b: [u8; 3]) -> bool {
 
 #[test]
 fn pattern_preview_repeats_the_document_on_gpu_and_cpu_canvases() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     let app = h.state_mut();
     app.run("file.new", json!({"width": 200, "height": 100, "mode": "rgb", "depth": 8})).expect("new");

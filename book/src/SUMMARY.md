@@ -1,6 +1,6 @@
 # Summary
 
-[PhotoCraft Documentation](README.md)
+[Lienzo Documentation](README.md)
 
 # Getting started
 

@@ -1,8 +1,8 @@
 //! Brush-engine tests: tips, spacing, dynamics, masks, smoothing, determinism, formats.
 
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_geom::{Point, Rect};
-use photocraft_raster::Surface;
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_geom::{Point, Rect};
+use lienzo_raster::Surface;
 
 use crate::brush::*;
 use crate::dynamics::{Smoother, smooth_points};
@@ -1210,7 +1210,7 @@ fn paints_every_depth_and_model() {
         for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
             for alpha in [true, false] {
                 let fmt = PixelFormat::new(mode, sample, alpha);
-                let mut s = Surface::with_default(fmt, &photocraft_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]));
+                let mut s = Surface::with_default(fmt, &lienzo_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]));
                 let fancy = BrushSettings {
                     shape_dynamics: ShapeDynamics { enabled: true, size: Dynamic::jitter(0.3), ..Default::default() },
                     color_dynamics: ColorDynamics { enabled: true, brightness_jitter: 0.1, ..Default::default() },
@@ -1221,7 +1221,7 @@ fn paints_every_depth_and_model() {
                     render_stroke(&mut s, br, &line(5.0, 40.0, 5.0), None, false, 1.0);
                 }
                 let c = s.rgba(20, 5);
-                let expect = photocraft_raster::to_rgba(&fmt, &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+                let expect = lienzo_raster::to_rgba(&fmt, &lienzo_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
                 assert!((c[0] - expect[0]).abs() < 0.15 && (c[1] - expect[1]).abs() < 0.12, "{fmt:?} {c:?} vs {expect:?}");
                 assert_eq!(s.pixel(20, 30), s.pixel(5000, 5000), "{fmt:?} untouched");
             }
@@ -1250,13 +1250,13 @@ fn behind_preserves_native_channels_and_respects_alpha_selection_and_locks() {
             let fmt = PixelFormat::new(mode, sample, true);
             let b = BrushSettings { size: 12.0, behind: true, opacity: 0.5, color: [0.1, 0.3, 0.8, 1.0], ..brush() };
             let mut s = Surface::new(fmt);
-            let native = photocraft_raster::from_rgba(&fmt, [0.8, 0.2, 0.1, 0.5]);
+            let native = lienzo_raster::from_rgba(&fmt, [0.8, 0.2, 0.1, 0.5]);
             s.fill_rect(Rect::new(0, 0, 12, 12), &native);
             let before = s.pixel(6, 6);
             let mut selection = Surface::new(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false));
             selection.fill_rect(Rect::new(0, 0, 8, 12), &[0.5]);
             render_stroke(&mut s, &b, &[StrokePoint::new(6.0, 6.0, 1.0)], Some(&selection), false, 1.0);
-            let source = photocraft_raster::from_rgba(&fmt, b.color);
+            let source = lienzo_raster::from_rgba(&fmt, b.color);
             let a = fmt.channels() - 1;
             let under = 0.25 * (1.0 - before[a]);
             let alpha = before[a] + under;
@@ -1270,7 +1270,7 @@ fn behind_preserves_native_channels_and_respects_alpha_selection_and_locks() {
             let locked = s.clone();
             render_stroke(&mut s, &b, &[StrokePoint::new(6.0, 6.0, 1.0)], None, true, 1.0);
             assert_eq!(s.read_region(Rect::new(0, 0, 12, 12)), locked.read_region(Rect::new(0, 0, 12, 12)), "locked transparency");
-            s.fill_rect(Rect::new(0, 0, 12, 12), &photocraft_raster::from_rgba(&fmt, [0.8, 0.2, 0.1, 1.0]));
+            s.fill_rect(Rect::new(0, 0, 12, 12), &lienzo_raster::from_rgba(&fmt, [0.8, 0.2, 0.1, 1.0]));
             let opaque = s.pixel(6, 6);
             render_stroke(&mut s, &b, &[StrokePoint::new(6.0, 6.0, 1.0)], None, false, 1.0);
             assert_eq!(s.pixel(6, 6), opaque, "opaque pixels");
@@ -1920,8 +1920,8 @@ fn general_loop_strokes_render_the_same_in_parallel_and_serially_at_every_depth(
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_parallel_composite_converts_through_the_documents_cmyk_profile() {
-    use photocraft_cms::synth::{CmykParams, cmyk_profile};
-    use photocraft_color::convert::{CmykSpace, with_cmyk_space};
+    use lienzo_cms::synth::{CmykParams, cmyk_profile};
+    use lienzo_color::convert::{CmykSpace, with_cmyk_space};
     let profile =
         cmyk_profile(&CmykParams { description: "Brush Test CMYK".into(), tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() });
     let bytes = profile.to_bytes();

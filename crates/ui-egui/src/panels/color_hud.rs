@@ -17,9 +17,9 @@ use egui::{Color32, Mesh, PointerButton, Rect, Stroke, Vec2, vec2};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use photocraft_color::convert::{hsb_to_rgb, rgb_to_hsb};
+use lienzo_color::convert::{hsb_to_rgb, rgb_to_hsb};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::paint_mouse::has_brush_picker;
 use crate::state::UiState;
 
@@ -76,7 +76,7 @@ pub fn is_open(ui: &UiState) -> bool {
 
 /// Open the HUD at `at`, seeded from the current foreground colour. `hold` marks a real-mouse
 /// gesture (see [`Hud::hold`]).
-pub fn open(app: &mut PhotocraftApp, at: [f32; 2], hold: bool) {
+pub fn open(app: &mut LienzoApp, at: [f32; 2], hold: bool) {
     static KEY: AtomicU64 = AtomicU64::new(0);
     let fg = app.session.tools.foreground;
     let hsv = rgb_to_hsb([fg[0], fg[1], fg[2]]);
@@ -162,7 +162,7 @@ fn paint_sv_square(painter: &egui::Painter, r: Rect, hue: f32) {
 }
 
 /// Draw the HUD and track the pointer: called once per frame while a gesture is open.
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(mut hud) = app.ui.color_hud else { return };
     if !has_brush_picker(app.ui.tool) {
         close(&mut app.ui);
@@ -235,7 +235,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// One foreground-colour edit of the gesture: coalesced under `key`, so the whole pick is a single
 /// history step (the colour is tool state, so it never touches the document).
-fn set_foreground(app: &mut PhotocraftApp, rgba: [f32; 4], key: u64) {
+fn set_foreground(app: &mut LienzoApp, rgba: [f32; 4], key: u64) {
     let p = json!({ "foreground": rgba, "coalesce": format!("color-hud:{key}") });
     if let Err(e) = app.run("tools.setColors", p) {
         app.ui.status = e;
@@ -253,18 +253,18 @@ mod tests {
 
     const SHIFT_ALT: Modifiers = Modifiers { alt: true, ctrl: false, shift: true, mac_cmd: false, command: false };
 
-    fn harness() -> Harness<'static, PhotocraftApp> {
+    fn harness() -> Harness<'static, LienzoApp> {
         harness_size(400, 300)
     }
 
-    fn harness_size(width: u32, height: u32) -> Harness<'static, PhotocraftApp> {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    fn harness_size(width: u32, height: u32) -> Harness<'static, LienzoApp> {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": width, "height": height})).unwrap();
         app.run("tools.setColors", json!({"foreground": "#0000ff"})).unwrap();
         app.ui.tool = Tool::Brush;
         app.sync_views();
         let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 let ctx = ui.ctx().clone();
                 if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
@@ -273,19 +273,19 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         h
     }
 
-    fn button(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2, pressed: bool, modifiers: Modifiers) {
+    fn button(h: &mut Harness<'static, LienzoApp>, pos: Pos2, pressed: bool, modifiers: Modifiers) {
         h.event(egui::Event::ModifiersChanged(modifiers));
         h.event(egui::Event::PointerButton { pos, button: PointerButton::Secondary, pressed, modifiers });
         h.run_steps(2);
     }
 
     /// The HUD's strip and square rects as drawn this frame.
-    fn rects(h: &Harness<'static, PhotocraftApp>) -> (Rect, Rect) {
+    fn rects(h: &Harness<'static, LienzoApp>) -> (Rect, Rect) {
         let area = h.ctx.memory(|m| m.area_rect(hud_id())).expect("the HUD is shown");
         let style = h.ctx.global_style();
         let m = style.spacing.menu_margin;
@@ -295,7 +295,7 @@ mod tests {
         layout(inner)
     }
 
-    fn foreground(h: &Harness<'static, PhotocraftApp>) -> [f32; 4] {
+    fn foreground(h: &Harness<'static, LienzoApp>) -> [f32; 4] {
         h.state().session.tools.foreground
     }
 
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn the_control_channel_opens_and_closes_the_hud() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 100, "height": 100})).unwrap();
         app.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
         app.ui.tool = Tool::Brush;

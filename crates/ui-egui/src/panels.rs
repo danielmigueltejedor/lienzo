@@ -1,15 +1,15 @@
 //! Chrome around the canvas: title bar, options bar, toolbar, status bar, dock cards, Properties.
 
 use egui::{Align2, Color32, CornerRadius, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_color::BlendMode;
-use photocraft_doc::{Layer, LayerContent, LayerId};
-use photocraft_engine::history_source_cmds::HistorySource;
+use lienzo_color::BlendMode;
+use lienzo_doc::{Layer, LayerContent, LayerId};
+use lienzo_engine::history_source_cmds::HistorySource;
 use serde_json::{Value, json};
 
 use crate::mask_thumbs_ui::MaskKind;
 use crate::state::Tool;
 use crate::theme::{self, Tokens};
-use crate::{PhotocraftApp, icons, widgets};
+use crate::{LienzoApp, icons, widgets};
 
 pub mod actions;
 pub mod adjust_ui;
@@ -145,8 +145,8 @@ mod title_tests {
         assert_eq!(title_x(400.0, f32::INFINITY, 1300.0, 60.0), None);
     }
 
-    fn app(custom_titlebar: bool) -> crate::PhotocraftApp {
-        let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app(custom_titlebar: bool) -> crate::LienzoApp {
+        let mut app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.custom_titlebar = custom_titlebar;
         // The preference that makes the shell launch without its own title bar.
         app.session.edit_prefs(|p| p.interface.system_title_bar = !custom_titlebar);
@@ -156,15 +156,12 @@ mod title_tests {
     #[test]
     fn without_the_preference_the_mark_stays() {
         // The default (e.g. the web build or snapshot example): the integrated title bar.
-        let app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         assert!(!system_title_bar(&app));
     }
 
-    fn open_named(app: &mut crate::PhotocraftApp, name: &str) {
-        app.session.add_document(
-            photocraft_doc::Document::new(name, photocraft_doc::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8),
-            None,
-        );
+    fn open_named(app: &mut crate::LienzoApp, name: &str) {
+        app.session.add_document(lienzo_doc::Document::new(name, lienzo_doc::Size::new(4, 4), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8), None);
     }
 
     #[test]
@@ -200,9 +197,9 @@ mod title_tests {
     fn hidden_file_name_leaves_the_app_name_in_the_drawn_title() {
         let mut app = app(true);
         open_named(&mut app, "foo.psd");
-        let texts = |app: &mut crate::PhotocraftApp| {
+        let texts = |app: &mut crate::LienzoApp| {
             let ctx = egui::Context::default();
-            crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+            crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
             let mut out = ctx.run_ui(egui::RawInput::default(), |ui| super::title_bar(app, ui));
             out.textures_delta.clear();
             let mut texts = Vec::new();
@@ -224,7 +221,7 @@ mod title_tests {
             let mut app = app(custom);
             open_named(&mut app, "foo.psd");
             let ctx = egui::Context::default();
-            crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+            crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
             let out = ctx.run_ui(egui::RawInput::default(), |ui| super::title_bar(&mut app, ui));
             let mut out = out;
             out.textures_delta.clear();
@@ -251,7 +248,7 @@ mod title_tests {
     fn sync_window_title_sends_only_on_change() {
         let mut app = app(true);
         let ctx = egui::Context::default();
-        crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         super::sync_window_title(&mut app, &ctx);
         assert_eq!(app.last_window_title, "Lienzo");
         let mut out = ctx.run_ui(egui::RawInput::default(), |_| {});
@@ -290,12 +287,12 @@ mod navigator_wheel_tests {
     /// The painted viewport follows the camera visible on the canvas, including preference changes.
     #[test]
     fn navigator_viewport_follows_the_displayed_camera_during_animation() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.sync_views();
         app.last_canvas_rect = Rect::from_min_size(Pos2::ZERO, vec2(80.0, 60.0));
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         for _ in 0..3 {
             frame(&mut app, &ctx, pos2(5.0, 5.0), 0.0);
         }
@@ -334,7 +331,7 @@ mod navigator_wheel_tests {
         }
     }
 
-    fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, pointer: Pos2, wheel: f32) {
+    fn frame(app: &mut LienzoApp, ctx: &egui::Context, pointer: Pos2, wheel: f32) {
         let mut events = vec![Event::PointerMoved(pointer)];
         if wheel != 0.0 {
             events.push(Event::MouseWheel {
@@ -352,7 +349,7 @@ mod navigator_wheel_tests {
 
     #[test]
     fn navigator_wheel_changes_zoom_only_when_over_preview() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
@@ -360,7 +357,7 @@ mod navigator_wheel_tests {
         // Animated Zoom off: a notch is one instant step, so one frame shows the whole ×1.1.
         app.session.edit_prefs(|p| p.general.animated_zoom = false);
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         crate::wheel_nav::configure(&ctx);
         frame(&mut app, &ctx, pos2(50.0, 55.0), 0.0);
         let center = app.ui.views[0].center;
@@ -406,14 +403,14 @@ mod navigator_wheel_tests {
     }
 
     /// One frame of the Navigator with pointer `events` and `modifiers` held.
-    fn frame_with(app: &mut PhotocraftApp, ctx: &egui::Context, modifiers: Modifiers, mut events: Vec<Event>) {
+    fn frame_with(app: &mut LienzoApp, ctx: &egui::Context, modifiers: Modifiers, mut events: Vec<Event>) {
         events.insert(0, Event::ModifiersChanged(modifiers));
         let input = RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(430.0, 460.0))), events, ..Default::default() };
         ctx.run_ui(input, |ui| navigator(app, ui)).textures_delta.clear();
     }
 
     /// A drag over the Navigator's preview between document points `from` and `to`.
-    fn drag(app: &mut PhotocraftApp, ctx: &egui::Context, modifiers: Modifiers, from: [f32; 2], to: [f32; 2]) {
+    fn drag(app: &mut LienzoApp, ctx: &egui::Context, modifiers: Modifiers, from: [f32; 2], to: [f32; 2]) {
         let preview = last_navigator_preview(ctx).expect("the preview");
         let s = preview.width() / 200.0;
         let at = |p: [f32; 2]| preview.min + vec2(p[0], p[1]) * s;
@@ -430,13 +427,13 @@ mod navigator_wheel_tests {
     /// Photoshop; a plain drag still only moves the view.
     #[test]
     fn navigator_command_drag_zooms_to_the_rectangle() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
         app.ui.views[0].fit_pending = false;
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         // The preview settles once the zoom row under it has been measured.
         for _ in 0..3 {
             frame(&mut app, &ctx, pos2(5.0, 5.0), 0.0);
@@ -484,17 +481,17 @@ mod navigator_wheel_tests {
     #[test]
     fn navigator_zoom_row_is_one_line_and_its_buttons_step_the_zoom() {
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
         app.ui.views[0].fit_pending = false;
-        let mut h = egui_kittest::Harness::builder().with_size(vec2(360.0, 300.0)).build_ui_state(|ui, app: &mut PhotocraftApp| navigator(app, ui), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(360.0, 300.0)).build_ui_state(|ui, app: &mut LienzoApp| navigator(app, ui), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         let row = last_navigator_controls(&h.ctx).expect("the zoom row");
         assert!(row.height() <= NAV_ROW_H + 14.0, "one row (with the gap above it): {row:?}");
-        let zoom = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().ui.views[0].zoom;
+        let zoom = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().ui.views[0].zoom;
         h.get_by_label("Zoom In").click();
         h.run_steps(2);
         assert!((zoom(&h) - crate::zoom_levels::step(1.0, 1, [200, 100])).abs() < 1e-4, "{}", zoom(&h));
@@ -523,11 +520,11 @@ mod symmetry_theme_tests {
     fn brush_pencil_and_eraser_expose_symmetry_menu_in_every_theme() {
         for kind in crate::theme::ThemeKind::ALL {
             for tool in [Tool::Brush, Tool::Pencil, Tool::Eraser] {
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                 app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
                 app.ui.tool = tool;
                 let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| options_bar(app, ui), app);
-                PhotocraftApp::setup_context(&h.ctx, kind);
+                LienzoApp::setup_context(&h.ctx, kind);
                 h.run_steps(4);
                 assert!(h.query_by_label("Set painting symmetry options").is_some(), "missing symmetry menu in {:?} for {:?}", kind, tool);
             }
@@ -547,12 +544,12 @@ mod info_panel_sampler_tests {
     /// the composite RGB/CMYK readout, one composite pixel each.
     #[test]
     fn info_panel_lists_the_sample_points() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 80, "height": 60, "background": "white"})).unwrap();
         app.run("view.colorSamplers.add", json!({"x": 5, "y": 6})).unwrap();
         app.run("view.colorSamplers.add", json!({"x": 40, "y": 30})).unwrap();
-        let mut h = Harness::builder().with_size(vec2(340.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| info_panel(app, ui), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+        let mut h = Harness::builder().with_size(vec2(340.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| info_panel(app, ui), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
         h.run_steps(3);
         // Both points are listed, numbered, and read as white (RGB 255 / CMYK 0%).
         assert!(h.query_by_label("#1").is_some(), "point 1 is listed");
@@ -571,7 +568,7 @@ mod history_transform_tests {
     use super::*;
     use egui_kittest::Harness;
 
-    fn click(h: &mut Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+    fn click(h: &mut Harness<'static, LienzoApp>, p: egui::Pos2) {
         h.hover_at(p);
         h.run_steps(1);
         for pressed in [true, false] {
@@ -585,13 +582,13 @@ mod history_transform_tests {
     #[test]
     fn history_rows_wait_for_an_open_transform() {
         for transforming in [true, false] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
             app.run("select.rect", json!({"x": 20, "y": 20, "width": 60, "height": 40})).unwrap();
             app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
             app.run("select.deselect", json!({})).unwrap();
-            let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+            let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
             h.run_steps(2);
             if transforming {
                 let ctx = h.ctx.clone();
@@ -615,16 +612,16 @@ mod history_transform_tests {
     /// snapshot (#2966), and file-plus makes a new document from the current state.
     #[test]
     fn history_footer_buttons_run_their_commands() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.state_mut().ui.theme = crate::theme::ThemeKind::ProMedium;
         h.run_steps(3);
         // Footer buttons are the only 26 pt squares; the bar lays them out right to left.
-        let buttons = |h: &Harness<'static, PhotocraftApp>| {
+        let buttons = |h: &Harness<'static, LienzoApp>| {
             let mut b: Vec<(Rect, bool)> = h.ctx.viewport(|v| {
                 v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).filter(|w| w.rect.size() == vec2(26.0, 26.0)).map(|w| (w.rect, w.enabled)).collect()
             });
@@ -656,11 +653,11 @@ mod history_transform_tests {
     /// Brush's source through `history.setSource`, without stepping to it.
     #[test]
     fn history_source_column_sets_the_history_brush_source() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         app.run("edit.fill", json!({"color": "#00ff00"})).unwrap();
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(2);
         // The column cells are the only 24 pt squares, one per state, top to bottom.
         let mut cells: Vec<Rect> = h
@@ -680,11 +677,11 @@ mod history_transform_tests {
     /// returning to it.
     #[test]
     fn history_source_column_on_a_snapshot_row() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         app.run("history.newSnapshot", json!({})).unwrap();
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(2);
         // Snapshot rows' cells are the 24×38 ones: the opening snapshot (0) first, then the new one.
         let mut cells: Vec<Rect> = h
@@ -695,7 +692,7 @@ mod history_transform_tests {
         let cell = cells[1];
         click(&mut h, cell.center());
         let st = h.state().session.active().unwrap();
-        assert_eq!(photocraft_engine::history_source_cmds::source(st), Some(HistorySource::Snapshot(1)));
+        assert_eq!(lienzo_engine::history_source_cmds::source(st), Some(HistorySource::Snapshot(1)));
         assert_eq!(st.history.entries().len(), 2, "the document did not return to the snapshot");
     }
 }
@@ -709,12 +706,12 @@ mod snapshot_row_tests {
 
     use super::*;
 
-    fn top_pixel(h: &Harness<'static, PhotocraftApp>) -> [f32; 4] {
+    fn top_pixel(h: &Harness<'static, LienzoApp>) -> [f32; 4] {
         h.state().session.active().unwrap().doc.layers.last().unwrap().surface().unwrap().rgba(1, 1)
     }
 
     /// The names of the snapshots taken after the first one (the document as opened).
-    fn snapshot_names(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+    fn snapshot_names(h: &Harness<'static, LienzoApp>) -> Vec<String> {
         h.state().session.active().unwrap().snapshots.iter().skip(1).map(|s| s.name.clone()).collect()
     }
 
@@ -722,15 +719,14 @@ mod snapshot_row_tests {
     /// state, and its right-click menu renames or deletes it.
     #[test]
     fn snapshot_rows_select_rename_and_delete() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         app.run("history.newSnapshot", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#0000ff"})).unwrap();
         // 60 fps steps, so two clicks a frame apart count as a double-click.
-        let mut h =
-            Harness::builder().with_size(vec2(300.0, 400.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(3);
         let steps = h.state().session.active().unwrap().history.entries().len();
         h.get_by_label("Snapshot 1").click();
@@ -777,29 +773,29 @@ mod snapshot_row_tests {
     }
 
     /// A History panel in the Photoshop theme (the footer with the trash) on red, Snapshot 1, blue.
-    fn pro_history() -> Harness<'static, PhotocraftApp> {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn pro_history() -> Harness<'static, LienzoApp> {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         app.run("history.newSnapshot", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#0000ff"})).unwrap();
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.state_mut().ui.theme = crate::theme::ThemeKind::ProMedium;
         h.run_steps(3);
         h
     }
 
     /// The footer's trash: the rightmost of its 26 pt buttons (the bar lays them out right to left).
-    fn trash(h: &Harness<'static, PhotocraftApp>) -> egui::Pos2 {
+    fn trash(h: &Harness<'static, LienzoApp>) -> egui::Pos2 {
         let buttons: Vec<Rect> = h
             .ctx
             .viewport(|v| v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).filter(|w| w.rect.size() == vec2(26.0, 26.0)).map(|w| w.rect).collect());
         buttons.into_iter().max_by(|a, b| a.center().x.total_cmp(&b.center().x)).unwrap().center()
     }
 
-    fn click(h: &mut Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+    fn click(h: &mut Harness<'static, LienzoApp>, p: egui::Pos2) {
         h.hover_at(p);
         h.run_steps(1);
         for pressed in [true, false] {
@@ -808,12 +804,12 @@ mod snapshot_row_tests {
         }
     }
 
-    fn selected(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+    fn selected(h: &Harness<'static, LienzoApp>, label: &str) -> bool {
         h.get_all_by_label(label).next().unwrap().accesskit_node().toggled() == Some(egui::accesskit::Toggled::True)
     }
 
     /// Press on `from`, drag in small steps to `to` and release there.
-    fn drag(h: &mut Harness<'static, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2) {
+    fn drag(h: &mut Harness<'static, LienzoApp>, from: egui::Pos2, to: egui::Pos2) {
         h.event(egui::Event::PointerMoved(from));
         h.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
         h.step();
@@ -892,13 +888,13 @@ mod snapshot_row_tests {
             h.state_mut().run("edit.undo", json!({})).unwrap();
         }
         h.run_steps(3);
-        let history = |h: &Harness<'static, PhotocraftApp>| {
+        let history = |h: &Harness<'static, LienzoApp>| {
             let st = h.state().session.active().unwrap();
             (st.history.past_len(), st.history.redo_labels().count())
         };
         assert_eq!(history(&h), (0, 3), "Open current, New Layer, Fill, Fill dimmed");
         assert!(h.state().session.is_enabled("history.deleteState"), "the engine still offers a later state to delete");
-        let enabled = |h: &Harness<'static, PhotocraftApp>| {
+        let enabled = |h: &Harness<'static, LienzoApp>| {
             let p = trash(h);
             h.ctx.viewport(|v| {
                 v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).find(|w| w.rect.size() == vec2(26.0, 26.0) && w.rect.center() == p).map(|w| w.enabled)
@@ -927,13 +923,13 @@ mod snapshot_row_tests {
     /// its camera button in view.
     #[test]
     fn many_snapshots_keep_the_footer_in_a_short_panel() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         for _ in 0..6 {
             app.run("history.newSnapshot", json!({})).unwrap();
         }
-        let mut h = Harness::builder().with_size(vec2(300.0, 250.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        let mut h = Harness::builder().with_size(vec2(300.0, 250.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.state_mut().ui.theme = crate::theme::ThemeKind::ProMedium;
         h.run_steps(3);
         let view = h.ctx.input(|i| i.viewport_rect());
@@ -948,12 +944,12 @@ mod snapshot_row_tests {
     /// (the Discord report on #2966: "History original file click does not work").
     #[test]
     fn the_top_row_returns_to_the_document_as_opened() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         let opened = app.session.active().unwrap().doc.layers[0].surface().unwrap().rgba(1, 1);
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         let name = app.session.active().unwrap().doc.name.clone();
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(3);
         h.get_by_label(&name).click();
         h.run_steps(2);
@@ -966,12 +962,12 @@ mod snapshot_row_tests {
     /// it, and From (Full Document, Merged Layers, Current Layer); OK takes the snapshot.
     #[test]
     fn alt_click_on_the_camera_opens_new_snapshot() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         let mut h = Harness::builder().with_size(vec2(900.0, 700.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 let ctx = ui.ctx().clone();
                 if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
@@ -981,7 +977,7 @@ mod snapshot_row_tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.state_mut().ui.theme = crate::theme::ThemeKind::ProMedium;
         h.run_steps(4);
         let mut buttons: Vec<Rect> = h
@@ -1022,11 +1018,11 @@ mod snapshot_row_tests {
     #[test]
     fn show_new_snapshot_dialog_by_default_makes_a_click_open_the_dialog() {
         for (dialog_by_default, modifiers) in [(true, egui::Modifiers::NONE), (true, egui::Modifiers::ALT), (false, egui::Modifiers::NONE)] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
             app.run("history.options", json!({"showNewSnapshotDialogByDefault": dialog_by_default})).unwrap();
             let mut h = Harness::builder().with_size(vec2(900.0, 700.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     let ctx = ui.ctx().clone();
                     if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                         return;
@@ -1036,7 +1032,7 @@ mod snapshot_row_tests {
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
             h.state_mut().ui.theme = crate::theme::ThemeKind::ProMedium;
             h.run_steps(4);
             let mut buttons: Vec<Rect> = h
@@ -1073,11 +1069,11 @@ mod snapshot_row_tests {
     #[test]
     fn the_first_snapshot_row_follows_the_option() {
         for first in [true, false] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("history.options", json!({"automaticallyCreateFirstSnapshot": first})).unwrap();
             app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
             let name = app.session.active().unwrap().doc.name.clone();
-            let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+            let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
             h.run_steps(3);
             assert_eq!(h.query_by_label(&name).is_some(), first, "a snapshot row named after the document: {first}");
         }
@@ -1088,13 +1084,13 @@ mod snapshot_row_tests {
     /// rather than the closed document's, even before the views are synced.
     #[test]
     fn snapshot_thumbnails_follow_their_document() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         let doc = (*app.session.active().unwrap().doc).clone();
         let doc_id = doc.id;
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(2);
-        let thumb = |h: &Harness<'static, PhotocraftApp>| h.state().snapshot_thumbs.get(&(doc_id, 0)).map(|(_, t)| t.id());
+        let thumb = |h: &Harness<'static, LienzoApp>| h.state().snapshot_thumbs.get(&(doc_id, 0)).map(|(_, t)| t.id());
         let first = thumb(&h).expect("the first snapshot's thumbnail");
         // Closed: its thumbnails go with it.
         h.state_mut().session.close(0);
@@ -1116,12 +1112,12 @@ mod snapshot_row_tests {
     /// carry the edit over to the other document's snapshot with the same id.
     #[test]
     fn a_rename_in_progress_stays_with_its_document() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         for _ in 0..2 {
             app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
             app.run("history.newSnapshot", json!({})).unwrap();
         }
-        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| history(app, ui), app);
         h.run_steps(3);
         h.get_by_label("Snapshot 1").click_secondary();
         h.run_steps(2);
@@ -1149,14 +1145,14 @@ mod lock_tests {
     use crate::canvas::{ToolEvent, tool_event};
     use egui::Modifiers;
 
-    fn click_lock(app: &mut PhotocraftApp) {
+    fn click_lock(app: &mut LienzoApp) {
         let st = app.session.active().unwrap();
         let l = st.active_layer.and_then(|id| st.doc.layer(id)).unwrap();
         let (cmd, p) = simple_lock_toggle(crate::doc_props_ui::is_background(&st.doc, l), l, &json!({"layer": l.id.0}));
         app.run(&cmd, p).unwrap();
     }
 
-    fn erase_line(app: &mut PhotocraftApp) {
+    fn erase_line(app: &mut LienzoApp) {
         app.ui.tool = Tool::Eraser;
         let m = Modifiers::NONE;
         tool_event(app, ToolEvent::Down { x: 10.0, y: 40.0, pressure: 1.0 }, m);
@@ -1168,7 +1164,7 @@ mod lock_tests {
     fn simple_lock_button_never_locks_the_eraser_out_of_the_background() {
         // #76: the simple themes' lock button used to toggle "lock all" on the Background, which
         // kept showing as locked and then refused every paint tool.
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
         app.run("tools.setColors", json!({"background": "#ff0000"})).unwrap();
         app.run("tools.setBrush", json!({"brush": {"size": 12, "hardness": 1.0}})).unwrap();
@@ -1202,7 +1198,7 @@ mod swatch_type_tests {
     /// was selected.
     #[test]
     fn idle_color_field_leaves_the_foreground_and_selected_type_alone() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 200})).unwrap();
         let id = app.run("type.create", json!({"text": "Hello world", "size": 40, "x": 20, "y": 100, "color": "#ffffff"})).unwrap()["layer"].as_u64().unwrap();
         app.run("tools.setColors", json!({"foreground": "#d8452e"})).unwrap();
@@ -1220,11 +1216,11 @@ mod swatch_type_tests {
             resize: None,
             preedit: None,
         });
-        let mut h = Harness::builder().with_size(vec2(300.0, 300.0)).build_ui_state(|ui, app: &mut PhotocraftApp| color_field(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 300.0)).build_ui_state(|ui, app: &mut LienzoApp| color_field(app, ui), app);
         h.run_steps(4);
         assert_eq!(h.state().session.tools.foreground, fg);
         let st = h.state().session.active().unwrap();
-        let Some(photocraft_doc::LayerContent::Text(t)) = st.doc.layer(photocraft_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
+        let Some(lienzo_doc::LayerContent::Text(t)) = st.doc.layer(lienzo_doc::LayerId(id)).map(|l| &l.content) else { panic!("type layer") };
         assert_eq!(t.char_runs().len(), 1, "still one white run");
     }
 }
@@ -1233,7 +1229,7 @@ mod swatch_type_tests {
 mod tool_flyout_drag_tests {
     use super::*;
 
-    fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
+    fn frame(app: &mut LienzoApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
         let mut out = ctx.run_ui(
             egui::RawInput { time: Some(time), events, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(1200.0, 1800.0))), ..Default::default() },
             |ui| toolbar(app, ui),
@@ -1267,9 +1263,9 @@ mod tool_flyout_drag_tests {
     /// delay is needed; releasing over the second row picks it and closes the flyout.
     #[test]
     fn flyout_press_drag_release_selects_the_row_without_long_press() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         frame(&mut app, &ctx, 0.0, vec![]);
         frame(&mut app, &ctx, 0.1, vec![]);
         let slot_index = TOOL_SECTIONS.iter().flat_map(|section| section.iter()).position(|slot| slot.contains(&Tool::Brush)).unwrap();
@@ -1313,9 +1309,9 @@ mod toolbar_hidden_tests {
     use super::*;
 
     /// Clickable tool-sized buttons the toolbar drew in its last pass.
-    fn tool_buttons(app: &mut PhotocraftApp) -> usize {
+    fn tool_buttons(app: &mut LienzoApp) -> usize {
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         for time in [0.0, 0.1] {
             let mut out = ctx.run_ui(
                 egui::RawInput { time: Some(time), screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(1200.0, 1800.0))), ..Default::default() },
@@ -1327,14 +1323,14 @@ mod toolbar_hidden_tests {
         ctx.viewport(|v| v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).filter(|w| w.rect.size() == size && w.sense.senses_click()).count())
     }
 
-    fn hide(app: &mut PhotocraftApp, tools: &[Tool]) {
+    fn hide(app: &mut LienzoApp, tools: &[Tool]) {
         let names: Vec<String> = tools.iter().map(|tool| format!("{tool:?}")).collect();
         app.session.edit_prefs(|p| p.toolbar.hidden = names);
     }
 
     #[test]
     fn hidden_tools_leave_the_toolbar() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let all = tool_buttons(&mut app);
         let slots: usize = TOOL_SECTIONS.iter().map(|section| section.len()).sum();
         hide(&mut app, &Tool::ALL);
@@ -1367,7 +1363,7 @@ mod properties_card_tests {
     /// Arithmetic left uncommitted in one fill layer's card never lands on the layer selected next.
     #[test]
     fn uncommitted_arithmetic_stays_with_its_layer() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
         let mut ids = Vec::new();
         for color in ["#00ff00", "#0000ff"] {
@@ -1376,17 +1372,17 @@ mod properties_card_tests {
         }
         // The layer selected next already shows 25, the value the edited one has when `25*` stops it.
         s.execute("layer.setProps", json!({"layer": ids[0].0, "opacity": 0.25})).unwrap();
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = LienzoApp::new(s, crate::Services::default());
         app.ui.panels.properties = true;
         let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                     properties_window(app, ui.ctx());
                 }
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
         h.run_steps(2);
         h.query_all_by_role(egui::accesskit::Role::SpinButton).next().unwrap().click();
         h.run_steps(1);
@@ -1420,9 +1416,9 @@ mod toolbar_tests {
             crate::theme::ThemeKind::SolarizedDark,
             crate::theme::ThemeKind::BreezeDark,
         ] {
-            let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             let mut h = egui_kittest::Harness::builder().with_size(vec2(800.0, 1400.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                         toolbar(app, ui);
                         let left = ui.available_rect_before_wrap().left();
@@ -1431,9 +1427,9 @@ mod toolbar_tests {
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, theme);
+            LienzoApp::setup_context(&h.ctx, theme);
             h.run_steps(2);
-            let left = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.ctx.data(|d| d.get_temp::<f32>(egui::Id::unique("toolbar-test-left"))).unwrap_or(0.0);
+            let left = |h: &egui_kittest::Harness<'_, LienzoApp>| h.ctx.data(|d| d.get_temp::<f32>(egui::Id::unique("toolbar-test-left"))).unwrap_or(0.0);
             let single = left(&h);
             assert!(!h.state().ui.panels.toolbar_double, "{theme:?}");
 
@@ -1453,16 +1449,16 @@ mod toolbar_tests {
     #[test]
     fn every_theme_has_the_toolbar_controls() {
         for kind in crate::theme::ThemeKind::ALL {
-            let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             let mut h = egui_kittest::Harness::builder().with_size(vec2(800.0, 1400.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                         toolbar(app, ui);
                     }
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, kind);
+            LienzoApp::setup_context(&h.ctx, kind);
             h.run_steps(2);
             for label in ["Edit Toolbar…", "Edit in Quick Mask Mode  (Q)", "Change Screen Mode  (F)"] {
                 assert!(h.query_by_label(label).is_some(), "{kind:?}: no {label:?} button");
@@ -1475,18 +1471,18 @@ mod toolbar_tests {
     #[test]
     fn quick_mask_and_screen_mode_follow_the_toolbar_columns() {
         for theme in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio, crate::theme::ThemeKind::Classic] {
-            let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             let mut h = egui_kittest::Harness::builder().with_size(vec2(800.0, 1400.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                         toolbar(app, ui);
                     }
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, theme);
+            LienzoApp::setup_context(&h.ctx, theme);
             h.run_steps(2);
-            let modes = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+            let modes = |h: &egui_kittest::Harness<'_, LienzoApp>| {
                 (h.get_by_label("Edit in Quick Mask Mode  (Q)").rect(), h.get_by_label("Change Screen Mode  (F)").rect())
             };
             let (quick, screen) = modes(&h);
@@ -1502,7 +1498,7 @@ mod toolbar_tests {
         }
     }
 
-    fn click(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, p: egui::Pos2) {
+    fn click(h: &mut egui_kittest::Harness<'_, LienzoApp>, p: egui::Pos2) {
         h.hover_at(p);
         h.run_steps(1);
         for pressed in [true, false] {
@@ -1512,7 +1508,7 @@ mod toolbar_tests {
     }
 
     /// A tool's toolbar button: tool buttons have no label, so find it by slot order.
-    fn tool_button(h: &egui_kittest::Harness<'_, PhotocraftApp>, tool: Tool) -> egui::Pos2 {
+    fn tool_button(h: &egui_kittest::Harness<'_, LienzoApp>, tool: Tool) -> egui::Pos2 {
         let size = egui::Vec2::splat(if Tokens::get(&h.ctx).pro { 30.0 } else { 36.0 });
         let buttons: Vec<Rect> = h.ctx.viewport(|v| {
             v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).filter(|w| w.rect.size() == size && w.sense.senses_click()).map(|w| w.rect).collect()
@@ -1521,21 +1517,21 @@ mod toolbar_tests {
         buttons[index].center()
     }
 
-    fn hand_button(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> egui::Pos2 {
+    fn hand_button(h: &egui_kittest::Harness<'_, LienzoApp>) -> egui::Pos2 {
         tool_button(h, Tool::Hand)
     }
 
-    fn toolbar_harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+    fn toolbar_harness(app: LienzoApp) -> egui_kittest::Harness<'static, LienzoApp> {
         // 60 fps steps, so two clicks a few frames apart are a double-click.
         let mut h = egui_kittest::Harness::builder().with_size(vec2(800.0, 1400.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     toolbar(app, ui);
                 }
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
         h.run_steps(2);
         h
     }
@@ -1544,7 +1540,7 @@ mod toolbar_tests {
     /// picks the tool.
     #[test]
     fn double_clicking_the_hand_tool_fits_on_screen() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.ui.tool = Tool::Move;
         app.ui.views[0].fit_pending = false;
@@ -1564,7 +1560,7 @@ mod toolbar_tests {
     /// With no document open the double-click still picks the tool and doesn't panic.
     #[test]
     fn double_clicking_the_hand_tool_without_a_document_is_harmless() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.tool = Tool::Move;
         let mut h = toolbar_harness(app);
         let p = hand_button(&h);
@@ -1577,7 +1573,7 @@ mod toolbar_tests {
     /// Double-clicking the Zoom tool zooms to 100% (Photoshop); a single click only picks the tool.
     #[test]
     fn double_clicking_the_zoom_tool_zooms_to_actual_pixels() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.ui.tool = Tool::Move;
         app.ui.views[0].fit_pending = true;
@@ -1599,7 +1595,7 @@ mod toolbar_tests {
     /// With no document open the double-click still picks the tool and doesn't panic.
     #[test]
     fn double_clicking_the_zoom_tool_without_a_document_is_harmless() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.tool = Tool::Move;
         let mut h = toolbar_harness(app);
         let p = tool_button(&h, Tool::Zoom);
@@ -1614,7 +1610,7 @@ mod toolbar_tests {
     #[test]
     fn a_click_without_a_prior_hover_picks_the_tool() {
         for tool in [Tool::Brush, Tool::Type] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.ui.tool = Tool::Move;
             let mut h = toolbar_harness(app);
             let p = tool_button(&h, tool);
@@ -1633,13 +1629,13 @@ mod embedding_tests {
     use super::*;
     use egui_kittest::kittest::Queryable;
 
-    fn whole_app(rail: bool, menu_bar: bool) -> egui_kittest::Harness<'static, PhotocraftApp> {
+    fn whole_app(rail: bool, menu_bar: bool) -> egui_kittest::Harness<'static, LienzoApp> {
         let mut h = egui_kittest::Harness::builder().with_size(vec2(1280.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut session = photocraft_engine::Session::new();
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut session = lienzo_engine::Session::new();
             // An empty workspace with its docks, not the Home screen.
             session.edit_prefs(|p| p.general.auto_show_home_screen = false);
-            let mut app = PhotocraftApp::new(session, crate::Services::default());
+            let mut app = LienzoApp::new(session, crate::Services::default());
             app.ui.panels.rail = rail;
             app.ui.panels.menu_bar = menu_bar;
             app
@@ -1648,13 +1644,13 @@ mod embedding_tests {
         h
     }
 
-    fn drawn(h: &egui_kittest::Harness<'_, PhotocraftApp>, panel: &str) -> bool {
+    fn drawn(h: &egui_kittest::Harness<'_, LienzoApp>, panel: &str) -> bool {
         egui::containers::panel::PanelState::load(&h.ctx, panel_state_id(&h.ctx, panel)).is_some()
     }
 
     /// The rail is drawn inside the canvas panel, so its panel state is keyed under that panel's
     /// scope: find it by a button only the rail has.
-    fn rail_drawn(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> bool {
+    fn rail_drawn(h: &egui_kittest::Harness<'_, LienzoApp>) -> bool {
         h.query_by_label("Color & Swatches").is_some()
     }
 
@@ -1776,7 +1772,7 @@ mod group_drag_selection_tests {
 
     #[test]
     fn the_background_row_neither_moves_nor_takes_a_layer_below_it() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
         let bg = s.active().unwrap().doc.layers[0].id;
         let a = LayerId(s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap());
@@ -1791,7 +1787,7 @@ mod group_drag_selection_tests {
         assert!(!refused(a, bg, "above", &[a], false));
         assert!(!refused(bg, a, "above", &[bg], true), "⌥-dragging copies the Background above");
         // Without a Background every drop is fine.
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
         s.execute("layer.new.layerFromBackground", json!({})).unwrap();
         let l0 = s.active().unwrap().doc.layers[0].id;
@@ -1858,7 +1854,7 @@ mod properties_target_regressions {
 
     #[test]
     fn pending_transform_arithmetic_does_not_apply_to_another_document_with_the_same_layer_id() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width":200,"height":200,"background":"transparent"})).unwrap();
         app.run("select.rect", json!({"x":10,"y":20,"width":100,"height":50})).unwrap();
         app.run("edit.fill", json!({"color":"#ff0000"})).unwrap();
@@ -1870,9 +1866,9 @@ mod properties_target_regressions {
         assert!(app.session.set_active(0));
         let mut ready = false;
         let mut h = Harness::builder().with_size(vec2(360.0, 650.0)).build_ui_state(
-            move |ui, app: &mut PhotocraftApp| {
+            move |ui, app: &mut LienzoApp| {
                 if !ready {
-                    PhotocraftApp::setup_context(ui.ctx(), theme::ThemeKind::ProMedium);
+                    LienzoApp::setup_context(ui.ctx(), theme::ThemeKind::ProMedium);
                     ready = true;
                     return;
                 }
@@ -1904,21 +1900,21 @@ mod navigator_animated_zoom_tests {
 
     #[test]
     fn animated_zoom_off_navigator_buttons_jump_without_a_transition() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.run("prefs.set", json!({"values": {"general.animatedZoom": false}})).unwrap();
         app.sync_views();
         app.ui.views[0].zoom = 1.0;
         app.ui.views[0].fit_pending = false;
         let mut h = egui_kittest::Harness::builder().with_size(vec2(430.0, 460.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     navigator(app, ui);
                 }
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
         h.run_steps(4);
         for (label, direction) in [("Zoom In", 1), ("Zoom Out", -1), ("Zoom Out", -1)] {
             let before = &h.state().ui.views[0];
@@ -1941,8 +1937,8 @@ mod layer_click_type_commit_tests {
     use super::*;
     use egui_kittest::{Harness, kittest::Queryable};
 
-    fn harness(kind: theme::ThemeKind) -> (Harness<'static, PhotocraftApp>, LayerId, LayerId) {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    fn harness(kind: theme::ThemeKind) -> (Harness<'static, LienzoApp>, LayerId, LayerId) {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
         let text = LayerId(app.run("type.create", json!({"text": "Before", "size": 24, "x": 20, "y": 80})).unwrap()["layer"].as_u64().unwrap());
         app.run("layer.setProps", json!({"layer": text.0, "name": "Edited type"})).unwrap();
@@ -1953,9 +1949,9 @@ mod layer_click_type_commit_tests {
         app.run("type.edit", json!({"layer": text.0, "text": "Preserved edit", "coalesce": session})).unwrap();
         let mut ready = false;
         let mut h = Harness::builder().with_size(vec2(360.0, 650.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-            move |ui, app: &mut PhotocraftApp| {
+            move |ui, app: &mut LienzoApp| {
                 if !ready {
-                    PhotocraftApp::setup_context(ui.ctx(), kind);
+                    LienzoApp::setup_context(ui.ctx(), kind);
                     ready = true;
                     return;
                 }
@@ -1967,7 +1963,7 @@ mod layer_click_type_commit_tests {
         (h, text, other)
     }
 
-    fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, modifiers: egui::Modifiers) {
+    fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2, modifiers: egui::Modifiers) {
         h.event(egui::Event::ModifiersChanged(modifiers));
         h.hover_at(at);
         h.run_steps(1);
@@ -1977,7 +1973,7 @@ mod layer_click_type_commit_tests {
         }
     }
 
-    fn preserved(app: &PhotocraftApp, id: LayerId) {
+    fn preserved(app: &LienzoApp, id: LayerId) {
         let layer = app.session.active().unwrap().doc.layer(id).unwrap();
         let LayerContent::Text(text) = &layer.content else { panic!("type must remain editable") };
         assert_eq!(text.text, "Preserved edit");
@@ -2030,7 +2026,7 @@ mod layer_click_type_commit_tests {
         let mut app = h.into_state();
         app.ui.tool = Tool::Type;
         let mut h = Harness::builder().with_size(vec2(1280.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).wgpu().build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, theme::ThemeKind::ProMedium);
+            LienzoApp::setup_context(&cc.egui_ctx, theme::ThemeKind::ProMedium);
             app
         });
         h.run_steps(4);
@@ -2053,7 +2049,7 @@ mod sampler_readout_tests {
     /// edit recomputes them (#4528).
     #[test]
     fn sampler_readouts_are_reused_until_the_document_changes() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 32, "height": 32, "background": "white"})).unwrap();
         app.run("view.colorSamplers.add", json!({"x": 4, "y": 4})).unwrap();
         let a = sampler_readouts(&mut app);
@@ -2074,7 +2070,7 @@ mod brush_chip_tests {
     use super::brush_controls::brush_preset_chip;
 
     /// The options-bar chip's tip texture for `brush`, row-major alpha (32 × 32).
-    fn chip_tip(brush: &photocraft_engine::BrushSettings) -> Vec<u8> {
+    fn chip_tip(brush: &lienzo_engine::BrushSettings) -> Vec<u8> {
         let ctx = egui::Context::default();
         let mut state = crate::state::UiState::default();
         let mut out = ctx.run_ui(Default::default(), |ui| brush_preset_chip(ui, brush, &mut state));
@@ -2097,13 +2093,13 @@ mod brush_chip_tests {
     #[test]
     fn the_brush_chip_draws_the_brushs_own_tip() {
         let at = |a: &[u8], x: usize, y: usize| a[y * 32 + x];
-        let hard = chip_tip(&photocraft_engine::BrushSettings { hardness: 1.0, ..Default::default() });
-        let soft = chip_tip(&photocraft_engine::BrushSettings { hardness: 0.0, ..Default::default() });
+        let hard = chip_tip(&lienzo_engine::BrushSettings { hardness: 1.0, ..Default::default() });
+        let soft = chip_tip(&lienzo_engine::BrushSettings { hardness: 0.0, ..Default::default() });
         assert!(at(&hard, 16, 16) == 255 && at(&hard, 16 + 11, 16) == 255, "hard: solid to near the rim");
         assert!(at(&soft, 16, 16) > 230, "soft: full at the centre");
         assert!(at(&soft, 16 + 11, 16) < 80, "soft: faint near the rim: {}", at(&soft, 16 + 11, 16));
         assert!(at(&soft, 16 + 6, 16) > at(&soft, 16 + 11, 16), "and fading outwards");
-        let flat = chip_tip(&photocraft_engine::BrushSettings { hardness: 1.0, roundness: 0.3, ..Default::default() });
+        let flat = chip_tip(&lienzo_engine::BrushSettings { hardness: 1.0, roundness: 0.3, ..Default::default() });
         assert!(at(&flat, 16 + 11, 16) > 200 && at(&flat, 16, 16 + 11) == 0, "a flattened tip is flat");
     }
 }
@@ -2145,7 +2141,7 @@ mod panel_state_migration_tests {
 
         // An existing 0.37 value wins, in a partial migration or on a later run.
         ctx.data_mut(|d| d.insert_persisted(new, state(290.0)));
-        ctx.data_mut(|d| d.insert_temp(Id::unique("photocraft-panel-state-migrated"), false));
+        ctx.data_mut(|d| d.insert_temp(Id::unique("lienzo-panel-state-migrated"), false));
         migrate_panel_state(&ctx);
         assert_eq!(PanelState::load(&ctx, new).map(|p| p.size().x), Some(290.0));
         assert_eq!(PanelState::load(&ctx, old).map(|p| p.size().x), Some(410.0));
@@ -2166,7 +2162,7 @@ mod panel_state_migration_tests {
         remember_panel_state(&ctx);
         // A 0.36 build then resized the same dock (it writes only the old key).
         ctx.data_mut(|d| d.insert_persisted(old, state(330.0)));
-        ctx.data_mut(|d| d.insert_temp(Id::unique("photocraft-panel-state-migrated"), false));
+        ctx.data_mut(|d| d.insert_temp(Id::unique("lienzo-panel-state-migrated"), false));
         migrate_panel_state(&ctx);
         assert_eq!(PanelState::load(&ctx, new).map(|p| p.size().x), Some(330.0), "the newer 0.36 width wins");
         assert_eq!(PanelState::load(&ctx, old).map(|p| p.size().x), Some(330.0), "and stays for a rollback");
@@ -2183,7 +2179,7 @@ mod panel_state_migration_tests {
         migrate_panel_state(&ctx);
         ctx.data_mut(|d| d.insert_persisted(new, state(290.0)));
         remember_panel_state(&ctx);
-        ctx.data_mut(|d| d.insert_temp(Id::unique("photocraft-panel-state-migrated"), false));
+        ctx.data_mut(|d| d.insert_temp(Id::unique("lienzo-panel-state-migrated"), false));
         migrate_panel_state(&ctx);
         assert_eq!(PanelState::load(&ctx, new).map(|p| p.size().x), Some(290.0));
     }

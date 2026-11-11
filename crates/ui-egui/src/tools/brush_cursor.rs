@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use egui::{CursorIcon, Painter, Pos2, Vec2};
-use photocraft_paint::brush::{BrushSettings, TipShape};
+use lienzo_paint::brush::{BrushSettings, TipShape};
 
 /// Below this on-screen radius an outline is unreadable: show the crosshair instead.
 const MIN_RADIUS: f32 = 3.0;
@@ -53,8 +53,8 @@ pub(crate) fn tip_axes(xf: &crate::canvas::ViewXform, size: f32) -> [Vec2; 2] {
 /// Apply pen orientation after the cached tip shape, in document space before the view.
 /// Keeping this outside `rings` avoids retracing a sampled tip on every tablet sample.
 pub(crate) fn pen_axes(xf: &crate::canvas::ViewXform, brush: &BrushSettings, pen: Option<crate::stylus::PenSample>) -> [Vec2; 2] {
-    use photocraft_paint::brush::Control;
-    use photocraft_paint::dynamics::{StepInput, apply_pose, control_angle};
+    use lienzo_paint::brush::Control;
+    use lienzo_paint::dynamics::{StepInput, apply_pose, control_angle};
     let axes = tip_axes(xf, brush.size);
     if !brush.shape_dynamics.enabled {
         return axes;
@@ -63,7 +63,7 @@ pub(crate) fn pen_axes(xf: &crate::canvas::ViewXform, brush: &BrushSettings, pen
     let pen = pen.sanitized();
     let point = apply_pose(
         brush,
-        photocraft_paint::StrokePoint { pressure: pen.pressure, tilt_x: pen.tilt_x, tilt_y: pen.tilt_y, rotation: pen.rotation, ..Default::default() },
+        lienzo_paint::StrokePoint { pressure: pen.pressure, tilt_x: pen.tilt_x, tilt_y: pen.tilt_y, rotation: pen.rotation, ..Default::default() },
     );
     let sd = &brush.shape_dynamics;
     let step = StepInput { point, direction: 0.0, initial_direction: 0.0, step: 0 };
@@ -103,7 +103,7 @@ pub(crate) fn cursor(painter: &Painter, at: Pos2, brush: &BrushSettings, radius:
     let anisotropic = (axes[0].length_sq() - axes[1].length_sq()).abs() > 0.001 || axes[0].dot(axes[1]).abs() > 0.001;
     let outline = rings(painter.ctx(), brush, !normal).or_else(|| {
         // A round tip becomes an ellipse under projection (or a non-square pixel aspect).
-        anisotropic.then(|| photocraft_paint::outline::tip_outline(brush, !normal).map(Arc::new)).flatten()
+        anisotropic.then(|| lienzo_paint::outline::tip_outline(brush, !normal).map(Arc::new)).flatten()
     });
     if let Some(rings) = outline {
         let pts = on_screen(&rings, axes);
@@ -113,7 +113,7 @@ pub(crate) fn cursor(painter: &Painter, at: Pos2, brush: &BrushSettings, radius:
         }
         return crate::tool_cursor::outline(painter, at, pts, centre);
     }
-    let r = if normal { photocraft_paint::half_coverage_radius(radius, brush.hardness).max(1.0) } else { radius };
+    let r = if normal { lienzo_paint::half_coverage_radius(radius, brush.hardness).max(1.0) } else { radius };
     crate::tool_cursor::circle(painter, at, r, centre)
 }
 
@@ -123,13 +123,13 @@ pub(crate) fn rings(ctx: &egui::Context, brush: &BrushSettings, full: bool) -> O
     if matches!(brush.tip, TipShape::Round) && brush.angle == 0.0 && brush.roundness >= 1.0 {
         return None;
     }
-    let id = egui::Id::unique("photocraft-tip-outline");
+    let id = egui::Id::unique("lienzo-tip-outline");
     if let Some(c) = ctx.data(|d| d.get_temp::<Cached>(id))
         && c.key.matches(brush, full)
     {
         return c.rings;
     }
-    let traced = photocraft_paint::outline::tip_outline(brush, full).map(Arc::new);
+    let traced = lienzo_paint::outline::tip_outline(brush, full).map(Arc::new);
     ctx.data_mut(|d| d.insert_temp(id, Cached { key: Key::of(brush, full), rings: traced.clone() }));
     traced
 }
@@ -155,7 +155,7 @@ mod tests {
     fn pen_cursor_cost_probe() {
         let mut brush = BrushSettings { size: 60.0, roundness: 0.25, hardness: 1.0, ..Default::default() };
         brush.shape_dynamics.enabled = true;
-        brush.shape_dynamics.angle.control = photocraft_paint::brush::Control::Rotation;
+        brush.shape_dynamics.angle.control = lienzo_paint::brush::Control::Rotation;
         let xf = view(0.0, false, 1.0);
         for dynamic in [false, true] {
             let ctx = egui::Context::default();
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn pen_orientation_preserves_mouse_and_disabled_dynamics() {
         let mut brush = BrushSettings::default();
-        brush.shape_dynamics.angle.control = photocraft_paint::brush::Control::Rotation;
+        brush.shape_dynamics.angle.control = lienzo_paint::brush::Control::Rotation;
         let pen = crate::stylus::PenSample { rotation: 90.0, ..Default::default() };
         let xf = view(30.0, true, 2.0);
         assert_eq!(pen_axes(&xf, &brush, Some(pen)), tip_axes(&xf, brush.size));
@@ -191,7 +191,7 @@ mod tests {
     fn pen_pose_rotation_precedes_the_view_and_reuses_the_tip_cache() {
         let mut brush = BrushSettings { size: 20.0, roundness: 0.25, ..Default::default() };
         brush.shape_dynamics.enabled = true;
-        brush.shape_dynamics.angle.control = photocraft_paint::brush::Control::Rotation;
+        brush.shape_dynamics.angle.control = lienzo_paint::brush::Control::Rotation;
         brush.pose.enabled = true;
         brush.pose.override_rotation = true;
         brush.pose.rotation = 90.0;

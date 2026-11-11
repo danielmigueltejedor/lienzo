@@ -15,13 +15,13 @@
 use std::borrow::Cow;
 
 use egui::{Color32, TextureOptions};
-use photocraft_doc::{AlphaChannel, ColorMode, Document};
-use photocraft_engine::channel_cmds::{ChannelView, color_count};
-use photocraft_engine::mask_view_cmds::MaskViewMode;
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba, to_rgba};
+use lienzo_doc::{AlphaChannel, ColorMode, Document};
+use lienzo_engine::channel_cmds::{ChannelView, color_count};
+use lienzo_engine::mask_view_cmds::MaskViewMode;
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba, to_rgba};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Largest overlay texture side; bigger documents show a downsampled overlay.
 const MAX_SIDE: u32 = 4096;
@@ -94,7 +94,7 @@ impl Default for Look {
 
 impl Look {
     /// The current preferences of `s`.
-    pub fn of(s: &photocraft_engine::Session) -> Self {
+    pub fn of(s: &lienzo_engine::Session) -> Self {
         let p = s.prefs();
         Self { in_color: p.interface.show_channels_in_color, mask_rgb: p.layer_mask_overlay.rgb(), mask_opacity: p.layer_mask_overlay.alpha() }
     }
@@ -106,12 +106,12 @@ impl Look {
 #[derive(Clone, Default)]
 pub struct Screen {
     pub encode_srgb: bool,
-    pub transform: Option<std::sync::Arc<photocraft_cms::Transform>>,
+    pub transform: Option<std::sync::Arc<lienzo_cms::Transform>>,
 }
 
 impl Screen {
     /// How the canvas shows `doc` on `display` (`None`: the main window's).
-    pub fn of(app: &PhotocraftApp, doc: &Document, display: Option<u32>) -> Screen {
+    pub fn of(app: &LienzoApp, doc: &Document, display: Option<u32>) -> Screen {
         let color = &app.session.color;
         let display = display.or(color.main_display);
         let Ok(d) = color.canvas_display_for(doc, display) else { return Screen::default() };
@@ -121,7 +121,7 @@ impl Screen {
     }
 
     /// A key that changes with [`Screen::of`].
-    pub fn key(app: &PhotocraftApp, doc: &Document, display: Option<u32>) -> u64 {
+    pub fn key(app: &LienzoApp, doc: &Document, display: Option<u32>) -> u64 {
         let color = &app.session.color;
         color.display_signature_for(doc, display.or(color.main_display))
     }
@@ -131,7 +131,7 @@ impl Screen {
         if self.encode_srgb {
             for p in px.iter_mut() {
                 for v in &mut p[..3] {
-                    *v = photocraft_color::convert::linear_to_srgb(v.clamp(0.0, 1.0));
+                    *v = lienzo_color::convert::linear_to_srgb(v.clamp(0.0, 1.0));
                 }
             }
         }
@@ -156,9 +156,9 @@ fn composite(doc: &Document, r: Rect, factor: u32) -> Vec<[f32; 4]> {
         }
         layers_only.selection = None;
         layers_only.quick_mask = None;
-        let p = photocraft_compose::proxy::proxy_document(&layers_only, factor);
+        let p = lienzo_compose::proxy::proxy_document(&layers_only, factor);
         let mut out = Vec::with_capacity((w * h) as usize);
-        let _ = photocraft_compose::render_bands(&p, Rect::new(0, 0, w as i32, h as i32), 0, |band| -> Result<(), ()> {
+        let _ = lienzo_compose::render_bands(&p, Rect::new(0, 0, w as i32, h as i32), 0, |band| -> Result<(), ()> {
             out.extend(band.px.iter().map(|p| {
                 let a = p[3].clamp(0.0, 1.0);
                 [p[0] * a + 1.0 - a, p[1] * a + 1.0 - a, p[2] * a + 1.0 - a, 1.0]
@@ -177,7 +177,7 @@ fn composite_sampled(doc: &Document, r: Rect, factor: u32) -> Vec<[f32; 4]> {
     let (w, h) = (r.width().div_ceil(factor), r.height().div_ceil(factor));
     let mut out = Vec::with_capacity((w * h) as usize);
     let f = factor as i32;
-    let _ = photocraft_compose::render_bands(doc, r, 0, |band| -> Result<(), ()> {
+    let _ = lienzo_compose::render_bands(doc, r, 0, |band| -> Result<(), ()> {
         let first = band.rect.y0 + (r.y0 - band.rect.y0).rem_euclid(f);
         for y in (first..band.rect.y1).step_by(factor as usize) {
             for x in (r.x0..r.x1).step_by(factor as usize) {
@@ -238,20 +238,20 @@ fn composite_at(doc: &Document, r: Rect, factor: u32, inked: &[usize], cached: O
 /// Whether `v` prints spot inks of `doc` over its composite, through the [`Screen`].
 fn prints_inks(doc: &Document, v: &ChannelView) -> bool {
     let colors = color_count(doc);
-    v.visible_colors(colors) == colors && (0..doc.channels.len()).any(|i| v.alpha_shown(i) && photocraft_compose::multichannel::is_overprint_spot(doc, i))
+    v.visible_colors(colors) == colors && (0..doc.channels.len()).any(|i| v.alpha_shown(i) && lienzo_compose::multichannel::is_overprint_spot(doc, i))
 }
 
 /// Whether a proxy composite picks the full composite's pixels: no layer effects or vector masks
-/// ([`proxy_faithful`](photocraft_compose::proxy::proxy_faithful)), no feathered masks, whose
+/// ([`proxy_faithful`](lienzo_compose::proxy::proxy_faithful)), no feathered masks, whose
 /// radius is in document pixels, and no pattern fills, whose tiles keep their size on a proxy
 /// unless a cache of the same fill is shrunk with it.
 fn proxy_matches(doc: &Document) -> bool {
-    use photocraft_doc::{Fill, LayerContent};
+    use lienzo_doc::{Fill, LayerContent};
     // A stack, not recursion: groups can nest deeply. Hidden layers (and what they hold) are not
     // composited, so they don't count.
-    let mut stack: Vec<&photocraft_doc::Layer> = doc.layers.iter().filter(|l| l.visible).collect();
+    let mut stack: Vec<&lienzo_doc::Layer> = doc.layers.iter().filter(|l| l.visible).collect();
     while let Some(l) = stack.pop() {
-        if photocraft_compose::masks::has_feather(l) {
+        if lienzo_compose::masks::has_feather(l) {
             return false;
         }
         if let LayerContent::Fill(fill @ Fill::Pattern { .. }) = &l.content
@@ -263,12 +263,12 @@ fn proxy_matches(doc: &Document) -> bool {
             stack.extend(g.children.iter().filter(|c| c.visible));
         }
     }
-    photocraft_compose::proxy::proxy_faithful(doc)
+    lienzo_compose::proxy::proxy_faithful(doc)
 }
 
 /// The channel view of `r` (document pixels, sampled every `factor` px) as premultiplied pixels,
 /// or `None` when the plain composite is all there is to show.
-pub fn render(doc: &Document, v: &ChannelView, r: Rect, factor: u32, look: Look, active: Option<photocraft_doc::LayerId>) -> Option<Vec<Color32>> {
+pub fn render(doc: &Document, v: &ChannelView, r: Rect, factor: u32, look: Look, active: Option<lienzo_doc::LayerId>) -> Option<Vec<Color32>> {
     let mut unused = None;
     render_with_source(doc, v, r, factor, look, active, CompositeSource { cached: None, fresh: &mut unused, screen: &Screen::default() })
 }
@@ -279,7 +279,7 @@ fn render_with_source(
     r: Rect,
     factor: u32,
     look: Look,
-    active: Option<photocraft_doc::LayerId>,
+    active: Option<lienzo_doc::LayerId>,
     source: CompositeSource<'_>,
 ) -> Option<Vec<Color32>> {
     if v.is_plain(doc) || r.is_empty() {
@@ -294,11 +294,11 @@ fn render_with_source(
     let feathered_mask = v
         .layer_mask
         .and_then(|view| doc.layer(view.layer))
-        .filter(|layer| layer.mask.as_ref().is_some_and(|mask| mask.enabled && photocraft_compose::masks::feather_sigma(mask.feather) > 0.0))
+        .filter(|layer| layer.mask.as_ref().is_some_and(|mask| mask.enabled && lienzo_compose::masks::feather_sigma(mask.feather) > 0.0))
         .and_then(|layer| {
             let mut pixel_mask_layer = layer.clone();
             pixel_mask_layer.vector_mask = None;
-            photocraft_compose::masks::combined_mask(&pixel_mask_layer, doc.bounds())
+            lienzo_compose::masks::combined_mask(&pixel_mask_layer, doc.bounds())
         });
     let shown_mask = layer_mask.map(|(m, mode)| (feathered_mask.as_ref().unwrap_or(&m.surface), mode));
     let only_mask = ChannelView { layer_mask: None, ..v.clone() }.is_plain(doc);
@@ -324,11 +324,11 @@ fn render_with_source(
     let mut computed = None;
     // Visible spot channels of an RGB or CMYK document print over the picture as inks, in panel
     // order, before the alpha channel and Quick Mask tints.
-    let spots: Vec<(photocraft_compose::multichannel::Ink, Vec<f32>)> = if vis > 0 {
-        let spot_ids: Vec<usize> = overlays.iter().copied().filter(|&i| photocraft_compose::multichannel::is_overprint_spot(doc, i)).collect();
+    let spots: Vec<(lienzo_compose::multichannel::Ink, Vec<f32>)> = if vis > 0 {
+        let spot_ids: Vec<usize> = overlays.iter().copied().filter(|&i| lienzo_compose::multichannel::is_overprint_spot(doc, i)).collect();
         overlays.retain(|i| !spot_ids.contains(i));
         // The ink colours are converted once per render, and only when there are inks to print.
-        let space = (!spot_ids.is_empty()).then(|| photocraft_compose::multichannel::InkSpace::of(doc));
+        let space = (!spot_ids.is_empty()).then(|| lienzo_compose::multichannel::InkSpace::of(doc));
         space.iter().flat_map(|space| spot_ids.iter().filter_map(|&i| doc.channels.get(i)).map(|ch| (space.ink(ch), sample(&ch.surface, r, factor)))).collect()
     } else {
         Vec::new()
@@ -417,7 +417,7 @@ fn render_with_source(
     *source.fresh = computed;
     let overlays: Vec<&AlphaChannel> = overlays.into_iter().filter_map(|i| doc.channels.get(i)).collect();
     // Rubylith: `color` at `opacity` × coverage over the accumulated pixels.
-    let mut tint = |values: Vec<f32>, color: photocraft_color::Color, opacity: f32, coverage: &dyn Fn(f32) -> f32| {
+    let mut tint = |values: Vec<f32>, color: lienzo_color::Color, opacity: f32, coverage: &dyn Fn(f32) -> f32| {
         let c = color.to_rgb();
         for (o, val) in out.iter_mut().zip(values) {
             let a = (coverage(val.clamp(0.0, 1.0)) * opacity).clamp(0.0, 1.0);
@@ -441,7 +441,7 @@ fn render_with_source(
     // Display Options colour and opacity (red at 50 % unless set).
     if !solo_mask && let Some((m, MaskViewMode::Overlay)) = shown_mask {
         let [cr, cg, cb] = mask_rgb;
-        tint(sample(m, r, factor), photocraft_color::Color::rgb(cr, cg, cb), mask_opacity, &|x| 1.0 - x);
+        tint(sample(m, r, factor), lienzo_color::Color::rgb(cr, cg, cb), mask_opacity, &|x| 1.0 - x);
     }
     Some(out.into_iter().map(|p| Color32::from_rgba_premultiplied(q(p[0]), q(p[1]), q(p[2]), q(p[3]))).collect())
 }
@@ -485,7 +485,7 @@ fn view_key(v: &ChannelView, look: Look) -> u64 {
 
 /// Make the channel-view texture of document `idx`, shown on `display` (`None`: the main
 /// window's), current; `None` = nothing to draw.
-pub fn ensure(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, display: Option<u32>) -> Option<egui::TextureId> {
+pub fn ensure(app: &mut LienzoApp, ctx: &egui::Context, idx: usize, display: Option<u32>) -> Option<egui::TextureId> {
     let st = app.session.documents().get(idx)?;
     let view = st.channel_view.clone();
     let active = st.active_layer;

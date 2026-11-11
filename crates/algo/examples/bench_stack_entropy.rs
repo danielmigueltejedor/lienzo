@@ -1,5 +1,5 @@
 //! Stack Mode Entropy timings and exact output hashes, including lookup preparation.
-//! Run the same example on both revisions: `cargo run --release -p photocraft-algo --example
+//! Run the same example on both revisions: `cargo run --release -p lienzo-algo --example
 //! bench_stack_entropy -- [--quick] [--reps N] [--threads N] [--json path]`.
 //! Full cases use 24/36 MP; quick cases use 1/16 as many pixels. The deep-stack fallback is
 //! deliberately small. Input generation, output hashing and deallocation are outside timings.
@@ -7,8 +7,8 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use photocraft_algo::stack::{Stat, combine};
-use photocraft_testkit::perf::{self, Summary};
+use lienzo_algo::stack::{Stat, combine};
+use lienzo_testkit::perf::{self, Summary};
 use serde_json::json;
 
 struct Options {

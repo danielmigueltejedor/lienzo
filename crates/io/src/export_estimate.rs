@@ -4,8 +4,8 @@
 
 use std::collections::HashSet;
 
-use photocraft_doc::{Document, LayerContent, SmartSource};
-use photocraft_geom::TILE_SIZE;
+use lienzo_doc::{Document, LayerContent, SmartSource};
+use lienzo_geom::TILE_SIZE;
 
 /// Bytes per pixel of the compositor's working buffer (`RGBA`, `f32`), filled when a flat format
 /// is written.
@@ -76,13 +76,13 @@ fn merged_image_bytes(doc: &Document) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_doc::{Layer, SmartObject};
-    use photocraft_geom::Affine;
+    use lienzo_color::{ColorMode, SampleType};
+    use lienzo_doc::{Layer, SmartObject};
+    use lienzo_geom::Affine;
     use std::sync::Arc;
 
     fn doc_with_smart_object(len: usize) -> Document {
-        let mut doc = Document::new("t", photocraft_geom::Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
+        let mut doc = Document::new("t", lienzo_geom::Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
         let source = SmartSource::Embedded { file_name: "a.png".into(), bytes: Arc::new(vec![0; len]) };
         doc.layers.push(Layer::new("so", LayerContent::Smart(SmartObject::new(source, Affine::IDENTITY, None))));
         doc
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn an_empty_document_needs_next_to_nothing() {
-        let doc = Document::new("t", photocraft_geom::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
+        let doc = Document::new("t", lienzo_geom::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
         assert_eq!(estimate_export_bytes(&doc, "psd"), 10 * 10 * 4 * 2, "only the merged image");
         assert_eq!(estimate_export_bytes(&doc, "pcraft"), 0);
     }

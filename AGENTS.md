@@ -53,7 +53,7 @@ Dependencies and assets use SPDX identifiers. An expression is allowed when ever
 
 # AGENTS.md: guide for AI agents and contributors
 
-Lienzo is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **Lienzo** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names keep their existing lowercase forms until they are renamed on purpose (they are what saved settings, files and the upstream merges rely on): crates (`photocraft-*`), binaries, file names, ids (`ai.storyteller.photocraft`). Shared Rust components live in [storytold/craft-libs](https://github.com/storytold/craft-libs) and are pinned by immutable git revision. UI libraries stay at L6. The goal is 1:1 Photoshop parity (same menus, shortcuts, behaviour and file fidelity) with better performance, and every feature drivable by agents. Read this file first, then `docs/`.
+Lienzo is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **Lienzo** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names keep their existing lowercase forms until they are renamed on purpose (they are what saved settings, files and the upstream merges rely on): crates (`lienzo-*`), binaries, file names, ids (`dev.danielmiguelt.Lienzo`). Shared Rust components live in [storytold/craft-libs](https://github.com/storytold/craft-libs) and are pinned by immutable git revision. UI libraries stay at L6. The goal is 1:1 Photoshop parity (same menus, shortcuts, behaviour and file fidelity) with better performance, and every feature drivable by agents. Read this file first, then `docs/`.
 
 ## 1. Orientation (5 minutes)
 
@@ -89,10 +89,10 @@ crates/
   ui-egui automation         L6 egui shell (thin: all actions go through the engine); MCP server
   testkit                    test helpers
 apps/
-  photocraft                 desktop app (eframe/wgpu), TCP control server
-  photocraft-cli             headless CLI (convert/info/run/batch/commands/mcp)
-  photocraft-web             the same app in the browser (trunk + wasm-bindgen)
-  photocraft-web-boot        starts the packaged browser app from compressed parts of its wasm (no file over a host's size cap)
+  lienzo                 desktop app (eframe/wgpu), TCP control server
+  lienzo-cli             headless CLI (convert/info/run/batch/commands/mcp)
+  lienzo-web             the same app in the browser (trunk + wasm-bindgen)
+  lienzo-web-boot        starts the packaged browser app from compressed parts of its wasm (no file over a host's size cap)
 xtask/                       cargo xtask layers | wasm | ci | stats | corpus | test-corpus | parity | perf | scorecard
 ```
 
@@ -102,10 +102,10 @@ xtask/                       cargo xtask layers | wasm | ci | stats | corpus | t
 
 ### Never crash (outranks feature work)
 
-People trust PhotoCraft with their work, and a crash loses it. A malformed file, a bad command or MCP param, a corrupt settings file, an odd keystroke or a full disk must produce an error the user or agent can act on, never a panic. Don't ship a feature by adding a panic path; fix a crash before building on top of it.
+People trust Lienzo with their work, and a crash loses it. A malformed file, a bad command or MCP param, a corrupt settings file, an odd keystroke or a full disk must produce an error the user or agent can act on, never a panic. Don't ship a feature by adding a panic path; fix a crash before building on top of it.
 
 - **Non-test code never panics.** No `unwrap()`, `expect()`, `panic!`, `unreachable!`, `todo!` or `unimplemented!`. Return the crate's error type and propagate with `?`; use `ok_or(..)?`, `let .. else { return Err(..) }`, `if let`, or `unwrap_or*` where a fallback is truly correct (never one that silently corrupts a document). Unfinished features return an "unsupported" error. The only exception is a provably infallible literal: `#[allow(clippy::expect_used)]` plus `.expect("why it can't fail")`.
-- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`. The one exception is the isolated helper crate `photocraft-tablet` (`crates/tablet`): winit drops pen tablet data, and reading it on macOS needs an AppKit event monitor (Objective-C interop) and on Windows a pointer message hook (`GetPointerPenInfo`). Only its `src/macos.rs` and `src/windows.rs` allow `unsafe` (`unsafe_code = "deny"` crate-wide, every block has a `SAFETY:` comment, tested against real `NSEvent`s and pointer messages); its X11 path and all mapping code are safe. Don't add `unsafe` anywhere else.
+- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`. The one exception is the isolated helper crate `lienzo-tablet` (`crates/tablet`): winit drops pen tablet data, and reading it on macOS needs an AppKit event monitor (Objective-C interop) and on Windows a pointer message hook (`GetPointerPenInfo`). Only its `src/macos.rs` and `src/windows.rs` allow `unsafe` (`unsafe_code = "deny"` crate-wide, every block has a `SAFETY:` comment, tested against real `NSEvent`s and pointer messages); its X11 path and all mapping code are safe. Don't add `unsafe` anywhere else.
 - **Input-derived numbers are hostile.** Use `get()` rather than `[i]`/`[a..b]` for indices from files, params, selections or arithmetic on them; slice strings only at char boundaries; use `checked_*`/`saturating_*` for lengths, offsets and counts; guard division by zero and NaN/inf casts; cap allocations sized by input.
 - **Bound recursion** with depth limits or seen-sets (documents can be deep or cyclic).
 - **Don't cascade.** Handle lock poisoning (`lock().unwrap_or_else(PoisonError::into_inner)`) and treat thread joins as `Result`s.
@@ -114,11 +114,11 @@ People trust PhotoCraft with their work, and a crash loses it. A malformed file,
 - **Enforced by clippy.** `clippy.toml` allows `unwrap`/`expect`/`panic` in tests only. Clean production crate roots carry `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]`; every new workspace crate must also include `[lints] workspace = true` in `Cargo.toml` to inherit `[workspace.lints]`.
 
 1. **Everything is a command.** New user-visible behaviour = a command in the engine (`crates/engine/src/*_cmds.rs`, registered in `commands.rs`) with id, label, menu path, shortcut, params doc, `enabled` and `run`, plus tests. The UI, CLI, control channel and MCP all dispatch commands by id. Use the **exact id from `crates/ui-egui/src/menu_catalog.rs`** and the menu item goes live automatically. Only pure view/window state (zoom, panels, screen mode) belongs to the shell (`menus.rs` `UI_COMMANDS`).
-2. **No format or colour assumptions.** Bit depth (8/16/32f) and colour model (RGB/Gray/CMYK/Lab…) are runtime data. Never introduce a `u8`-only pixel path in public APIs. Never assume sRGB: colour conversions go through `photocraft-cms` (`Transform`, `transform::cached`). Test at several depths.
-3. **Clean-room.** We studied Photoshop and other proprietary editors for *behaviour and look only*. Never copy their code, shaders, profiles or assets. Implement from public specs (Adobe PSD spec, ICC, ISO 32000 blend modes, papers) and observation. Third-party assets must be permissively licensed, keep their license file next to them, and get a row in `ATTRIBUTION.md` (path, title, author, source, license) in the same change; so do original assets. **Never commit font files:** fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts). PhotoCraft uses it through the optional build input `CRAFT_FONTS_DIR=<craft-fonts checkout>` (read by `crates/text/build.rs`, exposed as `photocraft_text::CRAFT_FONTS`; empty without it, and everything must still work). Build with it: `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo build`; details in `docs/development.md` › Fonts.
+2. **No format or colour assumptions.** Bit depth (8/16/32f) and colour model (RGB/Gray/CMYK/Lab…) are runtime data. Never introduce a `u8`-only pixel path in public APIs. Never assume sRGB: colour conversions go through `lienzo-cms` (`Transform`, `transform::cached`). Test at several depths.
+3. **Clean-room.** We studied Photoshop and other proprietary editors for *behaviour and look only*. Never copy their code, shaders, profiles or assets. Implement from public specs (Adobe PSD spec, ICC, ISO 32000 blend modes, papers) and observation. Third-party assets must be permissively licensed, keep their license file next to them, and get a row in `ATTRIBUTION.md` (path, title, author, source, license) in the same change; so do original assets. **Never commit font files:** fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts). Lienzo uses it through the optional build input `CRAFT_FONTS_DIR=<craft-fonts checkout>` (read by `crates/text/build.rs`, exposed as `lienzo_text::CRAFT_FONTS`; empty without it, and everything must still work). Build with it: `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo build`; details in `docs/development.md` › Fonts.
 4. **Tests are the gate.** Every change comes with tests. Format crates use round-trip, synthetic-generator, oracle and fuzz tests. Keep the PSD corpus results and the parity floor (`crates/ui-egui/src/parity.rs`) from regressing.
 5. **The UI is thin and data-driven.** UI state lives in `ui-egui/src/state.rs` (serde), so the control channel can read and drive it. Colours and radii come from `theme::Tokens`, never hard-coded.
-6. **Verify UI changes visually.** Render offscreen with `cargo run -p photocraft-ui-egui --example snapshot` (no window, no focus stealing), or launch with `--control` and take `ui.screenshot`. Look at the PNG. Demo images must be public-domain art, never personal photos. When fetching assets, never put a person's name, email or other personal details in requests (User-Agent, headers, URLs); use a generic `Photocraft-dev` User-Agent.
+6. **Verify UI changes visually.** Render offscreen with `cargo run -p lienzo-ui-egui --example snapshot` (no window, no focus stealing), or launch with `--control` and take `ui.screenshot`. Look at the PNG. Demo images must be public-domain art, never personal photos. When fetching assets, never put a person's name, email or other personal details in requests (User-Agent, headers, URLs); use a generic `Lienzo-dev` User-Agent.
 7. **Never break wasm.** L0–L6 must `cargo check --target wasm32-unknown-unknown` (run `cargo xtask wasm`). File-system code is `cfg(not(target_arch = "wasm32"))` or goes through the platform services.
 8. **Performance is a feature.** Benchmark heavy operations on a 24–36 MP image in release. Work per tile in parallel (rayon), skip empty tiles, never scan a full surface per frame (cache per revision), and record before/after timings in the dev log.
 
@@ -129,7 +129,7 @@ People trust PhotoCraft with their work, and a crash loses it. A malformed file,
 Priorities: important infrastructure first, then low-hanging parity, then the long tail.
 
 0. **Read `ROADMAP.md`, then `docs/gaps.md`.** `docs/target-app-parity.md` says, dimension by
-   dimension, where PhotoCraft is lacking; `docs/gaps.md` ranks the work. `docs/parity-checklist.md`
+   dimension, where Lienzo is lacking; `docs/gaps.md` ranks the work. `docs/parity-checklist.md`
    (menu wiring) is not a measure of behaviour. When your work moves a number or closes a gap,
    update the parity doc and gap entry it belongs to, with the date, and bump their status line
    and revision history.
@@ -151,7 +151,7 @@ cargo xtask layers
 cargo xtask panel-commands  # if you touched ui-egui: click handlers dispatch command ids (rule 1)
 cargo xtask wasm            # if you touched L0–L6
 cargo xtask parity          # if you added commands; commit the regenerated docs/parity-checklist.md
-cargo test -p photocraft-engine --test panic_hunt -- --ignored   # if you added/changed commands: no panic on adversarial input (Rule 9)
+cargo test -p lienzo-engine --test panic_hunt -- --ignored   # if you added/changed commands: no panic on adversarial input (Rule 9)
 cargo xtask scorecard       # if you moved a number: flip the checklist row in scorecard/*.toml, raise a
                             # corpus floor, fix a dead preference, or meet a budget (then set enforce = true
                             # in perf/budgets.toml); commit the regenerated docs/scorecard.md (CI checks it)
@@ -188,7 +188,7 @@ Then append a terse entry to `log/devlog.md` (what landed, numbers, what's still
 
 ## 8. Keeping the native format complete
 
-`photocraft-format` deliberately fails to compile when a `photocraft-doc` struct gains a field, so
+`lienzo-format` deliberately fails to compile when a `lienzo-doc` struct gains a field, so
 nothing is silently dropped from `.pcraft` saves. When you add a doc field, add it to
 `crates/format/src/manifest.rs` and `convert.rs` with `#[serde(default)]` so older files still load.
 If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown PSD blocks verbatim.

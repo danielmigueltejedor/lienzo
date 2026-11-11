@@ -1,13 +1,13 @@
-//! `filter.*` commands (Photoshop's Filter menu) backed by `photocraft-algo`.
+//! `filter.*` commands (Photoshop's Filter menu) backed by `lienzo-algo`.
 //!
 //! Every command acts on the active pixel layer (or the cached pixels of a
 //! smart object, recording a smart filter), respects the selection, and is
 //! undoable. `filter.lastFilter` re-runs the most recent filter command.
 
-use photocraft_algo::{
+use lienzo_algo::{
     self as algo, Distribution, FilterParams, PolarMode, Preserve, RadialMethod, RadialQuality, RippleSize, SpherizeMode, UndefinedAreas, WaveType,
 };
-use photocraft_doc::{LayerContent, SmartFilter};
+use lienzo_doc::{LayerContent, SmartFilter};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -181,11 +181,11 @@ pub fn params_for(id: &str, p: &Value) -> Option<FilterParams> {
 pub fn apply_filter_to_surface(
     id: &str,
     params: &Value,
-    surf: &photocraft_raster::Surface,
-    bounds: photocraft_geom::Rect,
-    selection: Option<&photocraft_raster::Surface>,
-    canvas: photocraft_geom::Rect,
-) -> Result<Option<photocraft_raster::Surface>> {
+    surf: &lienzo_raster::Surface,
+    bounds: lienzo_geom::Rect,
+    selection: Option<&lienzo_raster::Surface>,
+    canvas: lienzo_geom::Rect,
+) -> Result<Option<lienzo_raster::Surface>> {
     apply_filter_to_surface_in(id, params, surf, bounds, selection, canvas, &crate::jobs::JobCtx::new())
 }
 
@@ -193,12 +193,12 @@ pub fn apply_filter_to_surface(
 pub(crate) fn apply_filter_to_surface_in(
     id: &str,
     params: &Value,
-    surf: &photocraft_raster::Surface,
-    bounds: photocraft_geom::Rect,
-    selection: Option<&photocraft_raster::Surface>,
-    canvas: photocraft_geom::Rect,
+    surf: &lienzo_raster::Surface,
+    bounds: lienzo_geom::Rect,
+    selection: Option<&lienzo_raster::Surface>,
+    canvas: lienzo_geom::Rect,
     ctx: &crate::jobs::JobCtx,
-) -> Result<Option<photocraft_raster::Surface>> {
+) -> Result<Option<lienzo_raster::Surface>> {
     ctx.check()?;
     // Replays bypass command dispatch; nested paths must still obey the requesting session's
     // authority, including adjustment LUTs and plug-ins, before any resolver can read them.
@@ -224,14 +224,14 @@ pub(crate) fn apply_filter_to_surface_in(
     // unknown filter; the command itself already refused an unreadable map when it was added.
     // The stack owns progress across filters; this operation only inherits cancellation.
     let cancelled = || ctx.cancelled();
-    let ctl = photocraft_raster::Interrupt::cancel_only(&cancelled);
+    let ctl = lienzo_raster::Interrupt::cancel_only(&cancelled);
     match crate::filters_ext::resolve_map_path(&mut fp, params, &ctl) {
         Err(EngineError::Cancelled) => return Err(EngineError::Cancelled),
         Err(e) if matches!(fp, FilterParams::CustomShapeBlur { .. }) => return Err(e),
         Err(_) => return Ok(None),
         Ok(()) => {}
     }
-    let sel_bounds = selection.map(photocraft_raster::Surface::content_bounds);
+    let sel_bounds = selection.map(lienzo_raster::Surface::content_bounds);
     let content = surf.content_bounds();
     let area = algo::output_area(&fp, content, bounds, sel_bounds);
     let out = algo::apply_in_with(surf, &fp, area, bounds, selection, canvas.union(&content), &ctl);
@@ -241,7 +241,7 @@ pub(crate) fn apply_filter_to_surface_in(
 /// A filter's result. The filter also yields nothing when it cannot prepare its working data (a
 /// custom Shape Blur kernel it cannot allocate or does not accept): that is a failure to report,
 /// not a cancellation, unless the job was cancelled.
-fn filter_output(out: Option<photocraft_raster::Surface>, cancelled: bool) -> Result<photocraft_raster::Surface> {
+fn filter_output(out: Option<lienzo_raster::Surface>, cancelled: bool) -> Result<lienzo_raster::Surface> {
     match out {
         Some(surface) => Ok(surface),
         None if cancelled => Err(EngineError::Cancelled),
@@ -294,14 +294,14 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
         move |doc, _, ctx| {
             ctx.check()?;
             let prepare_kernel = |fp: &mut FilterParams| ctx.stage(0.0, 0.1, "Preparing filter", |ctl| crate::filters_ext::resolve_shape_kernel(fp, &p, ctl));
-            let filter = |surf: &photocraft_raster::Surface, fp: &FilterParams, area, bounds, sel: Option<&photocraft_raster::Surface>, extent| {
-                let _working = photocraft_raster::memory::try_reserve_operation(algo::working_bytes(fp, area, bounds, surf.format().channels()))
+            let filter = |surf: &lienzo_raster::Surface, fp: &FilterParams, area, bounds, sel: Option<&lienzo_raster::Surface>, extent| {
+                let _working = lienzo_raster::memory::try_reserve_operation(algo::working_bytes(fp, area, bounds, surf.format().channels()))
                     .map_err(EngineError::Other)?;
                 let out = ctx.stage(0.1, 1.0, &msg, |ctl| algo::apply_in_with(surf, fp, area, bounds, sel, extent, ctl));
                 filter_output(out, ctx.cancelled())
             };
             let selection = doc.selection.clone();
-            let sel_bounds = selection.as_ref().map(photocraft_raster::Surface::content_bounds);
+            let sel_bounds = selection.as_ref().map(lienzo_raster::Surface::content_bounds);
             // Distortions centre on the selection when there is one, else the canvas. Clouds and
             // Fibers place and size their pattern by the canvas either way; the selection masks them.
             let doc_bounds = doc.bounds();
@@ -345,9 +345,9 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
                     // document on each re-render.
                     let params = match &fp {
                         FilterParams::Displace { map: Some(map), .. }
-                            if photocraft_io::smart_map::displace_embedded_map(&params).is_none() && crate::filters_ext::map_path(&params).is_none() =>
+                            if lienzo_io::smart_map::displace_embedded_map(&params).is_none() && crate::filters_ext::map_path(&params).is_none() =>
                         {
-                            photocraft_io::smart_map::displace_embed_map(&params, map).ok_or_else(|| {
+                            lienzo_io::smart_map::displace_embed_map(&params, map).ok_or_else(|| {
                                 EngineError::Other(
                                     "Displace: the displacement map is too large to keep in a Smart Object's filter: rasterize the layer first".into(),
                                 )
@@ -356,7 +356,7 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
                         _ => params.clone(),
                     };
                     // Non-destructive: record the filter and re-render the smart object from its source.
-                    let sf = SmartFilter { command: id.clone(), params, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+                    let sf = SmartFilter { command: id.clone(), params, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
                     return crate::smart_cmds::add_smart_filter_in(doc, layer, sf, selection.as_ref(), ctx).map(|()| fp);
                 }
                 _ => return Err(EngineError::Other("not a pixel layer".into())),
@@ -404,8 +404,8 @@ pub(crate) fn run_filter(s: &mut Session, id: &str, p: &Value) -> Result<Value> 
 /// own, and `cancelled` is asked before each one: on a 24 MP layer (a Background, whose
 /// transparency is locked) a serial pass took about 400 ms that a cancelled job had to sit out
 /// (#6205). `Err(Cancelled)` leaves `new` holding all its tiles, some of them not yet fixed.
-pub(crate) fn keep_alpha(old: &photocraft_raster::Surface, new: &mut photocraft_raster::Surface, cancelled: &(dyn Fn() -> bool + Sync)) -> Result<()> {
-    use photocraft_raster::Surface;
+pub(crate) fn keep_alpha(old: &lienzo_raster::Surface, new: &mut lienzo_raster::Surface, cancelled: &(dyn Fn() -> bool + Sync)) -> Result<()> {
+    use lienzo_raster::Surface;
     use rayon::prelude::*;
     if old.format() != new.format() || !new.format().alpha {
         return Ok(());
@@ -416,7 +416,7 @@ pub(crate) fn keep_alpha(old: &photocraft_raster::Surface, new: &mut photocraft_
     let default = new.default_pixel();
     // Each changed tile alone in a surface (a tile `new` lacks is taken as its default pixel, as
     // `write_region` would create it).
-    let mut tiles: Vec<(photocraft_geom::Rect, Surface)> = coords
+    let mut tiles: Vec<(lienzo_geom::Rect, Surface)> = coords
         .iter()
         .map(|c| {
             let mut s = Surface::with_default(fmt, &default);
@@ -438,8 +438,8 @@ pub(crate) fn keep_alpha(old: &photocraft_raster::Surface, new: &mut photocraft_
                 }
             }
             s.write_region(*r, &v);
-            photocraft_raster::scratch::give(o);
-            photocraft_raster::scratch::give(v);
+            lienzo_raster::scratch::give(o);
+            lienzo_raster::scratch::give(v);
             true
         })
         .reduce(|| true, |a, b| a && b);

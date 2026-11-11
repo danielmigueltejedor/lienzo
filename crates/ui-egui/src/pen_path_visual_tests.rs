@@ -2,14 +2,14 @@
 
 use egui::{Event, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::Path;
+use lienzo_doc::Path;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
-fn path(app: &PhotocraftApp, name: &str) -> Path {
+fn path(app: &LienzoApp, name: &str) -> Path {
     let doc = &app.session.active().unwrap().doc;
     if name == "work" { doc.work_path.clone().unwrap() } else { doc.paths.iter().find(|p| p.name == name).unwrap().path.clone() }
 }
@@ -28,17 +28,17 @@ fn button(pos: Pos2, pressed: bool) -> Event {
     Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE }
 }
 
-/// Run explicitly with a wgpu adapter. PHOTOCRAFT_PEN_VISUAL_DIR chooses the output directory;
-/// PHOTOCRAFT_PEN_VISUAL_BASELINE=1 characterizes the old Work Path targeting for a before capture.
+/// Run explicitly with a wgpu adapter. LIENZO_PEN_VISUAL_DIR chooses the output directory;
+/// LIENZO_PEN_VISUAL_BASELINE=1 characterizes the old Work Path targeting for a before capture.
 #[test]
 #[ignore = "manual offscreen visual fixture; writes synthetic screenshots"]
 fn saved_path_drag_visual_fixture() {
-    let baseline = std::env::var("PHOTOCRAFT_PEN_VISUAL_BASELINE").is_ok_and(|v| v == "1");
-    let output = std::env::var_os("PHOTOCRAFT_PEN_VISUAL_DIR").map(std::path::PathBuf::from).unwrap_or_else(|| "log/pen-path-visual".into());
+    let baseline = std::env::var("LIENZO_PEN_VISUAL_BASELINE").is_ok_and(|v| v == "1");
+    let output = std::env::var_os("LIENZO_PEN_VISUAL_DIR").map(std::path::PathBuf::from).unwrap_or_else(|| "log/pen-path-visual".into());
     std::fs::create_dir_all(&output).expect("create synthetic screenshot directory");
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1280.0, 800.0)).with_max_steps(64).wgpu().build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.edit_prefs(|p| p.interface.language = "en".into());
         if let Some(rs) = cc.wgpu_render_state.as_ref() {
             app.set_wgpu(rs.clone());

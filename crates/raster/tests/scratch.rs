@@ -1,7 +1,7 @@
 //! The scratch pool is process-wide, so these tests live in their own binary (nothing else
 //! allocates tiles here) and take a lock to run one at a time.
 
-use photocraft_raster::scratch::*;
+use lienzo_raster::scratch::*;
 use std::sync::{Mutex, PoisonError};
 
 static SERIAL: Mutex<()> = Mutex::new(());

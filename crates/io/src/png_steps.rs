@@ -9,9 +9,9 @@
 
 use std::sync::Arc;
 
-use photocraft_codecs::{self as codecs, DecodeOptions, Format, Limits, OrientSteps, PngDecodeRows, PngExtras, PngFinish, SharedBytes, begin_png_finish};
-use photocraft_geom::TILE_SIZE;
-use photocraft_raster::{Interrupt, PruneCursor};
+use lienzo_codecs::{self as codecs, DecodeOptions, Format, Limits, OrientSteps, PngDecodeRows, PngExtras, PngFinish, SharedBytes, begin_png_finish};
+use lienzo_geom::TILE_SIZE;
+use lienzo_raster::{Interrupt, PruneCursor};
 
 use crate::flat::{FlatBuilder, PngStream, apply_flat_format};
 use crate::{ImportResult, IoError, Route};

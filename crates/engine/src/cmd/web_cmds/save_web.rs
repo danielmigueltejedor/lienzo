@@ -178,7 +178,7 @@ enum SlicePick {
 /// only select slices it shows, so a script naming one that doesn't exist, an unknown mode, or
 /// Selected Slices with nothing selected is refused rather than exporting too few or too many
 /// files. A document without slices is one image whatever the mode, as in the dialog.
-fn slice_pick(p: &Value, cmd: &str, doc: &photocraft_doc::Document) -> Result<SlicePick> {
+fn slice_pick(p: &Value, cmd: &str, doc: &lienzo_doc::Document) -> Result<SlicePick> {
     let mode = match p.get("slices") {
         None | Some(Value::Null) => "all",
         Some(Value::String(m)) if matches!(m.as_str(), "all" | "user" | "selected") => m.as_str(),
@@ -233,11 +233,11 @@ fn save_for_web_impl(s: &mut Session, p: &Value, write: &mut dyn FnMut(&str, &[u
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let doc = d.doc.clone();
     let (wdoc, sx, sy) = web_document(&doc, p, &st)?;
-    let buf = photocraft_compose::flatten(&wdoc);
+    let buf = lienzo_compose::flatten(&wdoc);
     let bw = wdoc.size.width as usize;
     // An untagged document is treated as sRGB (see [`web_document`]); with Embed Color Profile
     // on, the file says so, as Photoshop's does (#9325).
-    let srgb = (st.embed_icc && wdoc.icc_profile.is_none()).then(|| photocraft_cms::Builtin::Srgb.profile().to_bytes().to_vec());
+    let srgb = (st.embed_icc && wdoc.icc_profile.is_none()).then(|| lienzo_cms::Builtin::Srgb.profile().to_bytes().to_vec());
     let icc = wdoc.icc_profile.as_deref().map(|v| v.as_slice()).or(srgb.as_deref());
     let xmp = web_xmp(&doc, st.metadata);
     let exif = web_exif(&doc, st.metadata);
@@ -246,7 +246,7 @@ fn save_for_web_impl(s: &mut Session, p: &Value, write: &mut dyn FnMut(&str, &[u
     let all = slices::resolve(&doc);
     let picked = |r: &ResolvedSlice| match &pick {
         SlicePick::Numbers(n) => n.contains(&(r.number as u64)),
-        SlicePick::User => r.origin != photocraft_doc::SliceOrigin::Auto,
+        SlicePick::User => r.origin != lienzo_doc::SliceOrigin::Auto,
         SlicePick::All => true,
     };
     let chosen: Vec<&ResolvedSlice> = all.iter().filter(|r| picked(r)).collect();
@@ -361,7 +361,7 @@ fn save_for_web_impl(s: &mut Session, p: &Value, write: &mut dyn FnMut(&str, &[u
         let grid = cells.len() > 1;
         let spacer = grid.then(|| if images.is_empty() { "spacer.gif".to_string() } else { format!("{images}/spacer.gif") });
         if let Some(sp) = &spacer {
-            let gif = photocraft_codecs::web::encode_gif_indexed(1, 1, &[0], &[[0, 0, 0]], Some(0), false).map_err(other)?;
+            let gif = lienzo_codecs::web::encode_gif_indexed(1, 1, &[0], &[[0, 0, 0]], Some(0), false).map_err(other)?;
             write(&web_derived_path(&dir, sp, native_paths)?, &gif)?;
         }
         let page = html_table(&base, wdoc.size.width, wdoc.size.height, &cells, spacer.as_deref());

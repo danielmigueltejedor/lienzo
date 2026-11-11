@@ -11,17 +11,17 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_geom::Rect;
+use lienzo_doc::{DocId, Document, LayerId};
+use lienzo_geom::Rect;
 use serde_json::{Map, Value};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::color_picker_ui::{hex, parse_hex};
 
 /// The commands previewed: the text colour (`type_tool::open_color_picker`) and a gradient fill
 /// layer's colour stop (`gradient_ui::edit_stop_color`). Only commands that edit the active
 /// document belong here: a preset editor's picker (`gradient.presets.stop`) changes no pixels.
-const COMMANDS: [&str; 2] = ["type.setStyle", photocraft_engine::gradient_fill_cmds::STOP];
+const COMMANDS: [&str; 2] = ["type.setStyle", lienzo_engine::gradient_fill_cmds::STOP];
 /// Preview cache keys carry this bit so they never equal a committed document's key (0).
 const TAG: u64 = 1 << 60;
 /// How many previewed colours keep their ink bounds for canvas invalidation.
@@ -81,11 +81,11 @@ fn preview_params(fields: &Map<String, Value>) -> Option<(&'static str, Value)> 
 /// `doc` with `params` applied through the real command, so the preview is exactly what OK
 /// commits. `Err` when the command refuses (the canvas then keeps showing the document).
 pub(crate) fn preview_document(doc: &Document, command: &str, params: Value) -> Result<Document, String> {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc.clone(), None);
     s.execute(command, params).map_err(|e| e.to_string())?;
     let shown = s.active().ok_or("the preview has no document")?.doc.as_ref().clone();
-    Ok(photocraft_engine::mode_cmds::display_document(&shown).unwrap_or(shown))
+    Ok(lienzo_engine::mode_cmds::display_document(&shown).unwrap_or(shown))
 }
 
 /// The layers `params` recolour: the one being edited or the fill layer (`layer`), else every
@@ -104,7 +104,7 @@ fn layer_area(doc: &Document, layers: &[LayerId]) -> Rect {
 /// The document to draw while a previewed Color Picker is the top dialog: a copy with the picked
 /// colour applied. `None` (draw the document itself) without such a picker, while it shows its
 /// opening colour, for another document, or when the command refuses the preview.
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     // Under Free Transform the canvas shows the transform's preview, with the layer drawn where
     // the box puts it: a copy of the document would show it at its old place as well.
     let Some(d) = app.ui.dialogs.last().filter(|d| owns(&d.fields) && app.ui.transform.is_none()) else {
@@ -180,7 +180,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
 /// The active document and the preview key on screen when that preview is exactly what OK
 /// commits for these picker `fields`. OK then counts the canvas as showing the document, so the
 /// commit refreshes only the target layers instead of the whole canvas.
-pub(crate) fn shown_for(app: &PhotocraftApp, fields: &Map<String, Value>) -> Option<(DocId, u64)> {
+pub(crate) fn shown_for(app: &LienzoApp, fields: &Map<String, Value>) -> Option<(DocId, u64)> {
     let (_, params) = preview_params(fields)?;
     let st = app.session.active()?;
     let (p, params) = (app.color_picker_preview.as_ref()?, params.to_string());
@@ -190,7 +190,7 @@ pub(crate) fn shown_for(app: &PhotocraftApp, fields: &Map<String, Value>) -> Opt
 
 /// Drop the previewed copy (the picker closed or went back to its opening colour). The areas
 /// stay, so the canvas can still refresh just the text layer on its way back to the document.
-fn forget_shown(app: &mut PhotocraftApp) {
+fn forget_shown(app: &mut LienzoApp) {
     if let Some(p) = app.color_picker_preview.as_mut() {
         p.shown = None;
         p.key = 0;
@@ -199,7 +199,7 @@ fn forget_shown(app: &mut PhotocraftApp) {
 
 /// The canvas area that differs between the frames keyed `before` and `after` (0 is the document
 /// itself) of revision `revision`: the target layers' bounds. `None` when either isn't ours.
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
     if before == after {
         return None;
     }

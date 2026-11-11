@@ -24,8 +24,8 @@ fn alt_right_drag_resizes_the_liquify_brush_and_does_not_paint() {
     assert_eq!(resized_brush(40.0, 50.0, 0.0, -100.0, 1.0).1, 0.0);
 }
 
-fn app_with_layer() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_with_layer() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 120, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -66,7 +66,7 @@ fn native_component_liquify_preserves_proxy_detail_and_captured_commit_targets()
                         for k in [0, 2] {
                             native[k] = before.sample_channel((x + 2).min(63), y, k);
                         }
-                        let rgba = photocraft_raster::to_rgba(&before.format(), &native);
+                        let rgba = lienzo_raster::to_rgba(&before.format(), &native);
                         let expected = [rgba[0] * rgba[3], rgba[1] * rgba[3], rgba[2] * rgba[3], rgba[3]].map(|v| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8);
                         assert!(out[(y * 64 + x) as usize].iter().zip(expected).all(|(a, b)| a.abs_diff(b) <= 1), "{mode}@{depth}");
                     }
@@ -133,7 +133,7 @@ fn backdrop_use_and_mode() {
     let app = app_with_layer();
     let st = app.session.active().unwrap();
     let (layer, background) = (st.active_layer.unwrap(), st.doc.layers[0].id);
-    let at = |doc: &Document| photocraft_compose::render(doc, Rect::new(10, 10, 11, 11)).px[0];
+    let at = |doc: &Document| lienzo_compose::render(doc, Rect::new(10, 10, 11, 11)).px[0];
     let own = at(&st.doc);
     assert_eq!(at(&backdrop_doc(&st.doc, None)), own, "All Layers");
     assert_eq!(at(&backdrop_doc(&st.doc, Some(layer.0))), own, "the liquified layer alone");
@@ -397,7 +397,7 @@ fn liquify_redo_restores_undone_stroke_and_a_new_stroke_clears_redo() {
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     control(&mut app, &json!({"tool": "forwardWarp", "size": 40})).unwrap();
-    let draw = |app: &mut PhotocraftApp, x: f64| {
+    let draw = |app: &mut LienzoApp, x: f64| {
         for ev in
             [ToolEvent::Down { x, y: 40.0, pressure: 1.0 }, ToolEvent::Move { x: x + 14.0, y: 40.0, pressure: 1.0 }, ToolEvent::Up { x: x + 14.0, y: 40.0 }]
         {
@@ -432,7 +432,7 @@ fn freeze_lasso_records_a_stroke_and_clears_redo() {
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     control(&mut app, &json!({"tool": "lassoMask"})).unwrap();
-    let lasso = |app: &mut PhotocraftApp, m: egui::Modifiers, r: [f64; 4]| {
+    let lasso = |app: &mut LienzoApp, m: egui::Modifiers, r: [f64; 4]| {
         pointer(app, ToolEvent::Down { x: r[0], y: r[1], pressure: 1.0 }, m);
         for (x, y) in [(r[2], r[1]), (r[2], r[3]), (r[0], r[3])] {
             pointer(app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
@@ -460,7 +460,7 @@ fn alt_reverses_twirl_and_swaps_pucker_and_bloat() {
     let ctx = egui::Context::default();
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
-    let dab = |app: &mut PhotocraftApp, m: egui::Modifiers| {
+    let dab = |app: &mut LienzoApp, m: egui::Modifiers| {
         pointer(app, ToolEvent::Down { x: 50.0, y: 40.0, pressure: 1.0 }, m);
         pointer(app, ToolEvent::Up { x: 50.0, y: 40.0 }, m);
         app.distort.liquify.as_ref().unwrap().strokes.last().unwrap().tool
@@ -497,11 +497,11 @@ fn liquify_redo_stack_is_bounded() {
 #[test]
 fn alt_drag_resize_keeps_the_brush_where_it_started() {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     let screen = ERect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0));
-    let frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>, mods: egui::Modifiers| {
+    let frame = |app: &mut LienzoApp, events: Vec<egui::Event>, mods: egui::Modifiers| {
         let events = std::iter::once(egui::Event::ModifiersChanged(mods)).chain(events).collect();
         let raw = egui::RawInput { screen_rect: Some(screen), events, ..Default::default() };
         ctx.run_ui(raw, |ui| show(app, ui.ctx())).textures_delta.clear();
@@ -580,14 +580,14 @@ fn liquify_undo_and_redo_work_while_a_numeric_field_is_focused() {
     for ev in [ToolEvent::Down { x: 40.0, y: 40.0, pressure: 1.0 }, ToolEvent::Move { x: 52.0, y: 40.0, pressure: 1.0 }, ToolEvent::Up { x: 52.0, y: 40.0 }] {
         pointer(&mut app, ev, egui::Modifiers::NONE);
     }
-    let strokes = |app: &PhotocraftApp| app.distort.liquify.as_ref().unwrap().strokes.len();
+    let strokes = |app: &LienzoApp| app.distort.liquify.as_ref().unwrap().strokes.len();
     assert_eq!(strokes(&app), 1);
 
     // One frame of the real shortcut handler, then a focused single-line text edit (the
     // numeric fields are text edits), as the app orders them.
     let mut text = String::from("100");
     let field = egui::Id::unique("liquify-size-field");
-    let mut frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+    let mut frame = |app: &mut LienzoApp, events: Vec<egui::Event>| {
         let raw = egui::RawInput { events, ..Default::default() };
         let mut out = ctx.run_ui(raw, |ui| {
             crate::shortcuts::handle(app, ui.ctx());
@@ -614,8 +614,8 @@ fn liquify_tool_keys_leave_a_focused_field_alone_and_brackets_reach_one_pixel() 
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     app.distort.liquify.as_mut().unwrap().opts.size = 2.0;
-    let size = |app: &PhotocraftApp| app.distort.liquify.as_ref().unwrap().opts.size;
-    let press = |app: &mut PhotocraftApp, key: egui::Key| {
+    let size = |app: &LienzoApp| app.distort.liquify.as_ref().unwrap().opts.size;
+    let press = |app: &mut LienzoApp, key: egui::Key| {
         let ev = egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE };
         let mut out = ctx.run_ui(egui::RawInput { events: vec![ev], ..Default::default() }, |ui| crate::shortcuts::handle(app, ui.ctx()));
         out.textures_delta.clear();
@@ -629,7 +629,7 @@ fn liquify_tool_keys_leave_a_focused_field_alone_and_brackets_reach_one_pixel() 
     // With a text edit focused, `[` belongs to the field.
     let mut text = String::new();
     let field = egui::Id::unique("liquify-size-field");
-    let focused_frame = |app: &mut PhotocraftApp, text: &mut String, events: Vec<egui::Event>| {
+    let focused_frame = |app: &mut LienzoApp, text: &mut String, events: Vec<egui::Event>| {
         let mut out = ctx.run_ui(egui::RawInput { events, ..Default::default() }, |ui| {
             crate::shortcuts::handle(app, ui.ctx());
             ui.add(egui::TextEdit::singleline(text).id(field)).request_focus();
@@ -649,7 +649,7 @@ fn key(key: egui::Key) -> egui::Event {
 
 /// A frame of the open dialog in a 1000 × 700 window with `events`; returns the preview's
 /// centre (between the tool strip and the options panel, under the title strip).
-fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) -> Pos2 {
+fn frame(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>) -> Pos2 {
     let screen = ERect::from_min_size(Pos2::ZERO, vec2(1000.0, 700.0));
     let raw = egui::RawInput { screen_rect: Some(screen), events, ..Default::default() };
     let mut out = ctx.run_ui(raw, |ui| show(app, ui.ctx()));
@@ -662,7 +662,7 @@ fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>)
 #[test]
 fn zoom_shortcuts_zoom_the_preview_not_the_canvas() {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     frame(&mut app, &ctx, Vec::new());
@@ -690,7 +690,7 @@ fn zoom_shortcuts_zoom_the_preview_not_the_canvas() {
 #[test]
 fn pinch_and_wheel_zoom_the_preview_about_the_pointer() {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
     let center = frame(&mut app, &ctx, Vec::new());
@@ -766,7 +766,7 @@ fn short_mouse_strokes_are_recorded_whole_and_undo_removes_only_the_last() {
     open(&mut app, &ctx).unwrap();
     control(&mut app, &json!({"tool": "forwardWarp", "size": 30})).unwrap();
     let screen = ERect::from_min_size(pos2(0.0, 0.0), vec2(1280.0, 800.0));
-    let frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+    let frame = |app: &mut LienzoApp, events: Vec<egui::Event>| {
         let raw = egui::RawInput { screen_rect: Some(screen), events, ..Default::default() };
         let mut out = ctx.run_ui(raw, |ui| show(app, ui.ctx()));
         out.textures_delta.clear();
@@ -816,7 +816,7 @@ fn menu_opens_the_dialog_and_routes_pointer_events() {
 
 /// A smart object with a Liquify smart filter (one stroke, mesh size 3) and a Gaussian Blur
 /// above it.
-fn smart_liquify_app() -> (PhotocraftApp, LayerId) {
+fn smart_liquify_app() -> (LienzoApp, LayerId) {
     let mut app = app_with_layer();
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let stroke = json!({"tool": "forwardWarp", "size": 40, "points": [[40.0, 40.0, 1.0], [48.0, 41.0, 1.0], [56.0, 40.0, 1.0]]});
@@ -826,14 +826,14 @@ fn smart_liquify_app() -> (PhotocraftApp, LayerId) {
     (app, layer)
 }
 
-fn smart(app: &PhotocraftApp, layer: LayerId) -> photocraft_doc::SmartObject {
+fn smart(app: &LienzoApp, layer: LayerId) -> lienzo_doc::SmartObject {
     match &app.session.active().unwrap().doc.layer(layer).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.clone(),
+        lienzo_doc::LayerContent::Smart(sm) => sm.clone(),
         _ => panic!("not a smart object"),
     }
 }
 
-fn drag(app: &mut PhotocraftApp, from: f64, to: f64) {
+fn drag(app: &mut LienzoApp, from: f64, to: f64) {
     for ev in [ToolEvent::Down { x: from, y: 40.0, pressure: 1.0 }, ToolEvent::Move { x: to, y: 40.0, pressure: 1.0 }, ToolEvent::Up { x: to, y: 40.0 }] {
         pointer(app, ev, egui::Modifiers::NONE);
     }
@@ -855,7 +855,7 @@ fn smart_filter_double_click_edits_the_recorded_liquify() {
     assert_eq!(d.strokes, recorded);
     assert_eq!(d.field, LiquifyField::from_strokes(d.canvas, 3.0, &recorded));
     // The preview starts from the pixels below the filter (no liquify, no blur).
-    let below = photocraft_engine::smart_cmds::render_below_filter(&app.session.active().unwrap().doc, &sm, 0).unwrap().unwrap();
+    let below = lienzo_engine::smart_cmds::render_below_filter(&app.session.active().unwrap().doc, &sm, 0).unwrap().unwrap();
     assert_eq!(d.source.read_region(d.canvas), below.read_region(d.canvas));
 
     drag(&mut app, 70.0, 84.0);
@@ -863,7 +863,7 @@ fn smart_filter_double_click_edits_the_recorded_liquify() {
     assert!(app.distort.liquify.is_none());
     let sm = smart(&app, layer);
     assert_eq!(sm.smart_filters.len(), 2, "edited in place, not added");
-    assert_eq!(sm.smart_filters[0].command, photocraft_engine::distort_cmds::LIQUIFY);
+    assert_eq!(sm.smart_filters[0].command, lienzo_engine::distort_cmds::LIQUIFY);
     assert_eq!(sm.smart_filters[0].params["strokes"].as_array().map(Vec::len), Some(2));
     assert_eq!(sm.smart_filters[0].params["meshSize"], json!(3.0));
     assert_eq!(sm.smart_filters[1].command, "filter.blur.gaussianBlur");
@@ -952,7 +952,7 @@ fn liquify_that_cannot_be_applied_reports_the_error() {
 #[test]
 fn workspaces_open_on_the_layer_with_a_mask_channel_or_quick_mask_targeted() {
     let setup = |case: &str| {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": "#ff0000"})).unwrap();
@@ -970,7 +970,7 @@ fn workspaces_open_on_the_layer_with_a_mask_channel_or_quick_mask_targeted() {
         app.sync_views();
         app
     };
-    let surfaces = |app: &PhotocraftApp| {
+    let surfaces = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
         (
@@ -1004,7 +1004,7 @@ fn workspaces_open_on_the_layer_with_a_mask_channel_or_quick_mask_targeted() {
 /// OK adds a smart filter, as the filter mask doesn't take it.
 #[test]
 fn workspaces_open_on_a_smart_object_with_its_filter_mask_targeted() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"contents": "color", "color": "#ff0000"})).unwrap();
@@ -1022,8 +1022,8 @@ fn workspaces_open_on_a_smart_object_with_its_filter_mask_targeted() {
     d.strokes.push(LiquifyStroke { points: vec![vec![20.0, 24.0, 1.0], vec![36.0, 24.0, 1.0]], ..LiquifyStroke::new(LiquifyTool::ForwardWarp, 30.0) });
     commit(&mut app).unwrap();
     let st = app.session.active().unwrap();
-    let Some(photocraft_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else { panic!("not a smart object") };
-    assert_eq!(sm.smart_filters.iter().map(|f| f.command.as_str()).collect::<Vec<_>>(), ["filter.blur.gaussianBlur", photocraft_engine::distort_cmds::LIQUIFY]);
+    let Some(lienzo_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else { panic!("not a smart object") };
+    assert_eq!(sm.smart_filters.iter().map(|f| f.command.as_str()).collect::<Vec<_>>(), ["filter.blur.gaussianBlur", lienzo_engine::distort_cmds::LIQUIFY]);
 }
 
 /// The dialog's field and recorded points after a stroke of `tool` from (40, 40) through
@@ -1096,7 +1096,7 @@ fn preview_off_shows_the_original_and_p_toggles_it() {
     let d = app.distort.liquify.as_ref().unwrap();
     assert!(d.preview && d.describe()["preview"] == json!(true), "Liquify opens with Preview on");
     let original = render(d, &LiquifyField::new(d.canvas, d.cell));
-    let stroke = |app: &mut PhotocraftApp, y: f64| {
+    let stroke = |app: &mut LienzoApp, y: f64| {
         for ev in [ToolEvent::Down { x: 35.0, y, pressure: 1.0 }, ToolEvent::Move { x: 60.0, y, pressure: 1.0 }, ToolEvent::Up { x: 60.0, y }] {
             pointer(app, ev, egui::Modifiers::NONE);
         }
@@ -1135,14 +1135,14 @@ fn preview_off_shows_the_original_and_p_toggles_it() {
 }
 
 /// A forward-warp stroke across the test layer, at row `y`.
-fn warp_stroke(app: &mut PhotocraftApp, y: f64) {
+fn warp_stroke(app: &mut LienzoApp, y: f64) {
     for ev in [ToolEvent::Down { x: 35.0, y, pressure: 1.0 }, ToolEvent::Move { x: 60.0, y, pressure: 1.0 }, ToolEvent::Up { x: 60.0, y }] {
         pointer(app, ev, egui::Modifiers::NONE);
     }
 }
 
 /// The active layer's pixels over the whole document.
-fn layer_pixels(app: &PhotocraftApp) -> Vec<f32> {
+fn layer_pixels(app: &LienzoApp) -> Vec<f32> {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().read_region(Rect::new(0, 0, 120, 80))
 }
@@ -1194,7 +1194,7 @@ fn the_identity_field_exists_only_while_preview_is_off() {
     let ctx = egui::Context::default();
     let mut app = app_with_layer();
     open(&mut app, &ctx).unwrap();
-    let identity = |app: &PhotocraftApp| app.distort.liquify.as_ref().unwrap().identity.is_some();
+    let identity = |app: &LienzoApp| app.distort.liquify.as_ref().unwrap().identity.is_some();
     assert!(!identity(&app), "not made while Preview is on");
     control(&mut app, &json!({"preview": false})).unwrap();
     assert!(identity(&app));

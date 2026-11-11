@@ -5,17 +5,17 @@
 //! `tests.rs` files.
 
 use egui_kittest::Harness;
-use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
 use serde_json::json;
 
 use crate::state::Tool;
-use crate::{PhotocraftApp, Services, crop_presets, crop_ui};
+use crate::{LienzoApp, Services, crop_presets, crop_ui};
 
-fn app() -> PhotocraftApp {
+fn app() -> LienzoApp {
     let doc = Document::with_background("crop labels", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
-    let mut app = PhotocraftApp::new(s, Services::default());
+    let mut app = LienzoApp::new(s, Services::default());
     app.ui.tool = Tool::Crop;
     app
 }
@@ -37,8 +37,8 @@ fn drawn<State>(h: &Harness<'_, State>) -> Vec<String> {
 }
 
 /// The preset dropdown alone, so the only ComboBox in the harness is ours.
-fn dropdown_harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
-    Harness::builder().with_size(egui::vec2(460.0, 900.0)).with_max_steps(64).build_ui_state(|ui, app: &mut PhotocraftApp| crop_presets::dropdown(app, ui), app)
+fn dropdown_harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
+    Harness::builder().with_size(egui::vec2(460.0, 900.0)).with_max_steps(64).build_ui_state(|ui, app: &mut LienzoApp| crop_presets::dropdown(app, ui), app)
 }
 
 #[test]
@@ -55,8 +55,8 @@ fn the_options_bar_shows_the_fill_label_for_the_checkbox() {
         // The whole options bar has number fields the app itself does not name for accessibility.
         .with_accessibility_check(false)
         .build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
             app.run("file.new", json!({"name": "crop fill", "width": 200, "height": 100})).expect("new document");
             app.ui.tool = Tool::Crop;
             app

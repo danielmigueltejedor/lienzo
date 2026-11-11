@@ -3,22 +3,22 @@
 //! action continues into its callers. Behaviour measured in the reference application
 //! (2026-11-05).
 use super::*;
-use photocraft_engine::atn_cmds::STOP_MESSAGE;
+use lienzo_engine::atn_cmds::STOP_MESSAGE;
 
 const MESSAGE: &str = "Check the mask before continuing";
 
-fn names(app: &PhotocraftApp) -> Vec<String> {
+fn names(app: &LienzoApp) -> Vec<String> {
     app.session.active().unwrap().doc.walk().iter().map(|(_, _, l)| l.name.clone()).filter(|n| n != "Background").collect()
 }
 
-fn count(app: &PhotocraftApp, name: &str) -> usize {
+fn count(app: &LienzoApp, name: &str) -> usize {
     names(app).iter().filter(|n| *n == name).count()
 }
 
 /// `Stop Test` = Prefix, Stop, Suffix, saved to `.atn` and loaded back, so the step and its dialog
 /// toggle come the way a recorded file brings them.
-fn stop_app(allow: bool, with_dialog: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn stop_app(allow: bool, with_dialog: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 6})).unwrap();
     let mut action = Action::new(
         "Stop Test",
@@ -31,14 +31,14 @@ fn stop_app(allow: bool, with_dialog: bool) -> PhotocraftApp {
     if with_dialog {
         action.dialogs.insert(1);
     }
-    let (bytes, _) = photocraft_engine::atn_cmds::export("Stops", &[&action], &[], false).unwrap();
-    app.run("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(&bytes)})).unwrap();
+    let (bytes, _) = lienzo_engine::atn_cmds::export("Stops", &[&action], &[], false).unwrap();
+    app.run("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(&bytes)})).unwrap();
     assert_eq!(app.session.actions.list[0].dialogs.contains(&1), with_dialog);
     app
 }
 
 /// Grandparent and Parent each make a prefix layer, call the next one in, then make a suffix.
-fn nested_app(allow: bool) -> PhotocraftApp {
+fn nested_app(allow: bool) -> LienzoApp {
     let mut app = stop_app(allow, true);
     for (name, child) in [("Parent", "Stop Test"), ("Grandparent", "Parent")] {
         app.session.actions.list.push(Action::new(
@@ -53,7 +53,7 @@ fn nested_app(allow: bool) -> PhotocraftApp {
     app
 }
 
-fn assert_idle(app: &PhotocraftApp) {
+fn assert_idle(app: &LienzoApp) {
     assert_eq!(app.session.actions.playing, 0);
     assert!(app.session.actions.playback_stack.is_empty());
     assert!(app.paused_playbacks.paused.is_empty());
@@ -139,7 +139,7 @@ fn the_stop_dialog_shows_its_buttons_and_enter_answers_the_default_only_once_sho
     for (allow, button) in [(true, Some("Continue")), (true, Some("Stop")), (false, None)] {
         let app = stop_app(allow, true);
         let mut h = Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         play(h.state_mut(), &json!({"action": "Stop Test"})).unwrap();
         // The Enter that started the play arrives with the dialog's first frame: it answers nothing.
         h.key_press(egui::Key::Enter);
@@ -290,7 +290,7 @@ fn a_caller_chain_is_bounded() {
 }
 
 /// `If` makes Before, runs `Stop Test` when `condition` holds (`Other` when not), then makes After.
-fn conditional_app(condition: &str) -> PhotocraftApp {
+fn conditional_app(condition: &str) -> LienzoApp {
     let mut app = stop_app(true, true);
     app.session.actions.list.push(Action::new("Other", vec![("layer.new.layer".into(), json!({"name": "Other"}))]));
     app.session.actions.list.push(Action::new(

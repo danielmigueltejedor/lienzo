@@ -2,17 +2,17 @@
 //! selected layers refuses with the locked-layer alert, and any change to the selected layers
 //! while the box is open applies the box first, as in Photoshop.
 
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::transform_tool::LOCKED;
 
 /// A 200 × 200 document on a white Background: "A" with a red block at x 10..50, y 10..30, and
 /// "B" with a blue one at x 100..140, y 100..120. Only B is selected.
-fn app() -> (PhotocraftApp, LayerId, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, LayerId, LayerId, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200, "background": "white"})).unwrap();
     app.sync_views();
     let bg = app.session.active().unwrap().doc.layers[0].id;
@@ -28,25 +28,25 @@ fn app() -> (PhotocraftApp, LayerId, LayerId, LayerId) {
     (app, bg, a, b)
 }
 
-fn bounds(app: &PhotocraftApp, id: LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: LayerId) -> Rect {
     let st = app.session.active().unwrap();
-    photocraft_engine::transform_cmds::transform_bounds(&st.doc, st.doc.layer(id).unwrap())
+    lienzo_engine::transform_cmds::transform_bounds(&st.doc, st.doc.layer(id).unwrap())
 }
 
-fn select(app: &mut PhotocraftApp, id: LayerId, mode: &str) {
+fn select(app: &mut LienzoApp, id: LayerId, mode: &str) {
     app.run("layer.select", json!({"layer": id.0, "mode": mode})).unwrap();
 }
 
-fn invoke(app: &mut PhotocraftApp, id: &str) -> Result<(), String> {
+fn invoke(app: &mut LienzoApp, id: &str) -> Result<(), String> {
     crate::menus::invoke(app, &egui::Context::default(), id, json!({})).map(|_| ())
 }
 
-fn alerts(app: &PhotocraftApp) -> Vec<String> {
+fn alerts(app: &LienzoApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == crate::state::DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(String::from)).collect()
 }
 
 /// Drag the open box `dx` px right, with nearest neighbour so the blocks keep their edges.
-fn nudge(app: &mut PhotocraftApp, dx: f64) {
+fn nudge(app: &mut LienzoApp, dx: f64) {
     let t = app.ui.transform.as_mut().expect("a box is open");
     t.interpolation = "nearest".into();
     t.quad = t.quad.map(|[x, y]| [x + dx, y]);
@@ -208,7 +208,7 @@ fn taking_a_child_of_a_selected_group_out_of_the_selection_applies_the_box() {
 
 /// An unselected layer "C" under the frame's bottom-right handle (x, y 180..200), so a press there
 /// that reached the Move tool's Auto-Select would select it.
-fn corner_layer(app: &mut PhotocraftApp) -> LayerId {
+fn corner_layer(app: &mut LienzoApp) -> LayerId {
     let c = LayerId(app.run("layer.new.layer", json!({"name": "C"})).unwrap()["layer"].as_u64().unwrap());
     app.run("select.rect", json!({"x": 180, "y": 180, "width": 20, "height": 20})).unwrap();
     app.run("edit.fill", json!({"contents": "color", "color": "#00ff00"})).unwrap();
@@ -238,7 +238,7 @@ fn a_refused_handle_press_on_the_canvas_reaches_no_move_tool() {
         view.fill_pending = false;
         let rect = egui::Rect::from_min_size(Pos2::ZERO, vec2(300.0, 300.0));
         let ctx = egui::Context::default();
-        let mut frame = |app: &mut PhotocraftApp, events: Vec<Event>| {
+        let mut frame = |app: &mut LienzoApp, events: Vec<Event>| {
             let input = egui::RawInput { screen_rect: Some(rect), events, ..Default::default() };
             let mut out = ctx.run_ui(input, |ui| {
                 view = crate::canvas::canvas_view(app, ui, 0, rect, view.clone(), true);
@@ -282,7 +282,7 @@ fn a_refused_handle_press_over_the_control_channel_reaches_no_move_tool() {
     app.last_canvas_rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(300.0, 300.0));
     app.ui.tool_options.move_auto_select = true;
     let ctx = egui::Context::default();
-    let call = |app: &mut PhotocraftApp, method: &str, params: serde_json::Value| {
+    let call = |app: &mut LienzoApp, method: &str, params: serde_json::Value| {
         let (request, _receiver) = ControlRequest::new(method, params);
         let Outcome::Done(reply) = crate::control::handle(app, &ctx, &request) else { panic!("expected an immediate {method} reply") };
         assert_eq!(reply["ok"], true, "{method}: {reply}");

@@ -1,15 +1,15 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Size;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Size;
 use serde_json::json;
 
 fn fixture(depth: SampleType, p3: bool) -> Session {
     let mut s = Session::new();
-    let mut doc = Document::with_background("color range", Size::new(64, 48), ColorMode::Rgb, depth, photocraft_doc::Color::WHITE);
+    let mut doc = Document::with_background("color range", Size::new(64, 48), ColorMode::Rgb, depth, lienzo_doc::Color::WHITE);
     if p3 {
-        doc.icc_profile = Some(photocraft_cms::Builtin::DisplayP3.profile().to_bytes());
+        doc.icc_profile = Some(lienzo_cms::Builtin::DisplayP3.profile().to_bytes());
     } else {
-        doc.icc_profile = Some(photocraft_cms::Builtin::Srgb.profile().to_bytes());
+        doc.icc_profile = Some(lienzo_cms::Builtin::Srgb.profile().to_bytes());
     }
     let bg = doc.layers[0].surface_mut().unwrap();
     bg.fill_rect(Rect::new(0, 0, 64, 48), &[0.92, 0.92, 0.92, 1.0]);
@@ -99,7 +99,7 @@ fn window_defaults_and_hostile_tiles_fall_back_and_empty_selection_is_safe() {
     assert_eq!(color_range_area(&doc, SelectionMode::Replace), canvas);
     doc.selection = Some(Surface::new(PixelFormat::GRAY8));
     assert_eq!(color_range_area(&doc, SelectionMode::Replace), Rect::new(0, 0, 0, 0));
-    use photocraft_geom::TileCoord;
+    use lienzo_geom::TileCoord;
     use std::sync::Arc;
     let mut hostile = Surface::new(PixelFormat::GRAY8);
     let tile = hostile.solid_tile(&[1.0]);
@@ -192,7 +192,7 @@ fn cropped_range_matches_full_canvas_combinations_with_soft_holes_and_clipped_ma
 
 #[test]
 fn cropped_samples_match_full_composite_with_translucent_layers_and_active_layer_sampling() {
-    use photocraft_doc::{Layer, LayerContent};
+    use lienzo_doc::{Layer, LayerContent};
     for all_layers in [false, true] {
         let mut s = fixture(SampleType::F32, true);
         s.edit("overlay", |doc, _| {

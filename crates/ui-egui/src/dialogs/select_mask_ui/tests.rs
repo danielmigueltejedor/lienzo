@@ -4,12 +4,12 @@ use egui_kittest::kittest::{NodeT, Queryable};
 
 /// A 160 × 100 document: warm on the left (x < 80), cool on the right, with the top-left
 /// 20 × 20 selected.
-fn app_with_selection() -> PhotocraftApp {
+fn app_with_selection() -> LienzoApp {
     app_sized(160, 100)
 }
 
-fn app_sized(w: i32, h: i32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_sized(w: i32, h: i32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": w, "height": h, "depth": 8})).unwrap();
     app.session
         .edit("paint", |doc, _| {
@@ -27,19 +27,19 @@ fn app_sized(w: i32, h: i32) -> PhotocraftApp {
     app
 }
 
-fn ws(app: &PhotocraftApp) -> &SelectMaskWorkspace {
+fn ws(app: &LienzoApp) -> &SelectMaskWorkspace {
     app.distort.select_mask.as_ref().unwrap()
 }
 
-fn ui(app: &mut PhotocraftApp, v: Value) -> Value {
+fn ui(app: &mut LienzoApp, v: Value) -> Value {
     control(app, &v).unwrap()
 }
 
-fn selected(app: &mut PhotocraftApp) -> u64 {
+fn selected(app: &mut LienzoApp) -> u64 {
     ui(app, json!({"waitPreview": true}))["selectedProxyPixels"].as_u64().unwrap()
 }
 
-fn cov(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn cov(app: &LienzoApp, x: i32, y: i32) -> f32 {
     app.session.active().unwrap().doc.selection.as_ref().map_or(0.0, |s| s.sample_channel(x, y, 0))
 }
 
@@ -121,7 +121,7 @@ fn object_selection_clicks_and_drags() {
     assert_eq!(e[1]["rect"], json!([90.0, 10.0, 60.0, 80.0]));
 }
 
-fn ws_mut(app: &mut PhotocraftApp) -> &mut SelectMaskWorkspace {
+fn ws_mut(app: &mut LienzoApp) -> &mut SelectMaskWorkspace {
     app.distort.select_mask.as_mut().unwrap()
 }
 
@@ -353,7 +353,7 @@ fn the_preview_reuses_the_edits_it_applied() {
 /// on a repainted image previews what OK would commit.
 #[test]
 fn the_preview_recomputes_the_edits_after_the_document_changes() {
-    let warm = |app: &mut PhotocraftApp| {
+    let warm = |app: &mut LienzoApp| {
         app.session
             .edit("paint", |doc, _| {
                 doc.layers[0].surface_mut().unwrap().fill_rect(Rect::new(0, 0, 160, 100), &[0.85, 0.55, 0.25, 1.0]);
@@ -431,7 +431,7 @@ fn a_preview_of_an_old_revision_is_dropped() {
 }
 
 /// Sends `key` with `modifiers` through the workspace's key handling.
-fn press(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn press(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     let ev = egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     let input = egui::RawInput { events: vec![ev], ..Default::default() };
     ctx.run_ui(input, |ui| keys(app, ui.ctx())).textures_delta.clear();
@@ -463,7 +463,7 @@ fn keys_like_photoshop() {
     let mut app = app_with_selection();
     let ctx = egui::Context::default();
     open(&mut app).unwrap();
-    let tool = |app: &PhotocraftApp| ws(app).tool;
+    let tool = |app: &LienzoApp| ws(app).tool;
     for (key, mods, want) in [
         (Key::R, Modifiers::NONE, SmTool::RefineEdge),
         (Key::B, Modifiers::NONE, SmTool::Brush),
@@ -484,7 +484,7 @@ fn keys_like_photoshop() {
     assert_eq!(ws(&app).brush_size, 33.0);
     press(&mut app, &ctx, Key::OpenBracket, Modifiers::NONE);
     assert_eq!(ws(&app).brush_size, 30.0);
-    let view = |app: &PhotocraftApp| ws(app).opts.view;
+    let view = |app: &LienzoApp| ws(app).opts.view;
     for (key, want) in [
         (Key::K, Mode::BlackWhite),
         (Key::A, Mode::OnBlack),
@@ -516,7 +516,7 @@ fn polygonal_lasso_enter_and_escape() {
     open(&mut app).unwrap();
     ws_mut(&mut app).zoom = 1.0;
     ui(&mut app, json!({"tool": "polygonalLasso"}));
-    let click = |app: &mut PhotocraftApp, x: f64, y: f64| crate::distort_ui::pointer(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
+    let click = |app: &mut LienzoApp, x: f64, y: f64| crate::distort_ui::pointer(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
     for (x, y) in [(30.0, 30.0), (60.0, 30.0), (60.0, 60.0)] {
         click(&mut app, x, y);
     }
@@ -543,7 +543,7 @@ fn renders_photoshops_layout() {
     let mut app = app_with_selection();
     open(&mut app).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -552,7 +552,7 @@ fn renders_photoshops_layout() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     for label in [
         "Remember Settings",
@@ -600,7 +600,7 @@ fn panning_shows_the_hand() {
     open(&mut app).unwrap();
     ui(&mut app, json!({"tool": "brush"}));
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -611,7 +611,7 @@ fn panning_shows_the_hand() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     // Click Invert, then move over the image.
     h.get_by_label("Invert").click();
@@ -621,7 +621,7 @@ fn panning_shows_the_hand() {
     h.event(egui::Event::PointerMoved(over));
     h.run_steps(2);
     assert_eq!(h.output().platform_output.cursor_icon, egui::CursorIcon::None, "the brush's own cursor");
-    let space = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, pressed: bool| {
+    let space = |h: &mut egui_kittest::Harness<'_, LienzoApp>, pressed: bool| {
         h.event(egui::Event::Key { key: egui::Key::Space, physical_key: None, pressed, repeat: false, modifiers: Modifiers::NONE });
         h.run_steps(1);
     };
@@ -655,7 +655,7 @@ fn greyed_controls_explain_themselves() {
     let mut app = app_with_selection();
     open(&mut app).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -664,7 +664,7 @@ fn greyed_controls_explain_themselves() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     for (label, why) in [("Object Aware", "segmentation model"), ("Refine Hair", "hair detection")] {
         assert!(h.get_by_label(label).accesskit_node().is_disabled(), "{label} is greyed");
@@ -678,7 +678,7 @@ fn greyed_controls_explain_themselves() {
     }
 }
 
-fn call(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
+fn call(app: &mut LienzoApp, method: &str, params: Value) -> Value {
     let (req, _rx) = crate::control::ControlRequest::new(method, params);
     match crate::control::handle(app, &egui::Context::default(), &req) {
         crate::control::Outcome::Done(v) => v,
@@ -687,7 +687,7 @@ fn call(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
 }
 
 /// A second document with its own selection, the first one active again.
-fn two_documents() -> PhotocraftApp {
+fn two_documents() -> LienzoApp {
     let mut app = app_with_selection();
     app.session.execute("file.new", json!({"width": 160, "height": 100, "depth": 8})).unwrap();
     app.session.execute("select.rect", json!({"x": 100, "y": 50, "width": 30, "height": 30})).unwrap();
@@ -696,7 +696,7 @@ fn two_documents() -> PhotocraftApp {
     app
 }
 
-fn fingerprint(app: &PhotocraftApp, i: usize) -> (u64, Option<f32>, Option<f32>) {
+fn fingerprint(app: &LienzoApp, i: usize) -> (u64, Option<f32>, Option<f32>) {
     let st = &app.session.documents()[i];
     let sel = st.doc.selection.as_ref();
     (st.revision, sel.map(|s| s.sample_channel(10, 10, 0)), sel.map(|s| s.sample_channel(120, 50, 0)))
@@ -792,7 +792,7 @@ fn the_reason_a_stale_workspace_closed_is_reported() {
 #[test]
 fn sparse_large_preview_counts_coverage_without_a_dense_canvas_mask() {
     let area = Rect::new(0, 0, 100_000, 100_000);
-    let mut selection = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut selection = Surface::new(lienzo_color::PixelFormat::GRAY8);
     selection.write_pixel(99_999, 99_999, &[1.0]);
     selection.write_pixel(2, 3, &[0.5]);
     selection.write_pixel(-1, -1, &[1.0]);
@@ -802,7 +802,7 @@ fn sparse_large_preview_counts_coverage_without_a_dense_canvas_mask() {
     assert_eq!(selected_pixels(Some(&selection), small), 1);
     assert_eq!(preview_ants(Some(&selection), small, 1.0).unwrap().len(), 4);
 
-    let mut inverted = Surface::with_default(photocraft_color::PixelFormat::GRAY8, &[1.0]);
+    let mut inverted = Surface::with_default(lienzo_color::PixelFormat::GRAY8, &[1.0]);
     inverted.write_pixel(2, 3, &[0.0]);
     let smaller = Rect::new(0, 0, 1000, 1000);
     assert_eq!(selected_pixels(Some(&inverted), smaller), 999_999);
@@ -810,12 +810,12 @@ fn sparse_large_preview_counts_coverage_without_a_dense_canvas_mask() {
 }
 
 /// The workspace in a harness on `tool`, and a point over the image.
-fn resize_harness(tool: &str) -> (egui_kittest::Harness<'static, PhotocraftApp>, egui::Pos2) {
+fn resize_harness(tool: &str) -> (egui_kittest::Harness<'static, LienzoApp>, egui::Pos2) {
     let mut app = app_with_selection();
     open(&mut app).unwrap();
     ui(&mut app, json!({"tool": tool}));
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -826,13 +826,13 @@ fn resize_harness(tool: &str) -> (egui_kittest::Harness<'static, PhotocraftApp>,
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     (h, egui::Pos2::new(LEFT_W + 300.0, BAR_H + TAB_H + 300.0))
 }
 
 /// Presses `button` at `at` with `modifiers` held.
-fn pointer_down(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2, button: egui::PointerButton, modifiers: Modifiers) {
+fn pointer_down(h: &mut egui_kittest::Harness<'_, LienzoApp>, at: egui::Pos2, button: egui::PointerButton, modifiers: Modifiers) {
     h.event(egui::Event::ModifiersChanged(modifiers));
     h.event(egui::Event::PointerMoved(at));
     h.run_steps(1);
@@ -841,20 +841,20 @@ fn pointer_down(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2
 }
 
 /// Moves the held pointer from `from` by `by`, in four steps.
-fn pointer_move(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, from: egui::Pos2, by: egui::Vec2) {
+fn pointer_move(h: &mut egui_kittest::Harness<'_, LienzoApp>, from: egui::Pos2, by: egui::Vec2) {
     for k in 1..=4 {
         h.event(egui::Event::PointerMoved(from + by * (k as f32 / 4.0)));
         h.run_steps(1);
     }
 }
 
-fn tap_key(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, key: Key, pressed: bool) {
+fn tap_key(h: &mut egui_kittest::Harness<'_, LienzoApp>, key: Key, pressed: bool) {
     h.event(egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers: Modifiers::NONE });
     h.run_steps(1);
 }
 
 /// A whole drag of `button` from `at` by `by` with `modifiers` held.
-fn pointer_drag(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2, button: egui::PointerButton, modifiers: Modifiers, by: egui::Vec2) {
+fn pointer_drag(h: &mut egui_kittest::Harness<'_, LienzoApp>, at: egui::Pos2, button: egui::PointerButton, modifiers: Modifiers, by: egui::Vec2) {
     pointer_down(h, at, button, modifiers);
     pointer_move(h, at, by);
     h.event(egui::Event::PointerButton { pos: at + by, button, pressed: false, modifiers });
@@ -1054,7 +1054,7 @@ fn escape_mid_resize_restores_the_brush_and_keeps_the_workspace() {
 }
 
 /// The brush circles drawn last frame (the black outline's centre and radius).
-fn brush_circles(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> Vec<(egui::Pos2, f32)> {
+fn brush_circles(h: &egui_kittest::Harness<'_, LienzoApp>) -> Vec<(egui::Pos2, f32)> {
     h.output()
         .shapes
         .iter()

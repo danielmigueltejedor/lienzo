@@ -2,15 +2,15 @@ use serde_json::json;
 
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     app.run("select.rect", json!({"x": 2, "y": 2, "width": 8, "height": 8})).unwrap();
     app.run("select.saveSelection", json!({})).unwrap();
     app
 }
 
-fn channel(app: &PhotocraftApp) -> photocraft_doc::AlphaChannel {
+fn channel(app: &LienzoApp) -> lienzo_doc::AlphaChannel {
     app.session.active().unwrap().doc.channels[0].clone()
 }
 
@@ -73,7 +73,7 @@ fn spot_params_send_solidity_and_alpha_params_send_opacity() {
 #[test]
 fn menu_opens_the_dialog_on_the_targeted_channel_and_refuses_otherwise() {
     let ctx = egui::Context::default();
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     assert!(crate::menus::invoke(&mut empty, &ctx, COMMAND, json!({})).is_err());
 
     let mut app = app();
@@ -126,7 +126,7 @@ fn layer_mask_display_options_set_the_rubylith() {
     // Or with it targeted by `\` (the rubylith), which leaves the Channels target alone.
     app.run("channel.target", json!({"channel": "composite"})).unwrap();
     app.ui.dialogs.clear();
-    app.run(photocraft_engine::mask_view_cmds::OVERLAY_ID, json!({})).unwrap();
+    app.run(lienzo_engine::mask_view_cmds::OVERLAY_ID, json!({})).unwrap();
     app.sync_mask_targets();
     crate::menus::invoke(&mut app, &ctx, COMMAND, json!({})).unwrap();
     assert_eq!(app.ui.dialogs.last().unwrap().fields["channel"], json!("mask"));
@@ -154,7 +154,7 @@ fn value_fields_are_named_for_the_visible_solidity_or_opacity_caption() {
     let labels = |f: Map<String, Value>, body: fn(&mut egui::Ui, &mut Map<String, Value>)| -> Vec<String> {
         let mut h = Harness::builder()
             .with_size(egui::vec2(520.0, 300.0))
-            .with_context_setup(|ctx| crate::PhotocraftApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
+            .with_context_setup(|ctx| crate::LienzoApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
             .build_ui_state(&body, f);
         h.run_steps(2);
         h.query_all_by_role(Role::SpinButton).filter_map(|n| n.accesskit_node().label()).collect()
@@ -200,7 +200,7 @@ fn new_spot_channel_dialog_creates_the_ink_from_the_selection_and_remembers_it()
 #[test]
 fn new_spot_channel_cancel_menu_routing_and_no_document() {
     let ctx = egui::Context::default();
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     assert!(open_new_spot(&mut empty).is_none());
     assert!(crate::menus::invoke(&mut empty, &ctx, NEW_SPOT, json!({})).is_err());
 

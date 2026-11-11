@@ -3545,7 +3545,7 @@ cameraRaw	Color	Kleur
 	Modify Date	Wijzigingsdatum
 	Mosaic	Mozaïek
 	Motion Blur	Bewegingsonscherpte
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Bestanden slepen en neerzetten wordt nog niet ondersteund onder Wayland. Gebruik Bestand › Openen, of start Lienzo onder XWayland met `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Bestanden slepen en neerzetten wordt nog niet ondersteund onder Wayland. Gebruik Bestand › Openen, of start Lienzo onder XWayland met `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Neongloed
 	New Guide Layout	Nieuwe hulplijnindeling
 	New Path	Nieuw pad

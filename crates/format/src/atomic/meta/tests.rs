@@ -46,7 +46,7 @@ mod xattrs {
     #[cfg(target_os = "macos")]
     const TAG: &str = "com.apple.metadata:_kMDItemUserTags";
     #[cfg(not(target_os = "macos"))]
-    const TAG: &str = "user.photocraft.test";
+    const TAG: &str = "user.lienzo.test";
 
     fn set(path: &Path, name: &str, value: &[u8]) -> bool {
         rustix::fs::setxattr(path, name, value, rustix::fs::XattrFlags::empty()).is_ok()
@@ -252,11 +252,11 @@ mod windows {
         let d = TempDir::new("ads");
         let p = d.join("doc.psd");
         atomic_write(&p, b"first").unwrap();
-        std::fs::write(stream(&p, "photocraft.test"), b"side data").unwrap();
+        std::fs::write(stream(&p, "lienzo.test"), b"side data").unwrap();
 
         atomic_write(&p, b"second").unwrap();
 
-        assert_eq!(std::fs::read(stream(&p, "photocraft.test")).unwrap(), b"side data");
+        assert_eq!(std::fs::read(stream(&p, "lienzo.test")).unwrap(), b"side data");
     }
 
     /// #7096: an explicit ACL entry survives, instead of the file falling back to whatever the

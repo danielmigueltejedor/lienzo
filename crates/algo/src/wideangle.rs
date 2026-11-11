@@ -18,8 +18,8 @@
 //! The linear least-squares problems are solved with conjugate gradients. The result is
 //! rendered by textured triangles ([`crate::warp::warp_triangles`]).
 
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 use crate::photo_util::{BandChol, Csr, par_rows, pcg, solve_dense};
@@ -734,7 +734,7 @@ mod tests {
 
     #[test]
     fn no_constraints_is_identity_and_renders() {
-        use photocraft_color::PixelFormat;
+        use lienzo_color::PixelFormat;
         let frame = Rect::new(0, 0, 64, 48);
         let mut s = Surface::new(PixelFormat::RGBA8);
         s.fill_rect(frame, &[0.2, 0.4, 0.6, 1.0]);
@@ -748,7 +748,7 @@ mod tests {
 #[cfg(test)]
 mod tile_tests {
     use super::*;
-    use photocraft_color::PixelFormat;
+    use lienzo_color::PixelFormat;
 
     #[test]
     fn no_gaps_across_tiles() {

@@ -1,8 +1,8 @@
 //! Interleaved 24 MP command timings. The same harness runs on the pre-change base.
-//! `cargo run --release -p photocraft-engine --example multi_channel_bench -- --subset`
-use photocraft_engine::{Session, brush_cmds::LiveStroke};
-use photocraft_geom::Rect;
-use photocraft_paint::StrokePoint;
+//! `cargo run --release -p lienzo-engine --example multi_channel_bench -- --subset`
+use lienzo_engine::{Session, brush_cmds::LiveStroke};
+use lienzo_geom::Rect;
+use lienzo_paint::StrokePoint;
 use serde_json::{Value, json};
 use std::time::Instant;
 
@@ -17,18 +17,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fixture.execute("file.new", json!({"width":6000,"height":4000,"depth":16,"background":"transparent"}))?;
     fixture.execute("layer.new.layer", json!({}))?;
     fixture.edit("synthetic bands", |doc, id| {
-        let surf = doc
-            .layer_mut(id.ok_or(photocraft_engine::EngineError::NoDocument)?)
-            .and_then(|l| l.surface_mut())
-            .ok_or(photocraft_engine::EngineError::NoDocument)?;
+        let surf =
+            doc.layer_mut(id.ok_or(lienzo_engine::EngineError::NoDocument)?).and_then(|l| l.surface_mut()).ok_or(lienzo_engine::EngineError::NoDocument)?;
         for x in (0..6000).step_by(64) {
             let value = 0.15 + (x % 640) as f32 / 1000.0;
             surf.fill_rect(Rect::new(x, 0, (x + 64).min(6000), 4000), &[value, 0.4, 1.0 - value, 0.8]);
         }
         Ok(())
     })?;
-    let layer = fixture.active().and_then(|st| st.active_layer).ok_or(photocraft_engine::EngineError::NoDocument)?;
-    let base = fixture.active().ok_or(photocraft_engine::EngineError::NoDocument)?.doc.clone();
+    let layer = fixture.active().and_then(|st| st.active_layer).ok_or(lienzo_engine::EngineError::NoDocument)?;
+    let base = fixture.active().ok_or(lienzo_engine::EngineError::NoDocument)?.doc.clone();
     let commands: [(&str, Value); 9] = [
         ("image.adjustments.invert", json!({})),
         ("image.adjustments.threshold", json!({"level":128})),

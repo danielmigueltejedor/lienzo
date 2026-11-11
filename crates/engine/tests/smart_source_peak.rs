@@ -7,8 +7,8 @@
 
 #![cfg(target_os = "linux")]
 
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
-use photocraft_engine::{Session, smart_cmds};
+use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
+use lienzo_engine::{Session, smart_cmds};
 use serde_json::json;
 
 fn peak_rss_bytes() -> Option<u64> {
@@ -26,7 +26,7 @@ fn png() -> Vec<u8> {
         [(x * 5 + y) as u8, ((y * 7) ^ x) as u8, ((x * y) % 251) as u8, 255 - ((x / 64 + y / 64) % 4 * 40) as u8]
     });
     let img = Image::from_raw(SIDE, SIDE, ChannelLayout::Rgba, SampleType::U8, px.collect()).unwrap();
-    photocraft_codecs::encode(&img, Format::Png, &EncodeOptions::default()).unwrap()
+    lienzo_codecs::encode(&img, Format::Png, &EncodeOptions::default()).unwrap()
 }
 
 #[test]

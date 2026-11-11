@@ -6,17 +6,17 @@
 use egui::accesskit::{Role, Toggled};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::{LayerContent, LayerId, text::TextAlign};
+use lienzo_doc::{LayerContent, LayerId, text::TextAlign};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 const HORIZONTAL: [&str; 3] = ["Left align text", "Center text", "Right align text"];
 const VERTICAL: [&str; 3] = ["Top align text", "Center text", "Bottom align text"];
 
-fn new_app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn new_app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 400})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -24,25 +24,25 @@ fn new_app(tool: Tool) -> PhotocraftApp {
 }
 
 /// A text layer with `orientation`, made the active layer (selected, not edited).
-fn text_layer(app: &mut PhotocraftApp, orientation: &str) -> LayerId {
+fn text_layer(app: &mut LienzoApp, orientation: &str) -> LayerId {
     let made = app.run("type.create", json!({"text": "AB CD", "x": 400, "y": 100, "orientation": orientation})).unwrap();
     LayerId(made["layer"].as_u64().unwrap())
 }
 
-fn bar(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn bar(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             ui.horizontal(|ui| super::options_bar(app, ui));
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h
 }
 
 /// Which of the two button sets the bar shows; panics on a mix or neither.
-fn shown(h: &Harness<'static, PhotocraftApp>) -> [&'static str; 3] {
+fn shown(h: &Harness<'static, LienzoApp>) -> [&'static str; 3] {
     let has = |label: &str| h.query_by_role_and_label(Role::Button, label).is_some();
     match (has("Top align text") && has("Bottom align text"), has("Left align text") && has("Right align text")) {
         (true, false) => VERTICAL,
@@ -52,11 +52,11 @@ fn shown(h: &Harness<'static, PhotocraftApp>) -> [&'static str; 3] {
     }
 }
 
-fn lit(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn lit(h: &Harness<'static, LienzoApp>, label: &str) -> bool {
     h.get_by_role_and_label(Role::Button, label).accesskit_node().toggled() == Some(Toggled::True)
 }
 
-fn align_of(app: &PhotocraftApp, id: LayerId) -> TextAlign {
+fn align_of(app: &LienzoApp, id: LayerId) -> TextAlign {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Text(t) => t.paragraphs[0].style.align,
         other => panic!("{}", other.kind_name()),

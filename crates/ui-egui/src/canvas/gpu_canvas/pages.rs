@@ -6,7 +6,7 @@ use super::doc_textures::{catch_gpu_errors, init_buffer, tile_uniform};
 use super::resources::{DocTextures, Resources, Tile, f32_bytes};
 use super::texels::{texel_bytes, texels};
 use super::{GpuCanvas, Ordering, wgpu};
-use photocraft_geom::Rect as DRect;
+use lienzo_geom::Rect as DRect;
 
 /// The largest page texture side [`GpuCanvas::upload_page`] accepts (a 512 px page and its apron).
 pub const MAX_PAGE_SIDE: u32 = 1024;
@@ -17,10 +17,10 @@ pub struct PageUpload<'a> {
     pub key: u64,
     pub page: u64,
     pub size: [u32; 2],
-    pub depth: photocraft_doc::SampleType,
+    pub depth: lienzo_doc::SampleType,
     pub factor: u32,
     pub core: DRect,
-    pub buf: &'a photocraft_compose::Buffer,
+    pub buf: &'a lienzo_compose::Buffer,
 }
 
 impl DocTextures {
@@ -33,7 +33,7 @@ impl DocTextures {
 
 impl GpuCanvas {
     /// The GPU bytes one page of `w`×`h` texels takes for a `depth` document of `size`.
-    pub fn page_texture_bytes(&self, depth: photocraft_doc::SampleType, size: [u32; 2], w: u32, h: u32) -> u64 {
+    pub fn page_texture_bytes(&self, depth: lienzo_doc::SampleType, size: [u32; 2], w: u32, h: u32) -> u64 {
         u64::from(w) * u64::from(h) * texel_bytes(self.format_for(depth, size))
     }
 
@@ -43,7 +43,7 @@ impl GpuCanvas {
     /// Writes `buf` (texels at the page's reduction, a part of it) into the page `page` of `key`
     /// already resident: an edit's re-render, without a new texture. False when that page isn't
     /// held or `buf` falls outside it.
-    pub fn update_page(&self, key: u64, page: u64, buf: &photocraft_compose::Buffer) -> bool {
+    pub fn update_page(&self, key: u64, page: u64, buf: &lienzo_compose::Buffer) -> bool {
         let (w, h) = (buf.rect.width(), buf.rect.height());
         if !self.health.is_ok() || w == 0 || h == 0 || buf.px.len() as u64 != u64::from(w) * u64::from(h) {
             return false;
@@ -180,7 +180,7 @@ impl GpuCanvas {
         let Some(res) = renderer.callback_resources.get_mut::<Resources>() else { return };
         res.docs.remove(&key);
         if let Some(c) = res.compositor.as_mut() {
-            c.forget_doc(photocraft_doc::DocId(key));
+            c.forget_doc(lienzo_doc::DocId(key));
         }
     }
 

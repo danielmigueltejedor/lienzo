@@ -3,8 +3,8 @@
 //! canvas right-click layer list). Like Photoshop, Auto-Select hits a type layer anywhere inside its
 //! text's bounds, so a click between letters picks the type rather than the layer under it (#2370).
 
-use photocraft_doc::{Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
+use lienzo_doc::{Document, LayerContent, LayerId};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -159,7 +159,7 @@ fn layers_in_rect_with_locks(doc: &Document, r: Rect, group: bool, skip_position
         {
             continue;
         }
-        let mut b = photocraft_compose::layer_bounds(l, canvas);
+        let mut b = lienzo_compose::layer_bounds(l, canvas);
         if let Some(board) = path.first().and_then(|i| doc.layers.get(*i)).and_then(|t| t.artboard()) {
             b = b.intersect(&board.rect);
         }
@@ -397,11 +397,11 @@ mod tests {
         let mut text = None;
         s.edit("type", |doc, _| {
             // Two "glyphs", (10..14)×(10..20) and (20..24)×(10..20), with a gap between them.
-            let mut cache = photocraft_raster::Surface::new(doc.pixel_format());
+            let mut cache = lienzo_raster::Surface::new(doc.pixel_format());
             for x in [10, 20] {
                 cache.fill_rect(Rect::new(x, 10, x + 4, 20), &[0.0, 0.0, 0.0, 1.0]);
             }
-            let l = photocraft_doc::Layer::new("T", LayerContent::Text(photocraft_doc::TextLayer { cache: Some(cache), ..Default::default() }));
+            let l = lienzo_doc::Layer::new("T", LayerContent::Text(lienzo_doc::TextLayer { cache: Some(cache), ..Default::default() }));
             text = Some(l.id);
             doc.layers.push(l);
             Ok(())

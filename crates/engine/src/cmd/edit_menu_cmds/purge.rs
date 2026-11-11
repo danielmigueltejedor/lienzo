@@ -7,7 +7,7 @@ fn history_bytes(s: &Session, all: bool) -> usize {
     // Purge keeps the snapshots, so the tiles they share with the states aren't freed.
     docs.iter()
         .map(|d| {
-            let snaps: Vec<&photocraft_doc::Document> = d.snapshots.iter().map(|s| &*s.doc).collect();
+            let snaps: Vec<&lienzo_doc::Document> = d.snapshots.iter().map(|s| &*s.doc).collect();
             d.history.unique_bytes_besides(&d.doc, &snaps)
         })
         .sum()
@@ -47,12 +47,12 @@ pub(super) fn purge(s: &mut Session, what: &str) -> Result<Value> {
         }
     }
     if what == "all" {
-        let fx = photocraft_compose::purge_effect_cache();
+        let fx = lienzo_compose::purge_effect_cache();
         if fx > 0 {
             freed += fx;
             items.push("effect cache");
         }
-        let masks = photocraft_compose::masks::purge_cache();
+        let masks = lienzo_compose::masks::purge_cache();
         if masks > 0 {
             freed = freed.saturating_add(masks);
             items.push("mask cache");
@@ -67,17 +67,17 @@ pub(super) fn purge(s: &mut Session, what: &str) -> Result<Value> {
             freed = freed.saturating_add(sources);
             items.push("smart object source cache");
         }
-        let mips = photocraft_paint::purge_mip_cache();
+        let mips = lienzo_paint::purge_mip_cache();
         if mips > 0 {
             freed = freed.saturating_add(mips);
             items.push("brush mip cache");
         }
-        let strokes = photocraft_compose::shape_split::purge_cache();
+        let strokes = lienzo_compose::shape_split::purge_cache();
         if strokes > 0 {
             freed = freed.saturating_add(strokes);
             items.push("shape stroke cache");
         }
-        let luts = photocraft_compose::lut_rows::purge_cache();
+        let luts = lienzo_compose::lut_rows::purge_cache();
         if luts > 0 {
             freed = freed.saturating_add(luts);
             items.push("adjustment table cache");
@@ -102,12 +102,12 @@ pub(super) fn can_purge_histories(s: &Session) -> std::result::Result<(), String
 
 pub(super) fn can_purge_all(s: &Session) -> std::result::Result<(), String> {
     can_purge_histories(s).or_else(|_| can_purge_clipboard(s)).or_else(|_| {
-        if photocraft_compose::effect_cache_bytes() > 0
-            || photocraft_compose::masks::cache_bytes() > 0
+        if lienzo_compose::effect_cache_bytes() > 0
+            || lienzo_compose::masks::cache_bytes() > 0
             || crate::smart_cmds::stack_cache_bytes() > 0
             || crate::smart_cmds::source_cache_bytes() > 0
-            || photocraft_paint::mip_cache_bytes() > 0
-            || photocraft_compose::lut_rows::cache_bytes() > 0
+            || lienzo_paint::mip_cache_bytes() > 0
+            || lienzo_compose::lut_rows::cache_bytes() > 0
         {
             Ok(())
         } else {

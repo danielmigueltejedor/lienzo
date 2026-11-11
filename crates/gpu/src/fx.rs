@@ -1,4 +1,4 @@
-//! Effect maps on the GPU (`photocraft_compose::effects::build_maps`).
+//! Effect maps on the GPU (`lienzo_compose::effects::build_maps`).
 //!
 //! Every enabled effect of a layer becomes a small *map program*: a chain of single-channel
 //! fragment passes over the layer's effect region (shift, dilate, separable Gaussian blur, glow
@@ -25,10 +25,10 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use photocraft_compose::effects::FieldKind;
-use photocraft_doc::{Contour, Effect, GlobalLight, Layer, LayerContent, Pattern};
-use photocraft_geom::{Rect, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use lienzo_compose::effects::FieldKind;
+use lienzo_doc::{Contour, Effect, GlobalLight, Layer, LayerContent, Pattern};
+use lienzo_geom::{Rect, TileCoord};
+use lienzo_raster::{Surface, Tile};
 
 use crate::plan::Kernel;
 
@@ -270,7 +270,7 @@ impl B {
 /// Distance up to which a field must be exact for a band / dilation of width `w`
 /// (`clamp(w + 0.5 - d)`, with `d` up to 1.5 px beyond the pixel distance).
 fn reach_for(w: f32) -> i32 {
-    w.clamp(0.0, photocraft_compose::effects::MAX_REACH).ceil() as i32 + 2
+    w.clamp(0.0, lienzo_compose::effects::MAX_REACH).ceil() as i32 + 2
 }
 
 /// `compose::effects::blur`'s kernel (a tent of the effect size): (radius, normalised weights),
@@ -279,14 +279,14 @@ pub(crate) fn blur_kernel(size: f32) -> Option<(i32, Vec<f32>)> {
     if !size.is_finite() {
         return None;
     }
-    let k = photocraft_compose::effects::tent_kernel(size);
+    let k = lienzo_compose::effects::tent_kernel(size);
     (k.0 > 0).then_some(k)
 }
 
 fn contour_lut(c: &Contour) -> Option<Vec<f32>> {
     match c {
         Contour::Linear => None,
-        Contour::Custom { points, corners, .. } => Some(photocraft_compose::adjust::contour_curve_lut(points, corners)),
+        Contour::Custom { points, corners, .. } => Some(lienzo_compose::adjust::contour_curve_lut(points, corners)),
     }
 }
 
@@ -382,9 +382,8 @@ fn threaded_inside(kind: FieldKind) -> bool {
 /// fields run on all threads inside `distance_field`, from one window. That is also the window the CPU
 /// compositor computes them from, so a rebuilt field is exactly the one it gives.
 fn field_banded(kind: FieldKind, reach: i32, shape: &[f32], region: Rect, out: Rect, halo: i32) -> Vec<f32> {
-    let [f] = fields_in_windows(threaded_inside(kind), shape, region, out, halo, |s, w, h| {
-        [photocraft_compose::effects::distance_field(kind, s, w, h, reach as f32)]
-    });
+    let [f] =
+        fields_in_windows(threaded_inside(kind), shape, region, out, halo, |s, w, h| [lienzo_compose::effects::distance_field(kind, s, w, h, reach as f32)]);
     f
 }
 
@@ -393,7 +392,7 @@ fn field_banded(kind: FieldKind, reach: i32, shape: &[f32], region: Rect, out: R
 pub(crate) fn bevel_fields(reach: i32, shape: &[f32], region: Rect, out: Rect) -> [Vec<f32>; 2] {
     let kind = FieldKind::BevelInside;
     fields_in_windows(threaded_inside(kind), shape, region, out, field_radius(kind, reach) + 1, |s, w, h| {
-        photocraft_compose::effects::bevel_distance_fields(s, w, h, reach as f32)
+        lienzo_compose::effects::bevel_distance_fields(s, w, h, reach as f32)
     })
 }
 
@@ -430,17 +429,17 @@ fn fields_in_windows<const N: usize>(
 }
 
 /// The layer's shape (`compose::layer_shape`) over `r`, in parallel bands. Callers hand the
-/// result back with `photocraft_raster::scratch::give` once they have read it.
-pub(crate) fn shape(doc: &photocraft_doc::Document, layer: &Layer, r: Rect) -> Vec<f32> {
+/// result back with `lienzo_raster::scratch::give` once they have read it.
+pub(crate) fn shape(doc: &lienzo_doc::Document, layer: &Layer, r: Rect) -> Vec<f32> {
     if r.is_empty() {
         return Vec::new();
     }
-    let parts = par_map(bands(r, BAND), |band| photocraft_compose::layer_shape(doc, layer, band));
-    let mut shape = photocraft_raster::scratch::take_cap(parts.iter().map(Vec::len).sum());
+    let parts = par_map(bands(r, BAND), |band| lienzo_compose::layer_shape(doc, layer, band));
+    let mut shape = lienzo_raster::scratch::take_cap(parts.iter().map(Vec::len).sum());
     // A band can be a pooled mask (Transparency Shapes Layer off): hand each back once copied.
     for part in parts {
         shape.extend_from_slice(&part);
-        photocraft_raster::scratch::give(part);
+        lienzo_raster::scratch::give(part);
     }
     shape
 }
@@ -501,17 +500,17 @@ pub(crate) fn shape_key(layer: &Layer, canvas: Rect) -> u64 {
     match &layer.content {
         LayerContent::Fill(f) => {
             format!("{f:?}").hash(&mut h);
-            let fr = photocraft_compose::fill_frame(layer, canvas);
+            let fr = lienzo_compose::fill_frame(layer, canvas);
             (fr.x0, fr.y0, fr.x1, fr.y1, content.is_some()).hash(&mut h);
         }
         // A filled shape's effect shape follows its outline too.
         LayerContent::Shape(sh) => {
             std::mem::discriminant(&layer.content).hash(&mut h);
-            if photocraft_compose::effect_outline(layer).is_some() {
+            if lienzo_compose::effect_outline(layer).is_some() {
                 // The cached maps live in region-local coordinates. Preserve their identity
                 // under translation so sync_fx can verify coverage and reuse them after a move.
                 let mut outline =
-                    sh.path.control_bounds().map_or_else(|| sh.path.clone(), |(x, y, _, _)| sh.path.transform(&photocraft_geom::Affine::translate(-x, -y)));
+                    sh.path.control_bounds().map_or_else(|| sh.path.clone(), |(x, y, _, _)| sh.path.transform(&lienzo_geom::Affine::translate(-x, -y)));
                 // Integer translation can perturb fractional f64 coordinates in the low bits.
                 // Quantize only the fingerprint (1/65536 px); rendering keeps the original path,
                 // and sync_fx still requires exact coverage equality before reusing moved maps.

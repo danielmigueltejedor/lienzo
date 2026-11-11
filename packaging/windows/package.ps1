@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-  Build, sign and package PhotoCraft for Windows.
+  Build, sign and package Lienzo for Windows.
 
 .DESCRIPTION
   Produces, in $env:DIST (default: dist/release):
-    photocraft-<version>-windows-<arch>.msi            installer (WiX v5, per-user by default, per-machine optional)
-    photocraft-<version>-windows-<arch>-portable.zip   photocraft.exe + photocraft-cli.exe + portable.txt
-    photocraft-<version>-windows-<arch>-symbols.zip    photocraft.pdb + photocraft_cli.pdb (optional, for profilers)
+    lienzo-<version>-windows-<arch>.msi            installer (WiX v5, per-user by default, per-machine optional)
+    lienzo-<version>-windows-<arch>-portable.zip   lienzo.exe + lienzo-cli.exe + portable.txt
+    lienzo-<version>-windows-<arch>-symbols.zip    lienzo.pdb + lienzo_cli.pdb (optional, for profilers)
 
   The binaries link the C runtime statically (+crt-static), so neither the MSI nor the portable
   zip needs the Visual C++ redistributable. Signing is delegated to sign.ps1 (skipped with a
@@ -35,7 +35,7 @@ function Invoke-Native([string] $What, [scriptblock] $Block) {
 }
 
 # The version lives in one place: [workspace.package] version in the root Cargo.toml.
-$Version = $env:PHOTOCRAFT_VERSION
+$Version = $env:LIENZO_VERSION
 if (-not $Version) {
   $inPkg = $false
   foreach ($line in Get-Content (Join-Path $Root 'Cargo.toml')) {
@@ -52,10 +52,10 @@ $Dist = if ($env:DIST) { $env:DIST } else { Join-Path $Root 'dist\release' }
 $TargetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $Root 'target' }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 
-if (-not $env:PHOTOCRAFT_BUILD_SHA) { $env:PHOTOCRAFT_BUILD_SHA = (git -C $Root rev-parse HEAD 2>$null) }
-if (-not $env:PHOTOCRAFT_BUILD_DATE) { $env:PHOTOCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd') }
+if (-not $env:LIENZO_BUILD_SHA) { $env:LIENZO_BUILD_SHA = (git -C $Root rev-parse HEAD 2>$null) }
+if (-not $env:LIENZO_BUILD_DATE) { $env:LIENZO_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd') }
 
-Write-Output "PhotoCraft $Version for Windows $Arch ($Target)"
+Write-Output "Lienzo $Version for Windows $Arch ($Target)"
 
 if (-not $SkipBuild) {
   # Static CRT: no VC++ redistributable needed. Scoped to the target so host build scripts and
@@ -63,8 +63,8 @@ if (-not $SkipBuild) {
   $flagVar = 'CARGO_TARGET_' + ($Target.ToUpper() -replace '-', '_') + '_RUSTFLAGS'
   [Environment]::SetEnvironmentVariable($flagVar, '-C target-feature=+crt-static')
   # Fail the build (rather than warn) if the icon/VERSIONINFO can't be embedded.
-  $env:PHOTOCRAFT_REQUIRE_WINRES = '1'
-  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p photocraft -p photocraft-cli --features heif --target $Target }
+  $env:LIENZO_REQUIRE_WINRES = '1'
+  Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p lienzo -p lienzo-cli --features heif --target $Target }
 }
 
 $Bin = Join-Path $TargetDir "$Target\release"
@@ -79,7 +79,7 @@ function Get-PeHeader([string] $Path) {
   return @{ Machine = [BitConverter]::ToUInt16($bytes, $pe + 4); Subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C) }
 }
 $Machine = switch ($Arch) { 'x64' { 0x8664 } 'x86' { 0x14C } 'arm64' { 0xAA64 } }
-foreach ($check in @(@('photocraft.exe', 2), @('photocraft-cli.exe', 3))) {
+foreach ($check in @(@('lienzo.exe', 2), @('lienzo-cli.exe', 3))) {
   $h = Get-PeHeader (Join-Path $Bin $check[0])
   if ($h.Machine -ne $Machine) { throw "$($check[0]) is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }
   if ($h.Subsystem -ne $check[1]) { throw "$($check[0]) has PE subsystem $($h.Subsystem), expected $($check[1])" }
@@ -88,9 +88,9 @@ foreach ($check in @(@('photocraft.exe', 2), @('photocraft-cli.exe', 3))) {
 $Stage = Join-Path $TargetDir "windows-package\$Arch"
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
-Copy-Item (Join-Path $Bin 'photocraft.exe'), (Join-Path $Bin 'photocraft-cli.exe') $Stage
+Copy-Item (Join-Path $Bin 'lienzo.exe'), (Join-Path $Bin 'lienzo-cli.exe') $Stage
 
-& (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'photocraft.exe') (Join-Path $Stage 'photocraft-cli.exe')
+& (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'lienzo.exe') (Join-Path $Stage 'lienzo-cli.exe')
 
 # ---- font notices for the MSI ------------------------------------------------------------------
 # The portable ZIP already carries these notices; stage the complete files before MSI creation too.
@@ -108,7 +108,7 @@ if ($env:CRAFT_FONTS_DIR) {
 # ---- end font notices for the MSI --------------------------------------------------------------
 
 # ---- MSI ---------------------------------------------------------------------------------------
-# The setup wizard's art, drawn here from the app icon so the MSI shows PhotoCraft rather than
+# The setup wizard's art, drawn here from the app icon so the MSI shows Lienzo rather than
 # WiX's stock bitmaps: a 493x58 banner across the top of the inner pages (the page title is drawn
 # over its left side, so that stays white) and a 493x312 backdrop for the Welcome and Finish pages
 # (their text sits on the right; the left 164 px are ours). Both must be 24-bit BMPs.
@@ -143,15 +143,15 @@ function New-InstallerArt([string] $IconPng, [string] $BannerOut, [string] $Dial
 }
 $Banner = Join-Path $Stage 'installer-banner.bmp'
 $Dialog = Join-Path $Stage 'installer-dialog.bmp'
-New-InstallerArt (Join-Path $Root 'assets\app-icon\hicolor\256x256\apps\ai.storyteller.photocraft.png') $Banner $Dialog
+New-InstallerArt (Join-Path $Root 'assets\app-icon\hicolor\256x256\apps\dev.danielmiguelt.Lienzo.png') $Banner $Dialog
 
-$Msi = Join-Path $Dist "photocraft-$Version-windows-$Arch.msi"
+$Msi = Join-Path $Dist "lienzo-$Version-windows-$Arch.msi"
 & (Join-Path $PSScriptRoot 'check-icons.ps1')
 Invoke-Native 'wix build' {
-  wix build (Join-Path $PSScriptRoot 'photocraft.wxs') -arch $Arch `
+  wix build (Join-Path $PSScriptRoot 'lienzo.wxs') -arch $Arch `
     -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext `
-    -culture en-US -loc (Join-Path $PSScriptRoot 'photocraft.en-us.wxl') `
-    -d "Version=$MsiVersion" -d "DisplayVersion=$Version" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\photocraft.ico')" `
+    -culture en-US -loc (Join-Path $PSScriptRoot 'lienzo.en-us.wxl') `
+    -d "Version=$MsiVersion" -d "DisplayVersion=$Version" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\lienzo.ico')" `
     -d "BannerBmp=$Banner" -d "DialogBmp=$Dialog" `
     -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" `
     -o $Msi
@@ -167,7 +167,7 @@ Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Ms
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
 # ---- portable zip ------------------------------------------------------------------------------
-$Portable = Join-Path $TargetDir "windows-package\photocraft-$Version-windows-$Arch-portable"
+$Portable = Join-Path $TargetDir "windows-package\lienzo-$Version-windows-$Arch-portable"
 Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
@@ -183,40 +183,40 @@ if ($env:CRAFT_FONTS_DIR) {
     if (Test-Path $lic) { Copy-Item $lic (Join-Path $Portable "OFL-$($_.Name).txt") }
   }
 }
-# portable.txt beside photocraft.exe switches on portable mode: settings, presets and recovery
-# files go to PhotoCraftData\ next to the exe instead of %APPDATA% (#228; see app_dirs.rs).
+# portable.txt beside lienzo.exe switches on portable mode: settings, presets and recovery
+# files go to LienzoData\ next to the exe instead of %APPDATA% (#228; see app_dirs.rs).
 Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
-$Zip = Join-Path $Dist "photocraft-$Version-windows-$Arch-portable.zip"
+$Zip = Join-Path $Dist "lienzo-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 # The archive holds the files themselves. `-Path <folder>` puts the folder *in* the archive, so
-# photocraft.exe came out one level down and portable mode needs portable.txt beside the exe
+# lienzo.exe came out one level down and portable mode needs portable.txt beside the exe
 # wherever it is extracted (#7699); `<folder>\*` archives the contents, as windows7.ps1 does in
 # VectorCraft. Checked below, since nothing else reads the layout back.
 Compress-Archive -Path (Join-Path $Portable '*') -DestinationPath $Zip
 $Check = Join-Path $TargetDir 'windows-package\portable-zip-check'
 Remove-Item -Recurse -Force $Check -ErrorAction SilentlyContinue
 Expand-Archive -Path $Zip -DestinationPath $Check -Force
-foreach ($f in 'photocraft.exe', 'photocraft-cli.exe', 'portable.txt') {
+foreach ($f in 'lienzo.exe', 'lienzo-cli.exe', 'portable.txt') {
   if (-not (Test-Path (Join-Path $Check $f))) { throw "the portable zip has no $f at its root: $Zip" }
 }
 Remove-Item -Recurse -Force $Check -ErrorAction SilentlyContinue
 
 # ---- debug symbols -----------------------------------------------------------------------------
-# The linker writes a PDB beside each exe, and the exe names it without a path (photocraft.pdb,
-# photocraft_cli.pdb). They ship as a separate, optional download so profilers (Windows Performance
-# Analyzer, Superluminal, Visual Studio) show PhotoCraft's function names for the released
+# The linker writes a PDB beside each exe, and the exe names it without a path (lienzo.pdb,
+# lienzo_cli.pdb). They ship as a separate, optional download so profilers (Windows Performance
+# Analyzer, Superluminal, Visual Studio) show Lienzo's function names for the released
 # binaries (#688). Signing doesn't change the PDB signature an exe records, so they match the
 # signed exes; a rebuild of the same commit writes a PDB that doesn't.
-$Symbols = Join-Path $TargetDir "windows-package\photocraft-$Version-windows-$Arch-symbols"
+$Symbols = Join-Path $TargetDir "windows-package\lienzo-$Version-windows-$Arch-symbols"
 Remove-Item -Recurse -Force $Symbols -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Symbols | Out-Null
-foreach ($pdb in 'photocraft.pdb', 'photocraft_cli.pdb') {
+foreach ($pdb in 'lienzo.pdb', 'lienzo_cli.pdb') {
   $p = Join-Path $Bin $pdb
   if (-not (Test-Path $p)) { throw "$pdb is missing from $($Bin), where the release build writes it" }
   Copy-Item $p $Symbols
 }
 Copy-Item (Join-Path $PSScriptRoot 'symbols.txt') $Symbols
-$SymbolsZip = Join-Path $Dist "photocraft-$Version-windows-$Arch-symbols.zip"
+$SymbolsZip = Join-Path $Dist "lienzo-$Version-windows-$Arch-symbols.zip"
 Remove-Item -Force $SymbolsZip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Symbols -DestinationPath $SymbolsZip
 
@@ -224,8 +224,8 @@ Compress-Archive -Path $Symbols -DestinationPath $SymbolsZip
 # here; .github/workflows/windows-arm64.yml installs and runs it on ARM64 instead.
 $HostArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
 if ($Arch -ne 'arm64' -or $HostArch -eq 'arm64') {
-  Invoke-Native 'photocraft-cli --version' { & (Join-Path $Stage 'photocraft-cli.exe') --version }
+  Invoke-Native 'lienzo-cli --version' { & (Join-Path $Stage 'lienzo-cli.exe') --version }
 } else {
-  Write-Output "skipping photocraft-cli --version: an $Arch build doesn't run on this $HostArch machine"
+  Write-Output "skipping lienzo-cli --version: an $Arch build doesn't run on this $HostArch machine"
 }
 Get-Item $Msi, $Zip, $SymbolsZip | Format-Table Name, Length

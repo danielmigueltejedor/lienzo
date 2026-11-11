@@ -4,8 +4,8 @@ use super::*;
 use crate::menus::invoke as menu;
 
 /// One 4 × 2 inch document at 100 ppi, with the rulers in `unit`.
-fn app(unit: &str) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(unit: &str) -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 200, "resolution": 100})).unwrap();
     app.run("prefs.set", json!({"path": "unitsAndRulers.rulers", "value": unit})).unwrap();
     app.sync_views();
@@ -13,19 +13,19 @@ fn app(unit: &str) -> (PhotocraftApp, egui::Context) {
 }
 
 /// Open New Guide through the same menu entry used by the shell.
-fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> u64 {
+fn open(app: &mut LienzoApp, ctx: &egui::Context) -> u64 {
     menu(app, ctx, "view.newGuide", json!({})).unwrap()["dialog"].as_u64().unwrap()
 }
 
 /// Change the typed orientation and position without confirming the dialog.
-fn set(app: &mut PhotocraftApp, d: u64, orientation: &str, position: &str) {
+fn set(app: &mut LienzoApp, d: u64, orientation: &str, position: &str) {
     let f = &mut app.ui.dialog_mut(d).unwrap().fields;
     f.insert("orientation".into(), json!(orientation));
     f.insert("position".into(), json!(position));
 }
 
 /// Read committed guide positions, excluding any local draft preview.
-fn guides(app: &PhotocraftApp) -> (Vec<f64>, Vec<f64>) {
+fn guides(app: &LienzoApp) -> (Vec<f64>, Vec<f64>) {
     let g = &app.session.active().unwrap().doc.guides;
     (g.horizontal.clone(), g.vertical.clone())
 }
@@ -96,7 +96,7 @@ fn remembered_values_that_no_longer_parse_are_ignored() {
 }
 
 /// Read the colour stored on a committed guide.
-fn color_of(app: &PhotocraftApp, vertical: bool, position: f64) -> Option<[u8; 3]> {
+fn color_of(app: &LienzoApp, vertical: bool, position: f64) -> Option<[u8; 3]> {
     app.session.active().unwrap().doc.guides.color(vertical, position)
 }
 
@@ -166,7 +166,7 @@ fn position_tab_and_shift_tab_select_all_in_new_and_edit_dialogs() {
                 crate::guide_select::select(&mut app, true, 0);
             }
             let mut h = Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
             let d = if editing { open_edit(h.state_mut()).unwrap() } else { open(h.state_mut(), &ctx) };
             h.run_steps(3);
             h.key_press_modifiers(modifiers, egui::Key::Tab);
@@ -196,7 +196,7 @@ fn focusing_and_recolouring_preserve_the_exact_guide_position() {
             crate::guide_select::select(&mut app, true, 0);
             let history = app.session.active().unwrap().history.past_len();
             let mut h = Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
             let d = open_edit(h.state_mut()).unwrap();
             if rulers == "pixels" {
                 assert_eq!(h.state_mut().ui.dialog_mut(d).unwrap().fields["position"], "13 px");
@@ -233,7 +233,7 @@ fn retyping_the_rounded_readout_is_an_intentional_position_edit() {
     app.run(COMMAND, json!({"orientation": "vertical", "position": 12.5})).unwrap();
     crate::guide_select::select(&mut app, true, 0);
     let mut h = Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
     let d = open_edit(h.state_mut()).unwrap();
     h.run_steps(3);
     h.get_by_label("Position").click();
@@ -254,7 +254,7 @@ fn retyping_the_rounded_readout_is_an_intentional_position_edit() {
 
 // These regressions exercise the ordinary dialog handlers, not a separate model.
 /// Open a draft on the first of two guides and propose moving it to 30 px.
-fn edit_fixture() -> (PhotocraftApp, u64) {
+fn edit_fixture() -> (LienzoApp, u64) {
     let (mut app, _) = app("pixels");
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 10})).unwrap();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 20})).unwrap();
@@ -307,7 +307,7 @@ fn draft_unchanged_confirmation_preserves_redo() {
 fn draft_preview_is_isolated_and_invalid_text_keeps_the_last_good_preview() {
     let (mut app, id) = edit_fixture();
     crate::guide_edit::sync(&mut app);
-    let shown = |app: &PhotocraftApp| edit_preview(app, &app.session.active().unwrap().doc).unwrap().vertical.clone();
+    let shown = |app: &LienzoApp| edit_preview(app, &app.session.active().unwrap().doc).unwrap().vertical.clone();
     assert_eq!(shown(&app), vec![30.0, 20.0]);
     assert_eq!(guides(&app).1, vec![10.0, 20.0]);
     assert_eq!(app.session.active().unwrap().history.past_len(), 2);
@@ -416,11 +416,11 @@ fn refused_edit_shows_the_error_and_typed_fields_in_the_dialog() {
     app.automation_input = true;
     app.services.automation_command = Some(Box::new(|_, _| Err("guide edits are denied".into())));
     assert!(crate::dialogs::confirm(&mut app, id).is_err());
-    let evidence = std::env::var_os("PHOTOCRAFT_GUIDE_RETRY_EVIDENCE");
+    let evidence = std::env::var_os("LIENZO_GUIDE_RETRY_EVIDENCE");
     let builder = egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0));
     let builder = if evidence.is_some() { builder.wgpu() } else { builder };
     let mut h = builder.build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(3);

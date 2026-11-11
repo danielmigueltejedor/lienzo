@@ -2,22 +2,22 @@ use serde_json::{Map, Value, json};
 
 use super::*;
 
-fn app(dpi: f64, depth: u64) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(dpi: f64, depth: u64) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 40, "height": 20, "mode": "grayscale", "depth": depth, "resolution": dpi})).unwrap();
     app
 }
 
-fn open(app: &mut PhotocraftApp) -> u64 {
+fn open(app: &mut LienzoApp) -> u64 {
     crate::filter_dialog::open(app, COMMAND).unwrap()
 }
 
-fn fields(app: &PhotocraftApp, id: u64) -> Map<String, Value> {
+fn fields(app: &LienzoApp, id: u64) -> Map<String, Value> {
     app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone()
 }
 
 /// The text the body draws for `f`, and `f` after the frame.
-fn drawn(app: &PhotocraftApp, mut f: Map<String, Value>) -> (Vec<String>, Map<String, Value>) {
+fn drawn(app: &LienzoApp, mut f: Map<String, Value>) -> (Vec<String>, Map<String, Value>) {
     fn collect(shape: &egui::Shape, text: &mut Vec<String>) {
         match shape {
             egui::Shape::Text(shape) => text.push(shape.galley.job.text.clone()),
@@ -89,7 +89,7 @@ fn ok_resamples_to_the_output_resolution() {
         d.fields.insert("resolution".into(), json!(144));
         crate::dialogs::confirm(&mut app, id).unwrap();
         let doc = &app.session.active().unwrap().doc;
-        assert_eq!((doc.size.width, doc.size.height, doc.resolution_dpi, doc.mode), (80, 40, 144.0, photocraft_color::ColorMode::Bitmap), "{depth}");
+        assert_eq!((doc.size.width, doc.size.height, doc.resolution_dpi, doc.mode), (80, 40, 144.0, lienzo_color::ColorMode::Bitmap), "{depth}");
     }
 }
 
@@ -101,7 +101,7 @@ fn ok_with_custom_pattern_and_halftone_screen_converts() {
         app.ui.dialog_mut(id).unwrap().fields.insert("method".into(), json!(method));
         crate::dialogs::confirm(&mut app, id).unwrap();
         let doc = &app.session.active().unwrap().doc;
-        assert_eq!((doc.size.width, doc.mode), (40, photocraft_color::ColorMode::Bitmap), "{method}");
+        assert_eq!((doc.size.width, doc.mode), (40, lienzo_color::ColorMode::Bitmap), "{method}");
     }
 }
 
@@ -112,5 +112,5 @@ fn the_preview_keeps_the_canvas_size() {
     let p = json!({"method": "threshold", "resolution": 144});
     let shown = crate::filter_dialog::preview_document(&st.doc, st.active_layer, COMMAND, &p, 1).unwrap();
     assert_eq!((shown.size.width, shown.size.height), (40, 20));
-    assert_eq!(shown.mode, photocraft_color::ColorMode::Bitmap);
+    assert_eq!(shown.mode, lienzo_color::ColorMode::Bitmap);
 }

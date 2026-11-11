@@ -2,8 +2,8 @@
 //! is the one decoding the whole image gives, for every layout and depth, and an image over the
 //! old 2^30 px limit opens.
 
-use photocraft_codecs::{self as codecs, ChannelLayout, EncodeOptions, Format, Image, SampleType, TiffCompression};
-use photocraft_doc::LayerContent;
+use lienzo_codecs::{self as codecs, ChannelLayout, EncodeOptions, Format, Image, SampleType, TiffCompression};
+use lienzo_doc::LayerContent;
 
 /// A smooth pattern with some detail, in `layout` and `sample`.
 fn pattern(w: u32, h: u32, layout: ChannelLayout, sample: SampleType) -> Image {
@@ -17,7 +17,7 @@ fn tiff(img: &Image, compression: TiffCompression) -> Vec<u8> {
 }
 
 /// The layer's pixels as the codec's interleaved bytes.
-fn layer_bytes(r: &photocraft_io::ImportResult) -> Vec<u8> {
+fn layer_bytes(r: &lienzo_io::ImportResult) -> Vec<u8> {
     let d = &r.document;
     let [layer] = &d.layers[..] else { panic!("{} layers", d.layers.len()) };
     let LayerContent::Raster(s) = &layer.content else { panic!("not a raster layer") };
@@ -41,7 +41,7 @@ fn every_layout_opens_as_the_whole_image_decode_does() {
             let what = format!("{layout:?} {sample:?} {compression:?}");
             let img = pattern(301, 257, layout, sample);
             let bytes = tiff(&img, compression);
-            let r = photocraft_io::import("t.tif", &bytes).unwrap_or_else(|e| panic!("{what}: {e}"));
+            let r = lienzo_io::import("t.tif", &bytes).unwrap_or_else(|e| panic!("{what}: {e}"));
             let decoded = codecs::decode(&bytes).unwrap();
             let target = match layout {
                 ChannelLayout::Gray | ChannelLayout::GrayA => ChannelLayout::GrayA,
@@ -75,7 +75,7 @@ fn a_single_strip_tiff_opens_as_the_whole_image_decode_does() {
     let mut f = b"II*\0\0\0\0\0".to_vec();
     f.extend_from_slice(&strip);
     let bytes = rgb_tiff_directory(f, w, h, h, &[8], &[strip.len() as u32]);
-    let r = photocraft_io::import("one-strip.tif", &bytes).unwrap();
+    let r = lienzo_io::import("one-strip.tif", &bytes).unwrap();
     let decoded = codecs::decode(&bytes).unwrap();
     assert_eq!(decoded.data(), img.data());
     assert!(layer_bytes(&r) == decoded.convert(ChannelLayout::Rgba, SampleType::U8).data(), "pixels");
@@ -171,7 +171,7 @@ fn rgb_tiff_directory(mut f: Vec<u8>, w: u32, h: u32, rows: u32, offsets: &[u32]
     f
 }
 
-/// Opt-in, release: `cargo test --release -p photocraft-io --test it -- tiff_banded_import:: --ignored
+/// Opt-in, release: `cargo test --release -p lienzo-io --test it -- tiff_banded_import:: --ignored
 /// --nocapture`. Opens a 35,000 × 35,000 px TIFF (1.2 GP, the size from #8169's second report;
 /// it failed with "1225000000 pixels exceed max 1073741824"). `BANNER=1` opens the 117,504 ×
 /// 22,464 px banner from #8456 instead (2.64 GP; about 11 GB of RAM), `SIZE=<w>x<h>` any size.
@@ -185,7 +185,7 @@ fn opens_a_tiff_over_a_gigapixel() {
     eprintln!("built a {w}x{h} TIFF of {} MB in {:.1?}", bytes.len() / 1_000_000, t.elapsed());
     let before = peak_rss();
     let t = std::time::Instant::now();
-    let r = photocraft_io::import("big.tif", &bytes).unwrap();
+    let r = lienzo_io::import("big.tif", &bytes).unwrap();
     let took = t.elapsed();
     let d = &r.document;
     assert_eq!((d.size.width, d.size.height), (w, h));
@@ -193,7 +193,7 @@ fn opens_a_tiff_over_a_gigapixel() {
     for (x, y) in [(0, 0), (w - 1, h - 1), (w / 2, h / 2), (5000.min(w - 1), 21_000.min(h - 1))] {
         let band = (y / 997) as u8;
         let want = [band.wrapping_mul(40), (x / 1024) as u8, 200, 255];
-        assert_eq!(s.to_interleaved(photocraft_geom::Rect::new(x as i32, y as i32, x as i32 + 1, y as i32 + 1)), want, "pixel {x},{y}");
+        assert_eq!(s.to_interleaved(lienzo_geom::Rect::new(x as i32, y as i32, x as i32 + 1, y as i32 + 1)), want, "pixel {x},{y}");
     }
     let layer_gb = u64::from(w) * u64::from(h) * 4;
     eprintln!(
@@ -213,8 +213,8 @@ fn a_tiff_larger_than_free_memory_is_refused() {
     let (w, h) = (300_000, 300_000);
     let bytes = black_rgb_tiff(w, h);
     let layer = u64::from(w) * u64::from(h) * 4;
-    let free = photocraft_io::memory::available().unwrap();
+    let free = lienzo_io::memory::available().unwrap();
     assert!(free < layer, "this machine has {free} bytes free, enough for the {layer} byte layer");
-    let e = photocraft_io::import("huge.tif", &bytes).map(|_| ()).unwrap_err().to_string();
+    let e = lienzo_io::import("huge.tif", &bytes).map(|_| ()).unwrap_err().to_string();
     assert!(e.contains("not enough memory to open this 300000 × 300000 px image"), "{e}");
 }

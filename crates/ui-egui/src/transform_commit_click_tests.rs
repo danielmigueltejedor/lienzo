@@ -4,16 +4,16 @@
 
 use egui::{Modifiers, PointerButton, Pos2};
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform, tool_event};
 
 /// A 200 × 200 document with a red block (x 20..60, y 20..60) on layer "Paint", Free Transform
 /// open on it, and the box moved 10 px to the right as in the measurement.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
@@ -30,11 +30,11 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn click(app: &mut PhotocraftApp, p: [f64; 2]) {
+fn click(app: &mut LienzoApp, p: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: p[0], y: p[1] }, Modifiers::NONE);
 }
@@ -77,7 +77,7 @@ fn a_click_on_the_pasteboard_commits_one_free_transform_step() {
 /// (the click doesn't pick the layer under it).
 #[test]
 fn a_click_on_another_layers_pixels_commits_and_keeps_the_selection() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
@@ -107,7 +107,7 @@ fn a_click_on_another_layers_pixels_commits_and_keeps_the_selection() {
 /// another layer: the box stays open.
 #[test]
 fn a_click_on_a_layer_linked_after_the_box_opened_keeps_it_open() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
@@ -141,7 +141,7 @@ fn a_click_on_a_layer_linked_after_the_box_opened_keeps_it_open() {
 /// covered layer.
 #[test]
 fn a_click_on_a_grouped_layer_covering_another_layer_keeps_the_box_open() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
@@ -201,9 +201,9 @@ fn a_drag_outside_the_box_still_rotates() {
 }
 
 /// 60 frames a second, so the second click of a double-click lands inside egui's delay.
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_step_dt(1.0 / 60.0).with_size(egui::vec2(1200.0, 800.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -212,12 +212,12 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn screen(app: &PhotocraftApp, p: [f64; 2]) -> Pos2 {
+fn screen(app: &LienzoApp, p: [f64; 2]) -> Pos2 {
     let v = &app.ui.views[0];
     let xf = ViewXform {
         rect: crate::rulers::content_rect(app, app.last_canvas_rect),
@@ -230,7 +230,7 @@ fn screen(app: &PhotocraftApp, p: [f64; 2]) -> Pos2 {
     xf.to_screen(p[0] as f32, p[1] as f32)
 }
 
-fn double_click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn double_click(h: &mut Harness<'static, LienzoApp>, p: Pos2) {
     h.hover_at(p);
     h.run_steps(1);
     for pressed in [true, false, true, false] {

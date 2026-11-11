@@ -7,28 +7,28 @@ use crate::color_picker_ui::{open_for_field, open_requested, request, request_fi
 use crate::crop_shield::ShieldColor;
 use crate::state::DialogKind;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 16, "height": 12})).unwrap();
     app
 }
 
-fn fields(app: &PhotocraftApp, id: u64) -> &Map<String, Value> {
+fn fields(app: &LienzoApp, id: u64) -> &Map<String, Value> {
     &app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields
 }
 
-fn past(app: &PhotocraftApp) -> usize {
+fn past(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
 /// The Picker's colour changes, as a drag in it or `ui.dialog.set` changes it, and a frame passes.
-fn pick(app: &mut PhotocraftApp, picker: u64, color: &str) {
+fn pick(app: &mut LienzoApp, picker: u64, color: &str) {
     app.ui.dialog_mut(picker).unwrap().fields.insert("color".into(), json!(color));
     sync(app);
 }
 
 /// Edit › Fill on Color…, with its Color Picker open over it as its Color… choice opens it.
-fn fill_with_picker(app: &mut PhotocraftApp) -> (u64, u64) {
+fn fill_with_picker(app: &mut LienzoApp) -> (u64, u64) {
     let fill = crate::fill_ui::open(app);
     let f = &mut app.ui.dialog_mut(fill).unwrap().fields;
     f.insert("contents".into(), json!("color"));
@@ -112,7 +112,7 @@ fn derived_settings_are_rebuilt_from_the_opening_ones() {
     let before = fields(&app, parent).clone();
     let picker = open_for_field(&mut app, "Color Picker (Result)", [0.0; 3], parent, "picked");
     // The dialog's body consumes the colour each frame, as Replace Color's does.
-    let consume = |app: &mut PhotocraftApp| {
+    let consume = |app: &mut LienzoApp| {
         let f = &mut app.ui.dialog_mut(parent).unwrap().fields;
         let picked = f.remove("picked").unwrap();
         let hue = f["hue"].as_i64().unwrap();
@@ -210,7 +210,7 @@ fn a_previewed_colour_is_no_dialog_undo_step() {
     let mut app = app();
     let (fill, picker) = fill_with_picker(&mut app);
     crate::edit_history::track_dialogs(&mut app, &ctx);
-    let undo = |app: &mut PhotocraftApp| {
+    let undo = |app: &mut LienzoApp| {
         let mut now: Map<String, Value> = fields(app, fill).iter().filter(|(k, _)| !k.starts_with("__")).map(|(k, v)| (k.clone(), v.clone())).collect();
         app.dialog_edits.get_mut(&fill).unwrap().step(&mut now, crate::edit_history::Step::Undo).then_some(now)
     };
@@ -267,7 +267,7 @@ fn control_edits_preview_at_once() {
     let ctx = egui::Context::default();
     let mut app = app();
     let (fill, picker) = fill_with_picker(&mut app);
-    let call = |app: &mut PhotocraftApp, method: &str, params: Value| {
+    let call = |app: &mut LienzoApp, method: &str, params: Value| {
         let (req, _rx) = crate::control::ControlRequest::new(method, params);
         match crate::control::handle(app, &ctx, &req) {
             crate::control::Outcome::Done(v) => v,
@@ -287,7 +287,7 @@ fn control_edits_preview_at_once() {
 #[test]
 fn the_dialog_shows_the_colour_while_the_picker_is_open() {
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_max_steps(64).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app());
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let (fill, picker) = fill_with_picker(h.state_mut());
     h.run_steps(3);
     h.state_mut().ui.dialog_mut(picker).unwrap().fields.insert("color".into(), json!("#336699"));
@@ -308,7 +308,7 @@ fn a_pickers_target_stays_the_dialog_it_opened_on() {
     let mut app = app();
     let (fill, picker) = fill_with_picker(&mut app);
     let other = app.ui.open_dialog(DialogKind::Command, Map::new());
-    let set = |app: &mut PhotocraftApp, field: &str, value: Value| {
+    let set = |app: &mut LienzoApp, field: &str, value: Value| {
         let (req, _rx) = crate::control::ControlRequest::new("ui.dialog.set", json!({"dialog": picker, "field": field, "value": value}));
         let crate::control::Outcome::Done(r) = crate::control::handle(app, &ctx, &req) else { panic!("an immediate reply") };
         r["ok"].as_bool()

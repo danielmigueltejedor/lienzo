@@ -3,18 +3,18 @@
 //!
 //! Measured in Photoshop: 800 × 500 document, frame = whole canvas, free ratio, Auto Center
 //! Preview off, ⇧-drag of the bottom-right corner by (−100, −50) px commits 706 × 441 (the drag
-//! projected onto (800, 500) shortens the frame by 11.8 %). PhotoCraft let the larger relative
+//! projected onto (800, 500) shortens the frame by 11.8 %). Lienzo let the larger relative
 //! extent win and committed 720 × 450.
 //!
 //! Driven through `ui.pointer`, as an agent or the canvas sends the drag; no GPU needed. The Auto
 //! Center Preview test sends screen points through the view instead, as the mouse does, since the
 //! view pans with the frame during that drag.
 
-use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::{ToolEvent, ViewXform, tool_event};
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
-use photocraft_ui_egui::crop_ui;
+use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::{ToolEvent, ViewXform, tool_event};
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::crop_ui;
 use serde_json::{Value, json};
 
 /// The measured ⇧ drag.
@@ -30,11 +30,11 @@ struct Setup {
 }
 
 /// An 800 × 500 document at 100 % in a canvas it fits, the Crop tool's frame up.
-fn crop_app(s: Setup) -> PhotocraftApp {
+fn crop_app(s: Setup) -> LienzoApp {
     let doc = Document::with_background("crop", Size::new(800, 500), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.add_document(doc, None);
-    let mut app = PhotocraftApp::new(session, Default::default());
+    let mut app = LienzoApp::new(session, Default::default());
     app.sync_views();
     app.ui.extras.snap = s.snap;
     app.ui.extras.guides = true;
@@ -51,7 +51,7 @@ fn crop_app(s: Setup) -> PhotocraftApp {
     app
 }
 
-fn pointer(app: &mut PhotocraftApp, params: Value) {
+fn pointer(app: &mut LienzoApp, params: Value) {
     let ctx = egui::Context::default();
     let (req, _rx) = ControlRequest::new("ui.pointer", params);
     let Outcome::Done(v) = handle(app, &ctx, &req) else { panic!("ui.pointer didn't finish") };
@@ -59,26 +59,26 @@ fn pointer(app: &mut PhotocraftApp, params: Value) {
 }
 
 /// The frame's (turned) bottom-right corner, where the drags start.
-fn corner(app: &PhotocraftApp) -> [f64; 2] {
+fn corner(app: &LienzoApp) -> [f64; 2] {
     crop_ui::corners(app.ui.crop_rect.expect("a frame"), crop_ui::angle(app))[2]
 }
 
 /// Commits with ↵ and returns the document size.
-fn commit(app: &mut PhotocraftApp) -> (u32, u32) {
-    photocraft_ui_egui::canvas::commit_crop(app);
+fn commit(app: &mut LienzoApp) -> (u32, u32) {
+    lienzo_ui_egui::canvas::commit_crop(app);
     let size = app.session.active().expect("a document").doc.size;
     (size.width, size.height)
 }
 
 /// Drags the bottom-right corner by document vector `d` in steps through `ui.pointer`, holding
 /// `mods`, and commits.
-fn drag_corner_and_commit(app: &mut PhotocraftApp, d: [f64; 2], mods: Value) -> (u32, u32) {
+fn drag_corner_and_commit(app: &mut LienzoApp, d: [f64; 2], mods: Value) -> (u32, u32) {
     drag_corner(app, d, mods);
     commit(app)
 }
 
 /// [`drag_corner_and_commit`] without the commit: the frame stays pending.
-fn drag_corner(app: &mut PhotocraftApp, d: [f64; 2], mods: Value) {
+fn drag_corner(app: &mut LienzoApp, d: [f64; 2], mods: Value) {
     let [x, y] = corner(app);
     let mut events = vec![json!({"kind": "down", "x": x, "y": y})];
     events.extend((1..=4).map(|i| {
@@ -120,7 +120,7 @@ fn shift_corner_drag_on_a_turned_frame_follows_its_diagonal() {
     for classic in [true, false] {
         let mut app = crop_app(Setup { classic, ..Setup::default() });
         app.ui.crop_angle = 30.0;
-        photocraft_ui_egui::crop_mode::sync_frame(&mut app);
+        lienzo_ui_egui::crop_mode::sync_frame(&mut app);
         let d = crop_ui::turn(DRAG, [0.0, 0.0], 30.0);
         let got = drag_corner_and_commit(&mut app, d, json!({"shift": true}));
         assert_near(got, (706, 441), &format!("⇧ drag on a frame turned 30°, Classic Mode {classic}"));
@@ -139,7 +139,7 @@ fn shift_corner_drag_follows_the_diagonal_with_auto_center_preview() {
     let from = ViewXform::active(&app).expect("a view").to_screen(x as f32, y as f32);
     let to = from + egui::vec2(DRAG[0] as f32, DRAG[1] as f32);
     // Each screen point is read through the view as it is then, as the canvas does every frame.
-    let at = |app: &PhotocraftApp, p: egui::Pos2| ViewXform::active(app).expect("a view").to_doc(p);
+    let at = |app: &LienzoApp, p: egui::Pos2| ViewXform::active(app).expect("a view").to_doc(p);
     let [x, y] = at(&app, from);
     tool_event(&mut app, ToolEvent::Down { x, y, pressure: 1.0 }, shift);
     for i in 1..=4 {
@@ -201,7 +201,7 @@ fn a_shift_corner_drag_on_a_turned_frame_snaps_along_its_diagonal() {
             let what = format!("ratio {ratio:?}, guide at x = {guide}, Classic Mode {classic}");
             let mut app = crop_app(Setup { classic, ratio, snap: true, ..Setup::default() });
             app.ui.crop_angle = 30.0;
-            photocraft_ui_egui::crop_mode::sync_frame(&mut app);
+            lienzo_ui_egui::crop_mode::sync_frame(&mut app);
             app.run("view.newGuide", json!({"orientation": "vertical", "position": guide})).expect("guide");
             drag_corner(&mut app, crop_ui::turn(DRAG, [0.0, 0.0], 30.0), json!({"shift": true}));
             let at = corner(&app);
@@ -227,7 +227,7 @@ fn a_turned_shift_corner_ignores_a_guide_its_diagonal_meets_far_away() {
             let mut app = crop_app(Setup { classic, snap: true, ..Setup::default() });
             app.ui.crop_rect = Some([100.0, 60.0, 500.0, 310.0]);
             app.ui.crop_angle = -31.0;
-            photocraft_ui_egui::crop_mode::sync_frame(&mut app);
+            lienzo_ui_egui::crop_mode::sync_frame(&mut app);
             app
         };
         let mut free = setup();

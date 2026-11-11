@@ -47,7 +47,7 @@ pub(super) fn clone_sample(
 
 /// Read-only clone overlay. Shares the stroke sampler without anchoring a source or editing history.
 /// Both destination and transformed source allocations are bounded for interactive use.
-pub fn clone_preview(s: &Session, rect: Rect, map: &crate::presets::clone_source::Mapping, sample_layer: &str) -> Result<photocraft_compose::Buffer> {
+pub fn clone_preview(s: &Session, rect: Rect, map: &crate::presets::clone_source::Mapping, sample_layer: &str) -> Result<lienzo_compose::Buffer> {
     clone_preview_periodic(s, rect, map, sample_layer, false)
 }
 
@@ -58,7 +58,7 @@ pub fn clone_preview_periodic(
     map: &crate::presets::clone_source::Mapping,
     sample_layer: &str,
     wrap: bool,
-) -> Result<photocraft_compose::Buffer> {
+) -> Result<lienzo_compose::Buffer> {
     if ![map.source.0, map.source.1, map.anchor.0, map.anchor.1].into_iter().chain(map.m).all(|v| v.is_finite() && v.abs() < 1_000_000.0) {
         return Err(bad("clone.preview", "invalid preview mapping"));
     }
@@ -80,7 +80,7 @@ pub fn clone_preview_periodic(
     let which = sample_layers(&json!({"sampleLayer": sample_layer}), "clone.preview")?;
     let region = clone_sample(&d.doc, Some(id), surf, which, rect, map, wrap, "clone.preview")?;
     let px = region.data.chunks_exact(surf.format().channels()).map(|p| to_rgba(&surf.format(), p)).collect();
-    Ok(photocraft_compose::Buffer { rect, px })
+    Ok(lienzo_compose::Buffer { rect, px })
 }
 
 /// Result JSON shared by Clone Stamp and Healing Brush: the offset used and where the next stroke
@@ -159,7 +159,7 @@ enum LivePaint {
     History(Surface),
     /// The Pattern Stamp's pattern, tiled from its aligned placement (Impressionist strokes are
     /// laid dab by dab: `pattern_stamp::live_impressionist`).
-    Pattern { tile: std::sync::Arc<photocraft_compose::pattern::Tile>, place: photocraft_compose::pattern::Placement },
+    Pattern { tile: std::sync::Arc<lienzo_compose::pattern::Tile>, place: lienzo_compose::pattern::Placement },
 }
 
 /// A retouching stroke shown while it is drawn: the dabs so far composited onto a copy of the
@@ -169,7 +169,7 @@ pub struct LiveRetouch {
     /// The active document with the stroke so far.
     pub doc: std::sync::Arc<Document>,
     cmd: String,
-    renderer: photocraft_paint::StrokeRenderer,
+    renderer: lienzo_paint::StrokeRenderer,
     pre: std::sync::Arc<Document>,
     pre_surf: Surface,
     colors: Option<crate::color_channels::ColorChannels>,
@@ -184,7 +184,7 @@ pub struct LiveRetouch {
     /// smoothing catch-up), redrawn on every step as the Brush's live stroke does.
     tail: Rect,
     /// The document and revision the stroke started on.
-    base: (photocraft_doc::DocId, u64),
+    base: (lienzo_doc::DocId, u64),
     brush: Box<BrushSettings>,
     /// Every point rendered so far, in order.
     points: Vec<StrokePoint>,
@@ -232,7 +232,7 @@ impl LiveRetouch {
         let (surf, lock) = crate::channel_cmds::target_surface(&mut doc, id, p)?;
         let pre_surf = surf.clone();
         // As `stroke_coverage`, which the commit uses.
-        let renderer = photocraft_paint::StrokeRenderer::new(&stroke.brush, None, 1.0);
+        let renderer = lienzo_paint::StrokeRenderer::new(&stroke.brush, None, 1.0);
         let opacity = stroke.brush.opacity;
         let brush = Box::new(stroke.brush.clone());
         let paint = match paint {

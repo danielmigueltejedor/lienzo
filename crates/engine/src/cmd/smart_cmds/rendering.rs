@@ -10,8 +10,8 @@ use std::sync::Mutex;
 
 /// Layer › Smart Objects › Stack Mode: the source's layers (or, when it holds a single group, the
 /// group's layers) combined per pixel with `mode`. Cached like [`source_image`], keyed by mode.
-pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photocraft_doc::StackMode) -> Result<SourceImage> {
-    use photocraft_algo::stack::Stat;
+pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: lienzo_doc::StackMode) -> Result<SourceImage> {
+    use lienzo_algo::stack::Stat;
     let mut key = cache_key(bytes, fmt);
     key.0 = *blake3::hash(&[&key.0[..], b"stack:", mode.id().as_bytes()].concat()).as_bytes();
     if let Some(img) = cache_get(&key) {
@@ -25,7 +25,7 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photoc
     let bounds = doc.bounds();
     // An SVG opens with one layer per shape, and every visible one gets its own float frame:
     // they may take 1 GiB together, the SVG import's own budget, before any is rendered.
-    if photocraft_io::svg::is_svg(bytes) {
+    if lienzo_io::svg::is_svg(bytes) {
         let visible = u64::try_from(layers.iter().filter(|l| l.visible).count()).unwrap_or(u64::MAX);
         let frame_bytes = doc.size.area().saturating_mul(16);
         if visible.saturating_mul(frame_bytes) > 1 << 30 {
@@ -39,26 +39,26 @@ pub fn stack_image(file_name: &str, bytes: &[u8], fmt: PixelFormat, mode: photoc
             let mut one = l.clone();
             one.blend = BlendMode::Normal;
             one.clipped = false;
-            photocraft_compose::render_layer(&one, bounds).into_px()
+            lienzo_compose::render_layer(&one, bounds).into_px()
         })
         .collect();
     if frames.is_empty() {
         return Err(EngineError::Other("the smart object's contents have no visible layers".into()));
     }
     let stat = match mode {
-        photocraft_doc::StackMode::Entropy => Stat::Entropy,
-        photocraft_doc::StackMode::Kurtosis => Stat::Kurtosis,
-        photocraft_doc::StackMode::Maximum => Stat::Maximum,
-        photocraft_doc::StackMode::Mean => Stat::Mean,
-        photocraft_doc::StackMode::Median => Stat::Median,
-        photocraft_doc::StackMode::Minimum => Stat::Minimum,
-        photocraft_doc::StackMode::Range => Stat::Range,
-        photocraft_doc::StackMode::Skewness => Stat::Skewness,
-        photocraft_doc::StackMode::StandardDeviation => Stat::StandardDeviation,
-        photocraft_doc::StackMode::Summation => Stat::Summation,
-        photocraft_doc::StackMode::Variance => Stat::Variance,
+        lienzo_doc::StackMode::Entropy => Stat::Entropy,
+        lienzo_doc::StackMode::Kurtosis => Stat::Kurtosis,
+        lienzo_doc::StackMode::Maximum => Stat::Maximum,
+        lienzo_doc::StackMode::Mean => Stat::Mean,
+        lienzo_doc::StackMode::Median => Stat::Median,
+        lienzo_doc::StackMode::Minimum => Stat::Minimum,
+        lienzo_doc::StackMode::Range => Stat::Range,
+        lienzo_doc::StackMode::Skewness => Stat::Skewness,
+        lienzo_doc::StackMode::StandardDeviation => Stat::StandardDeviation,
+        lienzo_doc::StackMode::Summation => Stat::Summation,
+        lienzo_doc::StackMode::Variance => Stat::Variance,
     };
-    let buf = photocraft_compose::Buffer { rect: bounds, px: photocraft_algo::stack::combine(&frames, stat) };
+    let buf = lienzo_compose::Buffer { rect: bounds, px: lienzo_algo::stack::combine(&frames, stat) };
     let img = SourceImage { surface: Arc::new(source_surface_from_buffer(&doc, &buf, fmt)?), bounds };
     cache_put(key, img.clone());
     Ok(img)
@@ -87,19 +87,19 @@ pub(super) fn blend_surfaces(base: &Surface, top: &Surface, mode: BlendMode, opa
     let composite_coverage = mode != BlendMode::Normal && fmt.alpha && b.chunks_exact(n).zip(t.chunks_exact(n)).any(|(bp, tp)| bp.last() != tp.last());
     let mut o = vec![0.0f32; b.len()];
     for ((bp, tp), op) in b.chunks_exact(n).zip(t.chunks_exact(n)).zip(o.chunks_exact_mut(n)) {
-        let b = photocraft_raster::to_rgba(&fmt, bp);
-        let t = photocraft_raster::to_rgba(&fmt, tp);
+        let b = lienzo_raster::to_rgba(&fmt, bp);
+        let t = lienzo_raster::to_rgba(&fmt, tp);
         if composite_coverage {
-            let rgba = photocraft_color::blend::composite(mode, b, t, opacity);
-            photocraft_raster::from_rgba_into(&fmt, rgba, op);
+            let rgba = lienzo_color::blend::composite(mode, b, t, opacity);
+            lienzo_raster::from_rgba_into(&fmt, rgba, op);
             continue;
         }
         let cb = [b[0], b[1], b[2]];
         let ct = [t[0], t[1], t[2]];
-        let color = if fmt.sample == photocraft_color::SampleType::F32 {
-            photocraft_color::blend::blend_rgb_hdr(mode, cb, ct)
+        let color = if fmt.sample == lienzo_color::SampleType::F32 {
+            lienzo_color::blend::blend_rgb_hdr(mode, cb, ct)
         } else {
-            photocraft_color::blend::blend_rgb(mode, cb, ct)
+            lienzo_color::blend::blend_rgb(mode, cb, ct)
         };
         // A filter edits this surface, rather than adding a second source-over layer. Mix
         // premultiplied results so alpha-preserving filters keep coverage at every opacity,
@@ -111,7 +111,7 @@ pub(super) fn blend_surfaces(base: &Surface, top: &Surface, mode: BlendMode, opa
                 rgba[c] = (cb[c] * b[3] * (1.0 - opacity) + color[c] * t[3] * opacity) / a;
             }
         }
-        photocraft_raster::from_rgba_into(&fmt, rgba, op);
+        lienzo_raster::from_rgba_into(&fmt, rgba, op);
     }
     out.write_region(area, &o);
     out.prune();
@@ -132,7 +132,7 @@ pub fn apply_smart_filters(placed: &Surface, sm: &SmartObject, canvas: Rect) -> 
         cur = apply_smart_filter(f, sm, &cur, filter_bounds(f, placed, canvas), extent, &JobCtx::new())?;
     }
     Ok(match sm.filter_mask.as_ref().filter(|m| m.enabled) {
-        Some(m) => photocraft_compose::filter_mask::mix(placed, &cur, m),
+        Some(m) => lienzo_compose::filter_mask::mix(placed, &cur, m),
         None => cur,
     })
 }
@@ -170,7 +170,7 @@ pub(super) fn place(name: &str, bytes: &[u8], doc: &Document, sm: &SmartObject) 
     let fmt = doc.pixel_format();
     // A vector source is rendered at the placement's scale, and the placement is divided by
     // that scale so the rendered pixels land where the source units would.
-    if sm.stack_mode.is_none() && sm.warp.is_none() && photocraft_io::svg::is_svg(bytes) {
+    if sm.stack_mode.is_none() && sm.warp.is_none() && lienzo_io::svg::is_svg(bytes) {
         let k = vector_scale(sm);
         let img = svg_source_image_in(bytes, doc, k)?;
         return Ok(match &sm.perspective {
@@ -178,19 +178,19 @@ pub(super) fn place(name: &str, bytes: &[u8], doc: &Document, sm: &SmartObject) 
                 let [h0, h1, h2, h3, h4, h5, h6, h7, h8] = *p;
                 let h = Homography([h0 / k, h1 / k, h2, h3 / k, h4 / k, h5, h6 / k, h7 / k, h8]);
                 crate::transform_cmds::check_budget(img.bounds, &h, "smart object", fmt)?;
-                photocraft_algo::warp::place_source_projective(&img.surface, img.bounds, &h, None)?
+                lienzo_algo::warp::place_source_projective(&img.surface, img.bounds, &h, None)?
             }
             None => {
                 let [a, b, c, d, e, f] = sm.transform.m;
                 let t = Affine { m: [a / k, b / k, c / k, d / k, e, f] };
                 crate::transform_cmds::check_budget(img.bounds, &affine_homography(&t), "smart object", fmt)?;
-                photocraft_algo::warp::place_source(&img.surface, img.bounds, &t, None)?
+                lienzo_algo::warp::place_source(&img.surface, img.bounds, &t, None)?
             }
         });
     }
     let img = match sm.stack_mode {
-        Some(mode) if photocraft_io::svg::is_svg(bytes) => convert_svg_source(stack_image(name, bytes, PixelFormat::RGBA32F, mode)?, doc)?,
-        None if photocraft_io::svg::is_svg(bytes) => svg_source_image_in(bytes, doc, 1.0)?,
+        Some(mode) if lienzo_io::svg::is_svg(bytes) => convert_svg_source(stack_image(name, bytes, PixelFormat::RGBA32F, mode)?, doc)?,
+        None if lienzo_io::svg::is_svg(bytes) => svg_source_image_in(bytes, doc, 1.0)?,
         Some(mode) => stack_image(name, bytes, fmt, mode)?,
         None => source_image(name, bytes, fmt)?,
     };
@@ -200,8 +200,8 @@ pub(super) fn place(name: &str, bytes: &[u8], doc: &Document, sm: &SmartObject) 
     crate::transform_cmds::check_budget(img.bounds, &h, "smart object", fmt)?;
     // Through the warp (source space) and the transform in one pass; whole-pixel moves are exact.
     Ok(match &sm.perspective {
-        Some(_) => photocraft_algo::warp::place_source_projective(&img.surface, img.bounds, &h, sm.warp.as_ref())?,
-        None => photocraft_algo::warp::place_source(&img.surface, img.bounds, &sm.transform, sm.warp.as_ref())?,
+        Some(_) => lienzo_algo::warp::place_source_projective(&img.surface, img.bounds, &h, sm.warp.as_ref())?,
+        None => lienzo_algo::warp::place_source(&img.surface, img.bounds, &sm.transform, sm.warp.as_ref())?,
     })
 }
 
@@ -275,13 +275,13 @@ pub(super) fn display_source(sm: &SmartObject, bytes: &Arc<Vec<u8>>) -> Arc<Vec<
     sm.vector_preview
         .as_ref()
         .filter(|preview| {
-            if bytes.len() > 16 * 1024 * 1024 || !photocraft_io::vector_preview::is_native_source(bytes) {
+            if bytes.len() > 16 * 1024 * 1024 || !lienzo_io::vector_preview::is_native_source(bytes) {
                 return false;
             }
             preview.source_hash == native_digest(bytes)
                 && !preview.svg.is_empty()
                 && preview.svg.len() <= 16 * 1024 * 1024
-                && photocraft_io::svg::is_svg(&preview.svg)
+                && lienzo_io::svg::is_svg(&preview.svg)
         })
         .map_or_else(|| bytes.clone(), |preview| preview.svg.clone())
 }
@@ -298,7 +298,7 @@ pub(crate) fn source_box(doc: &Document, sm: &SmartObject) -> Option<[f64; 4]> {
     let bytes = display_source(sm, &bytes);
     let fmt = doc.pixel_format();
     let r = match sm.stack_mode {
-        None if photocraft_io::svg::is_svg(&bytes) => photocraft_io::svg::bounded_canvas_bounds(&bytes, 24_000_000).ok()?,
+        None if lienzo_io::svg::is_svg(&bytes) => lienzo_io::svg::bounded_canvas_bounds(&bytes, 24_000_000).ok()?,
         Some(mode) => stack_image(&name, &bytes, fmt, mode).ok()?.bounds,
         None => source_image(&name, &bytes, fmt).ok()?.bounds,
     };
@@ -324,7 +324,7 @@ pub(super) fn render_in(doc: &Document, sm: &SmartObject, ctx: &JobCtx) -> Resul
     let bytes = display_source(sm, &bytes);
     let (fmt, canvas) = (doc.pixel_format(), doc.bounds());
     let mut placed_key = stack_cache::placed_key(&bytes, fmt, sm, canvas);
-    if photocraft_io::svg::is_svg(&bytes) {
+    if lienzo_io::svg::is_svg(&bytes) {
         let mut h = blake3::Hasher::new();
         h.update(&placed_key);
         h.update(&crate::color_cmds::document_profile(doc).to_bytes());
@@ -373,7 +373,7 @@ pub(super) fn render_in(doc: &Document, sm: &SmartObject, ctx: &JobCtx) -> Resul
     }
     ctx.progress(1.0, "");
     Ok(Some(match sm.filter_mask.as_ref().filter(|m| m.enabled) {
-        Some(m) => photocraft_compose::filter_mask::mix(&placed()?.surface, &cur.surface, m),
+        Some(m) => lienzo_compose::filter_mask::mix(&placed()?.surface, &cur.surface, m),
         None => cur.surface,
     }))
 }

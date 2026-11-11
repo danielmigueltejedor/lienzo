@@ -3823,7 +3823,7 @@ layerLabel	No Color	بلا رنگ
 	Mezzotint	میزوٹنٹ
 	Mosaic	موزیک
 	Motion Blur	حرکت دھندلاپن
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	نیٹو فائل ڈریگ اینڈ ڈراپ ابھی تک Wayland پر سپورٹ نہیں ہے۔ فائل > کھولیں استعمال کریں، یا Lienzo کو XWayland کے تحت `WAYLAND_DISPLAY= photocraft` کے ساتھ چلائیں۔
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	نیٹو فائل ڈریگ اینڈ ڈراپ ابھی تک Wayland پر سپورٹ نہیں ہے۔ فائل > کھولیں استعمال کریں، یا Lienzo کو XWayland کے تحت `WAYLAND_DISPLAY= lienzo` کے ساتھ چلائیں۔
 	Neon Glow	نیون چمک
 	New Guide Layout	نیا رہنما خاکہ
 	New Video Layer from File	فائل سے نئی ویڈیو تہہ

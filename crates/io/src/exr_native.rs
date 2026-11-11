@@ -1,9 +1,9 @@
 //! Native OpenEXR blocks go straight into original-depth tiled storage.
 use crate::{ImportResult, IoError};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size, TILE_SIZE};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent};
+use lienzo_geom::{Rect, Size, TILE_SIZE};
+use lienzo_raster::{Interrupt, Surface};
 use std::io::{Read, Seek};
 
 /// Tiles the decoded image would add must fit the RAM tile budget when no scratch disk can
@@ -18,10 +18,8 @@ fn ram_tile_capacity(resident: u64, budget: u64, growth: u64) -> Result<(), IoEr
 /// A scratch disk that was on when the import started must still be on: its tiles may
 /// already have moved there.
 fn require_scratch(expected: bool) -> Result<(), IoError> {
-    if expected && !photocraft_raster::spill::enabled() {
-        return Err(IoError::Read(
-            photocraft_raster::spill::last_error().unwrap_or_else(|| "scratch storage was disabled while loading; retry the import".into()),
-        ));
+    if expected && !lienzo_raster::spill::enabled() {
+        return Err(IoError::Read(lienzo_raster::spill::last_error().unwrap_or_else(|| "scratch storage was disabled while loading; retry the import".into())));
     }
     Ok(())
 }
@@ -32,8 +30,8 @@ fn require_scratch(expected: bool) -> Result<(), IoError> {
 /// falls back to the whole-file decoder. Once pixels are being decoded any failure fails the
 /// open, so no partial document is published.
 pub(crate) fn import<R: Read + Seek>(source: R, ctl: &Interrupt<'_>) -> Result<Option<ImportResult>, IoError> {
-    let _metadata = photocraft_raster::memory::try_reserve(32 << 20).map_err(IoError::OutOfMemory)?;
-    let mut decoder = match photocraft_codecs::exr_stream::Decoder::new(source, &|| ctl.cancelled()) {
+    let _metadata = lienzo_raster::memory::try_reserve(32 << 20).map_err(IoError::OutOfMemory)?;
+    let mut decoder = match lienzo_codecs::exr_stream::Decoder::new(source, &|| ctl.cancelled()) {
         Ok(decoder) => decoder,
         Err(_) if ctl.cancelled() => return Err(IoError::Cancelled),
         Err(_) => return Ok(None),
@@ -41,18 +39,18 @@ pub(crate) fn import<R: Read + Seek>(source: R, ctl: &Interrupt<'_>) -> Result<O
     let info = decoder.info();
     let mode = if info.gray { ColorMode::Grayscale } else { ColorMode::Rgb };
     let fmt = PixelFormat::new(mode, SampleType::F32, true);
-    let scratch_expected = photocraft_raster::spill::enabled();
+    let scratch_expected = lienzo_raster::spill::enabled();
     if !scratch_expected {
-        let budget = photocraft_raster::memory::refresh();
+        let budget = lienzo_raster::memory::refresh();
         let side = TILE_SIZE as u64;
         let tiles = u64::from(info.width).div_ceil(side).saturating_mul(u64::from(info.height).div_ceil(side));
         ram_tile_capacity(
-            photocraft_raster::spill::stats().resident_bytes as u64,
+            lienzo_raster::spill::stats().resident_bytes as u64,
             budget.tile_bytes,
             tiles.saturating_mul(side * side).saturating_mul(fmt.bytes_per_pixel() as u64),
         )?;
     }
-    let _working = photocraft_raster::memory::try_reserve(info.working_bytes).map_err(IoError::OutOfMemory)?;
+    let _working = lienzo_raster::memory::try_reserve(info.working_bytes).map_err(IoError::OutOfMemory)?;
     let mut surface = Surface::new(fmt);
     let mut done = 0;
     loop {
@@ -63,11 +61,11 @@ pub(crate) fn import<R: Read + Seek>(source: R, ctl: &Interrupt<'_>) -> Result<O
             break;
         };
         let rect = Rect::from_xywh(band.x as i32, band.y as i32, band.width, band.height);
-        if !photocraft_raster::spill::enabled() {
+        if !lienzo_raster::spill::enabled() {
             let missing = rect.tiles().filter(|c| surface.tile(*c).is_none()).count() as u64;
             ram_tile_capacity(
-                photocraft_raster::spill::stats().resident_bytes as u64,
-                photocraft_raster::memory::stats().1.tile_bytes,
+                lienzo_raster::spill::stats().resident_bytes as u64,
+                lienzo_raster::memory::stats().1.tile_bytes,
                 missing.saturating_mul((TILE_SIZE as u64).pow(2)).saturating_mul(fmt.bytes_per_pixel() as u64),
             )?;
         }
@@ -91,7 +89,7 @@ pub(crate) fn import<R: Read + Seek>(source: R, ctl: &Interrupt<'_>) -> Result<O
     }
     document.layers.push(layer);
     document.icc_profile =
-        Some(if mode == ColorMode::Rgb { photocraft_cms::Builtin::LinearSrgb.profile().to_bytes() } else { photocraft_cms::builtin::linear_gray().to_bytes() });
+        Some(if mode == ColorMode::Rgb { lienzo_cms::Builtin::LinearSrgb.profile().to_bytes() } else { lienzo_cms::builtin::linear_gray().to_bytes() });
     let warnings = if info.all_half { vec!["16-bit float samples are stored as 32-bit float".into()] } else { Vec::new() };
     ctl.progress(1.0);
     Ok(Some(ImportResult { document, warnings, source_read_only: false, preview_only: false }))

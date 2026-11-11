@@ -23,7 +23,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
-use photocraft_doc::{Document, LayerContent, LayerId, SmartSource};
+use lienzo_doc::{Document, LayerContent, LayerId, SmartSource};
 use serde_json::{Value, json};
 
 use crate::{EngineError, Result, Session};
@@ -214,13 +214,13 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
-    use photocraft_geom::Rect;
+    use lienzo_geom::Rect;
     use serde_json::json;
 
     use crate::{EngineError, Session};
 
     fn dir(name: &str) -> std::path::PathBuf {
-        let d = std::env::temp_dir().join(format!("photocraft-link-watch-{name}-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("lienzo-link-watch-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
@@ -255,7 +255,7 @@ mod tests {
     }
 
     fn centre(s: &Session) -> [f32; 3] {
-        let p = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(20, 20, 21, 21)).px[0];
+        let p = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(20, 20, 21, 21)).px[0];
         [p[0], p[1], p[2]]
     }
 

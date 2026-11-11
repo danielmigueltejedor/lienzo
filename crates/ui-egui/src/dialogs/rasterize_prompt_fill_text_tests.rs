@@ -14,8 +14,8 @@ const OLD: &str = "This fill layer must be rasterized before proceeding. Its fil
 
 /// A Solid Color fill layer over a white Background, its content (not its mask) targeted, with
 /// the Paint Bucket.
-fn fill_layer_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn fill_layer_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     app.run("layer.newFillLayer.solidColor", json!({"color": "#00ff00"})).unwrap();
     app.ui.mask_target = false;
@@ -25,23 +25,23 @@ fn fill_layer_app() -> PhotocraftApp {
     app
 }
 
-fn harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> egui_kittest::Harness<'static, LienzoApp> {
     let h = egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h
 }
 
-fn bucket_click(app: &mut PhotocraftApp) {
+fn bucket_click(app: &mut LienzoApp) {
     tool_event(app, ToolEvent::Down { x: 30.0, y: 20.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: 30.0, y: 20.0 }, Modifiers::NONE);
 }
 
-fn active_content(app: &PhotocraftApp) -> &'static str {
+fn active_content(app: &LienzoApp) -> &'static str {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().content.kind_name()
 }
 
-fn past(app: &PhotocraftApp) -> usize {
+fn past(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 

@@ -6,13 +6,13 @@
 #[cfg(feature = "corpus")]
 use std::path::PathBuf;
 
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, export, import};
-use photocraft_psd::PsdFile;
-use photocraft_psd::resources::ImageResource;
-use photocraft_raster::Surface;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{AlphaChannel, Document};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, export, import};
+use lienzo_psd::PsdFile;
+use lienzo_psd::resources::ImageResource;
+use lienzo_raster::Surface;
 
 const W: u32 = 8;
 
@@ -80,7 +80,7 @@ fn flat_file_keeps_its_spot_and_alpha_channels() {
                 assert!(opened.channels[0].spot.is_some() && opened.channels[1].spot.is_none(), "{what}");
                 assert_close(&values(&opened.channels[0].surface), &values(&doc.channels[0].surface), &format!("{what}: spot ink"));
                 assert_close(&values(&opened.channels[1].surface), &values(&doc.channels[1].surface), &format!("{what}: alpha"));
-                let flat = photocraft_compose::flatten(&opened);
+                let flat = lienzo_compose::flatten(&opened);
                 assert!(flat.px.iter().all(|p| p[3] == 1.0), "{what}: the spot plane is not the image's transparency: {:?}", flat.px);
             }
         }
@@ -105,7 +105,7 @@ fn flat_extra_channel_names_decode_mac_roman_unless_unicode_is_present() {
 #[test]
 fn flat_file_without_channel_names_keeps_its_transparency() {
     let mut doc = Document::new("rgba", Size::new(W, 1), ColorMode::Rgb, SampleType::U8);
-    doc.layers.push(photocraft_doc::Layer::raster("Layer 1", doc.pixel_format()));
+    doc.layers.push(lienzo_doc::Layer::raster("Layer 1", doc.pixel_format()));
     let mut file = without_layer_records(&doc);
     assert_eq!(file.header.channels, 4);
     file.resources.retain(|r| r.id != 1045 && r.id != 1006);
@@ -119,7 +119,7 @@ fn flat_file_without_channel_names_keeps_its_transparency() {
     assert!(!alpha.merged_has_alpha());
 }
 
-/// A spot whose DisplayInfo colour is in a space PhotoCraft doesn't read takes its ink from the
+/// A spot whose DisplayInfo colour is in a space Lienzo doesn't read takes its ink from the
 /// Alternate Spot Colors (1067), as in the reference editor's cmyk-alpha-spot.psd (Lab 58.47 /
 /// −33.27 / −14.59 for channel id 3).
 #[test]
@@ -215,7 +215,7 @@ fn corpus_flat_photoshop_file_keeps_its_spot() {
     assert!(doc.channels[1].spot.is_none());
     let at = Rect::from_xywh(1348, 1492, 1, 1);
     assert_eq!(doc.channels[0].surface.read_region(at), [1.0], "solid ink");
-    let p = photocraft_compose::render(&doc, at).px[0];
+    let p = lienzo_compose::render(&doc, at).px[0];
     assert!(p[3] == 1.0 && p[..3].iter().all(|v| *v > 0.95), "no process ink, opaque: {p:?}");
 }
 
@@ -226,6 +226,6 @@ fn corpus_flat_file_with_pascal_names_keeps_every_channel() {
     let doc = import("cmyk-spot.psd", &psd_tools("cmyk-spot.psd")).unwrap().document;
     let names: Vec<_> = doc.channels.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, ["blue", "fluorescent pink", "yellow"]);
-    let flat = photocraft_compose::flatten(&doc);
+    let flat = lienzo_compose::flatten(&doc);
     assert!(flat.px.iter().all(|p| p[3] == 1.0), "opaque");
 }

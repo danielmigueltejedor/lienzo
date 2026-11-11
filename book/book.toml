@@ -3,7 +3,7 @@ authors = ["PhotoCraft contributors"]
 language = "en"
 multilingual = false
 src = "src"
-title = "PhotoCraft Documentation"
+title = "Lienzo Documentation"
 
 [build]
 build-dir = "output"

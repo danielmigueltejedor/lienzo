@@ -5,7 +5,7 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DialogKind, Tool};
 
 /// The alerts; `{tool}` is [`tool_name`].
@@ -39,11 +39,11 @@ pub fn tool_name(tool: Tool) -> Option<&'static str> {
 /// (`canvas::tool_input`), which this only words; the lock and the group are checked here. Lock
 /// transparent pixels is no refusal, and a group's targeted mask paints. A tool with a
 /// [`mode_tool_name`] gets only its colour-mode alert, in an Indexed Color or Bitmap document.
-pub fn alert(app: &PhotocraftApp, tool: Tool, hidden: bool) -> Option<String> {
+pub fn alert(app: &LienzoApp, tool: Tool, hidden: bool) -> Option<String> {
     if let Some(name) = mode_tool_name(tool) {
         let template = match app.session.active()?.doc.mode {
-            photocraft_doc::ColorMode::Indexed => INDEXED,
-            photocraft_doc::ColorMode::Bitmap => BITMAP,
+            lienzo_doc::ColorMode::Indexed => INDEXED,
+            lienzo_doc::ColorMode::Bitmap => BITMAP,
             _ => return None,
         };
         return Some(crate::i18n::fmt(tl!(template), &[("tool", name)]));
@@ -69,7 +69,7 @@ pub fn alert(app: &PhotocraftApp, tool: Tool, hidden: bool) -> Option<String> {
 }
 
 /// Opens the alert: ordinary dialog state, listed by `ui.inspect` and closed by `ui.dialog.confirm`.
-pub fn prompt(app: &mut PhotocraftApp, message: &str) {
+pub fn prompt(app: &mut LienzoApp, message: &str) {
     app.ui.open_dialog(DialogKind::Error, json!({ "message": message }).as_object().cloned().unwrap_or_default());
 }
 

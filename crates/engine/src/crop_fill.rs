@@ -15,9 +15,9 @@
 //! filled over; a straight crop fills all of the area past the old canvas, them included, as
 //! Photoshop does (#8060).
 
-use photocraft_doc::{Document, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_doc::{Document, LayerId};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use rayon::prelude::*;
 
 use crate::{EngineError, Result};
@@ -257,7 +257,7 @@ fn additional_target(doc: &Document, active: Option<LayerId>) -> Option<LayerId>
     let id = active.filter(|id| *id != background)?;
     let path = doc.path_of(id)?;
     let layer = doc.layer_at(&path)?;
-    (matches!(layer.content, photocraft_doc::LayerContent::Raster(_)) && doc.shown_at(&path) && !doc.locks_at(&path).any()).then_some(id)
+    (matches!(layer.content, lienzo_doc::LayerContent::Raster(_)) && doc.shown_at(&path) && !doc.locks_at(&path).any()).then_some(id)
 }
 
 /// The Background, else the active pixel layer.
@@ -266,7 +266,7 @@ fn target_layer(doc: &Document, active: Option<LayerId>) -> Result<LayerId> {
         return Ok(bg.id);
     }
     active
-        .filter(|id| doc.layer(*id).is_some_and(|l| matches!(l.content, photocraft_doc::LayerContent::Raster(_))))
+        .filter(|id| doc.layer(*id).is_some_and(|l| matches!(l.content, lienzo_doc::LayerContent::Raster(_))))
         .ok_or_else(|| EngineError::Other("Content-Aware crop fill needs a Background or an active pixel layer".into()))
 }
 

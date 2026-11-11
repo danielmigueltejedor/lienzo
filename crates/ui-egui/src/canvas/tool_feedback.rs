@@ -8,7 +8,7 @@
 
 use egui::{Color32, Pos2, Shape, Stroke, pos2, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// The intent a selection tool's next gesture has, shown as a cursor badge (none for New).
@@ -91,7 +91,7 @@ pub fn selection_mode(tool: Tool, bar: u8, m: egui::Modifiers) -> &'static str {
 /// [`selection_mode`] for the active document: with nothing selected, ⌥ (or ⇧⌥) has nothing to
 /// subtract from or intersect with, so it draws a new selection, as in Photoshop (where ⌥ then
 /// only draws a marquee from its centre). An options-bar Subtract or Intersect is kept (#1106).
-pub fn document_selection_mode(app: &PhotocraftApp, tool: Tool, m: egui::Modifiers) -> &'static str {
+pub fn document_selection_mode(app: &LienzoApp, tool: Tool, m: egui::Modifiers) -> &'static str {
     let mode = selection_mode(tool, app.ui.selection_mode, m);
     // Asked last, and from the bounds the selection outline caches (same key): the canvas asks
     // every frame while a Patch lasso is drawn or hovered with ⌥.
@@ -105,7 +105,7 @@ pub fn document_selection_mode(app: &PhotocraftApp, tool: Tool, m: egui::Modifie
 
 /// The badge the cursor of `tool` shows with modifiers `m` (None for non-selection tools or New;
 /// the anchor point tools show theirs).
-pub fn badge(app: &PhotocraftApp, tool: Tool, m: egui::Modifiers) -> Option<Badge> {
+pub fn badge(app: &LienzoApp, tool: Tool, m: egui::Modifiers) -> Option<Badge> {
     // Add / Delete Anchor Point: + or − beside the crosshair, as on Photoshop's pen cursors (⌥
     // swaps them; ⌘ is Direct Selection, which shows none).
     if let Some(t) = crate::anchor_tools::effective(tool, m) {
@@ -115,7 +115,7 @@ pub fn badge(app: &PhotocraftApp, tool: Tool, m: egui::Modifiers) -> Option<Badg
     // there), four arrows on an anchor (a press drags it).
     if let Some(p) = app.hover_doc.filter(|_| tool == Tool::CurvaturePen) {
         return crate::direct_select::curvature_hover(app, p, m)
-            .map(|h| if matches!(h, photocraft_vector::edit::Hit::Segment(..)) { Badge::Add } else { Badge::Move });
+            .map(|h| if matches!(h, lienzo_vector::edit::Hit::Segment(..)) { Badge::Add } else { Badge::Move });
     }
     // The Pen over the active path with Auto Add/Delete on: what a click would do (#4144).
     if let Some(p) = app.hover_doc.filter(|_| tool == Tool::Pen) {
@@ -249,7 +249,7 @@ mod tests {
     /// asks every frame, and scans only a selection that changed since.
     #[test]
     fn alt_reads_the_cached_selection_bounds() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let alt = egui::Modifiers::ALT;
         app.run("file.new", serde_json::json!({"width": 40, "height": 30})).unwrap();
         app.run("select.rect", serde_json::json!({"x": 5, "y": 5, "width": 10, "height": 10})).unwrap();
@@ -257,7 +257,7 @@ mod tests {
         let st = app.session.active().unwrap();
         let (key, fingerprint) = (u64::MAX - st.doc.id.0, crate::surface_fingerprint(st.doc.selection.as_ref().unwrap()));
         // An empty box cached for this very selection is believed, so nothing is scanned.
-        app.bounds_cache.insert(key, (fingerprint, photocraft_geom::Rect::EMPTY));
+        app.bounds_cache.insert(key, (fingerprint, lienzo_geom::Rect::EMPTY));
         assert_eq!(document_selection_mode(&app, Tool::Lasso, alt), "replace", "the cached bounds are used");
         app.run("select.rect", serde_json::json!({"x": 20, "y": 5, "width": 10, "height": 10})).unwrap();
         assert_eq!(document_selection_mode(&app, Tool::Lasso, alt), "subtract", "a new selection is scanned again");
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn badge_follows_modifiers_and_the_options_bar() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let none = egui::Modifiers::NONE;
         let (shift, alt) = (egui::Modifiers::SHIFT, egui::Modifiers::ALT);
         let both = egui::Modifiers { shift: true, alt: true, ..Default::default() };

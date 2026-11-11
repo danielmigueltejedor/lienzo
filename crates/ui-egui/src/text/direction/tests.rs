@@ -3,10 +3,10 @@
 //! depend on a right-to-left language being selected.
 
 use super::*;
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::i18n::{self, Lang};
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_text::scripts;
+use lienzo_text::scripts;
 use serde_json::json;
 
 #[test]
@@ -63,14 +63,14 @@ fn env_values_parse_strictly() {
     assert_eq!(parse_dir("ar"), None);
 }
 
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     harness_with(Harness::builder())
 }
 
-fn harness_with(builder: egui_kittest::HarnessBuilder<PhotocraftApp>) -> Harness<'static, PhotocraftApp> {
+fn harness_with(builder: egui_kittest::HarnessBuilder<LienzoApp>) -> Harness<'static, LienzoApp> {
     let mut h = builder.with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::ProMedium);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::ProMedium);
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).expect("new document");
         app
     });
@@ -79,12 +79,12 @@ fn harness_with(builder: egui_kittest::HarnessBuilder<PhotocraftApp>) -> Harness
 }
 
 /// Centre x of the widget labelled `label` (the first, when several are).
-fn x_of(h: &Harness<'static, PhotocraftApp>, label: &str) -> f32 {
+fn x_of(h: &Harness<'static, LienzoApp>, label: &str) -> f32 {
     h.query_all_by_label(label).next().unwrap_or_else(|| panic!("`{label}` drawn")).rect().center().x
 }
 
 /// Left x of the text `text` where it is painted (for widgets without an accessible label).
-fn text_x(h: &Harness<'static, PhotocraftApp>, text: &str) -> f32 {
+fn text_x(h: &Harness<'static, LienzoApp>, text: &str) -> f32 {
     fn find(shape: &egui::Shape, text: &str) -> Option<f32> {
         match shape {
             egui::Shape::Text(t) if t.galley.job.text == text => Some(t.pos.x),
@@ -95,7 +95,7 @@ fn text_x(h: &Harness<'static, PhotocraftApp>, text: &str) -> f32 {
     h.output().shapes.iter().find_map(|s| find(&s.shape, text)).unwrap_or_else(|| panic!("`{text}` painted"))
 }
 
-fn dock_x(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn dock_x(h: &Harness<'static, LienzoApp>) -> f32 {
     crate::panel_docking::probe::panel_rect(&h.ctx, "layers").expect("Layers docked").center().x
 }
 
@@ -155,7 +155,7 @@ fn hebrew_and_urdu_mirror_the_shell_and_draw_their_letters() {
 /// eager provider); installed fonts arrive a frame later through the lazy loader, which the
 /// harness's strict missing-glyph policy doesn't wait for (`cjk_fonts` tests).
 fn craft_font_covers(letter: char) -> bool {
-    photocraft_text::craft_fonts::CRAFT_FONTS.iter().any(|f| !f.bytes.is_empty() && scripts::covering_face(f.bytes, letter).is_some())
+    lienzo_text::craft_fonts::CRAFT_FONTS.iter().any(|f| !f.bytes.is_empty() && scripts::covering_face(f.bytes, letter).is_some())
 }
 
 #[test]

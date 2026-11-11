@@ -1,5 +1,5 @@
 //! Duplicate keeps action identities, complete settings and per-step flags stable.
-use photocraft_engine::{Session, actions_cmds::Action};
+use lienzo_engine::{Session, actions_cmds::Action};
 use serde_json::{Value, json};
 
 /// A tiny document to distinguish definition edits from document mutations and playback.

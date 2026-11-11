@@ -3,9 +3,9 @@ use super::*;
 #[test]
 fn tool_key_brings_back_the_groups_last_used_tool() {
     use crate::state::Tool;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, key, modifiers| {
+    let press = |app: &mut LienzoApp, key, modifiers| {
         let raw = egui::RawInput {
             events: vec![
                 egui::Event::ModifiersChanged(modifiers),
@@ -44,9 +44,9 @@ fn tool_key_brings_back_the_groups_last_used_tool() {
 #[test]
 fn shift_key_tool_switch_is_the_default() {
     use crate::state::Tool;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, modifiers| {
+    let press = |app: &mut LienzoApp, modifiers| {
         let raw = egui::RawInput {
             events: vec![
                 egui::Event::ModifiersChanged(modifiers),
@@ -77,7 +77,7 @@ fn shift_key_tool_switch_is_the_default() {
 #[test]
 fn a_tool_key_passes_over_a_remapped_tool_to_the_last_one_it_picks() {
     use crate::state::Tool;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("prefs.set", json!({"path": "shortcuts.tools.select.polygonLasso", "value": "F6"})).unwrap();
     app.ui.remember_group_tool(Tool::MagneticLasso);
@@ -90,12 +90,12 @@ fn a_tool_key_passes_over_a_remapped_tool_to_the_last_one_it_picks() {
 /// (⇧# types `'`) its hardness, as Photoshop's German shortcuts.
 #[test]
 fn german_o_umlaut_and_hash_are_the_brush_keys() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.ui.tool = Tool::Brush;
     app.session.tools.brush.hardness = 0.5;
     let ctx = egui::Context::default();
-    let typed = |app: &mut PhotocraftApp, key, physical_key, text: &str, modifiers| {
+    let typed = |app: &mut LienzoApp, key, physical_key, text: &str, modifiers| {
         let press = egui::Event::Key { key, physical_key: Some(physical_key), pressed: true, repeat: false, modifiers };
         let raw = egui::RawInput { events: vec![egui::Event::ModifiersChanged(modifiers), press, egui::Event::Text(text.into())], ..Default::default() };
         ctx.begin_pass(raw);
@@ -115,7 +115,7 @@ fn german_o_umlaut_and_hash_are_the_brush_keys() {
 
 #[test]
 fn pen_command_z_and_backspace_retract_points_before_document_undo() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", serde_json::json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = crate::state::Tool::Pen;
     app.run("shape.create", serde_json::json!({"kind": "rect", "rect": [10, 10, 40, 40], "fill": "#ff0000"})).unwrap();
@@ -125,7 +125,7 @@ fn pen_command_z_and_backspace_retract_points_before_document_undo() {
         crate::vector_ui::pen_up(&mut app);
     }
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, key, modifiers| {
+    let press = |app: &mut LienzoApp, key, modifiers| {
         let raw = egui::RawInput {
             events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
             ..Default::default()
@@ -150,7 +150,7 @@ fn pen_command_z_and_backspace_retract_points_before_document_undo() {
 
 #[test]
 fn pen_custom_undo_binding_and_menu_retract_pending_points() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", serde_json::json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = crate::state::Tool::Pen;
     for (x, y) in [(10.0, 10.0), (50.0, 10.0)] {
@@ -159,7 +159,7 @@ fn pen_custom_undo_binding_and_menu_retract_pending_points() {
     }
     app.session.prefs.edit(|p| p.shortcuts.insert("edit.undo".into(), "Cmd+Shift+Y".into()));
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, key: Key, modifiers: Modifiers| {
+    let press = |app: &mut LienzoApp, key: Key, modifiers: Modifiers| {
         ctx.begin_pass(egui::RawInput {
             events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
             ..Default::default()
@@ -180,7 +180,7 @@ fn pen_custom_undo_binding_and_menu_retract_pending_points() {
 /// Verifies pressing Escape with a custom undo shortcut cancels an active type path preview without popping document history.
 #[test]
 fn escape_rebound_to_undo_cancels_type_path_preview_before_dispatch() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::PathSelection;
@@ -214,7 +214,7 @@ fn escape_rebound_to_undo_cancels_type_path_preview_before_dispatch() {
 /// Verifies tool key shortcuts cancel active type path placement capture and releasing afterwards does not commit placement changes.
 #[test]
 fn tool_shortcut_cancels_type_path_placement_and_release_does_not_commit() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::PathSelection;
@@ -245,24 +245,24 @@ fn tool_shortcut_cancels_type_path_placement_and_release_does_not_commit() {
 }
 
 /// A 200×200 document for the ⌘⇧↩ / ⌘⌥↩ tests.
-fn selection_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn selection_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", serde_json::json!({"width": 200, "height": 200})).unwrap();
     app
 }
 
-fn set_work_rect(app: &mut PhotocraftApp, x: i32, y: i32, w: i32, h: i32) {
+fn set_work_rect(app: &mut LienzoApp, x: i32, y: i32, w: i32, h: i32) {
     let knots = serde_json::json!([[x, y], [x + w, y], [x + w, y + h], [x, y + h]]);
     app.run("path.set", serde_json::json!({"path": {"subpaths": [{"closed": true, "op": "combine", "knots": knots}]}})).unwrap();
 }
 
 /// The selection's bounds (x0, y0, x1, y1), if any.
-fn selection_bounds(app: &PhotocraftApp) -> Option<[i32; 4]> {
+fn selection_bounds(app: &LienzoApp) -> Option<[i32; 4]> {
     let r = app.session.active().unwrap().doc.selection.as_ref()?.content_bounds();
     Some([r.x0, r.y0, r.x1, r.y1])
 }
 
-fn press_key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn press_key(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     ctx.begin_pass(egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
         ..Default::default()
@@ -395,7 +395,7 @@ fn pretty_uses_the_platform_notation() {
 
 #[test]
 fn labels_show_the_effective_shortcut_in_platform_notation() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let new = command_label(&app, "New document…", "file.new");
     if cfg!(target_os = "macos") {
         assert_eq!(new, "New document…     ⌘N");
@@ -553,7 +553,7 @@ fn web_paste_key_and_paste_event_are_one_press() {
 fn windows_shift_delete_fills_instead_of_cutting() {
     let shift = Modifiers::SHIFT;
     let ctrl = Modifiers::CTRL | Modifiers::COMMAND;
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let bound = |held| {
         let (key, mods) = clipboard_press(&egui::Event::Cut, held, true)?;
         assert_eq!((key, mods), (Key::Delete, held));
@@ -618,7 +618,7 @@ fn ctrl_and_shift_insert_copy_and_paste_on_linux() {
 
 #[test]
 fn every_registered_shortcut_parses() {
-    for c in photocraft_engine::command_specs() {
+    for c in lienzo_engine::command_specs() {
         if let Some(sc) = c.shortcut {
             assert!(parse(sc).is_some(), "{}: {sc}", c.id);
         }
@@ -633,12 +633,12 @@ fn every_registered_shortcut_parses() {
 #[test]
 fn no_duplicate_shortcuts() {
     let mut seen = std::collections::HashMap::new();
-    let all = photocraft_engine::command_specs()
+    let all = lienzo_engine::command_specs()
         .iter()
         .filter_map(|c| c.shortcut.map(|s| (c.id, s)))
         .chain(crate::menus::UI_COMMANDS.iter().filter_map(|(id, _, _, s)| s.map(|s| (*id, s))))
         // Photoshop's second keys (#3665) are taken by no other command either.
-        .chain(photocraft_engine::prefs::ALTERNATE_SHORTCUTS.iter().copied());
+        .chain(lienzo_engine::prefs::ALTERNATE_SHORTCUTS.iter().copied());
     for (id, s) in all {
         assert!(parse(s).is_some(), "{id}: {s}");
         if let Some(prev) = seen.insert(s, id) {

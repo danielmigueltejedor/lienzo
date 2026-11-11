@@ -7,8 +7,8 @@
 #[path = "../support/recovery_psd.rs"]
 mod recovery_psd;
 
-use photocraft_io::{ImportOptions, import, import_for_open};
-use photocraft_psd::PsdFile;
+use lienzo_io::{ImportOptions, import, import_for_open};
+use lienzo_psd::PsdFile;
 
 /// Verifies a generated, two-layer PSD opens without source restrictions or damage prompts.
 #[test]
@@ -68,7 +68,7 @@ fn damaged_composite_keeps_layers_and_requests_interactive_confirmation() {
 /// Verifies mismatched resolution metadata produces a warning but no damage prompt.
 #[test]
 fn ordinary_compatibility_warning_does_not_mean_damaged() {
-    use photocraft_psd::{ImageResource, ResolutionInfo, resources::ids};
+    use lienzo_psd::{ImageResource, ResolutionInfo, resources::ids};
     let mut file = PsdFile::from_bytes(&recovery_psd::make_psd(false)).unwrap();
     let resolution = ResolutionInfo { v_res_fixed: ResolutionInfo::from_dpi(150.0).v_res_fixed, ..ResolutionInfo::from_dpi(300.0) };
     file.resources.push(ImageResource::new(ids::RESOLUTION_INFO, resolution.to_bytes()));
@@ -88,14 +88,14 @@ fn fatal_parse_errors_are_not_turned_into_confirmation_requests() {
 /// Generate the same two PSDs on demand for manual testing in the GUI.
 ///
 /// Run with:
-/// cargo test -p photocraft-io --test it \
+/// cargo test -p lienzo-io --test it \
 ///   psd_recovery_generated::write_psds_for_manual_gui_test -- --ignored --nocapture
 ///
 /// The files go to the system's temp folder, not into the repository.
 #[test]
 #[ignore = "writes temporary PSD fixtures only when manual GUI testing is requested"]
 fn write_psds_for_manual_gui_test() {
-    let output = std::env::temp_dir().join(format!("photocraft-psd-recovery-{}", std::process::id()));
+    let output = std::env::temp_dir().join(format!("lienzo-psd-recovery-{}", std::process::id()));
     std::fs::create_dir_all(&output).expect("create temporary fixture directory");
 
     for (name, corrupt) in [("valid-two-layers.psd", false), ("corrupt-green-rle.psd", true)] {

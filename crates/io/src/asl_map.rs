@@ -1,26 +1,26 @@
-//! Layer style libraries (`.asl`) ⇄ PhotoCraft styles.
+//! Layer style libraries (`.asl`) ⇄ Lienzo styles.
 //!
-//! The container is parsed by [`photocraft_psd::asl`]. Each style's `Lefx` is the same effects
+//! The container is parsed by [`lienzo_psd::asl`]. Each style's `Lefx` is the same effects
 //! tree as a layer's `lfx2` block ([`crate::effects_map`]); `blendOptions` ("Include Layer
 //! Blending Options") carries the blend mode, opacity and fill opacity; the file's patterns feed
 //! the styles' Pattern Overlays, pattern strokes and bevel textures.
 //!
-//! What PhotoCraft doesn't model (an effect kind it doesn't know, advanced blending keys, an
+//! What Lienzo doesn't model (an effect kind it doesn't know, advanced blending keys, an
 //! effects scale other than 100 %) is left out with a warning naming the style, and the rest of
 //! the file still imports.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{Effect, FxPaint, Pattern};
-use photocraft_psd::asl::{self, AslFile};
-use photocraft_psd::descriptor::{Descriptor, Id, Value};
+use lienzo_color::BlendMode;
+use lienzo_doc::{Effect, FxPaint, Pattern};
+use lienzo_psd::asl::{self, AslFile};
+use lienzo_psd::descriptor::{Descriptor, Id, Value};
 
 use crate::blocks::{enum_of, get_desc, num};
 use crate::effects_map::{blend_from_id, blend_value, effects_descriptor, effects_from_descriptor, is_known_effects_key};
 use crate::pattern_map::{from_psd, to_psd};
 
-/// One style as PhotoCraft keeps it.
+/// One style as Lienzo keeps it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AslStyle {
     /// Unique within the file (empty names get "Style N", repeats get "Name 2").
@@ -208,10 +208,10 @@ pub fn write_asl(styles: &[AslStyle], patterns: &[Pattern]) -> Result<Vec<u8>, S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::{BevelTexture, FxCommon, StrokePosition};
-    use photocraft_psd::descriptor::UnicodeString;
-    use photocraft_raster::Surface;
+    use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+    use lienzo_doc::{BevelTexture, FxCommon, StrokePosition};
+    use lienzo_psd::descriptor::UnicodeString;
+    use lienzo_raster::Surface;
 
     fn pattern(id: &str, s: SampleType) -> Pattern {
         let fmt = PixelFormat::new(ColorMode::Rgb, s, true);
@@ -376,7 +376,7 @@ mod tests {
             let _ = read_asl(&c);
         }
         assert!(read_asl(b"").is_err());
-        assert!(read_asl(&photocraft_psd::grd::write(&[])).is_err());
+        assert!(read_asl(&lienzo_psd::grd::write(&[])).is_err());
     }
 
     #[test]

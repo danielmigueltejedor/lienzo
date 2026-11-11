@@ -9,20 +9,20 @@ use std::rc::Rc;
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::{DialogKind, Tool};
 
 /// A 200 x 100 white document with nothing selected and the Content-Aware Move tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     app.ui.tool = Tool::ContentAwareMove;
     app
 }
 
 /// A drag through `points` (the first is the press), released at the last.
-fn drag(app: &mut PhotocraftApp, points: &[[f64; 2]]) {
+fn drag(app: &mut LienzoApp, points: &[[f64; 2]]) {
     let m = Modifiers::NONE;
     let [x, y] = points[0];
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
@@ -38,7 +38,7 @@ const DIAGONAL: &[[f64; 2]] = &[[20.0, 20.0], [50.0, 35.0], [80.0, 50.0], [110.0
 const AREA: &[[f64; 2]] = &[[20.0, 20.0], [80.0, 20.0], [80.0, 80.0], [20.0, 80.0]];
 
 /// The open "No pixels are selected." alerts.
-fn alerts(app: &PhotocraftApp) -> Vec<u64> {
+fn alerts(app: &LienzoApp) -> Vec<u64> {
     app.ui
         .dialogs
         .iter()
@@ -48,12 +48,12 @@ fn alerts(app: &PhotocraftApp) -> Vec<u64> {
 }
 
 /// Whether the document has a selection.
-fn selected(app: &PhotocraftApp) -> bool {
+fn selected(app: &LienzoApp) -> bool {
     app.session.active().unwrap().doc.selection.is_some()
 }
 
 /// The number of History states.
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -120,7 +120,7 @@ fn dont_show_again_stops_the_warning_and_is_kept_with_the_preferences() {
         assert!(!selected(&app) && steps(&app) == before, "confirm {confirm}: still nothing selected and no History state");
         // A restart reads it back from the store.
         let services = crate::Services { load_prefs: Some(Box::new(move || Some(text.clone()))), ..Default::default() };
-        let mut fresh = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        let mut fresh = LienzoApp::new(lienzo_engine::Session::new(), services);
         fresh.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
         fresh.ui.tool = Tool::ContentAwareMove;
         drag(&mut fresh, LINE);

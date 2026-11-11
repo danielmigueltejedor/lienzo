@@ -10,7 +10,7 @@
 use serde_json::json;
 
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, icons};
+use crate::{LienzoApp, icons};
 
 /// (command id, icon, label). The labels are the Layer menu's, already translated.
 pub(crate) const ALIGN: [(&str, &str, &str); 6] = [
@@ -66,7 +66,7 @@ pub(crate) fn panel_is_open(ctx: &egui::Context) -> bool {
 /// The two groups of four icons, then the "..." button and its panel. Each icon uses 20 pt
 /// artwork inside a 28 pt hit target for high-DPI legibility without changing enabled-state or
 /// command dispatch (#8849).
-pub fn options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options(app: &mut LienzoApp, ui: &mut egui::Ui) {
     ui.spacing_mut().item_spacing.x = 0.0;
     for group in bar_groups() {
         for (cmd, icon, tip) in group {
@@ -92,7 +92,7 @@ pub fn options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 /// The compact icon panel under the "..." button: Align (6) and Distribute (6). The Distribute
 /// Spacing group (#10715) and the Align To dropdown (#10358) go below these as further `group`
 /// rows.
-fn panel(app: &mut PhotocraftApp, ctx: &egui::Context, anchor: egui::Rect) {
+fn panel(app: &mut LienzoApp, ctx: &egui::Context, anchor: egui::Rect) {
     let t = Tokens::get(ctx);
     egui::Area::new(egui::Id::unique("move-align-panel")).order(egui::Order::Foreground).fixed_pos(anchor.left_bottom() + egui::vec2(0.0, 2.0)).show(
         ctx,
@@ -122,7 +122,7 @@ fn panel(app: &mut PhotocraftApp, ctx: &egui::Context, anchor: egui::Rect) {
 
 /// The gear after the "..." button: a menu of the Move tool's three check items, all on by
 /// default and saved with the tool options.
-pub fn gear(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn gear(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let gear = icons::button_with_icon_size(ui, "settings", 28.0, 20.0, false, tl!("Options"));
     egui::Popup::menu(&gear).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
         ui.set_min_width(200.0);
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn every_button_is_a_live_command_with_an_icon() {
-        let specs = photocraft_engine::command_specs();
+        let specs = lienzo_engine::command_specs();
         let bar: Vec<BarButton> = bar_groups().into_iter().flatten().collect();
         let panel = ALIGN.iter().chain(DISTRIBUTE.iter());
         for (cmd, icon) in bar.iter().map(|b| (b.0, b.1)).chain(panel.map(|b| (b.0, b.1))) {

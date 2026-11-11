@@ -4,7 +4,7 @@
 //! Applied on top of `menus::is_enabled`, so menus, shortcuts and the Layers context menu grey the
 //! same items Photoshop greys.
 
-use photocraft_doc::{Document, Layer, LayerContent, LayerId};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId};
 
 /// Commands Photoshop greys while the Background layer is the active layer.
 fn background_blocks(id: &str, has_selection: bool) -> bool {
@@ -48,7 +48,7 @@ fn kind_blocks(id: &str, l: &Layer) -> bool {
         "layer.rasterize.layer" => {
             l.vector_mask.is_none() && !matches!(c, LayerContent::Text(_) | LayerContent::Shape(_) | LayerContent::Fill(_) | LayerContent::Smart(_))
         }
-        "layer.rasterize.layerStyle" => !photocraft_engine::rasterize_style_cmds::can_bake(l),
+        "layer.rasterize.layerStyle" => !lienzo_engine::rasterize_style_cmds::can_bake(l),
         "layer.layerStyle.copyLayerStyle" | "layer.layerStyle.clear" => l.effects.items.is_empty(),
         _ => id.starts_with("layer.combineShapes.") && !matches!(c, LayerContent::Shape(_)),
     }
@@ -114,7 +114,7 @@ pub fn disabled_for_selection(doc: &Document, selected: &[LayerId], active: Opti
     !any
 }
 
-pub fn disabled(app: &crate::PhotocraftApp, id: &str) -> bool {
+pub fn disabled(app: &crate::LienzoApp, id: &str) -> bool {
     let Some(st) = app.session.active() else { return false };
     let active = st.active_layer.and_then(|a| st.doc.layer(a));
     // Free Transform Path works on the Background too: it moves the path, not the pixels.
@@ -131,10 +131,10 @@ pub fn disabled(app: &crate::PhotocraftApp, id: &str) -> bool {
     // refuses as locked when it opens (#11101). It doesn't warp, and doesn't distort while
     // editable type is among them.
     if transform {
-        let targets = photocraft_engine::transform_cmds::selection_targets(st);
+        let targets = lienzo_engine::transform_cmds::selection_targets(st);
         // Judged on the layers the box moves, linked ones included (#11217): one linked layer
         // selected is a box over its link group, which doesn't warp either.
-        let targets = photocraft_engine::transform_cmds::box_targets(&st.doc, &targets);
+        let targets = lienzo_engine::transform_cmds::box_targets(&st.doc, &targets);
         if targets.len() > 1 || targets.first() != st.active_layer.as_ref() {
             let text = targets.iter().any(|t| st.doc.layer(*t).is_some_and(|l| matches!(l.content, LayerContent::Text(_))));
             return match id {
@@ -161,7 +161,7 @@ pub fn disabled(app: &crate::PhotocraftApp, id: &str) -> bool {
             | "edit.transform.splitWarpVertically"
             | "edit.transform.removeWarpSplit"
     ) && active.is_some_and(|l| matches!(l.content, LayerContent::Text(_)))
-        && photocraft_engine::transform_cmds::lone_target(&st.doc, st.active_layer, &serde_json::json!({ "target": crate::canvas::paint_target(app) }))
+        && lienzo_engine::transform_cmds::lone_target(&st.doc, st.active_layer, &serde_json::json!({ "target": crate::canvas::paint_target(app) }))
             .is_ok_and(|t| t.is_none())
     {
         return true;
@@ -178,13 +178,13 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn session() -> photocraft_engine::Session {
-        let mut s = photocraft_engine::Session::new();
+    fn session() -> lienzo_engine::Session {
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 20, "height": 20})).unwrap();
         s
     }
 
-    fn off(s: &photocraft_engine::Session, id: &str) -> bool {
+    fn off(s: &lienzo_engine::Session, id: &str) -> bool {
         let st = s.active().unwrap();
         disabled_for(&st.doc, st.active_layer.and_then(|a| st.doc.layer(a)), id)
     }
@@ -216,7 +216,7 @@ mod tests {
         s.execute("select.deselect", json!({})).unwrap();
         s.execute("channel.new", json!({})).unwrap();
         s.execute("channel.target", json!({"channel": 0})).unwrap();
-        let app = crate::PhotocraftApp::new(s, crate::Services::default());
+        let app = crate::LienzoApp::new(s, crate::Services::default());
         assert!(!disabled(&app, "edit.freeTransform") && !disabled(&app, "edit.transform.flipHorizontal"));
     }
 
@@ -228,7 +228,7 @@ mod tests {
         assert!(off(&s, "edit.contentAwareScale"));
         s.execute("select.all", json!({})).unwrap();
         assert!(!off(&s, "edit.contentAwareScale"));
-        let mut app = crate::PhotocraftApp::new(s, crate::Services::default());
+        let mut app = crate::LienzoApp::new(s, crate::Services::default());
         assert!(!disabled(&app, "edit.contentAwareScale"));
         let r = app.session.execute("edit.contentAwareScale", json!({"scaleX": 70})).unwrap();
         assert_eq!(r["to"], json!([14, 20]));
@@ -245,8 +245,8 @@ mod tests {
         let mut s = session();
         s.execute("layer.new.layer", json!({})).unwrap();
         let raster = s.active().unwrap().active_layer.unwrap();
-        let text = photocraft_doc::LayerId(s.execute("type.create", json!({"text": "Hi", "size": 12, "x": 2, "y": 12})).unwrap()["layer"].as_u64().unwrap());
-        let sel = |s: &photocraft_engine::Session, ids: &[photocraft_doc::LayerId], id: &str| {
+        let text = lienzo_doc::LayerId(s.execute("type.create", json!({"text": "Hi", "size": 12, "x": 2, "y": 12})).unwrap()["layer"].as_u64().unwrap());
+        let sel = |s: &lienzo_engine::Session, ids: &[lienzo_doc::LayerId], id: &str| {
             let st = s.active().unwrap();
             disabled_for_selection(&st.doc, ids, ids.last().and_then(|a| st.doc.layer(*a)), id)
         };
@@ -271,8 +271,8 @@ mod tests {
     /// A document with a Background, plain layers, one with a mask, one with a vector mask, a type layer, a shape, a Smart
     /// Object, an adjustment layer and one with a drop shadow; `select` picks a selection (the last
     /// layer is active) and `copied` has a layer style on the clipboard.
-    fn world(select: &[&str], copied: bool) -> photocraft_engine::Session {
-        use photocraft_doc::LayerId;
+    fn world(select: &[&str], copied: bool) -> lienzo_engine::Session {
+        use lienzo_doc::LayerId;
         let mut s = session();
         let id = |r: serde_json::Value| LayerId(r["layer"].as_u64().unwrap());
         let mut ids = std::collections::HashMap::new();
@@ -301,7 +301,7 @@ mod tests {
     }
 
     /// What a layer command can change: kind, clipping, masks and style of every layer.
-    fn fingerprint(s: &photocraft_engine::Session) -> Vec<String> {
+    fn fingerprint(s: &lienzo_engine::Session) -> Vec<String> {
         s.active()
             .unwrap()
             .doc
@@ -360,7 +360,7 @@ mod tests {
         for sel in selections {
             for copied in [false, true] {
                 for (cmd, must_change) in commands {
-                    let app = crate::PhotocraftApp::new(world(sel, copied), crate::Services::default());
+                    let app = crate::LienzoApp::new(world(sel, copied), crate::Services::default());
                     let enabled = crate::menus::is_enabled(&app, cmd);
                     let mut s = app.session;
                     let before = fingerprint(&s);
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn warp_is_greyed_for_a_layer_with_linked_partners() {
         let mut s = session();
-        let id = |r: serde_json::Value| photocraft_doc::LayerId(r["layer"].as_u64().unwrap());
+        let id = |r: serde_json::Value| lienzo_doc::LayerId(r["layer"].as_u64().unwrap());
         let a = id(s.execute("layer.new.layer", json!({})).unwrap());
         let b = id(s.execute("layer.new.layer", json!({})).unwrap());
         let c = id(s.execute("layer.new.layer", json!({})).unwrap());
@@ -399,7 +399,7 @@ mod tests {
         s.execute("layer.select", json!({"layer": b.0, "mode": "add"})).unwrap();
         assert_eq!(s.execute("layer.linkLayers", json!({})).unwrap()["linked"], true);
         s.execute("layer.select", json!({"layer": a.0})).unwrap();
-        let mut app = crate::PhotocraftApp::new(s, crate::Services::default());
+        let mut app = crate::LienzoApp::new(s, crate::Services::default());
         assert!(disabled(&app, "edit.transform.warp"), "a linked layer warps with its partner: not available");
         assert!(!disabled(&app, "edit.freeTransform") && !disabled(&app, "edit.transform.distort"), "the box itself is");
         app.session.execute("layer.select", json!({"layer": c.0})).unwrap();

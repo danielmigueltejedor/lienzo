@@ -4,14 +4,14 @@
 use egui::{Rect as ScreenRect, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 
-fn paint(app: &mut PhotocraftApp, r: Rect) -> LayerId {
+fn paint(app: &mut LienzoApp, r: Rect) -> LayerId {
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
@@ -22,12 +22,12 @@ fn paint(app: &mut PhotocraftApp, r: Rect) -> LayerId {
     app.session.active().unwrap().active_layer.unwrap()
 }
 
-fn bounds(app: &PhotocraftApp, id: LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: LayerId) -> Rect {
     let doc = &app.session.active().unwrap().doc;
-    photocraft_compose::bounds::content_bounds(doc.layer(id).unwrap().surface().unwrap())
+    lienzo_compose::bounds::content_bounds(doc.layer(id).unwrap().surface().unwrap())
 }
 
-fn select_all(app: &mut PhotocraftApp, ids: &[LayerId]) {
+fn select_all(app: &mut LienzoApp, ids: &[LayerId]) {
     app.session.execute("layer.select", json!({"layer": ids[0].0})).unwrap();
     for id in &ids[1..] {
         app.session.execute("layer.select", json!({"layer": id.0, "mode": "toggle"})).unwrap();
@@ -36,8 +36,8 @@ fn select_all(app: &mut PhotocraftApp, ids: &[LayerId]) {
 
 /// A 120x120 document with three layers side by side and on top of each other unevenly, the
 /// Move tool current. Returns the app and the layers, bottom to top.
-fn app() -> (PhotocraftApp, [LayerId; 3]) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, [LayerId; 3]) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 120, "height": 120})).unwrap();
     let a = paint(&mut app, Rect::new(0, 0, 10, 10));
     let b = paint(&mut app, Rect::new(12, 50, 32, 54));
@@ -48,9 +48,9 @@ fn app() -> (PhotocraftApp, [LayerId; 3]) {
 }
 
 /// The Move tool's align controls and gear, as the options bar lays them out.
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(700.0, 200.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -63,16 +63,16 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn rect_of(h: &Harness<'static, PhotocraftApp>, label: &str) -> ScreenRect {
+fn rect_of(h: &Harness<'static, LienzoApp>, label: &str) -> ScreenRect {
     h.get_by_label(label).rect()
 }
 
-fn click(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn click(h: &mut Harness<'static, LienzoApp>, label: &str) {
     h.get_by_label(label).click();
     h.run_steps(4);
 }
@@ -259,9 +259,9 @@ fn show_hover_bounds_from_layers_switches_the_layers_panel_outline() {
     assert_eq!(crate::move_hover::active_outline(&mut app, None, false, false), None);
 }
 
-fn expanded(app: &PhotocraftApp, group: LayerId) -> bool {
+fn expanded(app: &LienzoApp, group: LayerId) -> bool {
     match &app.session.active().unwrap().doc.layer(group).unwrap().content {
-        photocraft_doc::LayerContent::Group(g) => g.expanded,
+        lienzo_doc::LayerContent::Group(g) => g.expanded,
         _ => panic!("not a group"),
     }
 }
@@ -269,7 +269,7 @@ fn expanded(app: &PhotocraftApp, group: LayerId) -> bool {
 #[test]
 fn expand_layer_group_on_click_switches_the_opening_of_closed_parent_groups() {
     for on in [true, false] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
         let inner = paint(&mut app, Rect::new(8, 8, 24, 24));
         app.session.execute("layer.groupLayers", json!({})).unwrap();
@@ -293,8 +293,8 @@ fn expand_layer_group_on_click_switches_the_opening_of_closed_parent_groups() {
 
 /// A 64x64 document: `inner` painted at (8..24)^2 inside a closed group, the Background-less
 /// group selected, `tool` current and the gear option set to `on`. The reveal has seen the frame.
-fn closed_group_doc(tool: Tool, on: bool) -> (PhotocraftApp, LayerId, LayerId, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn closed_group_doc(tool: Tool, on: bool) -> (LienzoApp, LayerId, LayerId, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     let inner = paint(&mut app, Rect::new(8, 8, 24, 24));
     app.session.execute("layer.groupLayers", json!({})).unwrap();
@@ -311,7 +311,7 @@ fn closed_group_doc(tool: Tool, on: bool) -> (PhotocraftApp, LayerId, LayerId, e
 }
 
 /// A press and release at (12, 12) with Ctrl/Cmd held (a temporary Move from another tool).
-fn ctrl_click(app: &mut PhotocraftApp) {
+fn ctrl_click(app: &mut LienzoApp) {
     use crate::canvas::{ToolEvent, tool_event};
     let mods = egui::Modifiers { command: true, ctrl: true, ..Default::default() };
     tool_event(app, ToolEvent::Down { x: 12.0, y: 12.0, pressure: 1.0 }, mods);

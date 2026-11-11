@@ -1,6 +1,6 @@
-use photocraft_psd::PsdError;
-use photocraft_psd::csh;
-use photocraft_psd::path::{PathData, PsdKnot, PsdSubpath};
+use lienzo_psd::PsdError;
+use lienzo_psd::csh;
+use lienzo_psd::path::{PathData, PsdKnot, PsdSubpath};
 
 fn fixture(names: &[&str]) -> Vec<u8> {
     let mut bytes = b"cush".to_vec();

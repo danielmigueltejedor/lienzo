@@ -8,17 +8,17 @@ use serde_json::{Value, json};
 use super::tests::{BLUR, active_content, answer, app_with, click, harness, menu, past, prompt};
 use super::*;
 
-fn step_name(app: &PhotocraftApp) -> Option<String> {
+fn step_name(app: &LienzoApp) -> Option<String> {
     app.session.active()?.history.undo_label().map(str::to_string)
 }
 
-fn active_layer_content(app: &PhotocraftApp) -> photocraft_doc::LayerContent {
+fn active_layer_content(app: &LienzoApp) -> lienzo_doc::LayerContent {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().content.clone()
 }
 
 /// A press of `tool` on a `kind` layer, answered with `button` in the dialog.
-fn answer_prompt(kind: Kind, tool: Tool, button: &str) -> (PhotocraftApp, usize) {
+fn answer_prompt(kind: Kind, tool: Tool, button: &str) -> (LienzoApp, usize) {
     let mut app = app_with(kind);
     app.ui.tool = tool;
     let before = past(&app);

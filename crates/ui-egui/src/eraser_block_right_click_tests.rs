@@ -6,12 +6,12 @@
 use egui_kittest::Harness;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::control::{ControlRequest, Outcome, handle};
 use crate::state::Tool;
 
-fn app(mode: &str) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(mode: &str) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#dc1e1e"})).unwrap();
@@ -21,7 +21,7 @@ fn app(mode: &str) -> PhotocraftApp {
     app
 }
 
-fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn call(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (req, _rx) = ControlRequest::new(method, params);
     match handle(app, ctx, &req) {
         Outcome::Done(v) => v,
@@ -29,7 +29,7 @@ fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Valu
     }
 }
 
-fn right_click(app: &mut PhotocraftApp, ctx: &egui::Context, modifiers: Value) {
+fn right_click(app: &mut LienzoApp, ctx: &egui::Context, modifiers: Value) {
     call(
         app,
         ctx,
@@ -38,7 +38,7 @@ fn right_click(app: &mut PhotocraftApp, ctx: &egui::Context, modifiers: Value) {
     );
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -95,7 +95,7 @@ fn with_the_erase_preference_block_mode_still_erases() {
 #[test]
 fn a_real_right_click_opens_the_menu_and_escape_closes_it() {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -104,7 +104,7 @@ fn a_real_right_click_opens_the_menu_and_escape_closes_it() {
         },
         app("block"),
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    crate::LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let n = steps(h.state());
     let c = h.state().last_canvas_rect.center();

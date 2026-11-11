@@ -2,16 +2,16 @@
 //! reference application does; Select > Transform Selection keeps "Transform Selection".
 
 use egui::Modifiers;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// A 400 x 300 document with 100,100 to 300,300 selected and `tool` active.
-fn app_with_selection(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_selection(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 400})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -20,22 +20,22 @@ fn app_with_selection(tool: Tool) -> PhotocraftApp {
     app
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     let m = Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
 }
 
-fn bounds(app: &PhotocraftApp) -> Option<Rect> {
+fn bounds(app: &LienzoApp) -> Option<Rect> {
     app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds())
 }
 
-fn last_step(app: &PhotocraftApp) -> String {
+fn last_step(app: &LienzoApp) -> String {
     app.session.active().unwrap().history.entries().last().cloned().unwrap()
 }
 
-fn past(app: &PhotocraftApp) -> usize {
+fn past(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 

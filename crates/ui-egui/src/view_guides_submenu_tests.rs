@@ -3,7 +3,7 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas_tool_menu::{GUIDE_CLEAR, GUIDE_EDIT, GUIDE_MENU};
 
 const ORDER: [(&str, &str); 9] = [
@@ -18,19 +18,19 @@ const ORDER: [(&str, &str); 9] = [
     ("New Guides From Shape", "view.newGuidesFromShape"),
 ];
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 10})).unwrap();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 20})).unwrap();
     app
 }
 
-fn item(app: &PhotocraftApp, id: &str) -> crate::menus::MenuItem {
+fn item(app: &LienzoApp, id: &str) -> crate::menus::MenuItem {
     crate::menus::menu_items(app).into_iter().find(|i| i.id == id).unwrap_or_else(|| panic!("{id} is not in the menu"))
 }
 
-fn vertical(app: &PhotocraftApp) -> Vec<f64> {
+fn vertical(app: &LienzoApp) -> Vec<f64> {
     app.session.active().unwrap().doc.guides.vertical.clone()
 }
 

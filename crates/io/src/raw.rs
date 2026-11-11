@@ -1,29 +1,29 @@
-//! Camera raw files via `photocraft-raw`: developed to a 16-bit RGB document
+//! Camera raw files via `lienzo-raw`: developed to a 16-bit RGB document
 //! in ProPhoto RGB (the embedded profile is the built-in ProPhoto-compatible
 //! profile), or, for raw variants not decoded yet, the camera's embedded
 //! JPEG preview with a warning.
 //!
 //! Files without colour calibration (everything but DNG) get their colour
-//! from the camera's own embedded JPEG: `photocraft-raw` cannot decode JPEG,
-//! so the preview is decoded here and handed to [`photocraft_raw::fit_look`],
+//! from the camera's own embedded JPEG: `lienzo-raw` cannot decode JPEG,
+//! so the preview is decoded here and handed to [`lienzo_raw::fit_look`],
 //! which fits a matrix and tone curve and keeps the neutral fallback when the
 //! fit is not clearly better.
 
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use photocraft_cms::{Builtin, Intent, Profile, Transform};
-use photocraft_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType};
-pub use photocraft_raw::Demosaic;
-use photocraft_raw::{CameraLook, DevelopOptions, Limits, PreviewColorSpace, RawError, Reference, Sensor, WhiteBalance};
-pub use photocraft_raw::{EXTENSIONS, Tone, retone};
+use lienzo_cms::{Builtin, Intent, Profile, Transform};
+use lienzo_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType};
+pub use lienzo_raw::Demosaic;
+use lienzo_raw::{CameraLook, DevelopOptions, Limits, PreviewColorSpace, RawError, Reference, Sensor, WhiteBalance};
+pub use lienzo_raw::{EXTENSIONS, Tone, retone};
 
 use crate::flat::image_to_document;
 use crate::{ImportResult, IoError};
 
-/// `true` if `bytes` are a camera raw file `photocraft-raw` recognises.
+/// `true` if `bytes` are a camera raw file `lienzo-raw` recognises.
 pub fn is_raw(bytes: &[u8]) -> bool {
-    photocraft_raw::is_raw(bytes)
+    lienzo_raw::is_raw(bytes)
 }
 
 /// The decode limits shared with the flat codecs.
@@ -35,8 +35,8 @@ fn limits() -> Limits {
 /// A raw file's embedded JPEG preview, turned upright. Its own EXIF orientation wins when it
 /// has one; otherwise the raw's IFD0 orientation applies (TIFF-based raws record it there, and
 /// their previews are usually stored as the sensor reads out). Developed raws are oriented by
-/// `photocraft-raw` and their EXIF carries no orientation, so nothing is turned twice.
-fn upright_preview(raw: &[u8], jpeg: &[u8], limits: &photocraft_raw::Limits) -> Result<Image, IoError> {
+/// `lienzo-raw` and their EXIF carries no orientation, so nothing is turned twice.
+fn upright_preview(raw: &[u8], jpeg: &[u8], limits: &lienzo_raw::Limits) -> Result<Image, IoError> {
     // Decode the embedded preview under the caller's limits, not the codec defaults: an
     // embedded JPEG can declare far more decoded pixels than the raw development the caller
     // authorized, so the preview fallback must honor the same policy.
@@ -44,7 +44,7 @@ fn upright_preview(raw: &[u8], jpeg: &[u8], limits: &photocraft_raw::Limits) -> 
         codecs::Limits { max_width: limits.max_width, max_height: limits.max_height, max_pixels: limits.max_pixels, max_alloc: limits.max_alloc };
     let img = codecs::decode_as_with(Format::Jpeg, jpeg, &codecs::DecodeOptions { keep_orientation: true, limits: codec_limits })?;
     let own = img.meta.exif.as_deref().map_or(1, codecs::exif_orientation);
-    let o = if own != 1 { own } else { photocraft_raw::orientation(raw).unwrap_or_else(|| codecs::exif_orientation(raw)) };
+    let o = if own != 1 { own } else { lienzo_raw::orientation(raw).unwrap_or_else(|| codecs::exif_orientation(raw)) };
     Ok(img.oriented(o)?)
 }
 
@@ -53,7 +53,7 @@ fn upright_preview(raw: &[u8], jpeg: &[u8], limits: &photocraft_raw::Limits) -> 
 /// developed RGB pixels, the demosaic method, and the crop.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct RawTuning {
-    /// −100…100, as `photocraft_algo::camera_raw::CameraRaw::temperature`.
+    /// −100…100, as `lienzo_algo::camera_raw::CameraRaw::temperature`.
     pub temperature: f32,
     /// −100…100, as `CameraRaw::tint`.
     pub tint: f32,
@@ -61,7 +61,7 @@ pub struct RawTuning {
     pub exposure: f32,
     pub demosaic: Demosaic,
     /// −100…100, as `CameraRaw::shadows`: in linear light before the tone curve, as Camera Raw
-    /// does for raw files ([`photocraft_raw::Tone`]).
+    /// does for raw files ([`lienzo_raw::Tone`]).
     pub shadows: f32,
     /// −100…100, as `CameraRaw::highlights`.
     pub highlights: f32,
@@ -83,14 +83,14 @@ pub struct RawTuning {
 /// no as-shot white balance: Temperature / Tint were then not applied, and the caller keeps
 /// them as RGB adjustments.
 pub fn import_raw_tuned(name: &str, bytes: &[u8], tuning: &RawTuning) -> Result<(ImportResult, bool), IoError> {
-    let format = photocraft_raw::identify(bytes).map(|f| f.name()).unwrap_or("camera raw");
+    let format = lienzo_raw::identify(bytes).map(|f| f.name()).unwrap_or("camera raw");
     let exposure = f64::from(tuning.exposure);
     if !exposure.is_finite() || !(-10.0..=10.0).contains(&exposure) {
         return Err(IoError::Raw(RawError::Malformed(format!("exposure {} EV is out of range", tuning.exposure))));
     }
-    let sensor = photocraft_raw::decode(bytes, &limits()).map_err(IoError::Raw)?;
+    let sensor = lienzo_raw::decode(bytes, &limits()).map_err(IoError::Raw)?;
     let slider = |v: f32| if v.is_finite() { v.clamp(-100.0, 100.0) } else { 0.0 };
-    let tone = photocraft_raw::Tone {
+    let tone = lienzo_raw::Tone {
         shadows: slider(tuning.shadows),
         highlights: slider(tuning.highlights),
         clarity: slider(tuning.clarity),
@@ -109,7 +109,7 @@ pub fn import_raw_tuned(name: &str, bytes: &[u8], tuning: &RawTuning) -> Result<
         }
         None => false,
     };
-    let mut dev = photocraft_raw::develop_sensor(&sensor, &opts).map_err(IoError::Raw)?;
+    let mut dev = lienzo_raw::develop_sensor(&sensor, &opts).map_err(IoError::Raw)?;
     let cropped = match tuning.crop {
         Some(crop) => {
             let o = if opts.orient { dev.info.orientation } else { 1 };
@@ -133,7 +133,7 @@ pub fn import_raw_tuned(name: &str, bytes: &[u8], tuning: &RawTuning) -> Result<
 }
 
 /// Crops the upright developed frame to `crop` (fractions of it), as Camera Raw crops a raw.
-fn crop_developed(dev: &mut photocraft_raw::Developed, crop: crate::camera_raw_xmp::Crop) -> Result<(), IoError> {
+fn crop_developed(dev: &mut lienzo_raw::Developed, crop: crate::camera_raw_xmp::Crop) -> Result<(), IoError> {
     let (w, h) = (dev.width as usize, dev.height as usize);
     let bad = || IoError::Raw(RawError::Malformed(format!("the developed {w}x{h} frame holds fewer samples than its size")));
     let Some((x0, y0, x1, y1)) = crop.pixels(w, h) else { return Ok(()) };
@@ -151,18 +151,18 @@ fn crop_developed(dev: &mut photocraft_raw::Developed, crop: crate::camera_raw_x
 /// The tone curve `bytes` develop with by default: the fitted look's for a file without colour
 /// calibration (see [`import_raw_with`]), else the camera profile's (empty: none, or not a raw
 /// this crate decodes). For previews of the open-time raw-stage sliders
-/// ([`photocraft_raw::retone`]), in linear-light knots.
+/// ([`lienzo_raw::retone`]), in linear-light knots.
 pub fn tone_curve(bytes: &[u8]) -> Vec<[f32; 2]> {
-    let Ok(sensor) = photocraft_raw::decode(bytes, &limits()) else { return Vec::new() };
+    let Ok(sensor) = lienzo_raw::decode(bytes, &limits()) else { return Vec::new() };
     match default_look(bytes, &sensor) {
         Some(look) => look.tone.as_ref().map(look_knots).unwrap_or_default(),
         None => sensor.tone_curve,
     }
 }
 
-/// A fitted look's tone curve as knots for [`photocraft_raw::retone`] (which reads them
+/// A fitted look's tone curve as knots for [`lienzo_raw::retone`] (which reads them
 /// log-linearly): sampled densely enough that the two agree within a fraction of a code value.
-fn look_knots(t: &photocraft_raw::ToneCurve) -> Vec<[f32; 2]> {
+fn look_knots(t: &lienzo_raw::ToneCurve) -> Vec<[f32; 2]> {
     const N: usize = 256;
     (1..=N).map(|i| (i as f64 / N as f64).powi(2)).map(|x| [x as f32, t.eval(x) as f32]).collect()
 }
@@ -192,24 +192,24 @@ fn camera_name(make: Option<&str>, model: Option<&str>) -> String {
 }
 
 /// Camera Raw's white-balance gains for Temperature / Tint (−100…100), the same the Camera
-/// Raw filter applies ([`photocraft_algo::camera_raw::white_balance_gains`]).
+/// Raw filter applies ([`lienzo_algo::camera_raw::white_balance_gains`]).
 fn wb_gains(temperature: f32, tint: f32) -> [f64; 3] {
-    photocraft_algo::camera_raw::white_balance_gains(temperature.clamp(-100.0, 100.0), tint.clamp(-100.0, 100.0)).map(f64::from)
+    lienzo_algo::camera_raw::white_balance_gains(temperature.clamp(-100.0, 100.0), tint.clamp(-100.0, 100.0)).map(f64::from)
 }
 
 /// A developed raw as a 16-bit ProPhoto document, with a note saying how it was developed.
-fn developed_document(name: &str, bytes: &[u8], format: &str, dev: photocraft_raw::Developed, summary: &str) -> Result<ImportResult, IoError> {
+fn developed_document(name: &str, bytes: &[u8], format: &str, dev: lienzo_raw::Developed, summary: &str) -> Result<ImportResult, IoError> {
     let mut img = Image::from_u16(dev.width, dev.height, ChannelLayout::Rgb, &dev.rgb)?;
     // The raw's own EXIF (camera, lens, exposure, date), for File Info's Camera Data. It carries
     // no orientation: the developed image is already upright.
     img.meta.exif = codecs::raw_exif(bytes);
     let mut r = image_to_document(name, &img)?;
-    r.document.icc_profile = Some(Arc::new(photocraft_cms::Builtin::ProPhotoCompat.profile().to_bytes().to_vec()));
+    r.document.icc_profile = Some(Arc::new(lienzo_cms::Builtin::ProPhotoCompat.profile().to_bytes().to_vec()));
     let camera = camera_name(dev.info.make.as_deref(), dev.info.model.as_deref());
     r.warnings.push(format!(
         "{format}{} {summary} into 16-bit {}",
         if camera.is_empty() { String::new() } else { format!(" from {camera}") },
-        photocraft_raw::OUTPUT_SPACE
+        lienzo_raw::OUTPUT_SPACE
     ));
     r.warnings.extend(dev.warnings);
     Ok(r)
@@ -227,7 +227,7 @@ pub fn import_raw_demosaic(name: &str, bytes: &[u8], demosaic: Demosaic) -> Resu
 
 /// Smallest preview long edge preferred for the colour fit (a smaller preview decodes faster;
 /// the fit grid is at most `PROXY_EDGE` cells and wants about two pixels per cell).
-const FIT_PREVIEW_EDGE: u32 = 2 * photocraft_raw::PROXY_EDGE as u32;
+const FIT_PREVIEW_EDGE: u32 = 2 * lienzo_raw::PROXY_EDGE as u32;
 
 /// The colour space of a raw's decoded preview when it is not sRGB: its own ICC profile, else the
 /// one the raw's EXIF states (a Sony body set to Adobe RGB writes no profile into the JPEG).
@@ -235,20 +235,20 @@ const FIT_PREVIEW_EDGE: u32 = 2 * photocraft_raw::PROXY_EDGE as u32;
 fn preview_profile(raw: &[u8], icc: Option<&[u8]>) -> Result<Option<Cow<'static, Profile>>, String> {
     let src = match icc {
         Some(icc) => Cow::Owned(Profile::parse(icc).map_err(|e| format!("the preview's ICC profile does not parse: {e}"))?),
-        None if photocraft_raw::embedded_preview_color_space(raw) == Some(PreviewColorSpace::AdobeRgb) => Cow::Borrowed(Builtin::AdobeRgbCompat.profile()),
+        None if lienzo_raw::embedded_preview_color_space(raw) == Some(PreviewColorSpace::AdobeRgb) => Cow::Borrowed(Builtin::AdobeRgbCompat.profile()),
         None => return Ok(None),
     };
     Ok((!src.same_colors(Builtin::Srgb.profile())).then_some(src))
 }
 
 /// Fits the colour of a decoded raw to the camera's embedded JPEG (see
-/// [`photocraft_raw::fit_look`]): picks the smallest preview at least
+/// [`lienzo_raw::fit_look`]): picks the smallest preview at least
 /// `FIT_PREVIEW_EDGE` pixels long (else the largest), decodes it, turns it upright and
 /// converts it to sRGB when it is in another colour space ([`preview_profile`]). `Err` says
 /// why there is no fit.
 pub fn fit_preview_look(raw: &[u8], sensor: &Sensor, opts: &DevelopOptions) -> Result<CameraLook, String> {
-    let previews = photocraft_raw::embedded_previews(raw);
-    let long = |p: &photocraft_raw::Preview| p.width.max(p.height);
+    let previews = lienzo_raw::embedded_previews(raw);
+    let long = |p: &lienzo_raw::Preview| p.width.max(p.height);
     let pick = previews
         .iter()
         .filter(|p| long(p) >= FIT_PREVIEW_EDGE)
@@ -267,12 +267,12 @@ pub fn fit_preview_look(raw: &[u8], sensor: &Sensor, opts: &DevelopOptions) -> R
         t.convert_u8(&rgb, 3, &mut out, 3, false);
         rgb = Cow::Owned(out);
     }
-    photocraft_raw::fit_look(sensor, opts, &Reference { width: w, height: h, rgb: &rgb }).map_err(|e| e.to_string())
+    lienzo_raw::fit_look(sensor, opts, &Reference { width: w, height: h, rgb: &rgb }).map_err(|e| e.to_string())
 }
 
 /// Decodes and develops; a file without colour calibration gets a look fitted to its preview.
-fn develop_fitted(bytes: &[u8], opts: &DevelopOptions) -> Result<photocraft_raw::Developed, RawError> {
-    let sensor = photocraft_raw::decode(bytes, &opts.limits)?;
+fn develop_fitted(bytes: &[u8], opts: &DevelopOptions) -> Result<lienzo_raw::Developed, RawError> {
+    let sensor = lienzo_raw::decode(bytes, &opts.limits)?;
     let mut opts = Cow::Borrowed(opts);
     if opts.camera_look.is_none()
         && sensor.color.calibrations.is_empty()
@@ -281,16 +281,16 @@ fn develop_fitted(bytes: &[u8], opts: &DevelopOptions) -> Result<photocraft_raw:
     {
         opts.to_mut().camera_look = Some(look);
     }
-    photocraft_raw::develop_sensor(&sensor, &opts)
+    lienzo_raw::develop_sensor(&sensor, &opts)
 }
 
 /// The camera's embedded JPEG, upright, for opening in place of sensor data that can't be
 /// developed. A preview without an ICC profile of its own is tagged with the colour space the
 /// raw's EXIF states (a Sony body set to Adobe RGB writes no profile into the JPEG), as the colour
 /// fit reads it ([`preview_profile`]); otherwise it opens as untagged sRGB.
-fn preview_image(raw: &[u8], jpeg: &[u8], limits: &photocraft_raw::Limits) -> Result<Image, IoError> {
+fn preview_image(raw: &[u8], jpeg: &[u8], limits: &lienzo_raw::Limits) -> Result<Image, IoError> {
     let mut img = upright_preview(raw, jpeg, limits)?;
-    if img.icc.is_none() && photocraft_raw::embedded_preview_color_space(raw) == Some(PreviewColorSpace::AdobeRgb) {
+    if img.icc.is_none() && lienzo_raw::embedded_preview_color_space(raw) == Some(PreviewColorSpace::AdobeRgb) {
         img.icc = Some(Builtin::AdobeRgbCompat.profile().to_bytes().to_vec());
     }
     Ok(img)
@@ -320,18 +320,18 @@ pub fn developed_demosaic(warnings: &[String]) -> Option<Demosaic> {
 /// Develops a raw file with explicit settings. Without `opts.camera_look`, a file without
 /// colour calibration gets one fitted to its embedded JPEG when that clearly helps.
 pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Result<ImportResult, IoError> {
-    let format = photocraft_raw::identify(bytes).map(|f| f.name()).unwrap_or("camera raw");
+    let format = lienzo_raw::identify(bytes).map(|f| f.name()).unwrap_or("camera raw");
     match develop_fitted(bytes, opts) {
         Ok(dev) => {
             let summary = format!("{DEVELOPED_NOTE} ({} demosaic, as-shot white balance)", opts.demosaic.id());
             developed_document(name, bytes, format, dev, &summary)
         }
         Err(RawError::Unsupported(reason)) => {
-            let jpeg = photocraft_raw::embedded_preview(bytes);
+            let jpeg = lienzo_raw::embedded_preview(bytes);
             // A DNG 1.7 converter keeps only its small thumbnail as JPEG and writes the larger
             // previews as JPEG XL, like the raw data (#8125): open the largest of either kind.
             let jpeg_area = jpeg.map_or(0, |p| u64::from(p.width) * u64::from(p.height));
-            let jxl = photocraft_raw::embedded_jxl_preview(bytes, &opts.limits).filter(|p| u64::from(p.width) * u64::from(p.height) > jpeg_area);
+            let jxl = lienzo_raw::embedded_jxl_preview(bytes, &opts.limits).filter(|p| u64::from(p.width) * u64::from(p.height) > jpeg_area);
             let (img, kind, (w, h)) = match (jxl, jpeg) {
                 (Some(p), _) => {
                     let size = (p.width, p.height);
@@ -348,7 +348,7 @@ pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Resul
         }
         // Damaged sensor data: the camera's JPEG is often still intact, so the photo opens.
         Err(RawError::Malformed(reason)) => {
-            match photocraft_raw::embedded_preview(bytes).map(|p| (p.width, p.height, preview_image(bytes, p.jpeg, &opts.limits))) {
+            match lienzo_raw::embedded_preview(bytes).map(|p| (p.width, p.height, preview_image(bytes, p.jpeg, &opts.limits))) {
                 Some((w, h, Ok(img))) => {
                     let note = format!(
                         "{format}: the raw sensor data is damaged ({reason}); opened the camera's embedded {w}x{h} JPEG preview instead (8-bit, not the raw sensor data)"
@@ -364,7 +364,7 @@ pub fn import_raw_with(name: &str, bytes: &[u8], opts: &DevelopOptions) -> Resul
 
 /// A decoded JPEG XL preview as an image: in its stated colour space (sRGB when it states
 /// none), turned upright by the raw's orientation (DNG previews are stored as the raw is).
-fn jxl_preview_image(raw: &[u8], p: photocraft_raw::DecodedPreview) -> Result<Image, IoError> {
+fn jxl_preview_image(raw: &[u8], p: lienzo_raw::DecodedPreview) -> Result<Image, IoError> {
     let img = if p.bits == 8 {
         Image::from_u8(p.width, p.height, ChannelLayout::Rgb, p.rgb.iter().map(|&v| v.min(255) as u8).collect())?
     } else {
@@ -377,7 +377,7 @@ fn jxl_preview_image(raw: &[u8], p: photocraft_raw::DecodedPreview) -> Result<Im
         Some(PreviewColorSpace::ProPhoto) => Some(Builtin::ProPhotoCompat.profile().to_bytes().to_vec()),
         Some(PreviewColorSpace::Srgb) | None => None,
     };
-    Ok(img.with_icc(icc).oriented(photocraft_raw::orientation(raw).unwrap_or(1))?)
+    Ok(img.with_icc(icc).oriented(lienzo_raw::orientation(raw).unwrap_or(1))?)
 }
 
 #[cfg(test)]
@@ -405,7 +405,7 @@ mod tests {
     /// its preview, which has no ICC profile, is read as Adobe RGB for the colour fit, not as sRGB.
     #[test]
     fn a_preview_without_a_profile_takes_the_raws_exif_colour_space() {
-        use photocraft_raw::testgen::{TiffBuilder, Val};
+        use lienzo_raw::testgen::{TiffBuilder, Val};
         let raw = |color_space: u16, index: &str| {
             let mut t = TiffBuilder::default();
             let interop = t.ifd(vec![(0x0001, Val::Ascii(index.into()))]);

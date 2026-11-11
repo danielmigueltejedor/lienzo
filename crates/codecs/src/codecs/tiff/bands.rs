@@ -2,7 +2,7 @@ use super::decode::{Layout, Patched, Prepared, Src, is_eof};
 use super::{CodecError, Decoder, SampleType, err, f16, map_err};
 
 /// The a* and b* samples (1 and 2 of every pixel) of a Lab image between the file's encoding and
-/// PhotoCraft's (8 bits: `a + 128`; 16 bits: `(a + 128) · 257`). In the file, CIELab holds them
+/// Lienzo's (8 bits: `a + 128`; 16 bits: `(a + 128) · 257`). In the file, CIELab holds them
 /// signed (8 bits: `a`; 16 bits: `a · 256`) and ICCLab offset (8 bits: `a + 128`; 16 bits:
 /// `(a + 128) · 256`). `to_file` picks the direction; samples are native-endian.
 pub(super) fn convert_ab(data: &mut [u8], channels: usize, sample: SampleType, signed: bool, to_file: bool) {

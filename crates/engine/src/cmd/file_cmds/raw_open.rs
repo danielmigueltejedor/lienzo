@@ -1,12 +1,12 @@
 //! Noninteractive RAW opening for Batch, using the same developer and workflow as Camera Raw.
 
-use photocraft_algo::camera_raw::CameraRaw;
-use photocraft_io::{ImportResult, raw::RawTuning};
+use lienzo_algo::camera_raw::CameraRaw;
+use lienzo_io::{ImportResult, raw::RawTuning};
 
 use super::{EngineError, Result, Session, Value, json};
 
 /// The prior settings of a sidecar, and its crop (in the raw's stored orientation).
-type Prior = (CameraRaw, Option<photocraft_io::camera_raw_xmp::Crop>);
+type Prior = (CameraRaw, Option<lienzo_io::camera_raw_xmp::Crop>);
 
 /// Read only a bounded regular XMP file. No ambient sidecar reads are granted to gated sessions.
 #[cfg(not(target_arch = "wasm32"))]
@@ -22,7 +22,7 @@ fn prior_settings(path: Option<&str>) -> Result<Option<Prior>> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(EngineError::Other(format!("{sidecar}: {error}"))),
     };
-    let cap = photocraft_io::camera_raw_xmp::MAX_XMP_BYTES;
+    let cap = lienzo_io::camera_raw_xmp::MAX_XMP_BYTES;
     if !meta.is_file() || meta.len() > cap as u64 {
         return Err(EngineError::Other(format!("{sidecar}: RAW settings must be a regular file of at most {cap} bytes")));
     }
@@ -30,7 +30,7 @@ fn prior_settings(path: Option<&str>) -> Result<Option<Prior>> {
     let mut bytes = Vec::new();
     file.take(cap as u64 + 1).read_to_end(&mut bytes).map_err(|error| EngineError::Other(format!("{sidecar}: {error}")))?;
     let mut settings = CameraRaw::default();
-    let report = photocraft_io::camera_raw_xmp::load(&mut settings, &bytes).map_err(|error| EngineError::Other(format!("{sidecar}: {error}")))?;
+    let report = lienzo_io::camera_raw_xmp::load(&mut settings, &bytes).map_err(|error| EngineError::Other(format!("{sidecar}: {error}")))?;
     if !report.ignored.is_empty() {
         return Err(EngineError::Other(format!("{sidecar}: unsupported prior RAW settings: {}", report.ignored.join(", "))));
     }
@@ -43,7 +43,7 @@ fn prior_settings(path: Option<&str>) -> Result<Option<Prior>> {
 }
 
 /// Sample the existing content at the Camera Raw histogram spacing, without a full proxy image.
-fn auto_sample(surface: &photocraft_raster::Surface) -> Vec<[f32; 4]> {
+fn auto_sample(surface: &lienzo_raster::Surface) -> Vec<[f32; 4]> {
     let area = surface.content_bounds();
     let (w, h) = (area.x1.saturating_sub(area.x0).max(0) as usize, area.y1.saturating_sub(area.y0).max(0) as usize);
     if w == 0 || h == 0 {
@@ -54,7 +54,7 @@ fn auto_sample(surface: &photocraft_raster::Surface) -> Vec<[f32; 4]> {
     let mut row = vec![[0.0; 4]; w];
     for y in (0..h).step_by(k) {
         let yy = area.y0.saturating_add(y as i32);
-        surface.read_rgba_into(photocraft_geom::Rect::new(area.x0, yy, area.x1, yy.saturating_add(1)), &mut row);
+        surface.read_rgba_into(lienzo_geom::Rect::new(area.x0, yy, area.x1, yy.saturating_add(1)), &mut row);
         out.extend(row.iter().step_by(k).copied());
     }
     out
@@ -63,7 +63,7 @@ fn auto_sample(surface: &photocraft_raster::Surface) -> Vec<[f32; 4]> {
 /// Develop representable prior settings at the sensor stage, retaining only the remaining RGB work.
 pub(super) fn prepare(s: &Session, name: &str, path: Option<&str>, bytes: &[u8]) -> Result<Option<(ImportResult, CameraRaw)>> {
     let Some(defaults) = &s.batch_raw_open else { return Ok(None) };
-    if !photocraft_io::raw::is_raw(bytes) {
+    if !lienzo_io::raw::is_raw(bytes) {
         return Ok(None);
     }
     if s.authorize.is_some() || crate::jobs::authorization_installed() {
@@ -74,13 +74,13 @@ pub(super) fn prepare(s: &Session, name: &str, path: Option<&str>, bytes: &[u8])
     let prior = prior.map(|(settings, _)| settings);
     let mut settings = prior.clone().unwrap_or_default();
     let opts = crate::jobs::import_options(s.prefs());
-    let mut imported = photocraft_io::import_with_options(name, bytes, &opts).map_err(|error| EngineError::Other(format!("{name}: {error}")))?;
-    if imported.preview_only || !imported.warnings.iter().any(|warning| warning.contains(photocraft_io::raw::DEVELOPED_NOTE)) {
+    let mut imported = lienzo_io::import_with_options(name, bytes, &opts).map_err(|error| EngineError::Other(format!("{name}: {error}")))?;
+    if imported.preview_only || !imported.warnings.iter().any(|warning| warning.contains(lienzo_io::raw::DEVELOPED_NOTE)) {
         return Err(EngineError::Other(format!("{name}: complete RAW development is required")));
     }
     if prior.is_none() && defaults.apply_auto_tone {
         let surface = imported.document.layers.iter().find_map(|layer| layer.surface()).ok_or(EngineError::NoDocument)?;
-        photocraft_algo::camera_raw::auto_tone(&auto_sample(surface), &mut settings);
+        lienzo_algo::camera_raw::auto_tone(&auto_sample(surface), &mut settings);
     }
     let tuning = RawTuning {
         temperature: settings.temperature,
@@ -97,7 +97,7 @@ pub(super) fn prepare(s: &Session, name: &str, path: Option<&str>, bytes: &[u8])
     };
     if tuning != (RawTuning { demosaic: opts.demosaic, ..Default::default() }) {
         super::open::raw_defaults(s, &imported.warnings, &mut imported.document);
-        let (mut developed, wb) = photocraft_io::raw::import_raw_tuned(name, bytes, &tuning).map_err(|error| EngineError::Other(format!("{name}: {error}")))?;
+        let (mut developed, wb) = lienzo_io::raw::import_raw_tuned(name, bytes, &tuning).map_err(|error| EngineError::Other(format!("{name}: {error}")))?;
         developed.document.resolution_dpi = imported.document.resolution_dpi;
         imported = developed;
         settings.exposure = 0.0;

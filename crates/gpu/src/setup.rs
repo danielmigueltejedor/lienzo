@@ -82,7 +82,7 @@ impl Compositor {
     /// diagnostics are marked deterministic; all other wgpu errors are transient or unknown.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn try_new_with_format_threads_classified(device: &wgpu::Device, acc_format: wgpu::TextureFormat, threads: usize) -> Result<Self, BuildFailure> {
-        let pool = rayon::ThreadPoolBuilder::new().num_threads(threads.max(1)).thread_name(|index| format!("photocraft-gpu-build-{index}")).build();
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(threads.max(1)).thread_name(|index| format!("lienzo-gpu-build-{index}")).build();
         let built = match pool {
             Ok(pool) => pool.install(|| first_error(device, || Self::build(device, acc_format, false))),
             Err(e) => {
@@ -229,7 +229,7 @@ impl Compositor {
             prefix: prefix::Prefix::default(),
             temps: Vec::new(),
             patterns: HashMap::new(),
-            pattern_mode: photocraft_color::ColorMode::Rgb,
+            pattern_mode: lienzo_color::ColorMode::Rgb,
             pattern_doc: DocId(0),
             pattern_budget: PATTERN_BUDGET,
             max_dim: 0,
@@ -438,7 +438,7 @@ impl Compositor {
 
     /// How far beyond a page cell the effect maps of `f` must be computed to be exact in it.
     pub(crate) fn fx_apron(doc: &Document, f: &plan::FxLayer<'_>) -> i32 {
-        let vector_shape = matches!(f.layer.content, LayerContent::Shape(_)) && photocraft_compose::effect_outline(f.layer).is_none();
+        let vector_shape = matches!(f.layer.content, LayerContent::Shape(_)) && lienzo_compose::effect_outline(f.layer).is_none();
         let progs: Vec<fx::MapProgram> = f
             .layer
             .effects
@@ -469,8 +469,8 @@ impl Compositor {
                 // Effect noise is speckled in the CPU maps; keep CPU and GPU identical by
                 // rendering noise-carrying effects on the CPU path.
                 let noisy = match e {
-                    photocraft_doc::Effect::DropShadow(s) | photocraft_doc::Effect::InnerShadow(s) => s.noise > 0.0,
-                    photocraft_doc::Effect::OuterGlow(g) | photocraft_doc::Effect::InnerGlow(g) => g.noise > 0.0,
+                    lienzo_doc::Effect::DropShadow(s) | lienzo_doc::Effect::InnerShadow(s) => s.noise > 0.0,
+                    lienzo_doc::Effect::OuterGlow(g) | lienzo_doc::Effect::InnerGlow(g) => g.noise > 0.0,
                     _ => false,
                 };
                 if noisy {
@@ -496,7 +496,7 @@ impl Compositor {
 
     /// A pattern's texture must fit the device and the per-pattern cap; a larger one renders on
     /// the CPU compositor.
-    fn check_pattern(&self, pat: &photocraft_doc::Pattern) -> Result<(), Unsupported> {
+    fn check_pattern(&self, pat: &lienzo_doc::Pattern) -> Result<(), Unsupported> {
         if pat.width > self.device_max || pat.height > self.device_max {
             return Err(Unsupported(format!("pattern `{}` larger than the GPU texture limit", pat.name)));
         }
@@ -592,10 +592,10 @@ impl Compositor {
     /// A measurement arrives a frame or two after the refresh it belongs to, so it carries that
     /// refresh's own pixel count; take it with [`Compositor::take_gpu_timing`].
     pub fn measure_gpu_time(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> bool {
-        // `PHOTOCRAFT_NO_GPU_TIMING` turns it off: a kill switch for a driver whose timestamp
+        // `LIENZO_NO_GPU_TIMING` turns it off: a kill switch for a driver whose timestamp
         // queries misbehave, and the control arm for measuring what the queries themselves
         // cost — the device is identical either way, so only the instrumentation varies.
-        if std::env::var_os("PHOTOCRAFT_NO_GPU_TIMING").is_some() {
+        if std::env::var_os("LIENZO_NO_GPU_TIMING").is_some() {
             return false;
         }
         if self.timer.is_none() {

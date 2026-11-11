@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_raster::{Interrupt, Surface};
 
 mod reference;
 
@@ -53,7 +53,7 @@ fn tilt_shift_matches_frozen_kernel_at_band_boundaries_and_edges() {
     cases.push(params(80.0, (-5.0, -5.0), 27.0, 0.1, 0.15));
     // The channel count and alpha are independent of the band geometry: a run takes a quarter of
     // their combinations, a different quarter each day.
-    let sweep = photocraft_testkit::Sweep::new(4);
+    let sweep = lienzo_testkit::Sweep::new(4);
     let mut case = 0;
     for ch in 1..=6 {
         let src = image(bounds.inflate(12), ch);
@@ -155,7 +155,7 @@ fn tilt_shift_depths_models_selection_and_tile_edges_match_reference() {
     selection.fill_rect(Rect::new(10, 20, 20, 30), &[0.0]);
     // Pixel formats and tile layouts are independent: a run takes a quarter of their combinations,
     // a different quarter each day.
-    let sweep = photocraft_testkit::Sweep::new(4);
+    let sweep = lienzo_testkit::Sweep::new(4);
     let mut case = 0;
     for mode in [
         ColorMode::Rgb,

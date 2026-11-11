@@ -4,14 +4,14 @@
 //!
 //! Measured in the reference application: an 800 × 500 document, the frame around the whole
 //! canvas, a line rising about 10°. The button commits 633 × 396; ⌘ held commits 800 × 500 with
-//! the uncovered corners in the background colour (Fill: Background). PhotoCraft fitted the frame
+//! the uncovered corners in the background colour (Fill: Background). Lienzo fitted the frame
 //! both ways.
 //!
 //! Driven as an agent does, through `ui.pointer` (document px), in both crop modes.
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
-use photocraft_ui_egui::crop_ui::{angle, corners as turned_corners, pending};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::crop_ui::{angle, corners as turned_corners, pending};
 use serde_json::{Value, json};
 
 /// The background colour, #1050e0: what the turn uncovers is filled with it.
@@ -20,8 +20,8 @@ const BLUE: [f32; 3] = [16.0 / 255.0, 80.0 / 255.0, 224.0 / 255.0];
 /// An 800 × 500 white document with a red 40 px square centred on (300, 200), the Crop tool
 /// picked with options-bar ratio `ratio` ("" for none) in Classic Mode or the default mode, and
 /// its default frame.
-fn app(classic: bool, ratio: &str) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(classic: bool, ratio: &str) -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 800, "height": 500, "background": "white"})).expect("new");
     app.run("select.rect", json!({"x": 280, "y": 180, "width": 40, "height": 40})).expect("select");
@@ -34,23 +34,23 @@ fn app(classic: bool, ratio: &str) -> (PhotocraftApp, egui::Context) {
     app.ui.tool_options.crop_shield.classic_mode = classic;
     app.ui.tool_options.crop_ratio = ratio.into();
     control(&mut app, &ctx, "ui.set", json!({"tool": "crop"}));
-    photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+    lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
     (app, ctx)
 }
 
 /// Runs one control-channel request, which must succeed.
-fn control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) {
+fn control(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) {
     let (req, _rx) = ControlRequest::new(method, params.clone());
     assert!(matches!(handle(app, ctx, &req), Outcome::Done(_)), "{method} {params}");
 }
 
 /// One `ui.pointer` call: `events` with ⌘ held or not.
-fn pointer(app: &mut PhotocraftApp, ctx: &egui::Context, command: bool, events: Value) {
+fn pointer(app: &mut LienzoApp, ctx: &egui::Context, command: bool, events: Value) {
     control(app, ctx, "ui.pointer", json!({"command": command, "events": events}));
 }
 
 /// A drag from `a` to `b` through their midpoint, `command` held or not.
-fn drag(app: &mut PhotocraftApp, ctx: &egui::Context, command: bool, a: [f64; 2], b: [f64; 2]) {
+fn drag(app: &mut LienzoApp, ctx: &egui::Context, command: bool, a: [f64; 2], b: [f64; 2]) {
     let mid = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
     let events = json!([
         {"kind": "down", "x": a[0], "y": a[1]},
@@ -67,22 +67,22 @@ fn ends() -> ([f64; 2], [f64; 2]) {
 }
 
 /// The issue's line, `command` held or not.
-fn line(app: &mut PhotocraftApp, ctx: &egui::Context, command: bool) {
+fn line(app: &mut LienzoApp, ctx: &egui::Context, command: bool) {
     let (a, b) = ends();
     drag(app, ctx, command, a, b);
 }
 
 /// ↵: commits the crop and returns the document's new size.
-fn committed(app: &mut PhotocraftApp) -> (u32, u32) {
-    photocraft_ui_egui::canvas::commit_crop(app);
+fn committed(app: &mut LienzoApp) -> (u32, u32) {
+    lienzo_ui_egui::canvas::commit_crop(app);
     let size = app.session.active().expect("document").doc.size;
     (size.width, size.height)
 }
 
 /// The flattened document's pixel at (`x`, `y`).
-fn pixel(app: &PhotocraftApp, x: usize, y: usize) -> [f32; 4] {
+fn pixel(app: &LienzoApp, x: usize, y: usize) -> [f32; 4] {
     let doc = &app.session.active().expect("document").doc;
-    let flat = photocraft_compose::flatten(doc);
+    let flat = lienzo_compose::flatten(doc);
     flat.px[y * doc.size.width as usize + x]
 }
 
@@ -100,7 +100,7 @@ fn is_red(p: [f32; 4]) -> bool {
 
 /// The four corner pixels of the document, in `crop_ui::corners`' order: top-left, top-right,
 /// bottom-right, bottom-left.
-fn corners(app: &PhotocraftApp) -> [[f32; 4]; 4] {
+fn corners(app: &LienzoApp) -> [[f32; 4]; 4] {
     let size = app.session.active().expect("document").doc.size;
     let (r, b) = (size.width as usize - 1, size.height as usize - 1);
     [pixel(app, 0, 0), pixel(app, r, 0), pixel(app, r, b), pixel(app, 0, b)]
@@ -122,7 +122,7 @@ fn a_command_held_straighten_line_keeps_the_frame_size() {
                 assert!((angle(&app) + 10.0).abs() < 1e-6, "{what}: {}", app.ui.crop_angle);
                 assert_eq!(app.ui.crop_rect, Some(frame), "{what}");
                 assert!(pending(&app), "{what}: a pending edit");
-                assert!(!photocraft_ui_egui::crop_straighten::mode(&app), "{what}: the line ended");
+                assert!(!lienzo_ui_egui::crop_straighten::mode(&app), "{what}: the line ended");
                 // Where the turned frame's corners land on the canvas: the whole-canvas frame's
                 // all leave it; the 500 × 500 one's top-right and bottom-left leave it at the top
                 // and bottom, the other two stay inside the 800 px width.
@@ -185,7 +185,7 @@ fn a_command_held_line_keeps_a_drawn_frame_where_it_is() {
         // The crop is centred on the red square, where the frame was (its red pixels' centroid
         // is the middle, which one pixel in the 40 px square can't tell); turned 4° the frame
         // stays inside the image, so nothing is filled.
-        let flat = photocraft_compose::flatten(&app.session.active().expect("document").doc);
+        let flat = lienzo_compose::flatten(&app.session.active().expect("document").doc);
         let red: Vec<(f64, f64)> = (0..300usize)
             .flat_map(|y| (0..400usize).map(move |x| (x, y)))
             .filter(|&(x, y)| is_red(flat.px[y * 400 + x]))
@@ -287,10 +287,10 @@ fn the_straighten_button_still_fits_the_frame() {
         for (ratio, command, want) in [("", false, (633.0, 396.0)), ("", true, (633.0, 396.0)), ("1:1", false, (square, square))] {
             let what = format!("classic {classic}, ratio {ratio:?}, command {command}");
             let (mut app, ctx) = app(classic, ratio);
-            photocraft_ui_egui::crop_straighten::toggle(&mut app);
+            lienzo_ui_egui::crop_straighten::toggle(&mut app);
             line(&mut app, &ctx, command);
             assert!((angle(&app) + 10.0).abs() < 1e-6, "{what}");
-            assert!(!photocraft_ui_egui::crop_straighten::mode(&app), "{what}: one line per click");
+            assert!(!lienzo_ui_egui::crop_straighten::mode(&app), "{what}: one line per click");
             let (w, h) = committed(&mut app);
             assert!((f64::from(w) - want.0).abs() <= 1.0 && (f64::from(h) - want.1).abs() <= 1.0, "{what}: {w} × {h}");
             if ratio == "1:1" {

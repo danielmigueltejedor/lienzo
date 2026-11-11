@@ -1,7 +1,7 @@
 //! Refuses a big operation that cannot fit in memory, with an error, before it starts (#10024).
 //!
 //! On the web build a failed allocation aborts the whole module and the page freezes without a
-//! message. [`photocraft_raster::headroom`] tells whether a given number of bytes can still be
+//! message. [`lienzo_raster::headroom`] tells whether a given number of bytes can still be
 //! allocated; an operation that is about to allocate a lot asks here first, with a rough upper
 //! bound of what it will need. A refusal changes nothing (the document, its history and the
 //! selection stay as they were) and says what the user can do. Off the web every check passes.
@@ -11,8 +11,8 @@
 //! to the flat-image estimate; one whose header or sections can't be read, or that isn't 8-bit
 //! RGB or grayscale, has no safe bound and is refused by the web gate before decoding.
 
-use photocraft_doc::{Document, LayerContent, SmartSource};
-use photocraft_geom::TILE_SIZE;
+use lienzo_doc::{Document, LayerContent, SmartSource};
+use lienzo_geom::TILE_SIZE;
 
 use crate::{EngineError, Result};
 
@@ -46,7 +46,7 @@ pub fn ensure_for_save(what: &str, need: u64) -> Result<()> {
 }
 
 fn check(what: &str, need: u64, advice: &str) -> Result<()> {
-    photocraft_raster::headroom::ensure(need).map_err(|_| {
+    lienzo_raster::headroom::ensure(need).map_err(|_| {
         if need == u64::MAX {
             // Freeing memory cannot satisfy an unbounded need, so the retry advice would mislead.
             EngineError::Other(format!(
@@ -79,7 +79,7 @@ pub(crate) fn source_pixels(bytes: &[u8]) -> u64 {
 }
 
 fn header_pixels(bytes: &[u8]) -> Option<u64> {
-    if let Ok((w, h)) = photocraft_codecs::probe_size(bytes) {
+    if let Ok((w, h)) = lienzo_codecs::probe_size(bytes) {
         return Some(u64::from(w) * u64::from(h));
     }
     let be32 = |at: usize| -> Option<u64> { Some(u64::from(u32::from_be_bytes(bytes.get(at..at.checked_add(4)?)?.try_into().ok()?))) };

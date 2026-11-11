@@ -4,8 +4,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, Size};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, Size};
 
 use super::{MANIFEST, PcraftWriter, SaveOptions, list_objects};
 use crate::atomic::{AtomicFs, RealFs};

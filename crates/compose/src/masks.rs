@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::Layer;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::Layer;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 // A U16 mask keeps substantially smaller cached tiles than F32 while adding at most
 // 1/65535 quantization error. Mask values are normalized coverage, so this is finer than
@@ -122,9 +122,9 @@ fn lookup(c: &Mutex<Cache>, k: u64) -> CachedMask {
 fn finish_mask(c: &Mutex<Cache>, k: u64, slot: &Arc<OnceLock<Surface>>, generation: u64, build: impl FnOnce() -> (Surface, Option<Surface>)) -> Surface {
     slot.get_or_init(|| {
         // Never hold the global cache mutex while rasterizing or feathering.
-        let read_generation = photocraft_raster::spill::read_error_generation();
+        let read_generation = lienzo_raster::spill::read_error_generation();
         let (surface, pixel_input) = build();
-        if photocraft_raster::spill::check_since(read_generation).is_err() || pixel_input.as_ref().is_some_and(|p| p.scratch_health().is_err()) {
+        if lienzo_raster::spill::check_since(read_generation).is_err() || pixel_input.as_ref().is_some_and(|p| p.scratch_health().is_err()) {
             return surface;
         }
         let bytes = entry_bytes(&surface, pixel_input.as_ref());
@@ -181,8 +181,8 @@ fn key(layer: &Layer, canvas: Rect) -> u64 {
     h.finish()
 }
 
-pub use photocraft_vector::feather::feather_sigma;
-use photocraft_vector::feather::gaussian;
+pub use lienzo_vector::feather::feather_sigma;
+use lienzo_vector::feather::gaussian;
 
 /// Whether `layer` has an enabled mask with a feather (rendered through [`combined_mask`]).
 pub fn has_feather(layer: &Layer) -> bool {
@@ -205,7 +205,7 @@ fn build_mask(layer: &Layer, canvas: Rect) -> Surface {
     let vm = layer.vector_mask.as_ref().filter(|v| v.enabled);
     let pixel = layer.mask.as_ref().filter(|m| m.enabled);
     let (sv, sp) = (vm.map_or(0.0, |v| feather_sigma(v.feather)), pixel.map_or(0.0, |m| feather_sigma(m.feather)));
-    let compiled = vm.map(photocraft_vector::CompiledVectorMask::new);
+    let compiled = vm.map(lienzo_vector::CompiledVectorMask::new);
     // Far outside the path the vector mask is constant.
     let far = Rect::from_xywh(canvas.x0 - 1_000_000, canvas.y0 - 1_000_000, 1, 1);
     let v_out = compiled.as_ref().map_or(1.0, |vm| vm.render_sequential(far)[0]);
@@ -216,11 +216,11 @@ fn build_mask(layer: &Layer, canvas: Rect) -> Surface {
     // Where the product can differ from `p_def × v_out`: the path's bounds, plus the pixel
     // mask's painted tiles when the vector mask lets them through outside the path, each grown
     // by its feather.
-    let mut area = vm.map_or(Rect::EMPTY, |vm| photocraft_vector::feather::path_area(&vm.path, sv));
+    let mut area = vm.map_or(Rect::EMPTY, |vm| lienzo_vector::feather::path_area(&vm.path, sv));
     if let Some(m) = pixel
         && v_out > 0.0
     {
-        let b = photocraft_vector::feather::grow(m.surface.content_bounds(), sp);
+        let b = lienzo_vector::feather::grow(m.surface.content_bounds(), sp);
         area = if area.is_empty() {
             b
         } else if b.is_empty() {

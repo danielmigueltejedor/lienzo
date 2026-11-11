@@ -1,8 +1,8 @@
 //! #7789: the headless (MCP) `doc.open` opens a developed raw at Preferences › Raw Defaults ›
 //! Resolution, as the app's File › Open does.
 
-use photocraft_automation::Headless;
-use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+use lienzo_automation::Headless;
+use lienzo_raw::testgen::{DngSpec, mosaic, scene};
 use serde_json::json;
 
 #[test]

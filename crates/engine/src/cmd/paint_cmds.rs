@@ -1,6 +1,6 @@
 //! Paint helpers: Paint Bucket and Gradient tool.
 
-use photocraft_algo::paint::{FillMode, GradientShape, bucket_fill_inks, bucket_fill_region_inks, paint_gradient};
+use lienzo_algo::paint::{FillMode, GradientShape, bucket_fill_inks, bucket_fill_region_inks, paint_gradient};
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, blend_from_str};
@@ -45,10 +45,10 @@ fn opacity(p: &Value, cmd: &str) -> Result<f32> {
 fn fill_mode(p: &Value) -> Result<FillMode> {
     let bad = |msg: String| EngineError::BadParams { cmd: "paint.bucket".into(), msg };
     match p.get("mode") {
-        None | Some(Value::Null) => Ok(FillMode::Blend(photocraft_color::BlendMode::Normal)),
+        None | Some(Value::Null) => Ok(FillMode::Blend(lienzo_color::BlendMode::Normal)),
         Some(Value::String(m)) if m.eq_ignore_ascii_case("clear") => Ok(FillMode::Clear),
         Some(Value::String(m)) => blend_from_str(m)
-            .filter(|m| *m != photocraft_color::BlendMode::PassThrough)
+            .filter(|m| *m != lienzo_color::BlendMode::PassThrough)
             .map(FillMode::Blend)
             .ok_or_else(|| bad(format!("unknown blend mode `{m}`"))),
         Some(v) => Err(bad(format!("`mode` must be a blend mode name or `clear`, not {v}"))),
@@ -66,7 +66,7 @@ fn bucket(s: &mut Session, p: &Value) -> Result<Value> {
     // Other visible layers can define the region, but the fill still writes only to the target.
     let region = if all {
         let (area, img) = crate::selection_cmds::sample_rgba8(s, true)?;
-        let region = photocraft_algo::selection::wand_region(&img, area, (x, y), tol, contiguous, aa);
+        let region = lienzo_algo::selection::wand_region(&img, area, (x, y), tol, contiguous, aa);
         drop(img);
         region
     } else {
@@ -76,7 +76,7 @@ fn bucket(s: &mut Session, p: &Value) -> Result<Value> {
     let source = p.get("contents").or_else(|| p.get("source")).and_then(Value::as_str).unwrap_or("foreground");
     let pattern = if source == "pattern" {
         let pat = crate::pattern_cmds::resolve_param(s, "paint.bucket", p)?;
-        let tile = photocraft_compose::pattern::Tile::new(&pat)
+        let tile = lienzo_compose::pattern::Tile::new(&pat)
             .ok_or_else(|| EngineError::BadParams { cmd: "paint.bucket".into(), msg: "the pattern is empty or too large to paint".into() })?;
         let (scale, angle, _, phase) = crate::pattern_cmds::placement("paint.bucket", p)?;
         Some((tile, scale, angle, phase))
@@ -94,8 +94,8 @@ fn bucket(s: &mut Session, p: &Value) -> Result<Value> {
             false
         } else if let Some((tile, scale, angle, phase)) = &pattern {
             // Render the pattern over the canvas once, then sample it at each filled pixel.
-            let place = photocraft_compose::pattern::Placement::new(photocraft_geom::Rect::EMPTY, false, *phase, *scale, *angle);
-            let rendered = photocraft_compose::pattern::render(tile, &place, area);
+            let place = lienzo_compose::pattern::Placement::new(lienzo_geom::Rect::EMPTY, false, *phase, *scale, *angle);
+            let rendered = lienzo_compose::pattern::render(tile, &place, area);
             let w = area.width() as usize;
             let src = |px: i32, py: i32| rendered[(py - area.y0) as usize * w + (px - area.x0) as usize];
             if let Some(region) = &region {
@@ -142,11 +142,11 @@ fn gradient(s: &mut Session, p: &Value) -> Result<Value> {
     // Photoshop's interpolation (`method`, with `smoothness` 0..=100, default 100) baked into dense
     // stops, as for Gradient Overlay: Photoshop 27.11's Classic black → white is 0.037 at t = 1/16
     // where straight stops give 0.0625.
-    let stops = match p.get("method").and_then(Value::as_str).and_then(photocraft_io::GradientMethod::from_name) {
+    let stops = match p.get("method").and_then(Value::as_str).and_then(lienzo_io::GradientMethod::from_name) {
         Some(m) if stops.len() >= 2 => {
-            let colors = stops.iter().map(|(t, c)| (*t, photocraft_color::Color::rgba(c[0], c[1], c[2], c[3]))).collect();
+            let colors = stops.iter().map(|(t, c)| (*t, lienzo_color::Color::rgba(c[0], c[1], c[2], c[3]))).collect();
             let mids = vec![0.5; stops.len() - 1];
-            photocraft_io::bake_gradient(colors, &mids, (f(p, "smoothness", 100.0) / 100.0).clamp(0.0, 1.0), m)
+            lienzo_io::bake_gradient(colors, &mids, (f(p, "smoothness", 100.0) / 100.0).clamp(0.0, 1.0), m)
                 .into_iter()
                 .map(|(t, c)| {
                     let rgb = c.to_rgb();
@@ -158,7 +158,7 @@ fn gradient(s: &mut Session, p: &Value) -> Result<Value> {
     };
     let reverse = b(p, "reverse", false);
     let opacity = opacity(p, "paint.gradient")?;
-    let blend = p.get("mode").and_then(Value::as_str).and_then(blend_from_str).unwrap_or(photocraft_color::BlendMode::Normal);
+    let blend = p.get("mode").and_then(Value::as_str).and_then(blend_from_str).unwrap_or(lienzo_color::BlendMode::Normal);
     let dither = b(p, "dither", true); // Photoshop dithers gradients by default (reduces banding).
     let layer = if p.get("layer").is_some() { Some(crate::commands::layer_param(s, p)?) } else { s.active().and_then(|st| st.active_layer) };
     s.edit("Gradient", |doc, _| {

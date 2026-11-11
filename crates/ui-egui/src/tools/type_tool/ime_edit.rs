@@ -4,8 +4,8 @@ use super::ime::{
 };
 use super::layout::layout;
 use super::{
-    CommittedText, ImeObservation, LayerId, PhotocraftApp, Point, Pos2, Range, TextEdit, ViewXform, byte_of, current_text, insertion_style, json,
-    text_char_count, text_layer,
+    CommittedText, ImeObservation, LayerId, LienzoApp, Point, Pos2, Range, TextEdit, ViewXform, byte_of, current_text, insertion_style, json, text_char_count,
+    text_layer,
 };
 
 /// UTF-8 byte offsets of the caret, anchor and pre-edit, found in one traversal.
@@ -55,7 +55,7 @@ pub(super) fn ime_offsets(text: &str, ed: &TextEdit) -> Option<ImeOffsets> {
 }
 
 /// Whether the stored character range still contains exactly the composition that wrote it.
-pub(super) fn ime_preedit_is_current(app: &PhotocraftApp, text: &str, ed: &TextEdit, offsets: &ImeOffsets) -> bool {
+pub(super) fn ime_preedit_is_current(app: &LienzoApp, text: &str, ed: &TextEdit, offsets: &ImeOffsets) -> bool {
     match (ed.preedit, offsets.preedit.as_ref()) {
         (None, _) => true,
         (Some(_), Some(range)) => {
@@ -67,7 +67,7 @@ pub(super) fn ime_preedit_is_current(app: &PhotocraftApp, text: &str, ed: &TextE
 
 /// Check the stored pre-edit against the live text, invalidating it (and the native composition)
 /// when an application edit moved or replaced it. Returns true when it was stale.
-pub(super) fn reconcile_preedit(app: &mut PhotocraftApp, ed: &TextEdit, text: &str) -> bool {
+pub(super) fn reconcile_preedit(app: &mut LienzoApp, ed: &TextEdit, text: &str) -> bool {
     if ed.preedit.is_none() {
         return false;
     }
@@ -83,7 +83,7 @@ pub(super) fn reconcile_preedit(app: &mut PhotocraftApp, ed: &TextEdit, text: &s
 }
 
 /// A borrowed observation for the tracker. It copies only the bounded window.
-fn committed_text<'a>(app: &PhotocraftApp, text: &'a str, ed: &TextEdit) -> Option<CommittedText<'a>> {
+fn committed_text<'a>(app: &LienzoApp, text: &'a str, ed: &TextEdit) -> Option<CommittedText<'a>> {
     let offsets = ime_offsets(text, ed)?;
     if !ime_preedit_is_current(app, text, ed, &offsets) {
         return None;
@@ -96,7 +96,7 @@ fn committed_text<'a>(app: &PhotocraftApp, text: &'a str, ed: &TextEdit) -> Opti
 }
 
 /// The bounded committed snapshot of the edited layer, or `None` when it cannot be exposed.
-fn ime_committed(app: &PhotocraftApp, ed: &TextEdit) -> Option<ImeCommitted> {
+fn ime_committed(app: &LienzoApp, ed: &TextEdit) -> Option<ImeCommitted> {
     let text = text_layer(&app.session.active()?.doc, LayerId(ed.layer))?.text.as_str();
     let offsets = ime_offsets(text, ed)?;
     if !ime_preedit_is_current(app, text, ed, &offsets) {
@@ -107,14 +107,14 @@ fn ime_committed(app: &PhotocraftApp, ed: &TextEdit) -> Option<ImeCommitted> {
 
 /// Report an accepted IME commit/deletion. Call only after the engine accepted the mutation and
 /// from the snapshots immediately around it.
-fn note_ime_apply(app: &mut PhotocraftApp, ed: &TextEdit, before: &ImeCommitted, after: &ImeCommitted) -> bool {
+fn note_ime_apply(app: &mut LienzoApp, ed: &TextEdit, before: &ImeCommitted, after: &ImeCommitted) -> bool {
     let Some(frame) = app.type_ime.frame else { return false };
     let Some(target) = ime_target(app, ed, frame.viewport) else { return false };
     app.type_ime.tracker.note_input_method_apply(frame.viewport, frame.frame_nr, target, before.stamp(), after.stamp())
 }
 
 /// Report an application-origin edit (typing, paste, cut, deletion, undo or a toolbar action).
-pub(super) fn note_ime_application_change(app: &mut PhotocraftApp, ed: &TextEdit) -> bool {
+pub(super) fn note_ime_application_change(app: &mut LienzoApp, ed: &TextEdit) -> bool {
     let Some(frame) = app.type_ime.frame else { return false };
     let Some(target) = ime_target(app, ed, frame.viewport) else { return false };
     app.type_ime.tracker.note_application_change(frame.viewport, frame.frame_nr, target)
@@ -125,7 +125,7 @@ pub(super) fn note_ime_application_change(app: &mut PhotocraftApp, ed: &TextEdit
 /// Run once per UI pass, after the editor has drawn its caret, so the descriptor reflects this
 /// pass's final model state. With no visible focused editor the context is ended; a moved focus
 /// therefore cannot leave the previous owner's surrounding text latched.
-pub(crate) fn sync_ime(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn sync_ime(app: &mut LienzoApp, ctx: &egui::Context) {
     bind_reset_context(app, ctx);
     let viewport = ctx.viewport_id();
     let frame_nr = ctx.cumulative_frame_nr_for(viewport);
@@ -219,11 +219,11 @@ pub(crate) fn sync_ime(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// The final caret and layer rectangles for an IME descriptor, in screen points.
-pub(super) fn ime_geometry(app: &mut PhotocraftApp, ed: &TextEdit, xf: ViewXform) -> Option<(egui::Rect, egui::Rect)> {
+pub(super) fn ime_geometry(app: &mut LienzoApp, ed: &TextEdit, xf: ViewXform) -> Option<(egui::Rect, egui::Rect)> {
     let id = LayerId(ed.layer);
     let (l, aff, text) = layout(app, id)?;
     let shape = app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape.clone()));
-    let bend = shape.as_ref().and_then(photocraft_text::warp::Warp::on_path);
+    let bend = shape.as_ref().and_then(lienzo_text::warp::Warp::on_path);
     let scr_t = |x: f32, y: f32| -> Pos2 {
         let p = aff.apply(Point::new(f64::from(x), f64::from(y)));
         xf.to_screen(p.x as f32, p.y as f32)
@@ -260,7 +260,7 @@ pub(super) fn ime_geometry(app: &mut PhotocraftApp, ed: &TextEdit, xf: ViewXform
 
 /// IME composition. The preedit text is written into the layer (so it lays out and reflows like
 /// typed text) and replaced by every update; `commit` makes the result final.
-pub(super) fn ime_update(app: &mut PhotocraftApp, s: &str, commit: bool) {
+pub(super) fn ime_update(app: &mut LienzoApp, s: &str, commit: bool) {
     let Some(ed) = app.ui.text_edit.clone() else { return };
     // Validate the composition only while one exists: a plain preedit/commit otherwise needs no
     // copy of the whole layer.
@@ -330,7 +330,7 @@ pub(super) fn ime_update(app: &mut PhotocraftApp, s: &str, commit: bool) {
 
 /// The active range for an IME delete-surrounding batch: the pre-edit when composing, otherwise
 /// the sorted selection. Returns `(start, end, length)` in character indices.
-fn ime_active_range(app: &PhotocraftApp, ed: &TextEdit) -> Option<(usize, usize, usize)> {
+fn ime_active_range(app: &LienzoApp, ed: &TextEdit) -> Option<(usize, usize, usize)> {
     let n = text_char_count(app, LayerId(ed.layer))?;
     if let Some((start, len)) = ed.preedit {
         let end = start.checked_add(len)?;
@@ -342,7 +342,7 @@ fn ime_active_range(app: &PhotocraftApp, ed: &TextEdit) -> Option<(usize, usize,
 }
 
 /// Delete characters around the selection/pre-edit, as one coalesced type edit.
-pub(super) fn ime_delete_chars(app: &mut PhotocraftApp, before_chars: usize, after_chars: usize) -> bool {
+pub(super) fn ime_delete_chars(app: &mut LienzoApp, before_chars: usize, after_chars: usize) -> bool {
     let Some(ed) = app.ui.text_edit.clone() else { return false };
     if ed.preedit.is_some() {
         let Some(text) = current_text(app, LayerId(ed.layer)) else { return false };
@@ -358,7 +358,7 @@ pub(super) fn ime_delete_chars(app: &mut PhotocraftApp, before_chars: usize, aft
 
 /// `DeleteSurroundingBytes` counts UTF-8 bytes from the active range's edges. A byte count that
 /// ends inside a character leaves that character, as the stock TextEdit does.
-pub(super) fn ime_delete_bytes(app: &mut PhotocraftApp, before_bytes: usize, after_bytes: usize) -> bool {
+pub(super) fn ime_delete_bytes(app: &mut LienzoApp, before_bytes: usize, after_bytes: usize) -> bool {
     let Some(ed) = app.ui.text_edit.clone() else { return false };
     let Some(text) = current_text(app, LayerId(ed.layer)) else { return false };
     if reconcile_preedit(app, &ed, &text) {
@@ -381,7 +381,7 @@ pub(super) fn ime_delete_bytes(app: &mut PhotocraftApp, before_bytes: usize, aft
 /// The active selection/pre-edit itself stays; only the requested runs before `start` and after
 /// `end` are removed. They are two engine mutations with the same coalescing key (one history
 /// step), and one receipt covers the whole batch.
-fn ime_delete_around(app: &mut PhotocraftApp, ed: TextEdit, from: usize, start: usize, end: usize, to: usize) -> bool {
+fn ime_delete_around(app: &mut LienzoApp, ed: TextEdit, from: usize, start: usize, end: usize, to: usize) -> bool {
     if from >= start && end >= to {
         return false;
     }

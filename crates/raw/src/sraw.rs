@@ -6,7 +6,7 @@
 //! ([`crate::ljpeg::decode_subsampled`]) gives the sample sequence; [`planes`] lays it out,
 //! [`camera_rgb`] interpolates the chroma and converts to camera RGB, and the result is
 //! developed like a three-sample LinearRaw: no CFA, the as-shot white balance, the look fitted
-//! to the embedded JPEG (`photocraft-io`), tone and exposure as for every other raw.
+//! to the embedded JPEG (`lienzo-io`), tone and exposure as for every other raw.
 //!
 //! Observed on EOS 6D Mark II mRAW files (ColorData version 15, 4680 × 3132 data):
 //! * Y is already black-subtracted (the darkest samples are 0) and on the sensor's scale; Cb and
@@ -297,12 +297,12 @@ mod tests {
         assert_eq!(clip_level(&[], 2, 14335.0), 14335.0);
     }
 
-    /// Real files: `PHOTOCRAFT_SRAW_CR2` lists CR2 paths (separated by `:`), e.g. EOS 6D Mark II
+    /// Real files: `LIENZO_SRAW_CR2` lists CR2 paths (separated by `:`), e.g. EOS 6D Mark II
     /// mRAW. Checks the size, the gains and that the development runs.
     #[test]
-    #[ignore = "needs real sRAW CR2 files in PHOTOCRAFT_SRAW_CR2"]
+    #[ignore = "needs real sRAW CR2 files in LIENZO_SRAW_CR2"]
     fn real_sraw_files() {
-        let paths = std::env::var("PHOTOCRAFT_SRAW_CR2").expect("PHOTOCRAFT_SRAW_CR2");
+        let paths = std::env::var("LIENZO_SRAW_CR2").expect("LIENZO_SRAW_CR2");
         for path in paths.split(':').filter(|p| !p.is_empty()) {
             let bytes = std::fs::read(path).expect("read");
             let s = decode(&bytes, &Limits::default()).expect("decode");

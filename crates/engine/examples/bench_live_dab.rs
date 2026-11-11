@@ -3,8 +3,8 @@
 //! This measures engine stroke work; canvas compositing/upload and presentation are excluded.
 use std::time::Instant;
 
-use photocraft_engine::{EngineError, Session, paint::StrokePoint, retouch_cmds::LiveDab};
-use photocraft_geom::Rect;
+use lienzo_engine::{EngineError, Session, paint::StrokePoint, retouch_cmds::LiveDab};
+use lienzo_geom::Rect;
 use serde_json::json;
 
 fn elapsed_ms(start: Instant) -> f64 {
@@ -30,7 +30,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let fmt = surface.format();
             for x in (0..6000).step_by(64) {
                 let color = if x % 128 == 0 { [0.9, 0.3, 0.1, 0.7] } else { [0.1, 0.4, 0.8, 1.0] };
-                surface.fill_rect(Rect::new(x, 0, (x + 64).min(6000), 4000), &photocraft_raster::from_rgba(&fmt, color));
+                surface.fill_rect(Rect::new(x, 0, (x + 64).min(6000), 4000), &lienzo_raster::from_rgba(&fmt, color));
             }
             Ok(())
         })?;

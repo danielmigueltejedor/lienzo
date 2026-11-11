@@ -2,17 +2,17 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{
     AlphaChannel, Document, Effects, FillCache, Group, Layer, LayerContent, LayerMask, PsdGlobalBlock, ShapeLayer, SmartContentsId, SmartObject, SmartSource,
     TextLayer,
 };
-use photocraft_geom::{Rect, Size, TILE_SIZE};
-use photocraft_psd::layer::{CHANNEL_REAL_USER_MASK, CHANNEL_TRANSPARENCY, CHANNEL_USER_MASK};
-use photocraft_psd::resources::ids;
-use photocraft_psd::tagged::BlockData;
-use photocraft_psd::{ColorMode as PsdMode, LayerNode, LayerRecord, PsdFile, TaggedBlock};
-use photocraft_raster::Surface;
+use lienzo_geom::{Rect, Size, TILE_SIZE};
+use lienzo_psd::layer::{CHANNEL_REAL_USER_MASK, CHANNEL_TRANSPARENCY, CHANNEL_USER_MASK};
+use lienzo_psd::resources::ids;
+use lienzo_psd::tagged::BlockData;
+use lienzo_psd::{ColorMode as PsdMode, LayerNode, LayerRecord, PsdFile, TaggedBlock};
+use lienzo_raster::Surface;
 
 use crate::adjust_map::{self, ADJUSTMENT_KEYS};
 use crate::blocks;
@@ -61,9 +61,9 @@ pub(crate) struct Ctx<'a> {
     /// Document resolution (type sizes are converted to points with it).
     pub dpi: f32,
     /// The parsed `Txt2` block (type settings EngineData lacks, e.g. optical kerning).
-    pub txt2: Option<photocraft_text::engine_data::Value>,
+    pub txt2: Option<lienzo_text::engine_data::Value>,
     /// Smart-filter caches from the global `FEid`/`FXid` blocks (filter masks, by placed id).
-    pub filter_effects: Vec<photocraft_psd::filter_effects::FilterEffectsItem>,
+    pub filter_effects: Vec<lienzo_psd::filter_effects::FilterEffectsItem>,
     /// Filter masks already decoded, by placed id: every layer of a source reads the same item, and
     /// a surface clones by sharing its tiles.
     pub filter_masks: std::collections::HashMap<String, Option<LayerMask>>,
@@ -78,11 +78,11 @@ pub(crate) struct Ctx<'a> {
     /// Shared vector previews are hashed/parsed once, under a per-file work budget.
     pub vector_previews: crate::vector_preview::ImportCache,
     /// Cancellation and progress for background opens (checked per layer record).
-    pub ctl: photocraft_raster::Interrupt<'a>,
+    pub ctl: lienzo_raster::Interrupt<'a>,
     /// Layer records decoded so far, out of `total` (progress).
     pub done: usize,
     /// Uniform tiles shared across imported layers.
-    pub uniform: photocraft_raster::TileInterner,
+    pub uniform: lienzo_raster::TileInterner,
     pub total: usize,
 }
 
@@ -139,7 +139,7 @@ fn doc_mode(m: PsdMode) -> Option<ColorMode> {
 }
 
 // Real-mask metadata without a -3 channel still selects the synthetic -2 mask.
-fn selected_real_mask(rec: &LayerRecord) -> Option<photocraft_psd::RealMask> {
+fn selected_real_mask(rec: &LayerRecord) -> Option<lienzo_psd::RealMask> {
     rec.channel(CHANNEL_REAL_USER_MASK)?;
     rec.layer_mask()?.real
 }
@@ -157,7 +157,7 @@ fn shape_mask_params(rec: &LayerRecord) -> (f32, f32) {
 /// with a vector mask: when it fills with a pattern, which the shape renderer can't draw (`.1`
 /// true when its vector mask is also soft: a density below 100 % or a feather). Other soft
 /// shapes stay shapes with that density and feather.
-fn soft_shape_fill(rec: &LayerRecord, has_vector: bool, fill_key: Option<&[u8; 4]>) -> Option<(photocraft_doc::Fill, bool)> {
+fn soft_shape_fill(rec: &LayerRecord, has_vector: bool, fill_key: Option<&[u8; 4]>) -> Option<(lienzo_doc::Fill, bool)> {
     if !has_vector || rec.block(b"vstk").is_some() || rec.block(b"vscg").is_some() {
         return None;
     }
@@ -169,14 +169,14 @@ fn soft_shape_fill(rec: &LayerRecord, has_vector: bool, fill_key: Option<&[u8; 4
     // document's patterns for fill layers), and its stored pixels may be the unclipped fill
     // (our own export writes fill layers so, #1907): it is a pattern fill layer seen through
     // its vector mask.
-    let pattern = matches!(fill, photocraft_doc::Fill::Pattern { .. });
+    let pattern = matches!(fill, lienzo_doc::Fill::Pattern { .. });
     pattern.then_some((fill, soft))
 }
 
 #[derive(Clone, Copy)]
 struct DecodedImport<'a> {
     file: &'a PsdFile,
-    merged: &'a Option<photocraft_psd::Result<Vec<u8>>>,
+    merged: &'a Option<lienzo_psd::Result<Vec<u8>>>,
     sizes: Option<(usize, usize)>,
     canvas: Rect,
     layered: bool,
@@ -190,9 +190,9 @@ struct DecodedImport<'a> {
 #[derive(Default)]
 struct Placement {
     id: String,
-    transform: photocraft_geom::Affine,
+    transform: lienzo_geom::Affine,
     perspective: Option<[f64; 9]>,
-    warp: Option<photocraft_geom::warp::Warp>,
+    warp: Option<lienzo_geom::warp::Warp>,
 }
 
 impl Ctx<'_> {
@@ -215,12 +215,12 @@ impl Ctx<'_> {
 
     /// A channel that failed to decode: a failed read of the file is kept to fail the open
     /// (`true`); damaged data is warned about, its layer left empty (`false`).
-    fn channel_failed(&mut self, name: &str, id: i16, e: &photocraft_psd::PsdError) -> bool {
-        if let photocraft_psd::PsdError::Read(msg) = e {
+    fn channel_failed(&mut self, name: &str, id: i16, e: &lienzo_psd::PsdError) -> bool {
+        if let lienzo_psd::PsdError::Read(msg) = e {
             self.fatal_error.get_or_insert_with(|| crate::IoError::Read(format!("layer \"{name}\": {msg}")));
             return true;
         }
-        if let photocraft_psd::PsdError::OutOfMemory(_) = e {
+        if let lienzo_psd::PsdError::OutOfMemory(_) = e {
             self.allocation_failed(format!("layer \"{name}\" channel {id}: {e}"));
             return true;
         }
@@ -275,7 +275,7 @@ impl Ctx<'_> {
         // tiles, so no buffer of the whole layer (planes or interleaved) is ever held.
         // par_map reuses the crate's worker pool (one OS thread per channel per layer would
         // spawn thousands on a file with many layers).
-        let decoders: Vec<Option<photocraft_psd::Result<photocraft_psd::RowDecoder<'_>>>> =
+        let decoders: Vec<Option<lienzo_psd::Result<lienzo_psd::RowDecoder<'_>>>> =
             crate::pixels::par_map(ids.to_vec(), |id| rec.channel(id).map(|ch| ch.row_decoder(w, h, depth, version)));
         let mut failed = false;
         for (&id, d) in ids.iter().zip(&decoders) {
@@ -301,7 +301,7 @@ impl Ctx<'_> {
         invert.push(false);
         let mut surf = Surface::new(self.fmt);
         for (b0, b1) in band_rows(r.top, h, w * (self.cc + 1) * s.bytes()) {
-            let planes: Vec<Option<photocraft_psd::Result<Vec<u8>>>> =
+            let planes: Vec<Option<lienzo_psd::Result<Vec<u8>>>> =
                 crate::pixels::par_map(decoders.iter().collect(), |d| d.as_ref().and_then(|d| d.as_ref().ok()).map(|d| d.rows(b0, b1)));
             let mut refs: Vec<Option<&[u8]>> = Vec::with_capacity(planes.len());
             for (&id, p) in ids.iter().zip(&planes) {
@@ -332,7 +332,7 @@ impl Ctx<'_> {
             // import): it is a fresh page-faulted mmap otherwise. The decoded planes don't: the
             // decoder allocates its own, so pooled ones would only sit there.
             drop(refs);
-            photocraft_raster::scratch::give(bytes);
+            lienzo_raster::scratch::give(bytes);
             drop(planes);
         }
         surf.prune();
@@ -420,17 +420,13 @@ impl Ctx<'_> {
         mask
     }
 
-    fn apply_common(&mut self, l: &mut Layer, rec: &LayerRecord, blend_override: Option<photocraft_psd::BlendMode>) {
+    fn apply_common(&mut self, l: &mut Layer, rec: &LayerRecord, blend_override: Option<lienzo_psd::BlendMode>) {
         if l.is_group()
             && let Some(data) = rec.block(b"pcFr").filter(|b| b.data.len() <= 8 << 20)
         {
             let end = data.data.iter().rposition(|b| *b != 0).map_or(0, |n| n.saturating_add(1));
-            l.frame = data
-                .data
-                .get(..end)
-                .and_then(|bytes| serde_json::from_slice::<photocraft_doc::Frame>(bytes).ok())
-                .filter(photocraft_doc::Frame::valid)
-                .map(Box::new);
+            l.frame =
+                data.data.get(..end).and_then(|bytes| serde_json::from_slice::<lienzo_doc::Frame>(bytes).ok()).filter(lienzo_doc::Frame::valid).map(Box::new);
         }
         l.visible = rec.is_visible();
         l.opacity = f32::from(rec.opacity) / 255.0;
@@ -490,7 +486,7 @@ impl Ctx<'_> {
         // The layer's XMP packet (`shmd` › `cust` › `layerXMP`) becomes the field; the rest of
         // `shmd` stays in `psd_blocks`, where export puts the packet back.
         if let Some(i) = l.psd_blocks.iter().position(|(k, _)| k == b"shmd")
-            && let Some((xmp, rest)) = photocraft_psd::metadata::take_layer_xmp(&l.psd_blocks[i].1)
+            && let Some((xmp, rest)) = lienzo_psd::metadata::take_layer_xmp(&l.psd_blocks[i].1)
         {
             l.xmp = Some(Arc::from(xmp));
             match rest {
@@ -533,7 +529,7 @@ impl Ctx<'_> {
             );
             // Kept verbatim for saving, but it renders as nothing: say so rather than open the
             // layer silently without its effect (#1763).
-            if matches!(adj, photocraft_doc::Adjustment::Unsupported { .. }) {
+            if matches!(adj, lienzo_doc::Adjustment::Unsupported { .. }) {
                 // Photoshop 2026's Light adjustment shares the Brightness/Contrast key (#6542).
                 let light = k == b"brit" && adjust_map::is_extended_brit(cged);
                 let why = if light {
@@ -554,28 +550,28 @@ impl Ctx<'_> {
             // text), so its TySh is saved back verbatim instead of being dropped with the raster.
             let parsed = (!block.is_foreign_order())
                 .then(|| {
-                    photocraft_text::psd::text_layer_from_tysh(&block.data, self.dpi).or_else(|| {
+                    lienzo_text::psd::text_layer_from_tysh(&block.data, self.dpi).or_else(|| {
                         let (text, transform) = blocks::parse_tysh(&block.data)?;
-                        photocraft_text::psd::transform_is_safe(&transform).then(|| TextLayer { text, transform, ..Default::default() })
+                        lienzo_text::psd::transform_is_safe(&transform).then(|| TextLayer { text, transform, ..Default::default() })
                     })
                 })
                 .flatten();
             if let Some(mut t) = parsed {
                 let mut path_error = None;
                 if let Some(txt2) = &self.txt2 {
-                    photocraft_text::psd::apply_txt2(&mut t, &block.data, txt2);
+                    lienzo_text::psd::apply_txt2(&mut t, &block.data, txt2);
                     // Type on a path keeps its path only in its `Txt2` frame (#7962).
-                    path_error = photocraft_text::psd::apply_txt2_path(&mut t, &block.data, txt2).err();
-                    photocraft_text::psd::apply_txt2_frame(&mut t, &block.data, txt2);
+                    path_error = lienzo_text::psd::apply_txt2_path(&mut t, &block.data, txt2).err();
+                    lienzo_text::psd::apply_txt2_frame(&mut t, &block.data, txt2);
                 }
                 if let Some(e) = path_error {
-                    let shape = if matches!(t.shape, photocraft_doc::text::TextShape::Box { .. }) { "paragraph" } else { "point" };
+                    let shape = if matches!(t.shape, lienzo_doc::text::TextShape::Box { .. }) { "paragraph" } else { "point" };
                     self.warn(format!("layer \"{name}\": its type path could not be read ({e}); it opens as {shape} text"));
                 }
                 // Photoshop's pixels stay until edited. Writers without type pixels are
                 // rendered by text_import::prepare instead of retaining an empty cache.
                 let cache = self.record_surface(rec, &name);
-                let drawn = !cache.content_bounds().is_empty() || photocraft_text::psd::engine_text_is_blank(&block.data);
+                let drawn = !cache.content_bounds().is_empty() || lienzo_text::psd::engine_text_is_blank(&block.data);
                 t.cache = drawn.then_some(cache);
                 t.psd_raw = principal(b"TySh");
                 LayerContent::Text(t)
@@ -589,7 +585,7 @@ impl Ctx<'_> {
             // A pattern-filled shape is a pattern fill layer seen through its vector mask (soft
             // or not). Unless that mask is soft, the stored pixels stay its rendering (a soft
             // mask's pixels lack the fill beyond the path).
-            if !soft && matches!(f, photocraft_doc::Fill::Pattern { .. }) && !rec.rect.is_empty() {
+            if !soft && matches!(f, lienzo_doc::Fill::Pattern { .. }) && !rec.rect.is_empty() {
                 fill_cache = Some(FillCache { fill: f.clone(), surface: self.record_surface(rec, &name) });
             }
             LayerContent::Fill(f)
@@ -607,7 +603,7 @@ impl Ctx<'_> {
             if self.fatal_error.is_none() && (soft || ((rec.rect.is_empty() || rec.rect.size().is_err()) && (!sh.path.subpaths.is_empty() || sh.path.inverted)))
             {
                 let canvas = Rect::new(0, 0, self.file.header.width as i32, self.file.header.height as i32);
-                sh.cache = Some(photocraft_vector::render_shape(&sh, self.fmt, canvas));
+                sh.cache = Some(lienzo_vector::render_shape(&sh, self.fmt, canvas));
             }
             LayerContent::Shape(sh)
         } else if let Some(k) = fill_key {
@@ -632,7 +628,7 @@ impl Ctx<'_> {
                 "layer \"{name}\": its adjustment settings could not be read (unknown adjustment type \"{key}\"); the layer is kept as saved but has no effect"
             ));
             let raw = rec.block(&k).map(|b| b.data.as_slice()).unwrap_or_default().into();
-            LayerContent::Adjustment(photocraft_doc::Adjustment::Unsupported { psd_key: key, raw })
+            LayerContent::Adjustment(lienzo_doc::Adjustment::Unsupported { psd_key: key, raw })
         } else {
             LayerContent::Raster(self.record_surface(rec, &name))
         };
@@ -697,7 +693,7 @@ impl Ctx<'_> {
                     }
                 };
                 match unfiltered {
-                    Some(u) => photocraft_compose::filter_mask::mix(&u, &stored, m),
+                    Some(u) => lienzo_compose::filter_mask::mix(&u, &stored, m),
                     None => stored,
                 }
             }
@@ -765,18 +761,14 @@ impl Ctx<'_> {
                     let rec = &layers[*index];
                     // The recursion here (and in every later consumer of the tree) is bounded by
                     // the document model's nesting cap; a deeper subtree is not imported.
-                    let children = if depth >= photocraft_doc::MAX_GROUP_DEPTH {
-                        self.warn(format!(
-                            "group `{}` nests deeper than {} groups; its contents were not imported",
-                            rec.name(),
-                            photocraft_doc::MAX_GROUP_DEPTH
-                        ));
+                    let children = if depth >= lienzo_doc::MAX_GROUP_DEPTH {
+                        self.warn(format!("group `{}` nests deeper than {} groups; its contents were not imported", rec.name(), lienzo_doc::MAX_GROUP_DEPTH));
                         Vec::new()
                     } else {
                         self.build(children, depth + 1)
                     };
                     let sd = rec.section_divider();
-                    let expanded = sd.is_none_or(|s| s.kind != photocraft_psd::SectionType::ClosedFolder);
+                    let expanded = sd.is_none_or(|s| s.kind != lienzo_psd::SectionType::ClosedFolder);
                     let artboard = crate::comps_map::ARTBOARD_KEYS.iter().find_map(|k| rec.block(k)).and_then(|b| crate::comps_map::parse_artboard(&b.data));
                     // A Photoshop Frame's stroke: `vstk` on the frame group, in a shape's layout.
                     let frame_stroke = rec.block(b"vstk").and_then(|b| crate::vector_map::parse_vstk(&b.data, self.dpi)).and_then(|v| v.stroke);
@@ -824,7 +816,7 @@ fn apply_link_groups(nodes: &[LayerNode], layers: &mut [Layer], records: &[Layer
                         None => (children, depth),
                     };
                     // Matches the importer's nesting cap: deeper children were not imported.
-                    if depth < photocraft_doc::MAX_GROUP_DEPTH
+                    if depth < lienzo_doc::MAX_GROUP_DEPTH
                         && let LayerContent::Group(g) = &mut l.content
                     {
                         rec(children, &mut g.children, records, ids, depth + 1);
@@ -841,8 +833,8 @@ fn apply_link_groups(nodes: &[LayerNode], layers: &mut [Layer], records: &[Layer
 /// Rejects a file whose groups nest deeper than the document model's cap, with the actionable
 /// limit error. Nesting past the cap could never be saved (.pcraft refuses it).
 pub(crate) fn check_group_depth(file: &PsdFile) -> Result<(), crate::IoError> {
-    if group_depth(file) > photocraft_doc::MAX_GROUP_DEPTH {
-        return Err(crate::IoError::Unsupported(format!("layer groups nested deeper than {}", photocraft_doc::MAX_GROUP_DEPTH)));
+    if group_depth(file) > lienzo_doc::MAX_GROUP_DEPTH {
+        return Err(crate::IoError::Unsupported(format!("layer groups nested deeper than {}", lienzo_doc::MAX_GROUP_DEPTH)));
     }
     Ok(())
 }
@@ -850,7 +842,7 @@ pub(crate) fn check_group_depth(file: &PsdFile) -> Result<(), crate::IoError> {
 /// Deepest group nesting of the file's layer records (a layer inside this many groups is the
 /// deepest), computed like `layer_tree`'s stack — iteratively, so no file can make it recurse.
 pub(crate) fn group_depth(file: &PsdFile) -> usize {
-    use photocraft_psd::tagged::SectionType;
+    use lienzo_psd::tagged::SectionType;
     let (mut open, mut depth) = (0usize, 0usize);
     for rec in file.layers() {
         match rec.section_type() {
@@ -878,7 +870,7 @@ const LAYER_INFO_KEYS: [&[u8; 4]; 50] = [
 ];
 
 /// The key of an adjustment layer whose type no mapper knows (#6575), e.g. Photoshop 4's
-/// `hue ` or a type newer than PhotoCraft. Photoshop writes every adjustment layer without
+/// `hue ` or a type newer than Lienzo. Photoshop writes every adjustment layer without
 /// pixels and with "pixel data irrelevant" set (every one in the corpus; pixel, type and smart
 /// layers never have it). Such a record that is not a group and carries exactly one block that
 /// is neither a known layer-information key nor a known adjustment is that adjustment. More than
@@ -899,7 +891,7 @@ fn preserved_blocks(rec: &LayerRecord) -> Vec<([u8; 4], Arc<Vec<u8>>)> {
     rec.blocks.iter().filter(|b| !REGENERATED.contains(&&b.key)).map(|b| (b.key, Arc::new(b.data.clone()))).collect()
 }
 
-fn be_to_ne_plane(plane: &[u8], s: SampleType, n: usize) -> photocraft_psd::Result<Vec<u8>> {
+fn be_to_ne_plane(plane: &[u8], s: SampleType, n: usize) -> lienzo_psd::Result<Vec<u8>> {
     crate::pixels::try_interleave(&[Some(plane)], &[zero_sample(s)], n, s, &[false])
 }
 
@@ -928,12 +920,8 @@ fn merged_plane(all: &[u8], i: usize, plane: usize) -> Option<&[u8]> {
 /// The merged image of a file the layered path does not open (Bitmap, Indexed, Duotone; 1-bit
 /// files) as RGBA8. What `composite_rgba8` can't read (Multichannel) shows its first channels as
 /// RGB. An output over `cap` bytes is refused, never allocated (#5200).
-fn flat_composite(
-    file: &PsdFile,
-    merged: Option<&Result<Vec<u8>, photocraft_psd::PsdError>>,
-    cap: u64,
-) -> Result<photocraft_psd::RgbaImage, photocraft_psd::PsdError> {
-    use photocraft_psd::PsdError;
+fn flat_composite(file: &PsdFile, merged: Option<&Result<Vec<u8>, lienzo_psd::PsdError>>, cap: u64) -> Result<lienzo_psd::RgbaImage, lienzo_psd::PsdError> {
+    use lienzo_psd::PsdError;
     match file.composite_rgba8() {
         Ok(img) => return Ok(img),
         // Over the output budget: the fallback below would make the same allocation.
@@ -958,12 +946,12 @@ fn flat_composite(
     data.resize(len, 255u8);
     for c in 0..3.min(usize::from(h.channels)) {
         let bytes = merged_plane(all, c, plane).ok_or_else(|| PsdError::Invalid("channel size mismatch".into()))?;
-        let p = photocraft_psd::pixels::plane_to_u8(bytes, h.depth, w, hh)?;
+        let p = lienzo_psd::pixels::plane_to_u8(bytes, h.depth, w, hh)?;
         for (px, v) in data.as_chunks_mut::<4>().0.iter_mut().zip(&p) {
             px[c] = *v;
         }
     }
-    Ok(photocraft_psd::RgbaImage { left: 0, top: 0, width: h.width, height: h.height, data })
+    Ok(lienzo_psd::RgbaImage { left: 0, top: 0, width: h.width, height: h.height, data })
 }
 
 /// Writes RGBA8 `data` covering `canvas` into `s`, a band of tile rows at a time (no full-size
@@ -980,7 +968,7 @@ fn write_rgba8(s: &mut Surface, canvas: Rect, data: &[u8]) -> Result<(), String>
         vals.clear();
         vals.try_reserve(rows.len().saturating_mul(fmt.channels()) / 4).map_err(|e| e.to_string())?;
         for p in rows.as_chunks::<4>().0 {
-            vals.extend(photocraft_raster::from_rgba(&fmt, p.map(|x| f32::from(x) / 255.0)));
+            vals.extend(lienzo_raster::from_rgba(&fmt, p.map(|x| f32::from(x) / 255.0)));
         }
         s.try_write_region(band, &vals).map_err(|e| e.to_string())?;
         y = band.y1;
@@ -1047,13 +1035,13 @@ fn mark_background(file: &PsdFile, layers: &mut [Layer]) {
 /// Converts a parsed PSD into a document, preserving best-effort recovery warnings.
 pub fn psd_to_document(file: &PsdFile) -> (Document, Vec<String>) {
     // Never cancelled, so always `Some`; the fallback is unreachable.
-    psd_to_document_with(file, &photocraft_raster::Interrupt::NONE)
+    psd_to_document_with(file, &lienzo_raster::Interrupt::NONE)
         .unwrap_or_else(|| (Document::new("Untitled", Size::new(1, 1), ColorMode::Rgb, SampleType::U8), Vec::new()))
 }
 
 /// [`psd_to_document`] for a background open: checks `ctl` per layer record and reports
 /// progress. `None` when cancelled.
-pub fn psd_to_document_with(file: &PsdFile, ctl: &photocraft_raster::Interrupt) -> Option<(Document, Vec<String>)> {
+pub fn psd_to_document_with(file: &PsdFile, ctl: &lienzo_raster::Interrupt) -> Option<(Document, Vec<String>)> {
     psd_to_document_decoded(file, ctl, None)
 }
 
@@ -1064,8 +1052,8 @@ pub fn psd_to_document_with(file: &PsdFile, ctl: &photocraft_raster::Interrupt) 
 /// because its file became unreadable while it opened).
 pub(crate) fn psd_to_document_owned(
     mut file: PsdFile,
-    ctl: &photocraft_raster::Interrupt,
-    decoded: Option<photocraft_psd::Result<Vec<u8>>>,
+    ctl: &lienzo_raster::Interrupt,
+    decoded: Option<lienzo_psd::Result<Vec<u8>>>,
 ) -> Option<(Document, Vec<String>, bool, Option<crate::IoError>)> {
     let global = file
         .global_blocks
@@ -1079,7 +1067,7 @@ pub(crate) fn psd_to_document_owned(
     psd_to_document_global(&file, ctl, decoded, global, true)
 }
 
-/// Whether `file` stores spot planes the way earlier PhotoCraft versions (releases 0.1.0 to
+/// Whether `file` stores spot planes the way earlier Lienzo versions (releases 0.1.0 to
 /// 0.16.0) wrote them: straight (the maximum = solid ink), the opposite of Photoshop, which
 /// stores 0 = solid ink in every PSD and TIFF it saves. Their files are recognised by three
 /// things together:
@@ -1087,8 +1075,8 @@ pub(crate) fn psd_to_document_owned(
 /// - DisplayInfo (1077) marks at least one spot channel;
 /// - there is no Alpha Identifiers resource (1053), or one that lists fewer channels than the
 ///   file has ([`photoshop_identified_channels`]). Photoshop has written it, one identifier per
-///   extra channel, in every file with an extra channel since version 6, and PhotoCraft writes it
-///   now. No earlier PhotoCraft wrote one of its own, but each kept the 1053 of a Photoshop file
+///   extra channel, in every file with an extra channel since version 6, and Lienzo writes it
+///   now. No earlier Lienzo wrote one of its own, but each kept the 1053 of a Photoshop file
 ///   it opened (a transparent document's `[0]`, for one) and wrote it back unchanged, after the
 ///   channels added in it, which it stored straight;
 /// - the version info (1057) is byte for byte what those versions wrote: writer "Adobe Photoshop"
@@ -1097,16 +1085,16 @@ pub(crate) fn psd_to_document_owned(
 ///
 /// Any other file is read in Photoshop's polarity. psd-tools' `cmyk-spot.psd`, for one, also has
 /// spots and no 1053, but names psd-tools in 1057 and stores Photoshop's polarity. A Photoshop
-/// file that an earlier PhotoCraft opened and saved again kept Photoshop's 1053 and its planes as
+/// file that an earlier Lienzo opened and saved again kept Photoshop's 1053 and its planes as
 /// Photoshop stored them, so it is read in Photoshop's polarity too; when channels were added
 /// there, only the planes after the ones the kept 1053 lists are read straight.
 ///
 /// Keeping these files' ink is the only reason this exists: deleting it (and its one caller)
 /// reads every file in Photoshop's polarity, at the cost of inverting the spot ink of PSDs saved
 /// by those versions.
-pub(crate) fn earlier_photocraft_spot_planes(file: &PsdFile) -> bool {
-    use photocraft_psd::descriptor::UnicodeString;
-    use photocraft_psd::resources::VersionInfo;
+pub(crate) fn earlier_lienzo_spot_planes(file: &PsdFile) -> bool {
+    use lienzo_psd::descriptor::UnicodeString;
+    use lienzo_psd::resources::VersionInfo;
 
     let marks_spot = file.resource(crate::channel_map::DISPLAY_INFO).is_some_and(|r| crate::channel_map::display_info_marks_spot(&r.data));
     let identifies_every_channel = match file.header.color_mode.color_channels() {
@@ -1136,7 +1124,7 @@ pub(crate) fn earlier_photocraft_spot_planes(file: &PsdFile) -> bool {
 /// How many extra channels, after the merged transparency, the Alpha Identifiers resource (1053)
 /// lists: its identifiers other than 0, which Photoshop gives the merged transparency (first, and
 /// in some files with no transparency plane at all). 0 without a 1053. In a file from an earlier
-/// PhotoCraft ([`earlier_photocraft_spot_planes`]) these are the channels of the Photoshop file
+/// Lienzo ([`earlier_lienzo_spot_planes`]) these are the channels of the Photoshop file
 /// it opened, stored as Photoshop stored them; the channels after them were added there.
 pub(crate) fn photoshop_identified_channels(file: &PsdFile) -> usize {
     file.resource(crate::channel_map::ALPHA_IDENTIFIERS).map_or(0, |r| r.data.as_chunks::<4>().0.iter().filter(|id| **id != [0; 4]).count())
@@ -1174,7 +1162,7 @@ fn read_initial_metadata(
     for resource in &file.resources {
         match resource.id {
             ids::RESOLUTION_INFO => {
-                if let Ok(info) = photocraft_psd::ResolutionInfo::from_bytes(&resource.data) {
+                if let Ok(info) = lienzo_psd::ResolutionInfo::from_bytes(&resource.data) {
                     let (x, y) = (info.h_res(), info.v_res());
                     doc.resolution_dpi = x as f32;
                     warnings.extend(crate::unequal_resolution_warning(x, y));
@@ -1195,7 +1183,7 @@ fn read_initial_metadata(
                 }
             }
             id if crate::vector_map::SAVED_PATHS.contains(&id) => match crate::vector_map::path_from_resource(&resource.data, header.width, header.height) {
-                Some(path) => doc.paths.push(photocraft_doc::NamedPath {
+                Some(path) => doc.paths.push(lienzo_doc::NamedPath {
                     name: String::from_utf8_lossy(&resource.name).into_owned(),
                     path,
                     psd_raw: Some(Arc::new(resource.data.clone())),
@@ -1206,7 +1194,7 @@ fn read_initial_metadata(
             crate::vector_map::CLIPPING_PATH => {
                 let len = usize::from(resource.data.first().copied().unwrap_or(0));
                 let name = resource.data.get(1..1 + len).map(|bytes| String::from_utf8_lossy(bytes).into_owned()).unwrap_or_default();
-                doc.clipping_path = Some(photocraft_doc::ClippingPath { name, flatness: 0.0 });
+                doc.clipping_path = Some(lienzo_doc::ClippingPath { name, flatness: 0.0 });
                 doc.metadata.psd_resources.push((resource.id, String::from_utf8_lossy(&resource.name).into_owned(), Arc::new(resource.data.clone())));
             }
             crate::channel_map::ALPHA_IDENTIFIERS if !multichannel => {}
@@ -1249,8 +1237,8 @@ fn read_initial_metadata(
 /// [`PsdFile::from_bytes_and_merged`] with [`merged_needed`]), so it is not decoded again.
 pub(crate) fn psd_to_document_decoded(
     file: &PsdFile,
-    ctl: &photocraft_raster::Interrupt,
-    decoded: Option<photocraft_psd::Result<Vec<u8>>>,
+    ctl: &lienzo_raster::Interrupt,
+    decoded: Option<lienzo_psd::Result<Vec<u8>>>,
 ) -> Option<(Document, Vec<String>)> {
     psd_to_document_decoded_integrity(file, ctl, decoded).map(|(document, warnings, _)| (document, warnings))
 }
@@ -1260,8 +1248,8 @@ pub(crate) fn psd_to_document_decoded(
 /// the low-level conversion API retain their existing best-effort behaviour.
 pub(crate) fn psd_to_document_decoded_integrity(
     file: &PsdFile,
-    ctl: &photocraft_raster::Interrupt,
-    decoded: Option<photocraft_psd::Result<Vec<u8>>>,
+    ctl: &lienzo_raster::Interrupt,
+    decoded: Option<lienzo_psd::Result<Vec<u8>>>,
 ) -> Option<(Document, Vec<String>, bool)> {
     let global = file.global_blocks.iter().map(|b| (b.signature, b.key, Arc::new(b.data.clone()))).collect();
     psd_to_document_global(file, ctl, decoded, global, false).map(|(doc, warnings, damaged, _)| (doc, warnings, damaged))
@@ -1273,7 +1261,7 @@ pub(crate) fn psd_to_document_decoded_integrity(
 /// A standalone conversion refuses an ineligible file before waiting for the decode gate and
 /// rechecks the fresh measurement once admitted, so a refused file never waits behind an active
 /// decode and a memory drop during the wait is seen before any pixel is decoded.
-fn legacy_admission(est: &crate::psd_budget::PsdMemoryEstimate, ctl: &photocraft_raster::Interrupt) -> Result<crate::psd_gate::AdmissionGuard, crate::IoError> {
+fn legacy_admission(est: &crate::psd_budget::PsdMemoryEstimate, ctl: &lienzo_raster::Interrupt) -> Result<crate::psd_gate::AdmissionGuard, crate::IoError> {
     if crate::psd_gate::is_holding_admission() {
         // Cancellation is checked before the charge and admission is reentrant here, so a
         // cancelled or refused nested conversion never spends its parent's allowance.
@@ -1293,8 +1281,8 @@ fn legacy_admission(est: &crate::psd_budget::PsdMemoryEstimate, ctl: &photocraft
 
 fn psd_to_document_global(
     file: &PsdFile,
-    ctl: &photocraft_raster::Interrupt,
-    decoded: Option<photocraft_psd::Result<Vec<u8>>>,
+    ctl: &lienzo_raster::Interrupt,
+    decoded: Option<lienzo_psd::Result<Vec<u8>>>,
     global: Vec<PsdGlobalBlock>,
     preflighted: bool,
 ) -> Option<(Document, Vec<String>, bool, Option<crate::IoError>)> {
@@ -1343,7 +1331,7 @@ fn psd_to_document_global(
         damaged,
         fatal_error: None,
         dpi: doc.resolution_dpi,
-        txt2: global.iter().find(|(_, k, _)| k == b"Txt2").and_then(|(_, _, d)| photocraft_text::psd::parse_txt2(d)),
+        txt2: global.iter().find(|(_, k, _)| k == b"Txt2").and_then(|(_, _, d)| lienzo_text::psd::parse_txt2(d)),
         filter_effects: Vec::new(),
         filter_masks: Default::default(),
         unfiltered: Default::default(),
@@ -1364,7 +1352,7 @@ fn psd_to_document_global(
         if ctl.cancelled() {
             return None;
         }
-        match photocraft_psd::filter_effects::FilterEffects::parse(data) {
+        match lienzo_psd::filter_effects::FilterEffects::parse(data) {
             Ok(fx) => cx.filter_effects.extend(fx.items),
             Err(e) => cx.warn(format!("smart filter masks ({}) could not be read: {e}", String::from_utf8_lossy(key))),
         }
@@ -1383,7 +1371,7 @@ fn psd_to_document_global(
     finish_import(doc, cx, ctl)
 }
 
-fn finish_import(mut doc: Document, mut cx: Ctx<'_>, ctl: &photocraft_raster::Interrupt) -> Option<(Document, Vec<String>, bool, Option<crate::IoError>)> {
+fn finish_import(mut doc: Document, mut cx: Ctx<'_>, ctl: &lienzo_raster::Interrupt) -> Option<(Document, Vec<String>, bool, Option<crate::IoError>)> {
     let raw_comps = doc.metadata.psd_resources.iter().find(|(id, _, _)| *id == crate::comps_map::LAYER_COMPS).map(|(_, _, data)| data.clone());
     let (comps, applied, state, warnings) = crate::comps_map::decode_comps(raw_comps.as_deref().map(Vec::as_slice), &doc);
     (doc.layer_comps, doc.last_applied_comp, doc.last_document_state) = (comps, applied, state);
@@ -1399,10 +1387,10 @@ fn finish_import(mut doc: Document, mut cx: Ctx<'_>, ctl: &photocraft_raster::In
 
 fn decode_merged(
     file: &PsdFile,
-    decoded: Option<photocraft_psd::Result<Vec<u8>>>,
-    ctl: &photocraft_raster::Interrupt,
+    decoded: Option<lienzo_psd::Result<Vec<u8>>>,
+    ctl: &lienzo_raster::Interrupt,
     cx: &mut Ctx<'_>,
-) -> Option<Option<photocraft_psd::Result<Vec<u8>>>> {
+) -> Option<Option<lienzo_psd::Result<Vec<u8>>>> {
     if merged_needed(file) {
         let merged = decoded.unwrap_or_else(|| file.decode_merged());
         if ctl.cancelled() {
@@ -1410,7 +1398,7 @@ fn decode_merged(
         }
         ctl.progress(0.1);
         if let Err(error) = &merged {
-            if matches!(error, photocraft_psd::PsdError::OutOfMemory(_)) {
+            if matches!(error, lienzo_psd::PsdError::OutOfMemory(_)) {
                 cx.allocation_failed(format!("merged image: {error}"));
             }
             cx.warn_unreadable_data(format!("merged image could not be decoded: {error}"));
@@ -1445,7 +1433,7 @@ fn import_decoded_content(import: DecodedImport<'_>, doc: &mut Document, cx: &mu
     }
 }
 
-fn import_multichannel(file: &PsdFile, merged: &Option<photocraft_psd::Result<Vec<u8>>>, doc: &mut Document, cx: &mut Ctx<'_>) {
+fn import_multichannel(file: &PsdFile, merged: &Option<lienzo_psd::Result<Vec<u8>>>, doc: &mut Document, cx: &mut Ctx<'_>) {
     if let Some(Ok(all)) = merged {
         let names = file.alpha_channel_names();
         if let Err(error) = crate::multichannel_map::import(file, all, doc, &names, &mut cx.warnings) {
@@ -1460,12 +1448,12 @@ fn import_multichannel(file: &PsdFile, merged: &Option<photocraft_psd::Result<Ve
 fn import_layered(import: DecodedImport<'_>, doc: &mut Document, cx: &mut Ctx<'_>) {
     let DecodedImport { file, merged, sizes, canvas, depth, fmt, .. } = import;
     let cc = fmt.mode.color_channels();
-    let tree = file.layer_tree_max_depth(photocraft_doc::MAX_GROUP_DEPTH);
-    let space = photocraft_compose::cmyk_space(doc);
-    doc.layers = photocraft_color::convert::with_cmyk_space(space.as_ref(), || cx.build(&tree, 0));
+    let tree = file.layer_tree_max_depth(lienzo_doc::MAX_GROUP_DEPTH);
+    let space = lienzo_compose::cmyk_space(doc);
+    doc.layers = lienzo_color::convert::with_cmyk_space(space.as_ref(), || cx.build(&tree, 0));
     mark_background(file, &mut doc.layers);
-    if let Some(Ok(photocraft_psd::resources::ResourceData::LayerGroupInfo(groups))) =
-        file.resources.iter().find(|r| r.id == ids::LAYER_GROUP_INFO).and_then(photocraft_psd::resources::ImageResource::parsed)
+    if let Some(Ok(lienzo_psd::resources::ResourceData::LayerGroupInfo(groups))) =
+        file.resources.iter().find(|r| r.id == ids::LAYER_GROUP_INFO).and_then(lienzo_psd::resources::ImageResource::parsed)
     {
         apply_link_groups(&tree, &mut doc.layers, file.layers(), &groups);
     }
@@ -1492,9 +1480,9 @@ fn import_layered(import: DecodedImport<'_>, doc: &mut Document, cx: &mut Ctx<'_
     if let Err(error) = surface.try_write_interleaved(canvas, &bytes) {
         return cx.allocation_failed(format!("merged image: {error}"));
     }
-    photocraft_raster::scratch::give(bytes);
+    lienzo_raster::scratch::give(bytes);
     if alpha_idx.is_some() {
-        let white = photocraft_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]);
+        let white = lienzo_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]);
         let mut vals = Vec::new();
         let mut y = canvas.y0;
         while y < canvas.y1 {
@@ -1523,7 +1511,7 @@ fn import_layered(import: DecodedImport<'_>, doc: &mut Document, cx: &mut Ctx<'_
 
 fn import_flattened(
     file: &PsdFile,
-    merged: &Option<photocraft_psd::Result<Vec<u8>>>,
+    merged: &Option<lienzo_psd::Result<Vec<u8>>>,
     sizes: Option<(usize, usize)>,
     canvas: Rect,
     fmt: PixelFormat,
@@ -1542,7 +1530,7 @@ fn import_flattened(
         let count = u16_of(crate::palette_map::COLOR_TABLE_COUNT).map_or(256, usize::from).clamp(1, 256);
         let colors = (0..count).map(|i| [m[i], m[256 + i], m[512 + i]]).collect();
         let transparent = u16_of(crate::palette_map::TRANSPARENCY_INDEX).filter(|&i| usize::from(i) < count).map(|i| i as u8);
-        doc.color_table = Some(photocraft_doc::ColorTable { colors, transparent });
+        doc.color_table = Some(lienzo_doc::ColorTable { colors, transparent });
     } else if h.color_mode == PsdMode::Duotone && !file.color_mode_data.is_empty() {
         let mut unknown = false;
         let alternate = file.resource(crate::duotone_map::ALTERNATE_DUOTONE_COLORS).map(|r| r.data.as_slice());
@@ -1550,12 +1538,12 @@ fn import_flattened(
         if inks.is_none() {
             cx.warn("duotone inks are not interpreted (shown as grayscale)");
         }
-        let inks = inks.unwrap_or_else(|| vec![photocraft_doc::DuotoneInk::new("Black", [0.0; 3])]);
-        doc.duotone = Some(photocraft_doc::Duotone { inks, psd_raw: Some(file.color_mode_data.as_slice().into()) });
+        let inks = inks.unwrap_or_else(|| vec![lienzo_doc::DuotoneInk::new("Black", [0.0; 3])]);
+        doc.duotone = Some(lienzo_doc::Duotone { inks, psd_raw: Some(file.color_mode_data.as_slice().into()) });
     } else if !file.color_mode_data.is_empty() {
         cx.warn("color mode data is not preserved");
     }
-    match flat_composite(file, merged.as_ref(), photocraft_psd::compression::MAX_DECODED_BYTES) {
+    match flat_composite(file, merged.as_ref(), lienzo_psd::compression::MAX_DECODED_BYTES) {
         Ok(mut img) => {
             if h.color_mode == PsdMode::Indexed
                 && let Some(t) = doc.color_table.as_ref().and_then(|t| t.transparent)
@@ -1579,10 +1567,10 @@ fn import_flattened(
                 Err(error) => cx.allocation_failed(format!("flattened image: {error}")),
             }
         }
-        Err(error @ photocraft_psd::PsdError::OutOfMemory(_)) => cx.allocation_failed(format!("flattened image: {error}")),
+        Err(error @ lienzo_psd::PsdError::OutOfMemory(_)) => cx.allocation_failed(format!("flattened image: {error}")),
         // A flattened file has nothing but its merged image: a failed source read fails the open
         // rather than opening it without the image.
-        Err(photocraft_psd::PsdError::Read(message)) => {
+        Err(lienzo_psd::PsdError::Read(message)) => {
             cx.fatal_error.get_or_insert(crate::IoError::Read(message));
         }
         Err(_) if matches!(merged, Some(Err(_))) => {}
@@ -1590,7 +1578,7 @@ fn import_flattened(
     }
 }
 
-/// Spot inks whose DisplayInfo colour is in a space PhotoCraft doesn't read take their colour
+/// Spot inks whose DisplayInfo colour is in a space Lienzo doesn't read take their colour
 /// from the Alternate Spot Colors (1067), matched by the identifiers of 1053. `ids_from` is the
 /// first imported channel's position in 1053 (1 past a merged transparency), `skip` the
 /// DisplayInfo records before it.
@@ -1632,9 +1620,9 @@ fn import_extra_channels(import: DecodedImport<'_>, doc: &mut Document, cx: &mut
     let names = names.get(skip..).unwrap_or_default();
     // Which planes hold spot ink in Photoshop's polarity (0 = solid): the DisplayInfo records
     // the channel options are read from below, the transparency's first when `skip` is 1.
-    // A file from an earlier PhotoCraft stores them straight as it was written,
+    // A file from an earlier Lienzo stores them straight as it was written,
     // past the channels of the Photoshop file it opened, if any.
-    let straight_from = if earlier_photocraft_spot_planes(file) { photoshop_identified_channels(file) } else { usize::MAX };
+    let straight_from = if earlier_lienzo_spot_planes(file) { photoshop_identified_channels(file) } else { usize::MAX };
     let photoshop_spots = if let Some(r) = file.resource(crate::channel_map::DISPLAY_INFO) {
         crate::channel_map::spot_flags(&r.data, true, skip)
     } else if let Some(r) = file.resource(crate::channel_map::DISPLAY_INFO_OLD) {
@@ -1658,7 +1646,7 @@ fn import_extra_channels(import: DecodedImport<'_>, doc: &mut Document, cx: &mut
         if let Err(error) = s.try_write_interleaved(canvas, &raw) {
             return cx.allocation_failed(format!("extra channel {idx}: {error}"));
         }
-        photocraft_raster::scratch::give(raw);
+        lienzo_raster::scratch::give(raw);
         s.prune();
         let name = names.get(k).cloned().unwrap_or_else(|| format!("Alpha {}", k + 1));
         doc.channels.push(AlphaChannel::new(name, s));

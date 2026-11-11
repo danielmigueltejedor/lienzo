@@ -2,19 +2,19 @@
 //!
 //! Measured in Photoshop: with a Magnetic Lasso border in progress, a right-click on the canvas
 //! opens nothing and changes nothing; the border stays live, and ↩ still closes it. With no border
-//! in progress the right-click opens the selection tools' menu as before. PhotoCraft opened that
+//! in progress the right-click opens the selection tools' menu as before. Lienzo opened that
 //! menu over the live border, from the canvas and from the control channel alike.
 //!
 //! The border is drawn with ⌥-clicks (straight segments), so its points don't depend on edges.
 //! No GPU needed.
 
 use egui::{Event, Modifiers, PointerButton};
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::ViewXform;
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
 use serde_json::{Value, json};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// The border's corners: a plain click starts it, ⌥-clicks add the others.
 const CORNERS: [[f64; 2]; 3] = [[50.0, 50.0], [250.0, 50.0], [150.0, 200.0]];
@@ -22,33 +22,33 @@ const CORNERS: [[f64; 2]; 3] = [[50.0, 50.0], [250.0, 50.0], [150.0, 200.0]];
 /// Where the right-click goes: inside the border, on the image.
 const INSIDE: [f64; 2] = [150.0, 100.0];
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 400, "height": 300})).expect("new document");
     app.sync_views();
     app
 }
 
-fn call(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
+fn call(app: &mut LienzoApp, method: &str, params: Value) -> Value {
     let ctx = egui::Context::default();
     let (req, _rx) = ControlRequest::new(method, params);
     let Outcome::Done(v) = handle(app, &ctx, &req) else { panic!("{method} didn't finish") };
     v
 }
 
-fn pointer(app: &mut PhotocraftApp, params: Value) {
+fn pointer(app: &mut LienzoApp, params: Value) {
     let v = call(app, "ui.pointer", params);
     assert_eq!(v["ok"], true, "{v}");
 }
 
 /// Clicks at `p` through `ui.pointer` with the Magnetic Lasso.
-fn agent_click(app: &mut PhotocraftApp, p: [f64; 2], button: &str, alt: bool) {
+fn agent_click(app: &mut LienzoApp, p: [f64; 2], button: &str, alt: bool) {
     let events = json!([{"kind": "down", "x": p[0], "y": p[1]}, {"kind": "up", "x": p[0], "y": p[1]}]);
     pointer(app, json!({"tool": "MagneticLasso", "button": button, "alt": alt, "events": events}));
 }
 
 /// `ui.inspect`'s Magnetic Lasso border and canvas tool menu.
-fn inspect(app: &mut PhotocraftApp) -> (Value, Value) {
+fn inspect(app: &mut LienzoApp) -> (Value, Value) {
     let v = call(app, "ui.inspect", json!({}));
     let r = &v["result"];
     (r["magnetic"].clone(), r["canvasToolMenu"].clone())
@@ -72,7 +72,7 @@ fn agent_right_click_while_drawing_opens_no_menu_and_keeps_the_border() {
     assert!(app.session.active().expect("a document").doc.selection.is_none(), "nothing is selected yet");
 
     // The border is still live: closing it selects it.
-    photocraft_ui_egui::magnetic_lasso_ui::close(&mut app, true);
+    lienzo_ui_egui::magnetic_lasso_ui::close(&mut app, true);
     let sel = app.session.active().expect("a document").doc.selection.as_ref().expect("the border closed into a selection");
     assert!(sel.sample_channel(150, 100, 0) > 0.9, "the inside is selected");
 }
@@ -123,19 +123,19 @@ fn agent_right_click_without_a_border_still_opens_the_selection_menu() {
 /// The app's document area alone, at 100 %, the Magnetic Lasso selected.
 fn harness() -> Harness {
     let mut app = app();
-    app.ui.tool = photocraft_ui_egui::state::Tool::MagneticLasso;
+    app.ui.tool = lienzo_ui_egui::state::Tool::MagneticLasso;
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
-            photocraft_ui_egui::shortcuts::handle(app, &ctx);
-            egui::CentralPanel::default().show(ui, |ui| photocraft_ui_egui::canvas::document_area(app, ui));
+            lienzo_ui_egui::shortcuts::handle(app, &ctx);
+            egui::CentralPanel::default().show(ui, |ui| lienzo_ui_egui::canvas::document_area(app, ui));
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     (v.zoom, v.center, v.fit_pending) = (1.0, [200.0, 150.0], false);
@@ -148,7 +148,7 @@ fn screen(h: &Harness, p: [f64; 2]) -> egui::Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     let xf = ViewXform {
-        rect: photocraft_ui_egui::rulers::content_rect(app, app.last_canvas_rect),
+        rect: lienzo_ui_egui::rulers::content_rect(app, app.last_canvas_rect),
         zoom: v.zoom,
         center: v.center,
         flip: false,

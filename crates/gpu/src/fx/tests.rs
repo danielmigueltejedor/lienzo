@@ -1,23 +1,23 @@
 use super::*;
-use photocraft_color::BlendMode;
-use photocraft_doc::FxCommon;
+use lienzo_color::BlendMode;
+use lienzo_doc::FxCommon;
 
 /// Filled-shape identity survives integer moves, including fractional anchors and handles.
 #[test]
 fn filled_shape_key_preserves_translation_but_detects_deformation() {
-    use photocraft_doc::{Fill, Path, ShapeLayer, Subpath};
+    use lienzo_doc::{Fill, Path, ShapeLayer, Subpath};
     let mut layer = Layer::new(
         "shape",
         LayerContent::Shape(ShapeLayer {
             path: Path::new(vec![Subpath::polygon(&[(20.0, 20.0), (70.0, 20.0), (70.0, 60.0), (20.0, 60.0)])]),
-            fill: Some(Fill::Solid(photocraft_color::Color::WHITE)),
+            fill: Some(Fill::Solid(lienzo_color::Color::WHITE)),
             ..Default::default()
         }),
     );
     let canvas = Rect::new(0, 0, 200, 200);
     let before = shape_key(&layer, canvas);
     let LayerContent::Shape(shape) = &mut layer.content else { unreachable!() };
-    shape.path = shape.path.transform(&photocraft_geom::Affine::translate(13.0, 7.0));
+    shape.path = shape.path.transform(&lienzo_geom::Affine::translate(13.0, 7.0));
     assert_eq!(before, shape_key(&layer, canvas));
     let LayerContent::Shape(shape) = &mut layer.content else { unreachable!() };
     shape.path.subpaths[0].knots[1].anchor.x += 3.0;
@@ -25,12 +25,12 @@ fn filled_shape_key_preserves_translation_but_detects_deformation() {
 
     let LayerContent::Shape(shape) = &mut layer.content else { unreachable!() };
     shape.path = Path::new(vec![Subpath::polygon(&[(0.1, 0.2), (0.3, 0.2), (0.3, 1.7), (0.1, 1.7)])]);
-    shape.path.subpaths[0].knots[1].out_ctrl = photocraft_geom::Point::new(0.45, 0.65);
+    shape.path.subpaths[0].knots[1].out_ctrl = lienzo_geom::Point::new(0.45, 0.65);
     let original = shape.path.clone();
     let before = shape_key(&layer, canvas);
     for (dx, dy) in [(1.0, 1.0), (-13.0, 7.0), (100_000.0, -100_000.0)] {
         let LayerContent::Shape(shape) = &mut layer.content else { unreachable!() };
-        shape.path = original.transform(&photocraft_geom::Affine::translate(dx, dy));
+        shape.path = original.transform(&lienzo_geom::Affine::translate(dx, dy));
         assert_eq!(before, shape_key(&layer, canvas), "fractional path translated by {dx}, {dy}");
     }
     let LayerContent::Shape(shape) = &mut layer.content else { unreachable!() };
@@ -43,7 +43,7 @@ fn programs_key_on_geometry_not_colour() {
     let light = GlobalLight::default();
     let Effect::DropShadow(mut s) = Effect::default_drop_shadow() else { unreachable!() };
     let a = program(&Effect::DropShadow(s.clone()), &light, false);
-    s.color = photocraft_color::Color::rgb(1.0, 0.0, 0.0);
+    s.color = lienzo_color::Color::rgb(1.0, 0.0, 0.0);
     s.common = FxCommon::new(BlendMode::Screen, 0.3);
     let b = program(&Effect::DropShadow(s.clone()), &light, false);
     assert_eq!(a.key, b.key);
@@ -55,7 +55,7 @@ fn programs_key_on_geometry_not_colour() {
 /// Advanced Blending, so the cached shape must be rebuilt when any of them changes.
 #[test]
 fn group_key_follows_vector_mask_blend_if_and_advanced() {
-    use photocraft_doc::{BlendRange, Knockout, Path, PixelFormat, Subpath, VectorMask};
+    use lienzo_doc::{BlendRange, Knockout, Path, PixelFormat, Subpath, VectorMask};
     let light = GlobalLight::default();
     let group = Layer::group("g", vec![Layer::raster("child", PixelFormat::RGBA8)]);
     let base = group_key(&group, &light, &mut |_| {});
@@ -127,7 +127,7 @@ fn banded_fields_match_whole_region_within_reach() {
         FieldKind::StrokeOutsideVectorChamfer,
     ] {
         let reach = 9;
-        let whole = photocraft_compose::effects::distance_field(kind, shape.clone(), w, h, reach as f32);
+        let whole = lienzo_compose::effects::distance_field(kind, shape.clone(), w, h, reach as f32);
         let banded = field(kind, reach, &shape, region, region);
         let part = Rect::new(40, 30, 170, 120);
         let partial = field(kind, reach, &shape, region, part);
@@ -171,7 +171,7 @@ fn windowed_bevel_fields_match_whole_region_on_anti_aliased_edges() {
         }
         for reach in [9, 24] {
             for kind in [FieldKind::BevelInside, FieldKind::BevelOutside] {
-                let whole = photocraft_compose::effects::distance_field(kind, shape.clone(), w, h, reach as f32);
+                let whole = lienzo_compose::effects::distance_field(kind, shape.clone(), w, h, reach as f32);
                 let differs = |part_field: &[f32], out: Rect| {
                     let ow = out.width() as usize;
                     part_field
@@ -224,11 +224,10 @@ fn paired_bevel_fields_equal_the_fields_one_at_a_time() {
             assert_eq!(bits(&outside), bits(&field(FieldKind::BevelOutside, reach, &shape, region, out)), "outside, reach {reach}, {out:?}");
             // The banded path (wasm) pairs them per band the same way.
             let halo = field_radius(FieldKind::BevelInside, reach) + 1;
-            let banded =
-                fields_in_windows(false, &shape, region, out, halo, |s, w, h| photocraft_compose::effects::bevel_distance_fields(s, w, h, reach as f32));
+            let banded = fields_in_windows(false, &shape, region, out, halo, |s, w, h| lienzo_compose::effects::bevel_distance_fields(s, w, h, reach as f32));
             for (k, kind) in [FieldKind::BevelInside, FieldKind::BevelOutside].into_iter().enumerate() {
                 let [one] =
-                    fields_in_windows(false, &shape, region, out, halo, |s, w, h| [photocraft_compose::effects::distance_field(kind, s, w, h, reach as f32)]);
+                    fields_in_windows(false, &shape, region, out, halo, |s, w, h| [lienzo_compose::effects::distance_field(kind, s, w, h, reach as f32)]);
                 assert_eq!(bits(&banded[k]), bits(&one), "banded {kind:?}, reach {reach}, {out:?}");
             }
         }
@@ -242,8 +241,8 @@ fn paired_bevel_fields_equal_the_fields_one_at_a_time() {
 /// routing a wide stroke through the chamfer, or a shadow through the exact field, fails here.
 #[test]
 fn a_stroke_uses_the_chamfer_narrow_and_the_exact_field_wide() {
-    use photocraft_color::{BlendMode, Color};
-    use photocraft_doc::{FxCommon, FxPaint, StrokeFx, StrokePosition};
+    use lienzo_color::{BlendMode, Color};
+    use lienzo_doc::{FxCommon, FxPaint, StrokeFx, StrokePosition};
     let light = GlobalLight::default();
     let stroke = |size, position| {
         Effect::Stroke(StrokeFx { common: FxCommon::new(BlendMode::Normal, 1.0), size, position, paint: FxPaint::Color(Color::BLACK), overprint: false })
@@ -279,7 +278,7 @@ fn a_stroke_uses_the_chamfer_narrow_and_the_exact_field_wide() {
 /// are freed although the entry remembers it.
 #[test]
 fn shape_tiles_and_group_pins_hold_addresses_not_pixels() {
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
     let fmt = PixelFormat::new(ColorMode::Rgb, SampleType::U8, true);
     let mut s = Surface::new(fmt);
     // A ramp, so no two tiles share their pixels.

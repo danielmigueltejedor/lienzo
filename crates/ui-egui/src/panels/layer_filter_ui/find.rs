@@ -6,7 +6,7 @@
 use serde_json::{Value, json};
 
 use super::FilterBy;
-use crate::{PhotocraftApp, widgets};
+use crate::{LienzoApp, widgets};
 
 /// The egui memory flag: focus the Name field the next time it is drawn.
 fn focus_flag() -> egui::Id {
@@ -16,7 +16,7 @@ fn focus_flag() -> egui::Id {
 /// Run `select.findLayers`: the engine checks `params` and lists the layers the Name text matches;
 /// then the Name filter is applied. Without a `name` the text is kept, and the Layers panel is
 /// shown with the field focused.
-pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> Result<Value, String> {
+pub fn invoke(app: &mut LienzoApp, ctx: &egui::Context, params: Value) -> Result<Value, String> {
     let given = params.get("name").is_some_and(|n| !n.is_null());
     // `run` keeps the Name text when no `name` is given ([`params_for_run`]) and applies the
     // reply's Name filter ([`apply`]).
@@ -43,7 +43,7 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> Re
 /// The params `select.findLayers` runs with: without a `name` the panel's Name text is kept, so the
 /// reply lists the layers the panel lists however the command runs (the menu, the shortcut,
 /// `engine.execute` or an action step).
-pub(crate) fn params_for_run(app: &PhotocraftApp, params: Value) -> Value {
+pub(crate) fn params_for_run(app: &LienzoApp, params: Value) -> Value {
     if params.get("name").is_some_and(|n| !n.is_null()) {
         return params;
     }
@@ -53,8 +53,8 @@ pub(crate) fn params_for_run(app: &PhotocraftApp, params: Value) -> Value {
 }
 
 /// Apply the Name filter in a `select.findLayers` reply to the Layers panel: switch to Name and set
-/// the text when the reply has one. [`PhotocraftApp::run`] calls it after every Find Layers.
-pub(crate) fn apply(app: &mut PhotocraftApp, reply: &Value) {
+/// the text when the reply has one. [`LienzoApp::run`] calls it after every Find Layers.
+pub(crate) fn apply(app: &mut LienzoApp, reply: &Value) {
     app.ui.layer_filter_by = FilterBy::Name;
     if let Some(name) = reply["layerFilter"]["name"].as_str() {
         app.ui.layer_filter_name = name.to_string();
@@ -64,7 +64,7 @@ pub(crate) fn apply(app: &mut PhotocraftApp, reply: &Value) {
 /// The Name filter's text field, taking the focus with its text selected after [`invoke`]. The
 /// focus waits for a frame without a pointer press or release: egui drops the focus at the end of
 /// a frame in which the pointer was clicked elsewhere, as it is when the menu item is clicked.
-pub fn name_field(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn name_field(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let id = ui.scope_id().with("layer-filter-name");
     let pending = ui.ctx().data(|d| d.get_temp::<bool>(focus_flag())).unwrap_or(false);
     let clicking = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released() || i.pointer.any_down());

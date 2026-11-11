@@ -3966,7 +3966,7 @@ cameraRaw	Yellow	Sárga
 	Modify Date	Módosítás dátuma
 	Mouse Controls	Egérvezérlés
 	Mouse Coordinates	Egérkoordináták
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	A fájlok natív behúzása Waylanden még nem támogatott. Használd a Fájl › Megnyitás parancsot, vagy futtasd a Lienzoot XWaylanden: `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	A fájlok natív behúzása Waylanden még nem támogatott. Használd a Fájl › Megnyitás parancsot, vagy futtasd a Lienzoot XWaylanden: `WAYLAND_DISPLAY= lienzo`.
 	New channel only	Csak új csatorna
 	New document…     ⌘N	Új dokumentum…     ⌘N
 	New Layer from Brush	Új réteg ecsetből

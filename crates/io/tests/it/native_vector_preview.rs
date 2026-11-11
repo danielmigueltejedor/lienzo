@@ -1,13 +1,13 @@
-//! Native embedded files stay native while PhotoCraft retains a source-bound display preview.
+//! Native embedded files stay native while Lienzo retains a source-bound display preview.
 
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, SmartObject, SmartSource, VectorPreview};
-use photocraft_geom::{Affine, Size};
-use photocraft_io::{ExportOptions, export, import, linked, smart_map, vector_preview};
-use photocraft_psd::PsdFile;
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent, SmartObject, SmartSource, VectorPreview};
+use lienzo_geom::{Affine, Size};
+use lienzo_io::{ExportOptions, export, import, linked, smart_map, vector_preview};
+use lienzo_psd::PsdFile;
+use lienzo_raster::Surface;
 
 const PDF: &[u8] = b"%PDF-1.7\nopaque native source bytes\n%%EOF\n";
 const EPS: &[u8] = b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 8 6\n1 0 0 setrgbcolor 0 0 8 6 rectfill\nshowpage\n%%EOF\n";
@@ -16,7 +16,7 @@ const SVG: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height=
 fn fixture(name: &str, source: &[u8]) -> Document {
     let mut doc = Document::new("native", Size::new(20, 20), ColorMode::Rgb, SampleType::U8);
     let mut cache = Surface::new(doc.pixel_format());
-    cache.fill_rect(photocraft_geom::Rect::new(2, 3, 18, 15), &[1.0, 0.0, 0.0, 1.0]);
+    cache.fill_rect(lienzo_geom::Rect::new(2, 3, 18, 15), &[1.0, 0.0, 0.0, 1.0]);
     let mut sm = SmartObject::new(
         SmartSource::Embedded { file_name: name.into(), bytes: Arc::new(source.to_vec()) },
         Affine { m: [2.0, 0.0, 0.0, 2.0, 2.0, 3.0] },
@@ -89,17 +89,17 @@ fn replacing_native_source_cannot_export_a_stale_preview() {
 fn native_preview_supplies_unfiltered_pixels_for_psd_smart_filter_masks() {
     let mut doc = fixture("Artwork.ai", PDF);
     let LayerContent::Smart(sm) = &mut doc.layers[0].content else { unreachable!() };
-    sm.smart_filters.push(photocraft_doc::SmartFilter {
+    sm.smart_filters.push(lienzo_doc::SmartFilter {
         command: "filter.blur.gaussianBlur".into(),
         params: serde_json::json!({"radius": 1.0}),
-        blend: photocraft_color::BlendMode::Normal,
+        blend: lienzo_color::BlendMode::Normal,
         opacity: 1.0,
         visible: true,
     });
-    let mut mask = photocraft_doc::LayerMask::reveal_all();
+    let mut mask = lienzo_doc::LayerMask::reveal_all();
     // All-white masks intentionally reopen as None. Use an actual masked region to prove
     // native-preview source pixels keep a nontrivial mask through PSD serialization.
-    mask.surface.fill_rect(photocraft_geom::Rect::new(4, 4, 8, 8), &[0.0]);
+    mask.surface.fill_rect(lienzo_geom::Rect::new(4, 4, 8, 8), &[0.0]);
     sm.filter_mask = Some(mask);
     let out = export(&doc, "psd", &Default::default()).unwrap();
     assert!(!out.warnings.iter().any(|warning| warning.contains("smart filter mask was not written")), "{:?}", out.warnings);

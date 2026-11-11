@@ -5,17 +5,17 @@ use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Brush;
     let mut h = Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -24,7 +24,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -34,7 +34,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     let xf = ViewXform {
@@ -48,20 +48,20 @@ fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
     xf.to_screen(x, y)
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, down: bool) {
+fn button(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, down: bool) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: Modifiers::NONE });
     h.run_steps(1);
 }
 
-fn move_to(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32) {
+fn move_to(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
 }
 
 /// The points of the committed `paint.stroke`.
-fn committed_points(h: &Harness<'static, PhotocraftApp>) -> Vec<Vec<f64>> {
+fn committed_points(h: &Harness<'static, LienzoApp>) -> Vec<Vec<f64>> {
     let (_, p) = h.state().session.journal.iter().rev().find(|(id, _)| id == "paint.stroke").cloned().expect("a committed stroke");
     p["points"].as_array().expect("points").iter().map(|v| v.as_array().expect("point").iter().filter_map(Value::as_f64).collect()).collect()
 }
@@ -105,7 +105,7 @@ fn stroke_points_carry_increasing_times_from_zero() {
 }
 
 /// Points of the drag in progress after holding the pointer still for a while.
-fn held_points(h: &mut Harness<'static, PhotocraftApp>) -> (usize, usize) {
+fn held_points(h: &mut Harness<'static, LienzoApp>) -> (usize, usize) {
     move_to(h, 20.0, 50.0);
     button(h, 20.0, 50.0, true);
     move_to(h, 30.0, 50.0);
@@ -184,7 +184,7 @@ fn the_pressure_curve_shapes_the_committed_stroke() {
 }
 
 /// A Brush whose size follows pen pressure, painting on a new empty layer.
-fn pressure_sized_brush(h: &mut Harness<'static, PhotocraftApp>) {
+fn pressure_sized_brush(h: &mut Harness<'static, LienzoApp>) {
     let app = h.state_mut();
     app.run("layer.new.layer", json!({})).unwrap();
     let brush = json!({"size": 40, "hardness": 1.0, "smoothing": {"amount": 0.0}, "shapeDynamics": {"enabled": true, "size": {"control": "penPressure"}}});
@@ -193,7 +193,7 @@ fn pressure_sized_brush(h: &mut Harness<'static, PhotocraftApp>) {
 }
 
 /// Width in pixels of the paint on the active layer along row `y`.
-fn painted_width(h: &Harness<'static, PhotocraftApp>, y: i32) -> usize {
+fn painted_width(h: &Harness<'static, LienzoApp>, y: i32) -> usize {
     let st = h.state().session.active().expect("a document");
     let s = st.doc.layer(st.active_layer.expect("an active layer")).and_then(|l| l.surface()).expect("a raster layer");
     (0..200).filter(|x| s.rgba(*x, y)[3] > 0.5).count()
@@ -201,7 +201,7 @@ fn painted_width(h: &Harness<'static, PhotocraftApp>, y: i32) -> usize {
 
 /// Press and release at (`x`, 50) in one frame, the pen reporting `samples` (`None`: cleared, as
 /// a lifting pen or a mouse leaves it) before the UI runs: a tap shorter than a frame.
-fn tap(h: &mut Harness<'static, PhotocraftApp>, x: f32, samples: &[Option<f32>]) {
+fn tap(h: &mut Harness<'static, LienzoApp>, x: f32, samples: &[Option<f32>]) {
     use crate::stylus::PenSample;
     move_to(h, x, 50.0);
     for p in samples {
@@ -317,12 +317,12 @@ fn releasing_a_stroke_commits_the_live_pixels_and_replays_identically() {
     assert_eq!((committed.doc, committed.revision), (st.doc.id, st.revision));
     // Replaying the journaled command from scratch gives the same pixels.
     let (_, p) = app.session.journal.iter().rev().find(|(id, _)| id == "paint.stroke").cloned().unwrap();
-    let mut fresh = photocraft_engine::Session::new();
+    let mut fresh = lienzo_engine::Session::new();
     fresh.execute("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     fresh.execute("tools.setBrush", json!({"brush": {"size": 14, "hardness": 0.2}, "smoothing": {"amount": 0.3}})).unwrap();
     fresh.execute("paint.stroke", p).unwrap();
-    let a = photocraft_compose::render(&st.doc, st.doc.bounds());
-    let b = photocraft_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
+    let a = lienzo_compose::render(&st.doc, st.doc.bounds());
+    let b = lienzo_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
     assert_eq!(a.px.len(), b.px.len());
     assert!(a.px.iter().zip(&b.px).all(|(x, y)| x == y), "live commit and replay differ");
 }
@@ -330,9 +330,9 @@ fn releasing_a_stroke_commits_the_live_pixels_and_replays_identically() {
 #[test]
 fn a_committed_stroke_refreshes_only_what_each_cache_had_not_shown() {
     use crate::canvas::CommittedStroke;
-    let r = |x: i32| photocraft_geom::Rect::new(x, 0, x + 10, 10);
+    let r = |x: i32| lienzo_geom::Rect::new(x, 0, x + 10, 10);
     let c = CommittedStroke::for_test(100, vec![r(0), r(20), r(40)]);
-    assert_eq!(c.since(103), Some(photocraft_geom::Rect::EMPTY), "showed the last step: nothing");
+    assert_eq!(c.since(103), Some(lienzo_geom::Rect::EMPTY), "showed the last step: nothing");
     assert_eq!(c.since(102), Some(r(40)), "one step behind: that step");
     assert_eq!(c.since(0), Some(r(0).union(&r(20)).union(&r(40))), "never showed the stroke: all of it");
     assert_eq!(c.since(99), None, "not a key of this stroke");
@@ -348,7 +348,7 @@ fn a_committed_stroke_repaints_a_gradient_overlay_over_the_whole_layer() {
     h.state_mut().run("layer.new.layer", json!({})).unwrap();
     h.state_mut().run("layer.layerStyle.gradientOverlay", json!({"from": "#ff0000", "to": "#0000ff", "angle": 0})).unwrap();
     h.state_mut().run("tools.setBrush", json!({"brush": {"size": 10, "hardness": 1.0}})).unwrap();
-    let drag = |h: &mut Harness<'static, PhotocraftApp>, pts: &[(f32, f32)]| {
+    let drag = |h: &mut Harness<'static, LienzoApp>, pts: &[(f32, f32)]| {
         move_to(h, pts[0].0, pts[0].1);
         button(h, pts[0].0, pts[0].1, true);
         for (x, y) in &pts[1..] {
@@ -374,13 +374,13 @@ fn a_committed_stroke_repaints_a_gradient_overlay_over_the_whole_layer() {
 fn the_stroke_trace_times_each_frame_of_a_stroke_and_ends_on_release() {
     // The app's hooks around the canvas (`raw_input_hook` starts a frame, `ui` ends it); the
     // canvas times the live stroke and the release's commit itself.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Brush;
     app.stroke_trace.output = crate::stroke_trace::Output::Stderr;
     let mut h = Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -394,7 +394,7 @@ fn the_stroke_trace_times_each_frame_of_a_stroke_and_ends_on_release() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     move_to(&mut h, 20.0, 50.0);
     button(&mut h, 20.0, 50.0, true);
@@ -443,18 +443,18 @@ fn releasing_a_clone_stamp_stroke_commits_what_a_replay_paints() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|q| photocraft_engine::paint::StrokePoint::new(q[0].as_f64().unwrap(), q[1].as_f64().unwrap(), q[2].as_f64().unwrap() as f32))
+        .map(|q| lienzo_engine::paint::StrokePoint::new(q[0].as_f64().unwrap(), q[1].as_f64().unwrap(), q[2].as_f64().unwrap() as f32))
         .collect();
     assert!(shown.len() > 1 && committed.starts_with(&shown), "live {shown:?} vs committed {committed:?}");
-    let mut fresh = photocraft_engine::Session::new();
+    let mut fresh = lienzo_engine::Session::new();
     fresh.execute("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     setup(&mut |id, p| {
         fresh.execute(id, p).unwrap();
     });
     fresh.execute("paint.cloneStamp", p).unwrap();
     let st = app.session.active().unwrap();
-    let a = photocraft_compose::render(&st.doc, st.doc.bounds());
-    let b = photocraft_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
+    let a = lienzo_compose::render(&st.doc, st.doc.bounds());
+    let b = lienzo_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
     assert_eq!(a.px.len(), b.px.len());
     assert!(a.px.iter().zip(&b.px).all(|(x, y)| x == y), "live commit and replay differ");
 }
@@ -486,7 +486,7 @@ fn releasing_a_sequential_dab_stroke_commits_what_a_replay_paints() {
         let app = h.state();
         assert!(app.retouch_from_live, "{cmd}: the release took the live pixels instead of rendering the stroke again");
         let (_, p) = app.session.journal.iter().rev().find(|(id, _)| id == cmd).cloned().expect("a committed stroke");
-        let mut fresh = photocraft_engine::Session::new();
+        let mut fresh = lienzo_engine::Session::new();
         fresh.execute("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
         setup(&mut |id, p| {
             fresh.execute(id, p).unwrap();
@@ -494,8 +494,8 @@ fn releasing_a_sequential_dab_stroke_commits_what_a_replay_paints() {
         let replayed = fresh.execute(cmd, p).unwrap();
         assert!(replayed.get("fromLive").is_none());
         let st = app.session.active().unwrap();
-        let a = photocraft_compose::render(&st.doc, st.doc.bounds());
-        let b = photocraft_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
+        let a = lienzo_compose::render(&st.doc, st.doc.bounds());
+        let b = lienzo_compose::render(&fresh.active().unwrap().doc, st.doc.bounds());
         assert_eq!(a.px.len(), b.px.len());
         assert!(a.px.iter().zip(&b.px).all(|(x, y)| x == y), "{cmd}: live commit and replay differ");
     }
@@ -515,7 +515,7 @@ fn a_shift_click_dodge_line_commits_its_live_pixels_unsmoothed() {
     move_to(&mut h, 100.0, 50.0);
     button(&mut h, 100.0, 50.0, false);
     h.run_steps(2);
-    let shift = |h: &mut Harness<'static, PhotocraftApp>, pressed: bool| {
+    let shift = |h: &mut Harness<'static, LienzoApp>, pressed: bool| {
         let pos = screen(h, 160.0, 70.0);
         h.event(egui::Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::SHIFT });
         h.run_steps(1);
@@ -572,20 +572,20 @@ fn pressure_sized_smudge_release_matches_replay_and_undo_redo() {
     assert!(points.iter().any(|p| p[2].as_f64().unwrap() < 0.2));
     assert!(points.iter().any(|p| p[2].as_f64().unwrap() > 0.9));
 
-    let mut fresh = photocraft_engine::Session::new();
+    let mut fresh = lienzo_engine::Session::new();
     fresh.execute("file.new", json!({"width":200,"height":100,"background":"white"})).unwrap();
     setup(&mut |id, p| {
         fresh.execute(id, p).unwrap();
     });
     assert_eq!(h.state().session.tools.brush, fresh.tools.brush, "replay uses the Smudge tool's actual brush");
     assert!(
-        photocraft_compose::render(&before, before.bounds()).px == photocraft_compose::render(&fresh.active().unwrap().doc, before.bounds()).px,
+        lienzo_compose::render(&before, before.bounds()).px == lienzo_compose::render(&fresh.active().unwrap().doc, before.bounds()).px,
         "the replay fixture starts with identical pixels"
     );
     assert!(fresh.execute("paint.smudge", params).unwrap().get("fromLive").is_none());
     let committed = h.state().session.active().unwrap().doc.clone();
-    let expected = photocraft_compose::render(&fresh.active().unwrap().doc, committed.bounds());
-    assert!(photocraft_compose::render(&committed, committed.bounds()).px == expected.px, "live commit and replay must paint identical pixels");
+    let expected = lienzo_compose::render(&fresh.active().unwrap().doc, committed.bounds());
+    assert!(lienzo_compose::render(&committed, committed.bounds()).px == expected.px, "live commit and replay must paint identical pixels");
     h.state_mut().run("edit.undo", json!({})).unwrap();
     assert_eq!(h.state().session.active().unwrap().doc, before);
     h.state_mut().run("edit.redo", json!({})).unwrap();

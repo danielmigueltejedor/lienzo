@@ -5,11 +5,11 @@
 //! These tests render the real app offscreen and read pixels back. They skip when no GPU adapter
 //! is available. The CPU canvas (no wgpu handed to the app) has its own pixel grid tests at the end.
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::control::{ControlRequest, handle};
 use serde_json::{Value, json};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 const LIGHT: u8 = 255;
 const DARK: u8 = 204;
@@ -26,8 +26,8 @@ fn harness_with(gpu: bool) -> Option<Harness> {
 fn harness_with_scale(gpu: bool, ppp: f32) -> Option<Harness> {
     let built = std::panic::catch_unwind(|| {
         egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 800.0)).with_pixels_per_point(ppp).with_max_steps(64).wgpu().build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             if let Some(rs) = cc.wgpu_render_state.as_ref().filter(|_| gpu) {
                 app.set_wgpu(rs.clone());
             }
@@ -117,7 +117,7 @@ fn render_on(h: &mut Harness, gpu: bool, zoom: f32, doc: u32, black: bool, grid:
     let img = Shot { w: width, px: rendered.into_raw() };
     if black {
         // View geometry also works on scaled displays, independently of grid colour.
-        let origin = photocraft_ui_egui::canvas::ViewXform::active(h.state()).expect("view").to_screen(0.0, 0.0) * h.ctx.pixels_per_point();
+        let origin = lienzo_ui_egui::canvas::ViewXform::active(h.state()).expect("view").to_screen(0.0, 0.0) * h.ctx.pixels_per_point();
         return (img, origin.x.round() as u32, origin.y.round() as u32, (doc as f32 * zoom).round() as u32);
     }
     let r = h.state().last_canvas_rect;
@@ -131,7 +131,7 @@ fn render_on(h: &mut Harness, gpu: bool, zoom: f32, doc: u32, black: bool, grid:
 
 #[test]
 fn checker_cells_are_8_screen_pixels_at_every_zoom() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     // The 8 px cell never changes with the zoom.
@@ -161,7 +161,7 @@ fn checker_cells_are_8_screen_pixels_at_every_zoom() {
 
 #[test]
 fn checker_phase_moves_with_the_image() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     // The document origin moves four screen pixels between these two views, and the checker
@@ -182,7 +182,7 @@ fn lit_columns(img: &Shot, x0: u32, y: u32, len: u32) -> Vec<u32> {
 
 #[test]
 fn pixel_grid_shows_above_500_percent_and_lightens_a_dark_pixel_by_about_a_quarter() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     let (flat, x0, y0, _) = render(&mut h, 5.0, 48, true, true);
@@ -199,7 +199,7 @@ fn pixel_grid_shows_above_500_percent_and_lightens_a_dark_pixel_by_about_a_quart
 
 #[test]
 fn pixel_grid_is_not_drawn_over_empty_checker() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     for zoom in [8.0f32, 16.0] {
@@ -215,7 +215,7 @@ fn pixel_grid_is_not_drawn_over_empty_checker() {
 
 #[test]
 fn cpu_pixel_grid_shows_above_500_percent_over_content() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     for ppp in [1.0, 2.0] {
         let Some(mut h) = harness_with_scale(false, ppp) else { return };
         h.run_steps(4);
@@ -235,7 +235,7 @@ fn cpu_pixel_grid_shows_above_500_percent_over_content() {
 
 #[test]
 fn cpu_pixel_grid_is_not_drawn_over_empty_checker() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness_with(false) else { return };
     h.run_steps(4);
     // The CPU checker has soft cell edges of its own, so compare with and without the grid.
@@ -286,7 +286,7 @@ fn grid_line_contrast_over_grey(h: &mut Harness, grey: u8) -> i32 {
 
 #[test]
 fn pixel_grid_does_not_flip_colour_across_mid_tones() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     // 0x87 and 0x90 sit either side of luma 0.55, where the line used to switch from a full white
@@ -305,11 +305,11 @@ fn pixel_grid_does_not_flip_colour_across_mid_tones() {
 }
 
 fn pixel_grid_is_solid_and_visible_at_scale(gpu: bool, ppp: f32) {
-    let _gpu = photocraft_testkit::gpu_lock();
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::{Document, Layer, LayerContent, Size};
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
+    let _gpu = lienzo_testkit::gpu_lock();
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_doc::{Document, Layer, LayerContent, Size};
+    use lienzo_geom::Rect;
+    use lienzo_raster::Surface;
 
     let Some(mut h) = harness_with_scale(gpu, ppp) else { return };
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {

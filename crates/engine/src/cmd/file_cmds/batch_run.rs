@@ -164,19 +164,19 @@ pub(crate) fn process_tree(
 }
 
 /// The extension a batch output takes with Format "Same": the input's own, except for formats
-/// PhotoCraft opens but can't write, camera raws above all (#5799: a folder of ARWs failed on
+/// Lienzo opens but can't write, camera raws above all (#5799: a folder of ARWs failed on
 /// every file), GIMP files (`gz` is the last extension of `.xcf.gz`), Photoshop templates and the
 /// codec formats without a writer in this build. Those are saved as PSD, the format Photoshop's
 /// Save As offers for a raw. An input whose file name has no extension (a dot in a folder name
 /// doesn't count) is saved as PNG.
 /// The format Batch's "Save in the same format" writes for `path`: its own, or PSD for a file
-/// PhotoCraft only opens.
+/// Lienzo only opens.
 pub fn same_format(path: &str) -> String {
     const IMPORT_ONLY: &[&str] =
         &["pdn", "kra", "krz", "af", "afdesign", "afphoto", "afpub", "heic", "heif", "hif", "svg", "svgz", "cin", "pcx", "xpm", "xcf", "xcfgz", "gz", "psdt"];
     let ext = extension(path).unwrap_or_else(|| "png".into());
-    let no_writer = photocraft_codecs::from_extension(&ext).is_some_and(|f| !f.caps().write);
-    if photocraft_io::raw::EXTENSIONS.contains(&ext.as_str()) || IMPORT_ONLY.contains(&ext.as_str()) || no_writer { "psd".into() } else { ext }
+    let no_writer = lienzo_codecs::from_extension(&ext).is_some_and(|f| !f.caps().write);
+    if lienzo_io::raw::EXTENSIONS.contains(&ext.as_str()) || IMPORT_ONLY.contains(&ext.as_str()) || no_writer { "psd".into() } else { ext }
 }
 
 #[cfg(test)]
@@ -188,11 +188,11 @@ fn same_format_takes_the_file_names_extension() {
     assert_eq!(same_format("/in/IMG_0001.HEIC"), "psd");
     assert_eq!(same_format("/in/logo.svg"), "psd");
     assert_eq!(same_format("/in/scan.cin"), "psd");
-    // Formats PhotoCraft opens and does not write are saved as PSD.
+    // Formats Lienzo opens and does not write are saved as PSD.
     for name in ["/in/scan.dcm", "/in/scan.DICOM", "/in/scan.dc3", "/in/page.xcf", "/in/page.xcf.gz", "/in/page.xcfgz", "/in/card.psdt"] {
         assert_eq!(same_format(name), "psd", "{name}");
     }
-    for f in photocraft_codecs::Format::ALL.into_iter().filter(|f| f.caps().read && !f.caps().write) {
+    for f in lienzo_codecs::Format::ALL.into_iter().filter(|f| f.caps().read && !f.caps().write) {
         for ext in f.extensions() {
             assert_eq!(same_format(&format!("/in/a.{ext}")), "psd", "{f:?} .{ext}");
         }
@@ -909,13 +909,13 @@ pub(super) fn batch(s: &mut Session, p: &Value) -> Result<Value> {
                     .unwrap_or_default();
                 let encode_format = if format == "same" { same_format(&source_path) } else { format.trim_start_matches('.').to_ascii_lowercase() };
                 // Save and Close writes over the source, so its bytes must be the source's own
-                // format: a source PhotoCraft reads but saves as PSD (Cineon, whose extension has
+                // format: a source Lienzo reads but saves as PSD (Cineon, whose extension has
                 // a writer elsewhere) would otherwise get PSD bytes under its own name.
                 if save_and_close
                     && !extension(out).is_some_and(|ext| {
                         ext == encode_format
                             && (matches!(ext.as_str(), "psd" | "psb" | "pcraft" | "ora")
-                                || photocraft_codecs::from_extension(&ext).is_some_and(|format| format.caps().write))
+                                || lienzo_codecs::from_extension(&ext).is_some_and(|format| format.caps().write))
                     })
                 {
                     return Err(EngineError::Other(format!("Save and Close needs Save As for this source format: {out}")).into());
@@ -940,12 +940,10 @@ pub(super) fn batch(s: &mut Session, p: &Value) -> Result<Value> {
                     // All recorded Opens passed their gates before inspecting the original source,
                     // including when this result is a saved snapshot whose document has been closed.
                     preserve_source(out)?;
-                    let tiff = extension(out).and_then(|ext| photocraft_codecs::from_extension(&ext)) == Some(photocraft_codecs::Format::Tiff);
+                    let tiff = extension(out).and_then(|ext| lienzo_codecs::from_extension(&ext)) == Some(lienzo_codecs::Format::Tiff);
                     if tiff {
-                        if !matches!(
-                            doc.pixel_format().mode,
-                            photocraft_color::ColorMode::Rgb | photocraft_color::ColorMode::Grayscale | photocraft_color::ColorMode::Cmyk
-                        ) || doc.mode == photocraft_color::ColorMode::Multichannel
+                        if !matches!(doc.pixel_format().mode, lienzo_color::ColorMode::Rgb | lienzo_color::ColorMode::Grayscale | lienzo_color::ColorMode::Cmyk)
+                            || doc.mode == lienzo_color::ColorMode::Multichannel
                         {
                             return Err(EngineError::Other("Save and Close cannot preserve this TIFF color mode".into()));
                         }
@@ -1217,10 +1215,10 @@ fn mark_script_limit(s: &Session, result: &mut Value) {
 /// Check source structure once at the common pre-write seam, after Open authorization and ownership.
 fn preserve_source(path: &str) -> Result<()> {
     let bytes = read_file(path)?;
-    if photocraft_codecs::has_unretained_source_data(&bytes).map_err(|e| EngineError::Other(format!("cannot inspect source data: {e}")))? {
+    if lienzo_codecs::has_unretained_source_data(&bytes).map_err(|e| EngineError::Other(format!("cannot inspect source data: {e}")))? {
         return Err(EngineError::Other("Save and Close cannot preserve additional source data; save to a separate output folder".into()));
     }
-    if photocraft_codecs::detect(&bytes) == Some(photocraft_codecs::Format::OpenExr) {
+    if lienzo_codecs::detect(&bytes) == Some(lienzo_codecs::Format::OpenExr) {
         preserve_exr(&bytes)?;
     }
     Ok(())
@@ -1228,7 +1226,7 @@ fn preserve_source(path: &str) -> Result<()> {
 
 /// Only a single flat, unprefixed RGB(A) source can be preserved by the EXR writer.
 fn preserve_exr(bytes: &[u8]) -> Result<()> {
-    let parts = photocraft_codecs::exr_info(bytes, &Default::default()).map_err(|e| EngineError::Other(format!("cannot inspect EXR source: {e}")))?;
+    let parts = lienzo_codecs::exr_info(bytes, &Default::default()).map_err(|e| EngineError::Other(format!("cannot inspect EXR source: {e}")))?;
     if parts.len() != 1
         || parts.first().is_none_or(|p| {
             p.data_window != (0, 0, p.width, p.height)
@@ -1255,7 +1253,7 @@ mod action_history_tests {
 
     #[derive(Debug)]
     struct Observed {
-        id: photocraft_doc::DocId,
+        id: lienzo_doc::DocId,
         past: usize,
         label: String,
         name: String,
@@ -1283,8 +1281,8 @@ mod action_history_tests {
     #[test]
     fn batch_and_droplet_document_history_boundaries() {
         let dir = tempfile::tempdir().unwrap();
-        let image = photocraft_codecs::Image::from_u8(4, 4, photocraft_codecs::ChannelLayout::Rgb, vec![255; 48]).unwrap();
-        let bytes = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+        let image = lienzo_codecs::Image::from_u8(4, 4, lienzo_codecs::ChannelLayout::Rgb, vec![255; 48]).unwrap();
+        let bytes = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
         let paths: Vec<_> = ["a.png", "b.png"]
             .iter()
             .map(|name| {
@@ -1465,8 +1463,8 @@ mod action_history_tests {
     /// Cancellation after a completed edit retains an undoable prefix without leaving a Batch-owned scope open.
     fn cancelled_folder_batch_finalizes_its_completed_prefix() {
         let dir = tempfile::tempdir().unwrap();
-        let image = photocraft_codecs::Image::from_u8(4, 4, photocraft_codecs::ChannelLayout::Rgb, vec![255; 48]).unwrap();
-        let bytes = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+        let image = lienzo_codecs::Image::from_u8(4, 4, lienzo_codecs::ChannelLayout::Rgb, vec![255; 48]).unwrap();
+        let bytes = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
         let input = dir.path().join("input.png");
         std::fs::write(&input, bytes).unwrap();
         let mut s = Session::new();

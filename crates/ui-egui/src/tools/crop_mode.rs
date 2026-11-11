@@ -30,26 +30,26 @@
 
 use egui::{Rect, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
 /// Use Classic Mode is on: the box turns and moves over the image.
-pub fn classic(app: &PhotocraftApp) -> bool {
+pub fn classic(app: &LienzoApp) -> bool {
     app.ui.tool_options.crop_shield.classic_mode
 }
 
-fn finite_frame(app: &PhotocraftApp) -> Option<[f64; 4]> {
+fn finite_frame(app: &LienzoApp) -> Option<[f64; 4]> {
     app.ui.crop_rect.filter(|r| r.iter().all(|v| v.is_finite()))
 }
 
 /// The Crop tool drives the view: it shows a frame (either mode; [`sync`]).
-pub fn turns_view(app: &PhotocraftApp) -> bool {
+pub fn turns_view(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && finite_frame(app).is_some() && app.session.active().is_some()
 }
 
 /// Gestures move and turn the image rather than the box (default mode with the Crop tool).
-pub fn moves_image(app: &PhotocraftApp) -> bool {
+pub fn moves_image(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && !classic(app)
 }
 
@@ -66,14 +66,14 @@ pub fn pivot_center(center: [f32; 2], c: [f64; 2], from: f32, to: f32, flip: boo
 }
 
 /// The active document's view rotation in degrees (0 without a view).
-pub fn view_rotation(app: &PhotocraftApp) -> f32 {
+pub fn view_rotation(app: &LienzoApp) -> f32 {
     app.session.active_index().and_then(|i| app.ui.views.get(i)).map_or(0.0, |v| v.rotation)
 }
 
 /// Turns the active view so the frame shows upright while default mode drives it, pivoting about
 /// document point `pivot` so that point stays put on screen (the view's own centre when `None`:
 /// picking the tool, a commit or a cancel only straighten the view).
-pub fn sync(app: &mut PhotocraftApp, pivot: Option<[f64; 2]>) {
+pub fn sync(app: &mut LienzoApp, pivot: Option<[f64; 2]>) {
     if !turns_view(app) {
         return;
     }
@@ -91,14 +91,14 @@ pub fn sync(app: &mut PhotocraftApp, pivot: Option<[f64; 2]>) {
 }
 
 /// [`sync`] about the frame's centre: the box stays put on screen while the image turns.
-pub fn sync_frame(app: &mut PhotocraftApp) {
+pub fn sync_frame(app: &mut LienzoApp) {
     let c = finite_frame(app).map(crate::crop_ui::center);
     sync(app, c);
 }
 
 /// A commit or cancel in default mode: the view is left upright (Photoshop 25.1 doesn't bring
 /// back a Rotate View turn).
-pub fn upright(app: &mut PhotocraftApp) {
+pub fn upright(app: &mut LienzoApp) {
     if app.ui.tool != Tool::Crop {
         return;
     }
@@ -165,7 +165,7 @@ pub fn kept_inside(rect: [f64; 4], deg: f64, cw: f64, ch: f64) -> Option<[f64; 4
 ///
 /// Not measured in Photoshop, so they keep the frame as before: Fill set to Content-Aware Fill,
 /// and a frame that already reached past the canvas at the press.
-pub fn keep_inside(app: &mut PhotocraftApp, rect: [f64; 4], from: f64, held: bool) {
+pub fn keep_inside(app: &mut LienzoApp, rect: [f64; 4], from: f64, held: bool) {
     let Some(now) = finite_frame(app) else { return };
     let Some((cw, ch)) = app.session.active().map(|st| (f64::from(st.doc.size.width), f64::from(st.doc.size.height))) else { return };
     let inside_at_press = kept_inside(rect, from, cw, ch) == Some(rect);
@@ -222,7 +222,7 @@ pub(crate) fn resized_frame(g: LiveResize) -> Option<([f64; 4], [f64; 2])> {
 }
 
 /// Move the camera with the resized frame to keep the crop box's centre stationary on screen.
-pub fn live_resize(app: &mut PhotocraftApp, g: LiveResize, press: PressView) {
+pub fn live_resize(app: &mut LienzoApp, g: LiveResize, press: PressView) {
     let Some((f, s)) = resized_frame(g) else { return };
     app.ui.crop_rect = Some(f);
     // The view follows the centre, so the box stays where it was on screen.
@@ -235,13 +235,13 @@ pub fn live_resize(app: &mut PhotocraftApp, g: LiveResize, press: PressView) {
 }
 
 /// Auto Center Preview while a handle is dragged in default mode.
-pub fn live_center(app: &PhotocraftApp) -> bool {
+pub fn live_center(app: &LienzoApp) -> bool {
     moves_image(app) && app.ui.tool_options.crop_shield.auto_center_preview
 }
 
 /// Moves the image under the box by document vector `d` as the view shows it: the frame moves by
 /// `-d` in the document and the view with it, so the box stays put on screen.
-pub fn shift_image(app: &mut PhotocraftApp, d: [f64; 2]) {
+pub fn shift_image(app: &mut LienzoApp, d: [f64; 2]) {
     let Some(r) = finite_frame(app) else { return };
     if !(d[0].is_finite() && d[1].is_finite()) {
         return;
@@ -268,7 +268,7 @@ pub struct PressView {
 }
 
 /// The active view's camera now.
-pub fn press_view(app: &PhotocraftApp) -> Option<PressView> {
+pub fn press_view(app: &LienzoApp) -> Option<PressView> {
     app.session.active_index().and_then(|i| app.ui.views.get(i)).map(|v| PressView { rotation: v.rotation, center: v.center })
 }
 
@@ -284,7 +284,7 @@ fn remap(p: [f64; 2], from: PressView, to: PressView, flip: bool) -> [f64; 2] {
 /// A pointer point `p` the canvas mapped through the view as it is now, read in the press-time
 /// view `press` (unchanged without one, or while the view hasn't moved: the `f32` round trip
 /// would nudge a click).
-pub fn to_press(app: &PhotocraftApp, press: Option<PressView>, p: [f64; 2]) -> [f64; 2] {
+pub fn to_press(app: &LienzoApp, press: Option<PressView>, p: [f64; 2]) -> [f64; 2] {
     match (press, press_view(app)) {
         (Some(press), Some(now)) if press != now => remap(p, now, press, app.ui.view.flip_horizontal),
         _ => p,
@@ -292,7 +292,7 @@ pub fn to_press(app: &PhotocraftApp, press: Option<PressView>, p: [f64; 2]) -> [
 }
 
 /// A press-view point mapped back into the current camera after snapping the crop handle.
-pub(crate) fn from_press(app: &PhotocraftApp, press: PressView, p: [f64; 2]) -> [f64; 2] {
+pub(crate) fn from_press(app: &LienzoApp, press: PressView, p: [f64; 2]) -> [f64; 2] {
     match press_view(app) {
         Some(now) => remap(p, press, now, app.ui.view.flip_horizontal),
         None => p,
@@ -302,7 +302,7 @@ pub(crate) fn from_press(app: &PhotocraftApp, press: PressView, p: [f64; 2]) -> 
 /// The control channel's `ui.pointer` gives document points as the view showed them at the press
 /// (it can't know how the view turns and pans with the image): during a default-mode drag, the
 /// point the canvas would report for the same screen position now.
-pub fn control_point(app: &PhotocraftApp, p: [f64; 2]) -> [f64; 2] {
+pub fn control_point(app: &LienzoApp, p: [f64; 2]) -> [f64; 2] {
     let press = match app.crop.drag {
         Some(
             crate::crop_ui::CropDrag::MoveImage { view, .. } | crate::crop_ui::CropDrag::TurnImage { view, .. } | crate::crop_ui::CropDrag::Resize { view, .. },
@@ -318,7 +318,7 @@ pub fn control_point(app: &PhotocraftApp, p: [f64; 2]) -> [f64; 2] {
 /// A default-mode drag inside the box: the image has moved by document vector `d` (in the press
 /// view) since the press, when the frame was `rect` and the view `press`. The frame moves by `-d`
 /// on the image and the view's centre with it, so the box stays put on screen.
-pub fn offset_image(app: &mut PhotocraftApp, rect: [f64; 4], press: Option<PressView>, d: [f64; 2]) {
+pub fn offset_image(app: &mut LienzoApp, rect: [f64; 4], press: Option<PressView>, d: [f64; 2]) {
     let n = [rect[0] - d[0], rect[1] - d[1], rect[2] - d[0], rect[3] - d[1]];
     if !n.iter().all(|v| v.is_finite()) {
         return;
@@ -333,7 +333,7 @@ pub fn offset_image(app: &mut PhotocraftApp, rect: [f64; 4], press: Option<Press
 
 /// A screen vector `s` (points, at the current zoom ignored) as a document vector of the same
 /// length: undoes the view's flip and rotation.
-pub fn screen_to_doc_vec(app: &PhotocraftApp, s: [f64; 2]) -> [f64; 2] {
+pub fn screen_to_doc_vec(app: &LienzoApp, s: [f64; 2]) -> [f64; 2] {
     let xf = ViewXform { rect: Rect::ZERO, zoom: 1.0, center: [0.0, 0.0], flip: app.ui.view.flip_horizontal, rotation: view_rotation(app), aspect: 1.0 };
     let u = xf.unmap_vec(vec2(s[0] as f32, s[1] as f32));
     [f64::from(u.x), f64::from(u.y)]
@@ -341,7 +341,7 @@ pub fn screen_to_doc_vec(app: &PhotocraftApp, s: [f64; 2]) -> [f64; 2] {
 
 /// Auto Center Preview: in default mode, pans the view so the box sits in the middle of the canvas
 /// (the view turns about its centre, so the box stays upright).
-pub fn auto_center(app: &mut PhotocraftApp) {
+pub fn auto_center(app: &mut LienzoApp) {
     if !turns_view(app) || classic(app) || !app.ui.tool_options.crop_shield.auto_center_preview {
         return;
     }

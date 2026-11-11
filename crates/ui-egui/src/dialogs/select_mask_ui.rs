@@ -14,7 +14,7 @@
 //! What the workspace holds is plain data: the tools' edits (`select.refineEdge`'s `edits`), the
 //! Refine Edge Brush strokes (`refineStrokes`) and the settings. OK runs `select.refineEdge` with
 //! them, one history step; Cancel drops them; Ctrl+Z undoes the last edit or stroke. The preview
-//! runs the same edits ([`photocraft_engine::select_mask_edits`]) on a reduced copy (full size
+//! runs the same edits ([`lienzo_engine::select_mask_edits`]) on a reduced copy (full size
 //! with High Quality Preview) in the background and keeps the selection after the edits it has
 //! applied, so a new stroke costs only that stroke; then it shows the refined selection in the
 //! view ([`crate::select_mask_view::preview_proxy`]). With Real-Time Refinement the stroke being
@@ -26,14 +26,14 @@
 use std::sync::Arc;
 
 use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_engine::select_mask_edits::{self, MAX_EDIT_POINTS, MAX_EDITS};
-use photocraft_engine::smartselect_cmds::{MAX_STROKE_POINTS, MAX_STROKES};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_doc::{DocId, Document, LayerId};
+use lienzo_engine::select_mask_edits::{self, MAX_EDIT_POINTS, MAX_EDITS};
+use lienzo_engine::smartselect_cmds::{MAX_STROKE_POINTS, MAX_STROKES};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::select_mask_view::Mode;
 use crate::theme::Tokens;
@@ -376,7 +376,7 @@ struct Preview {
     /// Bumped whenever the state changes; a result for an older generation is dropped.
     want: u64,
     #[cfg(not(target_arch = "wasm32"))]
-    running: Option<(u64, u64, std::sync::mpsc::Receiver<Outcome>, photocraft_engine::jobs::JobCtx)>,
+    running: Option<(u64, u64, std::sync::mpsc::Receiver<Outcome>, lienzo_engine::jobs::JobCtx)>,
     shown: u64,
     pending: Option<Shown>,
     tex: Option<TextureHandle>,
@@ -725,12 +725,12 @@ fn reset(w: &mut SelectMaskWorkspace) {
 }
 
 /// Opens the workspace on the selection (or the active layer's mask).
-pub fn open(app: &mut PhotocraftApp) -> Result<(), String> {
+pub fn open(app: &mut LienzoApp) -> Result<(), String> {
     // Opening again would drop the open workspace's work: edit it with `ui`, or cancel it.
     if app.distort.select_mask.is_some() {
         return Err("Select and Mask is already open".into());
     }
-    if let Some(Err(why)) = photocraft_engine::commands::find(CMD).map(|c| (c.enabled)(&app.session)) {
+    if let Some(Err(why)) = lienzo_engine::commands::find(CMD).map(|c| (c.enabled)(&app.session)) {
         return Err(format!("Select and Mask needs a selection or a layer mask ({why})"));
     }
     // A targeted layer mask is what is refined (Photoshop opens on it from the mask's thumbnail).
@@ -793,7 +793,7 @@ pub fn open(app: &mut PhotocraftApp) -> Result<(), String> {
 /// Why the open workspace's work no longer applies: the active document or layer is not the one it
 /// was opened on (another tab, or another layer selected by a shortcut or the control channel).
 /// `select.refineEdge` works on the active document and layer, so its edits must not run there.
-pub(crate) fn stale(app: &PhotocraftApp) -> Option<&'static str> {
+pub(crate) fn stale(app: &LienzoApp) -> Option<&'static str> {
     let w = app.distort.select_mask.as_ref()?;
     let Some(st) = app.session.active().filter(|st| st.doc.id == w.document) else {
         return Some(tl!("Select and Mask was closed: its document is no longer the active one"));
@@ -803,7 +803,7 @@ pub(crate) fn stale(app: &PhotocraftApp) -> Option<&'static str> {
 }
 
 /// Closes a [`stale`] workspace (its work is dropped, the new target untouched): the reason.
-fn drop_stale(app: &mut PhotocraftApp) -> Result<(), String> {
+fn drop_stale(app: &mut LienzoApp) -> Result<(), String> {
     match stale(app) {
         Some(why) => {
             close(app);
@@ -831,14 +831,14 @@ fn commit_params(w: &SelectMaskWorkspace) -> Value {
     Value::Object(p)
 }
 
-fn remember(app: &mut PhotocraftApp, opts: &SmOpts) {
+fn remember(app: &mut LienzoApp, opts: &SmOpts) {
     let v = if opts.remember { opts.to_json() } else { json!({"remember": false}) };
     app.session.prefs.edit(|p| p.dialogs.insert(REMEMBERED.into(), v));
 }
 
 /// OK: runs `select.refineEdge` and closes. A failure leaves the workspace open with the error in
 /// its panel, so nothing painted is lost.
-pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn commit(app: &mut LienzoApp) -> Result<Value, String> {
     drop_stale(app)?;
     let w = app.distort.select_mask.as_mut().ok_or("Select and Mask is not open")?;
     w.end_gesture();
@@ -862,11 +862,11 @@ pub fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Cancel (button, Esc): closes; the document is untouched.
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     close(app);
 }
 
-fn close(app: &mut PhotocraftApp) {
+fn close(app: &mut LienzoApp) {
     if let Some(w) = app.distort.select_mask.take() {
         cancel_preview(w);
     }
@@ -883,7 +883,7 @@ fn cancel_preview(w: SelectMaskWorkspace) {
 fn cancel_preview(_: SelectMaskWorkspace) {}
 
 /// Enter: closes a Polygonal Lasso polygon, else OK. True when it closed a polygon.
-pub fn enter(app: &mut PhotocraftApp) -> bool {
+pub fn enter(app: &mut LienzoApp) -> bool {
     let Some(w) = app.distort.select_mask.as_mut() else { return false };
     if w.poly.is_some() {
         w.close_polygon();
@@ -894,13 +894,13 @@ pub fn enter(app: &mut PhotocraftApp) -> bool {
 }
 
 /// A brush resize is in progress (Esc then ends it, with Control+Alt still held too).
-pub fn resizing(app: &PhotocraftApp) -> bool {
+pub fn resizing(app: &LienzoApp) -> bool {
     app.distort.select_mask.as_ref().is_some_and(|w| w.resize.is_some())
 }
 
 /// Esc: ends a brush resize as it began, else drops a Polygonal Lasso polygon being drawn, else
 /// Cancel.
-pub fn escape(app: &mut PhotocraftApp) {
+pub fn escape(app: &mut LienzoApp) {
     match app.distort.select_mask.as_mut() {
         Some(w) if w.resize.is_some() => w.escape_resize(),
         Some(w) if w.poly.is_some() => w.poly = None,
@@ -909,7 +909,7 @@ pub fn escape(app: &mut PhotocraftApp) {
 }
 
 /// Control channel: `select.selectAndMask {"ui": {...}}` while the workspace is open.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut LienzoApp, ui: &Value) -> Result<Value, String> {
     let flag = |k: &str| ui.get(k).and_then(Value::as_bool) == Some(true);
     if flag("cancel") {
         cancel(app);
@@ -1047,13 +1047,13 @@ struct Job {
     params: Value,
     cache: Option<BaseCache>,
     proxy: Option<Arc<Document>>,
-    display: Option<Arc<photocraft_engine::display_color::CanvasDisplay>>,
+    display: Option<Arc<lienzo_engine::display_color::CanvasDisplay>>,
     texture_limit: usize,
     /// [`Shown::trail`] of this preview.
     trail: usize,
 }
 
-fn job(app: &PhotocraftApp) -> Option<Job> {
+fn job(app: &LienzoApp) -> Option<Job> {
     if stale(app).is_some() {
         return None;
     }
@@ -1144,7 +1144,7 @@ fn selected_pixels(selection: Option<&Surface>, area: Rect) -> usize {
         if default_selected {
             count = count.saturating_sub(pixels);
         }
-        let values = photocraft_algo::selection::mask_from_surface(Some(surface), tile_area);
+        let values = lienzo_algo::selection::mask_from_surface(Some(surface), tile_area);
         count = count.saturating_add(values.iter().filter(|v| **v >= 0.5).count());
     }
     count
@@ -1156,7 +1156,7 @@ fn preview_ants(selection: Option<&Surface>, area: Rect, k: f32) -> Option<Vec<[
     if w.checked_mul(h).is_none_or(|n| n > MAX_ANT_PIXELS) {
         return sparse_preview_ants(selection?, area, k);
     }
-    let coverage = photocraft_algo::selection::mask_from_surface(selection, area);
+    let coverage = lienzo_algo::selection::mask_from_surface(selection, area);
     ant_edges(&coverage, w, h, k)
 }
 
@@ -1178,7 +1178,7 @@ fn sparse_preview_ants(surface: &Surface, area: Rect, k: f32) -> Option<Vec<[[f3
         if work > MAX_ANT_PIXELS {
             return None;
         }
-        let coverage = photocraft_algo::selection::mask_from_surface(Some(surface), tile);
+        let coverage = lienzo_algo::selection::mask_from_surface(Some(surface), tile);
         for y in tile.y0..tile.y1 {
             for x in tile.x0..tile.x1 {
                 let index = (y - tile.y0) as usize * tile.width() as usize + (x - tile.x0) as usize;
@@ -1213,7 +1213,7 @@ fn sparse_preview_ants(surface: &Surface, area: Rect, k: f32) -> Option<Vec<[[f3
 
 /// The preview of `job`: the edits applied (from where the cache left off), the edge refined and
 /// the result shown in the view, as an image no wider than the device allows.
-fn compute(job: Job, cancel: Option<&photocraft_engine::jobs::JobCtx>) -> Result<(Shown, BaseCache, Arc<Document>), String> {
+fn compute(job: Job, cancel: Option<&lienzo_engine::jobs::JobCtx>) -> Result<(Shown, BaseCache, Arc<Document>), String> {
     let k = job.k.max(1);
     let proxy = job.proxy.unwrap_or_else(|| Arc::new(crate::proxy::proxy_document(&job.doc, k)));
     let mut doc = (*proxy).clone();
@@ -1243,20 +1243,20 @@ fn compute(job: Job, cancel: Option<&photocraft_engine::jobs::JobCtx>) -> Result
             None => base,
         };
         // Nothing selected is an empty selection, not "use the layer mask".
-        doc.selection = Some(base.unwrap_or_else(|| Surface::new(photocraft_color::PixelFormat::GRAY8)));
+        doc.selection = Some(base.unwrap_or_else(|| Surface::new(lienzo_color::PixelFormat::GRAY8)));
         if let Some(o) = params.as_object_mut() {
             o.remove("target");
         }
     }
     let shown = crate::select_mask_view::preview_proxy(doc, layer, &params, k, cancel);
-    if cancel.is_some_and(photocraft_engine::jobs::JobCtx::cancelled) {
+    if cancel.is_some_and(lienzo_engine::jobs::JobCtx::cancelled) {
         return Err("cancelled".into());
     }
     let shown = shown.ok_or("the preview failed")?;
     let (pw, ph) = (shown.size.width as usize, shown.size.height as usize);
     let f = crate::filter_preview_ui::texture_factor(shown.size.width, shown.size.height, job.texture_limit) as usize;
     let (tw, th) = (pw.div_ceil(f.max(1)), ph.div_ceil(f.max(1)));
-    let buf = photocraft_compose::render_reduced(&shown, u32::try_from(tw).unwrap_or(1), u32::try_from(th).unwrap_or(1));
+    let buf = lienzo_compose::render_reduced(&shown, u32::try_from(tw).unwrap_or(1), u32::try_from(th).unwrap_or(1));
     let image = crate::canvas::display_image(job.display.as_deref(), &buf);
     let selected = selected_pixels(shown.selection.as_ref(), shown.bounds());
     let mode = params.get("__view").and_then(|v| v.get("mode")).and_then(Value::as_str);
@@ -1298,7 +1298,7 @@ fn take_result(w: &mut SelectMaskWorkspace, generation: u64, revision: u64, r: R
 }
 
 /// Computes the preview now, on this thread (tests and the control channel).
-fn wait_preview(app: &mut PhotocraftApp) -> Result<(), String> {
+fn wait_preview(app: &mut LienzoApp) -> Result<(), String> {
     drop_stale(app)?;
     follow_revision(app);
     let j = job(app).ok_or("Select and Mask is not open")?;
@@ -1315,7 +1315,7 @@ fn wait_preview(app: &mut PhotocraftApp) -> Result<(), String> {
 /// While a stroke is drawn with Real-Time Refinement, a running preview is let finish (cancelling
 /// it on every move would never show one) and the next starts from the latest state.
 #[cfg(not(target_arch = "wasm32"))]
-fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn drive_preview(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(w) = app.distort.select_mask.as_mut() else { return };
     if let Some((generation, revision, rx, _)) = &w.preview.running {
         match rx.try_recv() {
@@ -1346,7 +1346,7 @@ fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let Some(j) = job(app) else { return };
     let revision = j.revision;
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    let ctl = photocraft_engine::jobs::JobCtx::new();
+    let ctl = lienzo_engine::jobs::JobCtx::new();
     let work = ctl.clone();
     let repaint = ctx.clone();
     let spawned = std::thread::Builder::new().name("select-mask-preview".into()).spawn(move || {
@@ -1363,7 +1363,7 @@ fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// The web build has no threads: the preview is computed when the pointer comes up.
 #[cfg(target_arch = "wasm32")]
-fn drive_preview(app: &mut PhotocraftApp, _ctx: &egui::Context) {
+fn drive_preview(app: &mut LienzoApp, _ctx: &egui::Context) {
     let due = app.distort.select_mask.as_ref().is_some_and(|w| w.preview.shown != w.preview.want && !w.pressed);
     if due {
         let _ = wait_preview(app);
@@ -1371,7 +1371,7 @@ fn drive_preview(app: &mut PhotocraftApp, _ctx: &egui::Context) {
 }
 
 /// Pointer in document coordinates (from the view or the control channel).
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) {
     if drop_stale(app).is_err() {
         return;
     }
@@ -1395,7 +1395,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
 }
 
 /// The workspace's keys (unless a text field has the keyboard): tools, brush size, views, undo.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) {
     use egui::{Key, Modifiers};
     let picker = crate::color_picker_ui::any_open(app);
     let Some(w) = app.distort.select_mask.as_mut() else { return };
@@ -1497,13 +1497,13 @@ impl View {
 }
 
 /// Upload what changed: the document (for X and until the first preview) and a finished preview.
-fn upload(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn upload(app: &mut LienzoApp, ctx: &egui::Context) {
     let need_image = app.distort.select_mask.as_ref().is_some_and(|w| w.image_tex.is_none());
     if need_image {
         let img = app.session.active().map(|st| {
             let (cw, ch) = (st.doc.size.width, st.doc.size.height);
             let f = crate::filter_preview_ui::texture_factor(cw, ch, PROXY_SIDE);
-            let buf = photocraft_compose::render_reduced(&st.doc, cw.div_ceil(f.max(1)), ch.div_ceil(f.max(1)));
+            let buf = lienzo_compose::render_reduced(&st.doc, cw.div_ceil(f.max(1)), ch.div_ceil(f.max(1)));
             let (display, _) = crate::canvas::canvas_display(app, &st.doc, None);
             crate::canvas::display_image(display.as_deref(), &buf)
         });
@@ -1562,7 +1562,7 @@ fn options_bar(ui: &mut egui::Ui, w: &mut SelectMaskWorkspace) -> Option<Value> 
         if widgets::secondary_button(ui, tl!("Select Subject"), 0.0).clicked() {
             edit = Some(json!({"tool": "subject", "sampleAllLayers": w.sample_all}));
         }
-        // Refine Hair needs hair detection PhotoCraft doesn't have yet (#2671): greyed, saying so.
+        // Refine Hair needs hair detection Lienzo doesn't have yet (#2671): greyed, saying so.
         ui.add_enabled_ui(false, |ui| widgets::secondary_button(ui, tl!("Refine Hair"), 0.0))
             .inner
             .on_disabled_hover_text(tl!("Refine Hair needs hair detection, which isn't available yet"));
@@ -1674,7 +1674,7 @@ fn properties(ui: &mut egui::Ui, w: &mut SelectMaskWorkspace, t: &Tokens) -> Opt
 
 /// The document changed under the workspace: new textures, a new preview, and nothing of the old
 /// one shown or reused.
-fn follow_revision(app: &mut PhotocraftApp) {
+fn follow_revision(app: &mut LienzoApp) {
     let rev = app.session.active().map(|s| s.revision);
     if let Some(w) = app.distort.select_mask.as_mut()
         && Some(w.revision) != rev
@@ -1900,7 +1900,7 @@ fn canvas_input(
 }
 
 /// Draws the workspace (a full-window layer over the app).
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     follow_revision(app);
     upload(app, ctx);
     let title = app.distort.select_mask.as_ref().map(|w| {

@@ -3,7 +3,7 @@
 use egui::{Key, KeyboardShortcut, Modifiers};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// Parse `Cmd+Shift+N` style strings. `Cmd` maps to ⌘ on macOS and Ctrl elsewhere.
@@ -76,32 +76,32 @@ pub fn pretty(s: &str) -> String {
 
 /// The command's effective shortcut in the platform's notation (`Ctrl+N`), or `None` when
 /// the command has no binding (the user removed it in Edit › Keyboard Shortcuts).
-pub fn shortcut_label(app: &PhotocraftApp, command: &str) -> Option<String> {
+pub fn shortcut_label(app: &LienzoApp, command: &str) -> Option<String> {
     effective_shortcut(app, command, default_shortcut(command).as_deref()).map(|s| pretty(&s))
 }
 
 /// `label` (English, shown in the UI language) followed by the command's effective shortcut
 /// (`New document…     Ctrl+N`); bare `label` when the binding was removed.
-pub fn command_label(app: &PhotocraftApp, label: &str, command: &str) -> String {
+pub fn command_label(app: &LienzoApp, label: &str, command: &str) -> String {
     let label = tl!(label);
     shortcut_label(app, command).map_or_else(|| label.to_string(), |sc| format!("{label}     {sc}"))
 }
 
 /// `label` (English, shown in the UI language) with the command's effective shortcut in
 /// parentheses (`Rulers  (Ctrl+R)`); bare `label` when the binding was removed.
-pub fn tip_label(app: &PhotocraftApp, label: &str, command: &str) -> String {
+pub fn tip_label(app: &LienzoApp, label: &str, command: &str) -> String {
     let label = tl!(label);
     shortcut_label(app, command).map_or_else(|| label.to_string(), |sc| format!("{label}  ({sc})"))
 }
 
 /// The shortcut in effect for a command: the user's override, else `default`.
-pub fn effective_shortcut(app: &PhotocraftApp, id: &str, default: Option<&str>) -> Option<String> {
+pub fn effective_shortcut(app: &LienzoApp, id: &str, default: Option<&str>) -> Option<String> {
     app.session.prefs().shortcut(id, default).map(str::to_string)
 }
 
 /// A command's further keys in effect besides its main one (#3665): the user's, else
 /// Photoshop's (F3 for Copy, Shift+F7 for Inverse…). Menus show only the main key.
-pub fn effective_alternates(app: &PhotocraftApp, id: &str) -> Vec<String> {
+pub fn effective_alternates(app: &LienzoApp, id: &str) -> Vec<String> {
     let main = effective_shortcut(app, id, default_shortcut(id).as_deref());
     app.session.prefs().alternates(id, main.as_deref())
 }
@@ -112,9 +112,9 @@ pub fn default_shortcut(id: &str) -> Option<String> {
         .iter()
         .find(|c| c.0 == id)
         .and_then(|c| c.3)
-        .or_else(|| photocraft_engine::commands::find(id).and_then(|c| c.shortcut))
+        .or_else(|| lienzo_engine::commands::find(id).and_then(|c| c.shortcut))
         .or_else(|| crate::menu_catalog::CATALOG.iter().find(|c| c.3 == id).and_then(|c| c.2))
-        .or_else(|| photocraft_engine::prefs::TEMPORARY_TOOLS.iter().find(|t| t.0 == id).map(|t| t.2))
+        .or_else(|| lienzo_engine::prefs::TEMPORARY_TOOLS.iter().find(|t| t.0 == id).map(|t| t.2))
         .map(str::to_string)
         .or_else(|| crate::tool_shortcuts::tool(id).and_then(crate::tool_shortcuts::default))
 }
@@ -174,7 +174,7 @@ pub const NAV_COMMANDS: [&str; 4] = ["view.zoomIn", "view.zoomOut", "view.fitOnS
 /// Photoshop: the plain shortcut asks with the New Layer dialog first, like the menu item, and
 /// the Layers panel button's click and ⌥-click are the same pair the other way round (#4794).
 /// A command bound to that key itself keeps it.
-fn new_layer_without_dialog(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn new_layer_without_dialog(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     const NEW_LAYER: &str = crate::new_layer_ui::COMMAND;
     let Some(mut sc) = effective_shortcut(app, NEW_LAYER, default_shortcut(NEW_LAYER).as_deref()).and_then(|s| parse(&s)) else {
         return false;
@@ -195,7 +195,7 @@ fn new_layer_without_dialog(app: &mut PhotocraftApp, ctx: &egui::Context) -> boo
     true
 }
 
-fn nav_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn nav_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     let Some(id) = nav_shortcut(app, ctx) else { return false };
     if crate::menus::is_enabled(app, id) {
         let _ = crate::menus::invoke(app, ctx, id, json!({}));
@@ -206,7 +206,7 @@ fn nav_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 /// The [`NAV_COMMANDS`] entry whose shortcut (or an Edit › Keyboard Shortcuts override) was
 /// pressed this frame, with the key press consumed. A view with its own zoom, like Liquify's
 /// preview, steps it with the same keys (#7210).
-pub(crate) fn nav_shortcut(app: &PhotocraftApp, ctx: &egui::Context) -> Option<&'static str> {
+pub(crate) fn nav_shortcut(app: &LienzoApp, ctx: &egui::Context) -> Option<&'static str> {
     NAV_COMMANDS.into_iter().find(|id| {
         let main = crate::menus::UI_COMMANDS.iter().find(|c| c.0 == *id).and_then(|c| app.session.prefs().shortcut(id, c.3));
         let keys: Vec<KeyboardShortcut> =
@@ -307,7 +307,7 @@ pub fn clipboard_keys(ctx: &egui::Context, typing: bool, raw: &mut egui::RawInpu
         // makes from the window's key and so never sends as key presses. A ⌘C / ⌘X / ⌘V press
         // here is the Mac menu's key equivalent (AppKit takes the key while Edit › Copy, Cut or
         // Paste is enabled), which a text field ignores: pasting text worked only while
-        // PhotoCraft's own clipboard was empty. Give those presses back as the events; Paste asks
+        // Lienzo's own clipboard was empty. Give those presses back as the events; Paste asks
         // the window for the clipboard text, which arrives as a Paste event next frame.
         raw.events.retain_mut(|e| {
             let egui::Event::Key { key, pressed: true, modifiers: m, .. } = *e else { return true };
@@ -429,7 +429,7 @@ pub(crate) fn forwarded_keys_down(ctx: &egui::Context) -> Vec<Key> {
 /// the clipboard work while a floating window has the keyboard. craft-ui forwards nothing while
 /// one of that window's widgets has keyboard focus. egui-winit sends ⌘C, ⌘X and ⌘V there as
 /// `Copy`, `Cut` and `Paste` too, so [`clipboard_keys`] turns them into presses first.
-pub(crate) fn handle_forwarded(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>, modifiers: Modifiers) {
+pub(crate) fn handle_forwarded(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>, modifiers: Modifiers) {
     if events.is_empty() {
         return;
     }
@@ -466,7 +466,7 @@ pub(crate) fn handle_forwarded(app: &mut PhotocraftApp, ctx: &egui::Context, eve
 /// for the Hand tool stays on while the pointer moves over the canvas. Its releases stop coming
 /// once the main window or no window of the app has the keyboard, or one of its widgets takes
 /// keyboard focus, so the keys count as released then.
-pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn handle(app: &mut LienzoApp, ctx: &egui::Context) {
     let held = !ctx.input(|i| i.focused) && crate::panel_docking::other_window_keyboard(ctx) == Some(false);
     if !held {
         ctx.data_mut(|d| d.remove_temp::<std::collections::BTreeSet<Key>>(forwarded_down_id()));
@@ -479,7 +479,7 @@ pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-fn preflight_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn preflight_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     // A held tool letter released: a temporary tool gives the previous one back (#2672).
     crate::spring_tools::tick(app, ctx);
     if crate::canvas::cancel_mixer_on_context_change(app, ctx) {
@@ -563,7 +563,7 @@ fn preflight_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
     true
 }
 
-fn handle_modal_canvas_keys(app: &mut PhotocraftApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
+fn handle_modal_canvas_keys(app: &mut LienzoApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
     use crate::shortcut_dispatch::{Focus, dispatch_pressed};
     // Dialogs (and Liquify's panel while one of its controls has focus) keep canvas zoom; a
     // focused text field keeps its keys.
@@ -629,7 +629,7 @@ fn handle_modal_canvas_keys(app: &mut PhotocraftApp, ctx: &egui::Context, focus:
     }
     // Moved pixels still floating: ↩ drops them.
     if focus == Focus::None
-        && app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some())
+        && app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some())
         && ctx.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter))
     {
         if let Err(e) = app.run("select.drop", json!({})) {
@@ -641,7 +641,7 @@ fn handle_modal_canvas_keys(app: &mut PhotocraftApp, ctx: &egui::Context, focus:
     false
 }
 
-fn handle_lasso_vertex_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn handle_lasso_vertex_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     // While placing polygonal lasso vertices, Backspace/Delete retracts the last point;
     // it must win over the regular Edit › Clear shortcut, which edits document pixels.
     if crate::lasso_ui::waiting_for_vertex(app) {
@@ -663,7 +663,7 @@ fn handle_lasso_vertex_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> boo
     false
 }
 
-fn handle_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn handle_keys(app: &mut LienzoApp, ctx: &egui::Context) {
     if !preflight_keys(app, ctx) {
         return;
     }
@@ -679,7 +679,7 @@ fn handle_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Pen path keys (#1466, #1769), the work-path delete key (#5702), and in-progress lasso state.
 /// Returns true when one of them consumed the key.
-fn handle_pen_and_work_path_keys(app: &mut PhotocraftApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
+fn handle_pen_and_work_path_keys(app: &mut LienzoApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
     // A Pen path's points are uncommitted gesture state, not History entries (#1466).
     // Intercept Cmd/Ctrl+Z before the normal Edit › Undo shortcut, as well as unmodified
     // Backspace/Delete. Once the last anchor is removed, regular Undo works again.
@@ -731,7 +731,7 @@ fn handle_pen_and_work_path_keys(app: &mut PhotocraftApp, ctx: &egui::Context, f
 
 /// Magnetic Lasso, lasso vertices, guides, slices and smart-filter rows: each owns ⌫/Delete (and ↩/Esc)
 /// in its own context, so none of them reaches Edit › Clear. Returns true when one consumed the key.
-fn handle_object_tool_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn handle_object_tool_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     // Magnetic Lasso: ↩ closes, Esc cancels, ⌫ removes a fastening point (not Edit › Clear),
     // [ ] change the detection width (not the brush size).
     if crate::magnetic_lasso_ui::keys(app, ctx) || handle_lasso_vertex_keys(app, ctx) {
@@ -755,7 +755,7 @@ fn handle_object_tool_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool
 
 /// Registry shortcuts, inline type, and the crop-tool and single-key tool shortcuts. Returns true
 /// when one consumed the key.
-fn handle_registry_and_tool_keys(app: &mut PhotocraftApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
+fn handle_registry_and_tool_keys(app: &mut LienzoApp, ctx: &egui::Context, focus: crate::shortcut_dispatch::Focus) -> bool {
     // Space+F (⇧Space+F backwards) cycles the pasteboard colour, as in Photoshop: F while the
     // Hand key is held, before F's own Cycle Screen Mode.
     if !matches!(focus, crate::shortcut_dispatch::Focus::Text) && app.ui.text_edit.is_none() && crate::hold_keys::reposition_held(app, ctx) {
@@ -852,7 +852,7 @@ fn handle_registry_and_tool_keys(app: &mut PhotocraftApp, ctx: &egui::Context, f
 
 /// Esc (leave full screen, else deselect), the tool-letter keys, Page/Home/End scrolling and the
 /// opacity keys. Runs last, so every state that owns Esc has already had its chance.
-fn handle_escape_and_view_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn handle_escape_and_view_keys(app: &mut LienzoApp, ctx: &egui::Context) {
     let pressed = |k: Key| ctx.input_mut(|i| i.consume_key(Modifiers::NONE, k));
     // Esc with no active operation leaves a full screen mode, else deselects (#2674), like ⌘D.
     // The key is never taken from a state that handles Esc itself: menus, dialogs, text fields
@@ -914,7 +914,7 @@ fn handle_escape_and_view_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// Selects a tool from its letter key. Entering a group uses its remembered eligible tool or the
 /// first eligible tool in toolbar order. Pressing the key of the current group cycles within it.
 /// With the Shift-switch preference, only ⇧+key cycles. Returns true when a tool key was handled.
-fn select_tool_by_key(app: &mut PhotocraftApp, ctx: &egui::Context, pressed: &impl Fn(Key) -> bool) -> bool {
+fn select_tool_by_key(app: &mut LienzoApp, ctx: &egui::Context, pressed: &impl Fn(Key) -> bool) -> bool {
     let shift_switch = app.session.prefs().tools.use_shift_key_for_tool_switch;
     for t in Tool::ALL {
         if !crate::tool_shortcuts::uses_default(app, t) {

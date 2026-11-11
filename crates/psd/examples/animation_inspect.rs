@@ -1,15 +1,15 @@
 //! Inspect a local PSD/PSB's animation structure without printing layer names, text, or metadata
 //! values. No asset is bundled: pass a path explicitly. Does not decode pixels or modify the file.
-//! `cargo run -p photocraft-psd --example animation_inspect -- /path/to/input.psd`
+//! `cargo run -p lienzo-psd --example animation_inspect -- /path/to/input.psd`
 
 #[cfg(not(target_arch = "wasm32"))]
 fn inspect() -> Result<(), Box<dyn std::error::Error>> {
     use std::collections::BTreeMap;
     use std::io::Read;
 
-    use photocraft_psd::animation::{frame_info, frame_sets, layer_frame_states};
-    use photocraft_psd::metadata::parse_shmd;
-    use photocraft_psd::{PsdFile, ResourceData};
+    use lienzo_psd::animation::{frame_info, frame_sets, layer_frame_states};
+    use lienzo_psd::metadata::parse_shmd;
+    use lienzo_psd::{PsdFile, ResourceData};
 
     let mut args = std::env::args_os().skip(1);
     let path = args.next().ok_or("usage: animation_inspect <input.psd|input.psb>")?;
@@ -80,7 +80,7 @@ fn inspect() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            if photocraft_psd::metadata::write_shmd(&items) != block.data {
+            if lienzo_psd::metadata::write_shmd(&items) != block.data {
                 return Err("layer metadata failed its byte-exact round trip".into());
             }
         }

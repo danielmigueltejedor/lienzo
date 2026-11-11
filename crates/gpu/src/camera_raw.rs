@@ -3,7 +3,7 @@
 //! One fragment pass (`camera_raw.wgsl`) runs the stages that read only their own pixel: white
 //! balance and exposure, Contrast without Texture or Clarity, Whites and Blacks, Vibrance and
 //! Saturation, the tone curves, the Color Mixer, Color Grading, the vignette and grain. Their
-//! constants and tables come from [`photocraft_algo::camera_raw::per_pixel`], which the CPU
+//! constants and tables come from [`lienzo_algo::camera_raw::per_pixel`], which the CPU
 //! develop builds its own from, so both evaluate the same maths; the curves and the Whites and
 //! Blacks rows are rows of one `R32Float` texture. Settings with a spatial stage (Dehaze, Shadows
 //! and Highlights, Texture, Clarity, Detail) have no [`PerPixel`] and stay on the CPU.
@@ -11,7 +11,7 @@
 //! The pipeline is built on demand ([`CameraRawDevelop::new`]), not with the compositor (#6419).
 //! It renders into `Rgba32Float`; [`CameraRawDevelop::supported`] says whether the adapter can.
 
-use photocraft_algo::camera_raw::{CURVE_LUT, PerPixel, VignetteStyle, WB_STEPS};
+use lienzo_algo::camera_raw::{CURVE_LUT, PerPixel, VignetteStyle, WB_STEPS};
 
 use crate::Unsupported;
 

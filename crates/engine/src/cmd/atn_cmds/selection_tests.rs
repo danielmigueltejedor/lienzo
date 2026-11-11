@@ -77,10 +77,10 @@ fn group_f_load_save_preserves_recorded_descriptors() {
         }
         for event in events {
             let mut s = Session::new();
-            let loaded = s.execute("actions.load", json!({"data":photocraft_paint::tile::b64_encode(&file(event.clone(),d.clone()))})).unwrap();
+            let loaded = s.execute("actions.load", json!({"data":lienzo_paint::tile::b64_encode(&file(event.clone(),d.clone()))})).unwrap();
             assert_eq!(loaded["unsupported"], json!([]), "{id}");
             let saved = s.execute("actions.save", json!({"action":"Step"})).unwrap();
-            let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+            let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
             let back = atn::parse(&bytes).unwrap();
             assert_eq!(back.actions[0].items[0].descriptor, Some(d.clone()), "{id}");
             assert_eq!(back.actions[0].items[0].event.id(), if id.is_empty() { name.unwrap() } else { id });
@@ -95,14 +95,14 @@ fn assert_kept(id: &str, name: Option<&str>, descriptor: Descriptor) {
     original.actions[0].items[0].with_dialog = true;
     original.actions[0].items[0].dialog_options = 2;
     let mut s = Session::new();
-    let loaded = s.execute("actions.load", json!({"data":photocraft_paint::tile::b64_encode(&atn::write(&original).unwrap())})).unwrap();
+    let loaded = s.execute("actions.load", json!({"data":lienzo_paint::tile::b64_encode(&atn::write(&original).unwrap())})).unwrap();
     assert_eq!(loaded["unsupported"].as_array().unwrap().len(), 1, "{id}/{name:?}/{descriptor:?}");
     assert_eq!(s.actions.list[0].steps[0].0, PHOTOSHOP_STEP);
     assert!(s.actions.list[0].disabled.contains(&0));
     assert!(s.actions.list[0].dialogs.contains(&0));
     let saved = s.execute("actions.save", json!({"action":"Step"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     let back = atn::parse(&bytes).unwrap();
     let saved = &back.actions[0].items[0];
     let original = &original.actions[0].items[0];
@@ -351,7 +351,7 @@ fn group_f_unsupported_settings_are_not_silently_replaced() {
 
 /// Execute the action name assigned by the loader, including collision-safe renaming.
 fn play(s: &mut Session, event: AtnEvent, d: Descriptor) -> Value {
-    let loaded = s.execute("actions.load", json!({"data":photocraft_paint::tile::b64_encode(&file(event,d))})).unwrap();
+    let loaded = s.execute("actions.load", json!({"data":lienzo_paint::tile::b64_encode(&file(event,d))})).unwrap();
     assert_eq!(loaded["unsupported"], json!([]));
     s.execute("actions.play", json!({"action":loaded["actions"][0]})).unwrap()
 }

@@ -2,18 +2,18 @@
 //! boards it draws, the Align panel and the gear menu, and what Reset Tool puts back.
 
 use egui::Modifiers;
-use photocraft_doc::{ArtboardBackground, LayerId};
-use photocraft_geom::Rect;
+use lienzo_doc::{ArtboardBackground, LayerId};
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::artboard_tool::ArtboardToolUi;
 use crate::artboard_tool::bar::{self, ALIGN_PANEL, GEAR, Gear};
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
-fn app_with_depth(depth: u32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_with_depth(depth: u32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 800, "height": 600, "depth": depth})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -22,29 +22,29 @@ fn app_with_depth(depth: u32) -> PhotocraftApp {
     app
 }
 
-fn app() -> PhotocraftApp {
+fn app() -> LienzoApp {
     app_with_depth(8)
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     let m = Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
 }
 
-fn boards(app: &PhotocraftApp) -> Vec<(LayerId, Rect, ArtboardBackground)> {
+fn boards(app: &LienzoApp) -> Vec<(LayerId, Rect, ArtboardBackground)> {
     app.session.active().unwrap().doc.artboards().iter().map(|b| (b.0, b.2.rect, b.2.background)).collect()
 }
 
-fn reset_tool(app: &mut PhotocraftApp) {
+fn reset_tool(app: &mut LienzoApp) {
     crate::menus::invoke(app, &egui::Context::default(), crate::tool_reset::RESET, json!({})).unwrap();
 }
 
 #[test]
 fn the_presets_list_has_iphone_8_7_6() {
-    assert!(photocraft_engine::artboard_cmds::PRESETS.contains(&("iPhone 8/7/6", 750, 1334)));
-    assert!(photocraft_engine::artboard_cmds::PRESETS.contains(&("iPhone 14", 390, 844)), "the existing entries stay");
+    assert!(lienzo_engine::artboard_cmds::PRESETS.contains(&("iPhone 8/7/6", 750, 1334)));
+    assert!(lienzo_engine::artboard_cmds::PRESETS.contains(&("iPhone 14", 390, 844)), "the existing entries stay");
     // The engine takes the new preset by name.
     let mut app = app();
     let r = app.run("layer.new.artboard", json!({"preset": "iPhone 8/7/6", "x": 0, "y": 0})).unwrap();
@@ -182,7 +182,7 @@ fn a_drawn_board_gets_the_bars_background() {
 /// A board placed by the Add New Artboard click takes the bar's background too.
 #[test]
 fn a_placed_board_gets_the_bars_background() {
-    let place = |app: &mut PhotocraftApp| {
+    let place = |app: &mut LienzoApp| {
         app.ui.artboard_tool.adding = true;
         let m = Modifiers::NONE;
         tool_event(app, ToolEvent::Down { x: 20.0, y: 30.0, pressure: 1.0 }, m);
@@ -222,7 +222,7 @@ fn a_placed_board_takes_the_bars_size_with_no_board_selected() {
 #[test]
 fn a_placed_board_keeps_the_bars_preset_name() {
     let mut app = app();
-    let place = |app: &mut PhotocraftApp, x: f64| {
+    let place = |app: &mut LienzoApp, x: f64| {
         app.ui.artboard_tool.adding = true;
         let m = Modifiers::NONE;
         tool_event(app, ToolEvent::Down { x, y: 30.0, pressure: 1.0 }, m);
@@ -265,7 +265,7 @@ fn ok_in_the_picker_without_a_change_leaves_the_boards_alone() {
 }
 
 /// Two boards, both selected.
-fn two_boards(app: &mut PhotocraftApp) -> (u64, u64) {
+fn two_boards(app: &mut LienzoApp) -> (u64, u64) {
     let a = app.run("layer.new.artboard", json!({"rect": [0, 0, 100, 100]})).unwrap()["layer"].as_u64().unwrap();
     let b = app.run("layer.new.artboard", json!({"rect": [300, 0, 100, 100]})).unwrap()["layer"].as_u64().unwrap();
     app.run("layer.select", json!({"layer": a})).unwrap();
@@ -273,16 +273,16 @@ fn two_boards(app: &mut PhotocraftApp) -> (u64, u64) {
     (a, b)
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn last_label(app: &PhotocraftApp) -> Option<String> {
+fn last_label(app: &LienzoApp) -> Option<String> {
     app.session.active().unwrap().history.entries().last().cloned()
 }
 
 /// Two selected boards with different custom colours; the first board's colour is the swatch's.
-fn two_coloured_boards(app: &mut PhotocraftApp) -> (u64, u64) {
+fn two_coloured_boards(app: &mut LienzoApp) -> (u64, u64) {
     let (a, b) = two_boards(app);
     app.run("layer.artboard.set", json!({"layer": a, "background": "custom", "color": "#336699"})).unwrap();
     app.run("layer.artboard.set", json!({"layer": b, "background": "custom", "color": "#cc3300"})).unwrap();
@@ -290,7 +290,7 @@ fn two_coloured_boards(app: &mut PhotocraftApp) -> (u64, u64) {
 }
 
 /// Open the Color Picker from the swatch (as the bar does) and OK it with `color`, or as opened.
-fn pick_from_swatch(app: &mut PhotocraftApp, color: Option<&str>) {
+fn pick_from_swatch(app: &mut LienzoApp, color: Option<&str>) {
     let hex = bar::shown_background(app).1;
     let id = crate::color_picker_ui::open_for_target(app, "artboardBackground", "Color Picker (Color)", crate::color_picker_ui::parse_hex(&hex).unwrap());
     let mut fields = app.ui.dialog_mut(id).unwrap().fields.clone();
@@ -300,7 +300,7 @@ fn pick_from_swatch(app: &mut PhotocraftApp, color: Option<&str>) {
     crate::color_picker_ui::confirm(app, &fields).unwrap();
 }
 
-fn colours(app: &PhotocraftApp) -> Vec<ArtboardBackground> {
+fn colours(app: &LienzoApp) -> Vec<ArtboardBackground> {
     boards(app).iter().map(|b| b.2).collect()
 }
 
@@ -443,7 +443,7 @@ fn the_align_panel_has_the_eight_entries_in_the_measured_order() {
             vec!["Distribute Widths", "Distribute Heights"],
         ]
     );
-    let specs = photocraft_engine::command_specs();
+    let specs = lienzo_engine::command_specs();
     for (label, cmd) in ALIGN_PANEL.iter().flat_map(|g| g.iter()) {
         match cmd {
             Some(c) => {
@@ -459,7 +459,7 @@ fn the_align_panel_has_the_eight_entries_in_the_measured_order() {
 }
 
 /// A filled square at `r` (`x, y, w, h`); the engine aligns a board by its contents.
-fn square(app: &mut PhotocraftApp, r: [i64; 4]) -> u64 {
+fn square(app: &mut LienzoApp, r: [i64; 4]) -> u64 {
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.rect", json!({"x": r[0], "y": r[1], "width": r[2], "height": r[3]})).unwrap();
     app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
@@ -467,7 +467,7 @@ fn square(app: &mut PhotocraftApp, r: [i64; 4]) -> u64 {
     app.session.active().unwrap().active_layer.unwrap().0
 }
 
-fn wrap(app: &mut PhotocraftApp, layer: u64) -> u64 {
+fn wrap(app: &mut LienzoApp, layer: u64) -> u64 {
     app.run("layer.select", json!({"layer": layer})).unwrap();
     app.run("layer.new.artboardFromLayers", json!({})).unwrap()["layer"].as_u64().unwrap()
 }
@@ -517,7 +517,7 @@ fn the_gear_menu_has_four_entries_all_checked_and_only_auto_nest_live() {
 #[test]
 fn auto_nest_layers_turns_the_move_tools_nesting_on_and_off() {
     for (nest, joins) in [(true, true), (false, false)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.session.execute("file.new", json!({"width": 300, "height": 100, "background": "transparent"})).unwrap();
         app.sync_views();
         app.session.execute("layer.new.layer", json!({})).unwrap();

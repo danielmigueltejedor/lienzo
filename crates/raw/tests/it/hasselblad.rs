@@ -2,8 +2,8 @@
 //! exact samples, metadata, the DefaultCrop area, and the unsupported and
 //! hostile variants.
 
-use photocraft_raw::testgen::{Hasselblad3frSpec, mosaic, scene};
-use photocraft_raw::*;
+use lienzo_raw::testgen::{Hasselblad3frSpec, mosaic, scene};
+use lienzo_raw::*;
 
 const RGGB: [u8; 4] = [0, 1, 1, 2];
 

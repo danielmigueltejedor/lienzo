@@ -11,13 +11,13 @@
 
 use egui::{Modifiers, PointerButton, Pos2, Rect, Vec2, pos2, vec2};
 use egui_kittest::kittest::Queryable;
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::ViewXform;
-use photocraft_ui_egui::control::{ControlRequest, Outcome, handle};
-use photocraft_ui_egui::crop_ui::{corners, pending};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::control::{ControlRequest, Outcome, handle};
+use lienzo_ui_egui::crop_ui::{corners, pending};
 use serde_json::{Value, json};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// The bar's top below the frame's bottom edge, measured in the reference application (screen px
 /// at 100 %, points here).
@@ -27,8 +27,8 @@ const GAP: f32 = 11.0;
 /// Mode (the frame moves over a fixed image, so the frame's screen place is easy to predict).
 fn harness() -> Harness {
     let mut h = Harness::builder().with_size(vec2(1100.0, 760.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         // English labels, whatever the system language.
         app.session.prefs.edit(|p| p.interface.language = "en".into());
         app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).expect("new");
@@ -228,7 +228,7 @@ fn ui_set_changes_only_the_place_fields_it_names() {
     assert_eq!(bar(&h).expect("bar").left_top(), dropped.left_top());
     // Placing it keeps the pin.
     control(&mut h, "ui.set", json!({"panels": {"task_bar": {"at": [12.0, 34.0]}}}));
-    assert_eq!(h.state().ui.panels.task_bar, photocraft_ui_egui::state::TaskBarPlace { pinned: true, at: Some([12.0, 34.0]) });
+    assert_eq!(h.state().ui.panels.task_bar, lienzo_ui_egui::state::TaskBarPlace { pinned: true, at: Some([12.0, 34.0]) });
     // A field the bar doesn't have is refused, and nothing changes.
     let v = request(&mut h, "ui.set", json!({"panels": {"task_bar": {"pinned": false, "nope": 1}}}));
     assert_eq!(v["ok"], false, "{v}");
@@ -275,7 +275,7 @@ fn with_tiled_documents_the_bar_sits_on_the_active_tile() {
     h.state_mut().run("file.new", json!({"width": 400, "height": 300, "background": "white"})).expect("new");
     h.run_steps(4);
     let ctx = h.ctx.clone();
-    photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, "window.arrange.twoUpVertical", json!({})).expect("2-up");
+    lienzo_ui_egui::menus::invoke(h.state_mut(), &ctx, "window.arrange.twoUpVertical", json!({})).expect("2-up");
     h.run_steps(6);
     // Each tile active in turn (side by side, the first one left): the first tile is drawn before
     // the second, so a bar drawn by every tile would end up on the second one both times.
@@ -311,7 +311,7 @@ fn hide_bar_and_the_window_toggle() {
     assert!(bar(&h).is_none());
     assert_eq!(window_item_checked(&mut h), Some(false), "Hide bar unticks Window › Contextual Task Bar");
     let ctx = h.ctx.clone();
-    photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, "window.panel.contextualTaskBar", json!({})).expect("toggle");
+    lienzo_ui_egui::menus::invoke(h.state_mut(), &ctx, "window.panel.contextualTaskBar", json!({})).expect("toggle");
     h.run_steps(6);
     assert!(bar(&h).is_some(), "Window › Contextual Task Bar shows it again");
     assert_eq!(window_item_checked(&mut h), Some(true));
@@ -378,13 +378,13 @@ fn the_bar_grows_for_cancel_and_done() {
 #[test]
 fn straighten_is_the_options_bar_straighten() {
     let mut h = harness();
-    assert!(!photocraft_ui_egui::crop_straighten::mode(h.state()));
+    assert!(!lienzo_ui_egui::crop_straighten::mode(h.state()));
     // The options-bar button and the task-bar one are both labelled "Straighten" now (#10888);
     // click the one in the bar.
     let bar = bar(&h).expect("the task bar");
     let at = h.query_all_by_label("Straighten").map(|n| n.rect().center()).find(|p| bar.contains(*p)).expect("the task bar's Straighten");
     click_at(&mut h, at);
-    assert!(photocraft_ui_egui::crop_straighten::mode(h.state()), "armed, as by the options bar's button");
+    assert!(lienzo_ui_egui::crop_straighten::mode(h.state()), "armed, as by the options bar's button");
     assert_eq!(h.state().ui.crop_rect, Some([0.0, 0.0, 400.0, 300.0]), "the click didn't reach the canvas");
 }
 
@@ -394,14 +394,14 @@ fn hide_and_place_are_kept_with_the_panel_layout() {
     // A layout saved before the bar existed: the bar is on and follows the frame.
     let mut old = serde_json::to_value(&h.state().ui.panels).expect("panels");
     old.as_object_mut().map(|o| (o.remove("context_task_bar"), o.remove("task_bar")));
-    photocraft_ui_egui::dock::apply(h.state_mut(), &json!({"panels": old}));
+    lienzo_ui_egui::dock::apply(h.state_mut(), &json!({"panels": old}));
     assert!(h.state().ui.panels.context_task_bar);
     assert_eq!(h.state().ui.panels.task_bar, Default::default());
     // What a restart restores.
     let saved = json!({"panels": {"context_task_bar": false, "task_bar": {"pinned": true, "at": [12.0, 34.0]}}});
     let mut panels = serde_json::to_value(&h.state().ui.panels).expect("panels");
     panels.as_object_mut().expect("object").extend(saved["panels"].as_object().expect("object").clone());
-    photocraft_ui_egui::dock::apply(h.state_mut(), &json!({"panels": panels}));
+    lienzo_ui_egui::dock::apply(h.state_mut(), &json!({"panels": panels}));
     let p = &h.state().ui.panels;
     assert!(!p.context_task_bar);
     assert!(p.task_bar.pinned);

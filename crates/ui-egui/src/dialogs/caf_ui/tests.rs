@@ -1,8 +1,8 @@
 use super::*;
 
 /// A textured layer (a checker of two colours over a gradient) with a 20 px square selected.
-fn app_with_selection() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_with_selection() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 200, "height": 160, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -28,11 +28,11 @@ fn app_with_selection() -> PhotocraftApp {
     app
 }
 
-fn px(app: &PhotocraftApp, layer: LayerId, x: i32, y: i32) -> Vec<f32> {
+fn px(app: &LienzoApp, layer: LayerId, x: i32, y: i32) -> Vec<f32> {
     app.session.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().pixel(x, y)
 }
 
-fn ws(app: &PhotocraftApp) -> &CafWorkspace {
+fn ws(app: &LienzoApp) -> &CafWorkspace {
     app.distort.caf.as_ref().unwrap()
 }
 
@@ -46,8 +46,8 @@ fn settings_dropdowns_are_named_for_their_visible_labels() {
     open(&mut app).unwrap();
     let mut h = Harness::builder()
         .with_size(egui::vec2(1000.0, 900.0))
-        .with_context_setup(|ctx| PhotocraftApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
-        .build_ui_state(|ui, app: &mut PhotocraftApp| show(app, ui.ctx()), app);
+        .with_context_setup(|ctx| LienzoApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
+        .build_ui_state(|ui, app: &mut LienzoApp| show(app, ui.ctx()), app);
     h.run_steps(2);
     // The Indicates dropdown lives inside a collapsed "Sampling Area Overlay" header.
     h.get_by_role_and_label(Role::DisclosureTriangle, "Sampling Area Overlay").click();
@@ -258,10 +258,10 @@ fn settings_are_remembered_and_the_menu_opens_the_workspace() {
 
 /// The engine's sampling area over the plan's rectangle (what the fill samples) and its fill
 /// area.
-fn engine_source(app: &PhotocraftApp) -> (Rect, Vec<bool>, Vec<bool>) {
+fn engine_source(app: &LienzoApp) -> (Rect, Vec<bool>, Vec<bool>) {
     let w = ws(app);
     let st = app.session.active().unwrap();
-    let plan = photocraft_engine::edit_menu_cmds::content_aware_plan(&st.doc, w.layer, &plan_params(w, true), CMD).unwrap();
+    let plan = lienzo_engine::edit_menu_cmds::content_aware_plan(&st.doc, w.layer, &plan_params(w, true), CMD).unwrap();
     (plan.rect, plan.source, plan.hole)
 }
 
@@ -323,7 +323,7 @@ fn a_stroke_keeps_its_points_from_before_the_drag_threshold() {
         open(&mut app).unwrap();
         control(&mut app, &json!({"tool": tool, "sampling": "rectangular"})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(1600.0, 1000.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 let ctx = ui.ctx().clone();
                 if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
@@ -332,14 +332,14 @@ fn a_stroke_keeps_its_points_from_before_the_drag_threshold() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         // The document view sits between the tool strip and the Preview panel, under the
         // title and the options bar; its centre shows the document's centre.
         let view = ERect::from_min_max(pos2(LEFT_W, 30.0 + BAR_H), pos2(1600.0 - PANEL_W - PREVIEW_W, 1000.0));
         let c = view.center();
         let at = |dx: f32, dy: f32| pos2(c.x + dx, c.y + dy);
-        let press = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, down: bool, p: Pos2| {
+        let press = |h: &mut egui_kittest::Harness<'_, LienzoApp>, down: bool, p: Pos2| {
             h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: Modifiers::NONE });
             h.run_steps(1);
         };
@@ -377,7 +377,7 @@ fn a_stroke_keeps_its_points_from_before_the_drag_threshold() {
 /// box-averaged to fit, and is still drawn over the plan's rectangle.
 #[test]
 fn the_preview_texture_respects_the_device_limit() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 2200, "height": 40, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -473,7 +473,7 @@ fn strokes_past_the_engines_limits_are_refused_at_the_brush() {
     assert!(d["error"].as_str().is_some_and(|e| e.contains("at most")), "{d}");
 }
 
-fn press(app: &mut PhotocraftApp, ctx: &egui::Context, key: egui::Key, modifiers: egui::Modifiers) {
+fn press(app: &mut LienzoApp, ctx: &egui::Context, key: egui::Key, modifiers: egui::Modifiers) {
     let ev = egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     let input = egui::RawInput { events: vec![ev], ..Default::default() };
     ctx.run_ui(input, |ui| keys(app, ui.ctx())).textures_delta.clear();

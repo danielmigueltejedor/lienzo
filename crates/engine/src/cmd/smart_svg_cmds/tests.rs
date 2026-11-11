@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_doc::{DocId, Locks, SmartFilter};
-use photocraft_geom::Affine;
+use lienzo_doc::{DocId, Locks, SmartFilter};
+use lienzo_geom::Affine;
 
 const RED: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="6"><rect width="8" height="6" fill="red"/></svg>"#;
 const BLUE: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="6"><rect width="8" height="6" fill="blue"/></svg>"#;
@@ -78,8 +78,8 @@ fn valid_updates_repeat_at_all_depths_and_roundtrip_original_svg() {
         s.execute(UPDATE, params).unwrap();
         assert_eq!(source(&s, id), GREEN.as_bytes());
         assert_eq!(s.journal.len(), journal_len, "vector saves must not accumulate full artwork in the replay journal");
-        let bytes = photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
-        let loaded = photocraft_format::load_from_bytes(&bytes).unwrap();
+        let bytes = lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
+        let loaded = lienzo_format::load_from_bytes(&bytes).unwrap();
         let loaded_source = &smart(&loaded, id).unwrap().source;
         assert!(matches!(loaded_source, SmartSource::Embedded {file_name,bytes} if file_name == "Artwork.svg" && bytes.as_slice() == GREEN.as_bytes()));
     }
@@ -96,13 +96,13 @@ fn shared_instances_keep_placement_filters_masks_and_one_undo_transaction() {
         sm.smart_filters.push(SmartFilter {
             command: "filter.invert".into(),
             params: json!({}),
-            blend: photocraft_color::BlendMode::Normal,
+            blend: lienzo_color::BlendMode::Normal,
             opacity: 0.5,
             visible: true,
         });
         sm.filters_enabled = false;
-        sm.filter_mask = Some(photocraft_doc::LayerMask {
-            surface: photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8),
+        sm.filter_mask = Some(lienzo_doc::LayerMask {
+            surface: lienzo_raster::Surface::new(lienzo_color::PixelFormat::GRAY8),
             enabled: true,
             linked: true,
             density: 0.5,
@@ -247,7 +247,7 @@ fn inherited_parent_lock_refuses_content_edits() {
     let doc = Arc::make_mut(&mut s.active_mut().unwrap().doc);
     let layer = doc.remove(id).unwrap();
     let mut group =
-        Layer::new("Locked parent", LayerContent::Group(photocraft_doc::Group { children: vec![layer], expanded: true, artboard: None, frame_stroke: None }));
+        Layer::new("Locked parent", LayerContent::Group(lienzo_doc::Group { children: vec![layer], expanded: true, artboard: None, frame_stroke: None }));
     group.locks.pixels = true;
     doc.layers.push(group);
     fails_without_edit(&mut s, params);
@@ -261,7 +261,7 @@ fn perspective_and_warp_geometry_survive_an_update() {
         let LayerContent::Smart(sm) = &mut doc.layer_mut(id).unwrap().content else { panic!("smart object") };
         sm.perspective = Some([1.0, 0.0, 12.0, 0.0, 1.0, 9.0, 0.01, 0.0, 1.0]);
         if warp {
-            sm.warp = Some(photocraft_geom::warp::Warp::preset(photocraft_geom::warp::WarpStyle::Arc, 10.0, [0.0, 0.0, 8.0, 6.0]));
+            sm.warp = Some(lienzo_geom::warp::Warp::preset(lienzo_geom::warp::WarpStyle::Arc, 10.0, [0.0, 0.0, 8.0, 6.0]));
         }
         let before = sm.clone();
         let params = request(&mut s, id, BLUE);
@@ -304,7 +304,7 @@ fn embedded_pdf_ai_and_eps_update_shared_instances_without_reading_linked_paths(
             let duplicate;
             {
                 let doc = Arc::make_mut(&mut s.active_mut().unwrap().doc);
-                let payload = photocraft_io::linked::encode_linked_file(&photocraft_io::linked::LinkedFile {
+                let payload = lienzo_io::linked::encode_linked_file(&lienzo_io::linked::LinkedFile {
                     uuid: "owned-vector".into(),
                     file_name: name.into(),
                     bytes: bytes.to_vec(),
@@ -340,8 +340,8 @@ fn embedded_pdf_ai_and_eps_update_shared_instances_without_reading_linked_paths(
             let before_stale = s.active().unwrap().doc.clone();
             assert!(s.execute(UPDATE_VECTOR, params).is_err(), "stale first-save fingerprint");
             assert_eq!(s.active().unwrap().doc, before_stale);
-            let serialized = photocraft_format::save_to_bytes(&after, &Default::default()).unwrap();
-            assert_eq!(photocraft_format::load_from_bytes(&serialized).unwrap(), *after);
+            let serialized = lienzo_format::save_to_bytes(&after, &Default::default()).unwrap();
+            assert_eq!(lienzo_format::load_from_bytes(&serialized).unwrap(), *after);
         }
     }
 }
@@ -401,8 +401,8 @@ fn original_vector_formats_save_atomically_and_survive_undo_and_persistence() {
             assert_eq!(s.active().unwrap().doc, before);
             assert!(s.redo());
             assert_eq!(s.active().unwrap().doc, after);
-            let bundle = photocraft_format::save_to_bytes(&after, &Default::default()).unwrap();
-            let reopened = photocraft_format::load_from_bytes(&bundle).unwrap();
+            let bundle = lienzo_format::save_to_bytes(&after, &Default::default()).unwrap();
+            let reopened = lienzo_format::load_from_bytes(&bundle).unwrap();
             assert_eq!(smart(&reopened, id).unwrap(), sm);
             let mut repeated = native_request(&mut s, id, ext, &changed);
             let revision = s.active().unwrap().revision;
@@ -415,7 +415,7 @@ fn original_vector_formats_save_atomically_and_survive_undo_and_persistence() {
     }
 }
 
-/// A save from an external editor whose SVG embeds an image PhotoCraft can't read (here a BMP)
+/// A save from an external editor whose SVG embeds an image Lienzo can't read (here a BMP)
 /// is accepted with that image left out, as placing the same SVG is.
 #[test]
 fn saved_svg_with_an_unreadable_embedded_image_still_updates() {
@@ -485,7 +485,7 @@ fn native_saves_reject_wrong_formats_bad_previews_and_locks_without_editing() {
 #[test]
 fn native_save_keeps_fractional_psd_frame_and_rejects_a_resized_preview() {
     let (mut s, id, original) = native_session("ai", 8);
-    let spec = photocraft_io::smart_map::PlacedSpec {
+    let spec = lienzo_io::smart_map::PlacedSpec {
         idnt: "authored",
         placed: "authored",
         transform: Affine::IDENTITY,
@@ -495,7 +495,7 @@ fn native_save_keeps_fractional_psd_frame_and_rejects_a_resized_preview() {
         warp: None,
         filter_fx: None,
     };
-    let sold = photocraft_io::smart_map::sold_bytes(None, &spec, &mut vec![]);
+    let sold = lienzo_io::smart_map::sold_bytes(None, &spec, &mut vec![]);
     let state = s.active_mut().unwrap();
     let LayerContent::Smart(sm) = &mut Arc::make_mut(&mut state.doc).layer_mut(id).unwrap().content else { panic!("smart") };
     sm.psd_raw = Some(Arc::new(sold));
@@ -534,7 +534,7 @@ fn shared_native_instances_check_one_preview_identity_once_and_keep_per_instance
     s.execute(UPDATE_VECTOR, params).unwrap();
     assert_eq!(PREVIEW_FRAME_CHECKS.with(std::cell::Cell::get) - before, 2, "one check per source and preview identity");
     // An instance without a preview still validates its own PSD frame.
-    let spec = photocraft_io::smart_map::PlacedSpec {
+    let spec = lienzo_io::smart_map::PlacedSpec {
         idnt: "authored",
         placed: "authored",
         transform: Affine::IDENTITY,
@@ -544,7 +544,7 @@ fn shared_native_instances_check_one_preview_identity_once_and_keep_per_instance
         warp: None,
         filter_fx: None,
     };
-    let sold = photocraft_io::smart_map::sold_bytes(None, &spec, &mut vec![]);
+    let sold = lienzo_io::smart_map::sold_bytes(None, &spec, &mut vec![]);
     let mut framed = s.active().unwrap().doc.layer(id).unwrap().duplicate();
     let LayerContent::Smart(sm) = &mut framed.content else { panic!("smart") };
     sm.vector_preview = None;
@@ -687,7 +687,7 @@ fn native_update_authorizes_filters_on_every_shared_instance_before_editing() {
     sm.smart_filters.push(SmartFilter {
         command: "image.adjustments.colorLookup".into(),
         params: json!({"file":"/not-authorized/private.cube"}),
-        blend: photocraft_color::BlendMode::Normal,
+        blend: lienzo_color::BlendMode::Normal,
         opacity: 1.0,
         visible: true,
     });

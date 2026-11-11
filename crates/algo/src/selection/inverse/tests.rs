@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{ColorMode, SampleType};
+use lienzo_color::{ColorMode, SampleType};
 
 fn reference(source: &Surface, area: Rect) -> Surface {
     let data: Vec<f32> = source.read_region(area).chunks_exact(source.channels()).map(|p| 1.0 - p[0]).collect();

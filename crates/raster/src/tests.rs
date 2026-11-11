@@ -121,7 +121,7 @@ fn conversion_keeps_shared_tiles_shared() {
 }
 
 use super::*;
-use photocraft_color::PixelFormat;
+use lienzo_color::PixelFormat;
 use proptest::prelude::*;
 
 fn write_region_reference(surface: &mut Surface, r: Rect, data: &[f32]) {

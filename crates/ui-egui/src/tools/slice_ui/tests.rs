@@ -1,7 +1,7 @@
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 100, "height": 80})).unwrap();
     app
 }
@@ -16,7 +16,7 @@ fn slice_tool_draws_and_select_tool_moves() {
     pointer(&mut app, ToolEvent::Up { x: 40.0, y: 30.0 }, m);
     let doc = app.session.active().unwrap().doc.clone();
     assert_eq!(doc.slices.list.len(), 1);
-    assert_eq!(doc.slices.list[0].rect, photocraft_geom::Rect::new(10, 10, 40, 30));
+    assert_eq!(doc.slices.list[0].rect, lienzo_geom::Rect::new(10, 10, 40, 30));
     let n = app.ui.slices.selected.unwrap();
     // Slice Select: drag it by (5, 5).
     app.ui.tool = Tool::SliceSelect;
@@ -24,7 +24,7 @@ fn slice_tool_draws_and_select_tool_moves() {
     assert_eq!(app.ui.slices.selected, Some(n));
     pointer(&mut app, ToolEvent::Up { x: 25.0, y: 25.0 }, m);
     let doc = app.session.active().unwrap().doc.clone();
-    assert_eq!(doc.slices.list[0].rect, photocraft_geom::Rect::new(15, 15, 45, 35));
+    assert_eq!(doc.slices.list[0].rect, lienzo_geom::Rect::new(15, 15, 45, 35));
     // Clicking an auto slice selects it; Slice Options promotes it.
     pointer(&mut app, ToolEvent::Down { x: 90.0, y: 75.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 90.0, y: 75.0 }, m);
@@ -78,7 +78,7 @@ fn slice_style_fixes_the_ratio_or_the_size() {
     let mut app = app();
     app.ui.tool = Tool::Slice;
     let m = egui::Modifiers::NONE;
-    let draw = |app: &mut PhotocraftApp, a: [f64; 2], b: [f64; 2]| {
+    let draw = |app: &mut LienzoApp, a: [f64; 2], b: [f64; 2]| {
         pointer(app, ToolEvent::Down { x: a[0], y: a[1], pressure: 1.0 }, m);
         pointer(app, ToolEvent::Move { x: b[0], y: b[1], pressure: 1.0 }, m);
         pointer(app, ToolEvent::Up { x: b[0], y: b[1] }, m);
@@ -86,34 +86,30 @@ fn slice_style_fixes_the_ratio_or_the_size() {
     };
     let o = &mut app.ui.tool_options;
     (o.slice_style, o.slice_width, o.slice_height) = ("fixedRatio".into(), 2.0, 1.0);
-    assert_eq!(draw(&mut app, [10.0, 10.0], [30.0, 40.0]), photocraft_geom::Rect::new(10, 10, 70, 40));
+    assert_eq!(draw(&mut app, [10.0, 10.0], [30.0, 40.0]), lienzo_geom::Rect::new(10, 10, 70, 40));
     let o = &mut app.ui.tool_options;
     (o.slice_style, o.slice_width, o.slice_height) = ("fixedSize".into(), 24.0, 16.0);
-    assert_eq!(draw(&mut app, [5.0, 5.0], [5.0, 5.0]), photocraft_geom::Rect::new(5, 5, 29, 21), "a click");
-    assert_eq!(draw(&mut app, [90.0, 70.0], [80.0, 60.0]), photocraft_geom::Rect::new(66, 54, 90, 70), "up and to the left");
+    assert_eq!(draw(&mut app, [5.0, 5.0], [5.0, 5.0]), lienzo_geom::Rect::new(5, 5, 29, 21), "a click");
+    assert_eq!(draw(&mut app, [90.0, 70.0], [80.0, 60.0]), lienzo_geom::Rect::new(66, 54, 90, 70), "up and to the left");
     // The preview while dragging shows the same rectangle the slice gets.
     pointer(&mut app, ToolEvent::Down { x: 40.0, y: 40.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Move { x: 41.0, y: 41.0, pressure: 1.0 }, m);
     let Some(SliceDrag::New { start, cur }) = app.ui.slices.drag.clone() else { panic!("drawing a slice") };
-    assert_eq!(new_rect(&app, start, cur), photocraft_geom::Rect::new(40, 40, 64, 56));
+    assert_eq!(new_rect(&app, start, cur), lienzo_geom::Rect::new(40, 40, 64, 56));
     pointer(&mut app, ToolEvent::Up { x: 41.0, y: 41.0 }, m);
     // A press inside a pixel starts the slice on that pixel, still 24 x 16 pixels.
-    assert_eq!(draw(&mut app, [10.25, 30.75], [12.5, 31.5]), photocraft_geom::Rect::new(10, 30, 34, 46), "a press inside a pixel");
-    assert_eq!(
-        draw(&mut app, [70.5, 70.5], [60.25, 60.25]),
-        photocraft_geom::Rect::new(47, 55, 71, 71),
-        "and towards the upper left, holding the pressed pixel"
-    );
+    assert_eq!(draw(&mut app, [10.25, 30.75], [12.5, 31.5]), lienzo_geom::Rect::new(10, 30, 34, 46), "a press inside a pixel");
+    assert_eq!(draw(&mut app, [70.5, 70.5], [60.25, 60.25]), lienzo_geom::Rect::new(47, 55, 71, 71), "and towards the upper left, holding the pressed pixel");
     // A short drag up and to the left inside the pressed pixel goes up and to the left.
-    assert_eq!(draw(&mut app, [50.75, 50.75], [50.25, 50.25]), photocraft_geom::Rect::new(27, 35, 51, 51), "up-left within the pixel");
+    assert_eq!(draw(&mut app, [50.75, 50.75], [50.25, 50.25]), lienzo_geom::Rect::new(27, 35, 51, 51), "up-left within the pixel");
     // A Fixed Size that isn't whole pixels (from a settings file) is rounded, not grown a pixel.
     let o = &mut app.ui.tool_options;
     (o.slice_width, o.slice_height) = (1.5, 2.4);
-    assert_eq!(draw(&mut app, [5.5, 5.5], [5.5, 5.5]), photocraft_geom::Rect::new(5, 5, 7, 7), "1.5 x 2.4 is 2 x 2");
+    assert_eq!(draw(&mut app, [5.5, 5.5], [5.5, 5.5]), lienzo_geom::Rect::new(5, 5, 7, 7), "1.5 x 2.4 is 2 x 2");
     // A size of a pixel or two is made too, not taken for a click that selects.
     let o = &mut app.ui.tool_options;
     (o.slice_width, o.slice_height) = (1.0, 2.0);
-    assert_eq!(draw(&mut app, [3.0, 3.0], [3.0, 3.0]), photocraft_geom::Rect::new(3, 3, 4, 5), "a 1 x 2 slice");
+    assert_eq!(draw(&mut app, [3.0, 3.0], [3.0, 3.0]), lienzo_geom::Rect::new(3, 3, 4, 5), "a 1 x 2 slice");
 }
 
 /// #8360: Fixed Ratio's longer side follows a fractional drag to the pixel and the shorter takes
@@ -173,16 +169,16 @@ fn options_bar_picks_the_slice_style() {
     app.sync_views();
     app.ui.tool = Tool::Slice;
     let mut h = Harness::builder().with_size(vec2(1400.0, 200.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::options_bar(app, ui);
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(4);
-    let fields = |h: &Harness<'static, PhotocraftApp>| {
+    let fields = |h: &Harness<'static, LienzoApp>| {
         h.query_all_by_role(Role::SpinButton)
             .filter(|n| !n.accesskit_node().is_disabled())
             .filter_map(|n| n.accesskit_node().numeric_value())
@@ -199,7 +195,7 @@ fn options_bar_picks_the_slice_style() {
     let (app, m) = (h.state_mut(), egui::Modifiers::NONE);
     pointer(app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 }, m);
     pointer(app, ToolEvent::Up { x: 10.0, y: 10.0 }, m);
-    assert_eq!(app.session.active().unwrap().doc.slices.list[0].rect, photocraft_geom::Rect::new(10, 10, 74, 74));
+    assert_eq!(app.session.active().unwrap().doc.slices.list[0].rect, lienzo_geom::Rect::new(10, 10, 74, 74));
 }
 
 #[test]
@@ -213,20 +209,20 @@ fn dragging_a_piece_moves_the_whole_covered_slice() {
     pointer(&mut app, ToolEvent::Down { x: 10.0, y: 50.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 15.0, y: 50.0 }, m);
     let doc = app.session.active().unwrap().doc.clone();
-    assert_eq!(doc.slices.list[0].rect, photocraft_geom::Rect::new(5, 0, 65, 60));
+    assert_eq!(doc.slices.list[0].rect, lienzo_geom::Rect::new(5, 0, 65, 60));
 }
 
 #[test]
 fn handles_resize_the_edges_they_hang_off() {
-    let r = photocraft_geom::Rect::new(10, 10, 40, 30);
+    let r = lienzo_geom::Rect::new(10, 10, 40, 30);
     assert_eq!(handle_at(r, [10.5, 9.0], 2.0), Some([-1, -1]));
     assert_eq!(handle_at(r, [25.0, 30.0], 2.0), Some([0, 1]));
     assert_eq!(handle_at(r, [40.0, 20.0], 2.0), Some([1, 0]));
     assert_eq!(handle_at(r, [25.0, 20.0], 2.0), None, "the middle is no handle");
-    assert_eq!(resized(r, [1, 0], 5, 9), photocraft_geom::Rect::new(10, 10, 45, 30), "the right edge only");
-    assert_eq!(resized(r, [-1, 1], -4, 6), photocraft_geom::Rect::new(6, 10, 40, 36));
-    assert_eq!(resized(r, [-1, 0], 50, 0), photocraft_geom::Rect::new(40, 10, 60, 30), "dragged past the other edge");
-    assert_eq!(resized(r, [1, 0], -30, 0), photocraft_geom::Rect::new(10, 10, 11, 30), "never empty");
+    assert_eq!(resized(r, [1, 0], 5, 9), lienzo_geom::Rect::new(10, 10, 45, 30), "the right edge only");
+    assert_eq!(resized(r, [-1, 1], -4, 6), lienzo_geom::Rect::new(6, 10, 40, 36));
+    assert_eq!(resized(r, [-1, 0], 50, 0), lienzo_geom::Rect::new(40, 10, 60, 30), "dragged past the other edge");
+    assert_eq!(resized(r, [1, 0], -30, 0), lienzo_geom::Rect::new(10, 10, 11, 30), "never empty");
 }
 
 /// #7863: with Slice Select, dragging a handle of the selected slice resizes it; the middle
@@ -239,31 +235,31 @@ fn slice_select_handles_resize_the_slice() {
     pointer(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 40.0, y: 30.0 }, m);
     app.ui.tool = Tool::SliceSelect;
-    let rect = |app: &PhotocraftApp| app.session.active().unwrap().doc.slices.list[0].rect;
+    let rect = |app: &LienzoApp| app.session.active().unwrap().doc.slices.list[0].rect;
     // The bottom-right corner.
     pointer(&mut app, ToolEvent::Down { x: 40.0, y: 30.0, pressure: 1.0 }, m);
     assert!(matches!(app.ui.slices.drag, Some(SliceDrag::Resize { handle: [1, 1], .. })));
     pointer(&mut app, ToolEvent::Move { x: 50.0, y: 45.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 50.0, y: 45.0 }, m);
-    assert_eq!(rect(&app), photocraft_geom::Rect::new(10, 10, 50, 45));
+    assert_eq!(rect(&app), lienzo_geom::Rect::new(10, 10, 50, 45));
     assert!(app.ui.slices.selected.is_some(), "still selected");
     // The left edge's middle.
     pointer(&mut app, ToolEvent::Down { x: 10.0, y: 27.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 4.0, y: 60.0 }, m);
-    assert_eq!(rect(&app), photocraft_geom::Rect::new(4, 10, 50, 45), "only the left edge moves");
+    assert_eq!(rect(&app), lienzo_geom::Rect::new(4, 10, 50, 45), "only the left edge moves");
     // Inside, away from the handles, it still moves.
     pointer(&mut app, ToolEvent::Down { x: 30.0, y: 20.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 32.0, y: 21.0 }, m);
-    assert_eq!(rect(&app), photocraft_geom::Rect::new(6, 11, 52, 46));
+    assert_eq!(rect(&app), lienzo_geom::Rect::new(6, 11, 52, 46));
     // Locked: the handle doesn't resize.
     app.run("view.lockSlices", json!({"on": true})).unwrap();
     pointer(&mut app, ToolEvent::Down { x: 52.0, y: 46.0, pressure: 1.0 }, m);
     pointer(&mut app, ToolEvent::Up { x: 70.0, y: 70.0 }, m);
-    assert_eq!(rect(&app), photocraft_geom::Rect::new(6, 11, 52, 46));
+    assert_eq!(rect(&app), lienzo_geom::Rect::new(6, 11, 52, 46));
 }
 
 /// Delete through the app's shortcut handling, as the canvas gets it.
-fn press(app: &mut PhotocraftApp, key: egui::Key) {
+fn press(app: &mut LienzoApp, key: egui::Key) {
     let ctx = egui::Context::default();
     let m = egui::Modifiers::NONE;
     let raw = egui::RawInput {

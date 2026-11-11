@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use photocraft_doc::{Adjustment, Layer, LayerContent, SmartContentsId, SmartSource};
+use lienzo_doc::{Adjustment, Layer, LayerContent, SmartContentsId, SmartSource};
 use serde_json::{Value, json};
 
 use crate::{DocState, Session};
@@ -31,7 +31,7 @@ pub fn document(d: &DocState) -> Value {
 }
 
 /// [`document`] plus every text run and paragraph run, anti-aliasing and the full serialized
-/// layer-effect settings, for format round-trip checks (`photocraft-cli info --detail`).
+/// layer-effect settings, for format round-trip checks (`lienzo-cli info --detail`).
 pub fn document_detail(d: &DocState) -> Value {
     document_with(d, true)
 }
@@ -83,7 +83,7 @@ pub fn layer(l: &Layer) -> Value {
 }
 
 /// [`layer`] plus every text run and paragraph run, anti-aliasing and the full serialized
-/// layer-effect settings, for format round-trip checks (`photocraft-cli info --detail`).
+/// layer-effect settings, for format round-trip checks (`lienzo-cli info --detail`).
 pub fn layer_detail(l: &Layer) -> Value {
     layer_sel(l, &[], &smart_instances(std::slice::from_ref(l)), None, true)
 }
@@ -105,9 +105,9 @@ fn smart_instances(layers: &[Layer]) -> HashMap<SmartContentsId, usize> {
 /// [`layer`] with a `selected` flag on every node (Layers panel multi-selection).
 fn layer_sel(
     l: &Layer,
-    selected: &[photocraft_doc::LayerId],
+    selected: &[lienzo_doc::LayerId],
     instances: &HashMap<SmartContentsId, usize>,
-    meta: Option<&photocraft_doc::Metadata>,
+    meta: Option<&lienzo_doc::Metadata>,
     detail: bool,
 ) -> Value {
     let bounds = l.surface().map(|s| {
@@ -164,7 +164,7 @@ fn layer_sel(
             // New Smart Object via Copy embeds its own copy of the file instead.
             v["smartSource"] = match &sm.source {
                 SmartSource::Embedded { file_name, .. } => json!({"kind": "embedded", "fileName": file_name}),
-                SmartSource::Linked { path } => match meta.and_then(|m| photocraft_io::linked::embedded_file_name(m, path)) {
+                SmartSource::Linked { path } => match meta.and_then(|m| lienzo_io::linked::embedded_file_name(m, path)) {
                     Some(name) => json!({"kind": "embedded", "fileName": name, "uuid": path}),
                     None => json!({"kind": "linked", "path": path}),
                 },
@@ -199,7 +199,7 @@ fn layer_sel(
             .ranges
             .iter()
             .enumerate()
-            .filter(|(_, r)| !r.iter().all(photocraft_doc::BlendRange::is_full))
+            .filter(|(_, r)| !r.iter().all(lienzo_doc::BlendRange::is_full))
             .map(|(i, [this, under])| json!({"channel": i, "thisLayer": this.to_bytes(), "underlying": under.to_bytes()}))
             .collect();
     }
@@ -216,8 +216,8 @@ fn layer_sel(
     // Video layer (Layer › Video Layers): the frame stack behind the displayed content.
     if let Some(vid) = &l.video {
         let source = match &vid.source {
-            photocraft_doc::VideoSource::Blank => Value::String("blank".into()),
-            photocraft_doc::VideoSource::File { path } => json!({ "file": path }),
+            lienzo_doc::VideoSource::Blank => Value::String("blank".into()),
+            lienzo_doc::VideoSource::File { path } => json!({ "file": path }),
         };
         v["video"] = json!({"frames": vid.frames.len(), "fps": vid.fps, "showAltered": vid.show_altered, "source": source});
     }
@@ -227,21 +227,21 @@ fn layer_sel(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
-    use photocraft_doc::{LayerMask, Path, VectorMask};
+    use lienzo_color::PixelFormat;
+    use lienzo_doc::{LayerMask, Path, VectorMask};
 
     #[test]
     fn layer_inspect_reports_text_runs_and_full_effect_data() {
-        let text = photocraft_doc::TextLayer {
+        let text = lienzo_doc::TextLayer {
             text: "Hi".into(),
             font_family: "Fixture Sans".into(),
             size_pt: 18.0,
-            antialias: photocraft_doc::text::AntiAlias::Crisp,
+            antialias: lienzo_doc::text::AntiAlias::Crisp,
             ..Default::default()
         };
         let mut lyr = Layer::new("Styled text", LayerContent::Text(text));
         lyr.effects.enabled = true;
-        lyr.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        lyr.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
 
         let plain = layer(&lyr);
         for key in ["antialias", "runs", "paragraphs"] {
@@ -254,7 +254,7 @@ mod tests {
         assert_eq!(text_json["text"], "Hi");
         assert_eq!(text_json["font"], "Fixture Sans");
         assert_eq!(text_json["sizePt"], 18.0);
-        assert_eq!(text_json["antialias"], serde_json::to_value(photocraft_doc::text::AntiAlias::Crisp).unwrap());
+        assert_eq!(text_json["antialias"], serde_json::to_value(lienzo_doc::text::AntiAlias::Crisp).unwrap());
         assert_eq!(
             text_json["runs"],
             serde_json::to_value(match &lyr.content {
@@ -293,12 +293,12 @@ mod tests {
             LayerContent::Adjustment(a) => a.clone(),
             c => panic!("{c:?}"),
         };
-        let back = crate::adjust_params::from_params("levels", &adj["params"], None, photocraft_color::ColorMode::Rgb).unwrap();
+        let back = crate::adjust_params::from_params("levels", &adj["params"], None, lienzo_color::ColorMode::Rgb).unwrap();
         assert_eq!(crate::adjust_params::to_params(&back), crate::adjust_params::to_params(&model));
         assert!(!adj.to_string().contains('_'), "{adj}");
     }
 
-    /// #6541: an adjustment PhotoCraft keeps but cannot render is reported as such, not as an Invert.
+    /// #6541: an adjustment Lienzo keeps but cannot render is reported as such, not as an Invert.
     #[test]
     fn an_unsupported_adjustment_layer_is_reported_as_kept_not_rendered() {
         let mut s = Session::new();

@@ -1,5 +1,5 @@
 //! Develop's per-pixel stages resolved for one image: every constant and table they use, so
-//! another implementation of them (the GPU preview, `photocraft_gpu::CameraRawDevelop`) runs the
+//! another implementation of them (the GPU preview, `lienzo_gpu::CameraRawDevelop`) runs the
 //! same maths. [`develop`](super::develop) builds its own constants with the same functions.
 
 use super::{CameraRaw, Encoding, Wheel, curve_lut, hsv_to_rgb, is_linear, luma, parametric_lut, white_balance_gains, whites_blacks};

@@ -9,11 +9,11 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use photocraft_doc::{DocId, Document, Fill, LayerContent, LayerId};
-use photocraft_engine::pattern_fill_cmds as cmds;
+use lienzo_doc::{DocId, Document, Fill, LayerContent, LayerId};
+use lienzo_engine::pattern_fill_cmds as cmds;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 const MARK: &str = "__patternFill";
@@ -56,7 +56,7 @@ fn fields(command: &str, target: Value, values: Value) -> Map<String, Value> {
 }
 
 /// Edit the active Pattern Fill layer (its thumbnail, Layer › Layer Content Options…).
-pub(crate) fn open(app: &mut PhotocraftApp) -> Option<u64> {
+pub(crate) fn open(app: &mut LienzoApp) -> Option<u64> {
     let st = app.session.active()?;
     let layer = st.active_layer?;
     let LayerContent::Fill(Fill::Pattern { scale, id, angle, link, phase, .. }) = &st.doc.layer(layer)?.content else { return None };
@@ -67,12 +67,12 @@ pub(crate) fn open(app: &mut PhotocraftApp) -> Option<u64> {
 
 /// Layer › New Fill Layer › Pattern…: the dialog in front of creating the layer, starting from
 /// the Patterns panel's pattern at 100 %, 0° and linked, as in Photoshop.
-pub(crate) fn open_new(app: &mut PhotocraftApp) -> Result<u64, String> {
-    if let Some(Err(why)) = photocraft_engine::commands::find(cmds::CREATE).map(|c| (c.enabled)(&app.session)) {
+pub(crate) fn open_new(app: &mut LienzoApp) -> Result<u64, String> {
+    if let Some(Err(why)) = lienzo_engine::commands::find(cmds::CREATE).map(|c| (c.enabled)(&app.session)) {
         return Err(why);
     }
     let st = app.session.active().ok_or("no document open")?;
-    let pattern = photocraft_engine::pattern_cmds::resolve_id(&app.session, "").ok_or("no patterns")?;
+    let pattern = lienzo_engine::pattern_cmds::resolve_id(&app.session, "").ok_or("no patterns")?;
     let values = json!({"pattern": pattern, "scale": 100.0, "angle": 0.0, "link": true, "phase": [0.0, 0.0]});
     let mut f = fields(cmds::CREATE, json!({"document": st.doc.id.0}), values);
     // The command inserts above the active layer. Its id is frozen here (null with none, which
@@ -82,7 +82,7 @@ pub(crate) fn open_new(app: &mut PhotocraftApp) -> Result<u64, String> {
 }
 
 /// The command and its params: the target plus the dialog's values.
-fn command(app: &PhotocraftApp, f: &Map<String, Value>) -> Option<(&'static str, Value)> {
+fn command(app: &LienzoApp, f: &Map<String, Value>) -> Option<(&'static str, Value)> {
     let cmd = match f.get("__command").and_then(Value::as_str)? {
         cmds::SET => cmds::SET,
         cmds::CREATE => cmds::CREATE,
@@ -114,7 +114,7 @@ fn unchanged(f: &Map<String, Value>) -> bool {
 }
 
 /// The document the dialog targets, if it is still the active one.
-fn target_is_active(app: &PhotocraftApp, f: &Map<String, Value>) -> bool {
+fn target_is_active(app: &LienzoApp, f: &Map<String, Value>) -> bool {
     let target = f.get("__params").and_then(|p| p.get("document")).and_then(Value::as_u64);
     app.session.active().is_some_and(|st| target == Some(st.doc.id.0))
 }
@@ -135,7 +135,7 @@ fn finite_pair(v: Option<&Value>) -> Option<[f64; 2]> {
 }
 
 /// A new fill inserts above this active layer, frozen when the dialog opened.
-fn insertion_unchanged(app: &PhotocraftApp, f: &Map<String, Value>) -> bool {
+fn insertion_unchanged(app: &LienzoApp, f: &Map<String, Value>) -> bool {
     let Some(st) = app.session.active() else { return false };
     let Some(stored) = f.get(INSERT_KEY) else { return false };
     let frozen = match stored {
@@ -154,7 +154,7 @@ fn is_create(f: &Map<String, Value>) -> bool {
 }
 
 /// The dialog's target document and insertion layer are still the ones it opened on.
-fn context_ok(app: &PhotocraftApp, f: &Map<String, Value>) -> bool {
+fn context_ok(app: &LienzoApp, f: &Map<String, Value>) -> bool {
     target_is_active(app, f) && (!is_create(f) || insertion_unchanged(app, f))
 }
 
@@ -211,7 +211,7 @@ pub(crate) fn drag_owner(f: &Map<String, Value>) -> Option<Option<u64>> {
 /// Pattern Fill and is not pixel-locked, directly or through a group. A new fill needs no existing
 /// fill layer; it may be inserted above a locked one, as the command allows, but its insertion
 /// layer must still be the one the dialog opened on.
-pub(crate) fn drag_target(app: &PhotocraftApp, f: &Map<String, Value>) -> Option<DragTarget> {
+pub(crate) fn drag_target(app: &LienzoApp, f: &Map<String, Value>) -> Option<DragTarget> {
     let command = match f.get("__command").and_then(Value::as_str)? {
         cmds::SET => cmds::SET,
         cmds::CREATE => cmds::CREATE,
@@ -451,7 +451,7 @@ pub(crate) fn release_phase_drag(f: &mut Map<String, Value>, delta: [f64; 2], ta
 }
 
 /// OK: one engine command. A stale document or insertion layer never receives the edit.
-pub(crate) fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub(crate) fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     if !target_is_active(app, f) {
         return Err("the target document is no longer active".into());
     }
@@ -466,7 +466,7 @@ pub(crate) fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result
 }
 
 /// The canvas preview while the dialog is open: the document as OK would leave it.
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let dialog = app.ui.dialogs.iter().rev().find(|d| owns(&d.fields));
     let Some(d) = dialog else {
         app.pattern_fill_preview = None;
@@ -493,7 +493,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     (st.doc.id.0, st.revision, d.id, params.to_string()).hash(&mut hash);
     let key = (1 << 47) | (hash.finish() & ((1 << 36) - 1));
     let (document, revision, dialog) = (st.doc.id, st.revision, d.id);
-    let shown = Arc::new(photocraft_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
+    let shown = Arc::new(lienzo_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
     app.pattern_fill_preview = Some(Preview { document, revision, dialog, params, shown: shown.clone(), key });
     Some((shown, key))
 }
@@ -504,7 +504,7 @@ fn num(f: &Map<String, Value>, k: &str, d: f64) -> f32 {
 
 /// The dialog body, in Photoshop's layout: the pattern with Snap to Origin beside it, then
 /// Angle, Scale and Link with Layer.
-pub(crate) fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(crate) fn body(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.spacing_mut().item_spacing.y = 6.0;
     ui.horizontal(|ui| {
         let pat = f.get("pattern").and_then(Value::as_str).unwrap_or_default().to_string();

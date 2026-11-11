@@ -1,4 +1,4 @@
-//! Adjustment parameters (data only). Evaluation lives in `photocraft-compose`.
+//! Adjustment parameters (data only). Evaluation lives in `lienzo-compose`.
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -279,7 +279,7 @@ pub enum Adjustment {
         #[serde(default)]
         dither: bool,
         /// The LUT file `lut` was read from, embedded unchanged on PSD save as Photoshop does.
-        /// None for a table made in PhotoCraft (a built-in look); a save also ignores it when
+        /// None for a table made in Lienzo (a built-in look); a save also ignores it when
         /// it no longer parses to `lut`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         source: Option<LutSource>,

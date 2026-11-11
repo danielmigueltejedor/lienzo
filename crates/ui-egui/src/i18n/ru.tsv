@@ -4112,7 +4112,7 @@ smartSvg	AI/PDF/EPS contents will be edited as SVG. Saving replaces the embedded
 	Multiple Flames Path Directions	Несколько языков пламени по направлениям контура
 	Multiple Flames Various Length	Несколько языков пламени разной длины
 	My Brushes	Мои кисти
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Перетаскивание файлов ещё не поддерживается в Wayland. Используйте «Файл › Открыть» или запустите Lienzo под XWayland с `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Перетаскивание файлов ещё не поддерживается в Wayland. Используйте «Файл › Открыть» или запустите Lienzo под XWayland с `WAYLAND_DISPLAY= lienzo`.
 	Nearest	Ближайший
 	Neon Glow	Неоновое свечение
 	Neutralize	Нейтрализовать

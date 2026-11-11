@@ -3,15 +3,15 @@
 //! ⌥ conversion and the Curvature Pen's double-click keep their names.
 
 use egui::Modifiers;
-use photocraft_doc::LayerContent;
+use lienzo_doc::LayerContent;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -19,7 +19,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// A square work path; knot 1 at (120, 40) is smooth with handles at (100, 40) and (140, 40).
-fn with_path(app: &mut PhotocraftApp) {
+fn with_path(app: &mut LienzoApp) {
     let path = json!({"subpaths": [{"closed": true, "knots": [
         [40, 40],
         {"anchor": [120, 40], "in": [100, 40], "out": [140, 40], "smooth": true},
@@ -29,22 +29,22 @@ fn with_path(app: &mut PhotocraftApp) {
     app.run("path.set", json!({"name": "work", "path": path})).unwrap();
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, mods);
 }
 
-fn click(app: &mut PhotocraftApp, at: [f64; 2], mods: Modifiers) {
+fn click(app: &mut LienzoApp, at: [f64; 2], mods: Modifiers) {
     drag(app, at, at, mods);
 }
 
-fn names(app: &PhotocraftApp) -> Vec<String> {
+fn names(app: &LienzoApp) -> Vec<String> {
     app.session.active().unwrap().history.entries()
 }
 
 /// Runs `gesture` and returns the History steps it added.
-fn added(app: &mut PhotocraftApp, gesture: impl FnOnce(&mut PhotocraftApp)) -> Vec<String> {
+fn added(app: &mut LienzoApp, gesture: impl FnOnce(&mut LienzoApp)) -> Vec<String> {
     let n = names(app).len();
     gesture(app);
     names(app).split_off(n)
@@ -52,7 +52,7 @@ fn added(app: &mut PhotocraftApp, gesture: impl FnOnce(&mut PhotocraftApp)) -> V
 
 /// `tool` with the smooth anchor selected so its handles show: a ⌘-click, Direct Selection in
 /// each of these tools (a selection made with another tool is dropped when the Pen is taken).
-fn with_shown_handles(tool: Tool) -> PhotocraftApp {
+fn with_shown_handles(tool: Tool) -> LienzoApp {
     let mut app = app(tool);
     with_path(&mut app);
     click(&mut app, [120.0, 40.0], Modifiers::COMMAND);
@@ -85,7 +85,7 @@ fn convert_point_handle_drags_are_corner_drag() {
         let mut app = with_shown_handles(Tool::ConvertPoint);
         assert_eq!(added(&mut app, |a| drag(a, [140.0, 40.0], [140.0, 70.0], mods)), one, "{mods:?}");
         let k = app.session.active().unwrap().doc.work_path.clone().unwrap().subpaths[0].knots[1];
-        assert!(!k.smooth && k.in_ctrl == photocraft_geom::Point::new(100.0, 40.0), "the handle moved alone: {k:?}");
+        assert!(!k.smooth && k.in_ctrl == lienzo_geom::Point::new(100.0, 40.0), "the handle moved alone: {k:?}");
         let click_anchor = added(&mut app, |a| click(a, [120.0, 40.0], Modifiers::NONE));
         assert_eq!(click_anchor, ["Change Anchor Point"], "click on an anchor with broken handles");
     }
@@ -95,7 +95,7 @@ fn convert_point_handle_drags_are_corner_drag() {
 fn convert_point_names_steps_on_a_live_rectangle_and_on_vector_masks() {
     let mut app = app(Tool::ConvertPoint);
     let id = app.run("shape.create", json!({"kind": "rect", "rect": [20, 20, 60, 60], "fill": "#3070c0"})).unwrap()["layer"].as_u64().unwrap();
-    let live = |app: &PhotocraftApp| match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
+    let live = |app: &LienzoApp| match &app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().content {
         LayerContent::Shape(sh) => sh.live.is_some(),
         _ => panic!("not a shape layer"),
     };
@@ -111,7 +111,7 @@ fn convert_point_names_steps_on_a_live_rectangle_and_on_vector_masks() {
     assert_ne!(mask_corner(&masked), before, "the mask was edited");
 }
 
-fn app_with_mask() -> PhotocraftApp {
+fn app_with_mask() -> LienzoApp {
     let mut app = app(Tool::ConvertPoint);
     app.run("layer.new.layer", json!({})).unwrap();
     let id = app.session.active().unwrap().active_layer.unwrap().0;
@@ -121,7 +121,7 @@ fn app_with_mask() -> PhotocraftApp {
     app
 }
 
-fn mask_corner(app: &PhotocraftApp) -> photocraft_doc::Knot {
+fn mask_corner(app: &LienzoApp) -> lienzo_doc::Knot {
     let st = app.session.active().unwrap();
     st.active_layer.and_then(|id| st.doc.layer(id)).unwrap().vector_mask.as_ref().unwrap().path.subpaths[0].knots[0]
 }

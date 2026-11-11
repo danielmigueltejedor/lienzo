@@ -1,7 +1,7 @@
 //! #11798: with W and H empty, a Perspective Crop takes the size of the rectangle the quad shows
 //! in perspective. The expected sizes are the reference application's measurements from the issue.
 
-use photocraft_algo::transform::{convex_quad, quad_free_size};
+use lienzo_algo::transform::{convex_quad, quad_free_size};
 use serde_json::{Value, json};
 
 use crate::Session;

@@ -11,7 +11,7 @@
 //! With `"mask":"filter"` the same view shows a smart object's filter mask (⌥-click the filter
 //! mask thumbnail on its Smart Filters row), and painting while it's shown paints that mask.
 
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -43,12 +43,12 @@ pub struct LayerMaskView {
 }
 
 /// The mask a view of `l` shows: its layer mask, or (`filter`) its smart filter mask.
-pub fn viewed_mask(l: &photocraft_doc::Layer, filter: bool) -> Option<&photocraft_doc::LayerMask> {
+pub fn viewed_mask(l: &lienzo_doc::Layer, filter: bool) -> Option<&lienzo_doc::LayerMask> {
     if !filter {
         return l.mask.as_ref();
     }
     match &l.content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.filter_mask.as_ref(),
+        lienzo_doc::LayerContent::Smart(sm) => sm.filter_mask.as_ref(),
         _ => None,
     }
 }
@@ -146,7 +146,7 @@ fn set_view(s: &mut Session, p: &Value) -> Result<Value> {
         if clean {
             st.saved_revision = st.revision;
         }
-        st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+        st.last_damage = Some(lienzo_geom::Rect::EMPTY);
     }
     let v = current(st);
     Ok(json!({"layer": layer.0, "mode": mode_name(v.filter(|v| v.layer == layer && v.filter == filter)), "mask": if filter { "filter" } else { "layer" }}))

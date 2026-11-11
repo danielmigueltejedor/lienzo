@@ -320,7 +320,7 @@ impl Compositor {
         }
         let format = surface.format();
         let kind = TexKind::for_surface(key.1, format);
-        let cmyk = if format.mode == photocraft_color::ColorMode::Cmyk { self.cmyk } else { 0 };
+        let cmyk = if format.mode == lienzo_color::ColorMode::Cmyk { self.cmyk } else { 0 };
         let default_pixel = surface.default_pixel();
         let default_bits: Vec<u32> = default_pixel.iter().map(|v| v.to_bits()).collect();
         let stale = self
@@ -482,7 +482,7 @@ impl Compositor {
             return cached.texture.view.clone();
         }
         let (w, h) = (pat.width, pat.height);
-        let px = photocraft_compose::pattern::pattern_rgba(pat, mode);
+        let px = lienzo_compose::pattern::pattern_rgba(pat, mode);
         let bytes: Vec<u8> = px.iter().flat_map(|q| [q[0] * q[3], q[1] * q[3], q[2] * q[3], q[3]]).flat_map(f32::to_le_bytes).collect();
         let t = Tex::new(device, "pc_pattern", w, h, wgpu::TextureFormat::Rgba32Float, wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
         queue.write_texture(

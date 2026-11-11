@@ -4,15 +4,15 @@ use super::params::{
     BUTTONS, KEY_MODIFIERS, MAX_CLICKS, MAX_SCREEN_POINT, POINTER_MODIFIERS, UI_SET_FIELDS, bool_field, err, f32_field, f32_range, input_choice,
     input_modifiers, input_number, input_object, merged_object, modifiers_from, num_field, ok, screen_point, uint_field, whole_object,
 };
-use super::{ControlRequest, DialogKind, Outcome, PhotocraftApp, SHELL_DIALOG, Tool, ToolEvent, Value, json, run_waiting, tool_event, wrap};
-use photocraft_engine::jobs::{CancelReport, JobId};
+use super::{ControlRequest, DialogKind, LienzoApp, Outcome, SHELL_DIALOG, Tool, ToolEvent, Value, json, run_waiting, tool_event, wrap};
+use lienzo_engine::jobs::{CancelReport, JobId};
 
 /// A domain handler: `Some` when it owns the request's method, `None` to let the next one try.
-type Handler = fn(&mut PhotocraftApp, &egui::Context, &ControlRequest) -> Option<Outcome>;
+type Handler = fn(&mut LienzoApp, &egui::Context, &ControlRequest) -> Option<Outcome>;
 
-pub(super) fn dispatch(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+pub(super) fn dispatch(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
     const HANDLERS: [Handler; 5] = [engine_methods, shell_methods, dialog_methods, input_methods, app_methods];
-    HANDLERS.iter().find_map(|handler| handler(app, ctx, req)).unwrap_or_else(|| err(photocraft_engine::command_hints::unknown_method(&req.method, METHODS)))
+    HANDLERS.iter().find_map(|handler| handler(app, ctx, req)).unwrap_or_else(|| err(lienzo_engine::command_hints::unknown_method(&req.method, METHODS)))
 }
 
 fn str_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
@@ -29,7 +29,7 @@ fn wait_param(p: &Value) -> bool {
 
 // ---- engine commands, menus and jobs ----
 
-fn engine_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
+fn engine_methods(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
     Some(match req.method.as_str() {
         "ui.context.choose" => context_choose(app, ctx, &req.params),
         "engine.execute" | "ui.menu.invoke" => execute_command(app, ctx, req),
@@ -50,7 +50,7 @@ fn engine_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlReq
     })
 }
 
-fn context_choose(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn context_choose(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     let Some(id) = str_param(p, "id") else { return err("missing `id`") };
     if app.ui.canvas_tool_menu.is_none() && app.ui.brush_mode_menu.is_some() {
         return mode_menu_choose(app, ctx, id);
@@ -71,7 +71,7 @@ fn context_choose(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Ou
 }
 
 /// A row of the painting tools' Shift+right-click menu, by its English label (`brushModeMenu.choices`).
-fn mode_menu_choose(app: &mut PhotocraftApp, ctx: &egui::Context, label: &str) -> Outcome {
+fn mode_menu_choose(app: &mut LienzoApp, ctx: &egui::Context, label: &str) -> Outcome {
     let item = match crate::brush_mode_menu::find(app, label) {
         Ok(item) => item,
         Err(e) => return err(e),
@@ -87,11 +87,11 @@ fn mode_menu_choose(app: &mut PhotocraftApp, ctx: &egui::Context, label: &str) -
 }
 
 /// `engine.execute` and `ui.menu.invoke`: run command `command` (or `id`) with `params`, as the menu would or, for `engine.execute`, directly.
-fn execute_command(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+fn execute_command(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
     let p = &req.params;
     let Some(id) = str_param(p, "command").or(str_param(p, "id")) else { return err("missing `command`") };
-    if req.method == "engine.execute" && METHODS.contains(&id) && photocraft_engine::commands::find(id).is_none() {
-        return err(photocraft_engine::command_hints::protocol_method_as_command(id));
+    if req.method == "engine.execute" && METHODS.contains(&id) && lienzo_engine::commands::find(id).is_none() {
+        return err(lienzo_engine::command_hints::protocol_method_as_command(id));
     }
     let params = p.get("params").cloned().unwrap_or(json!({}));
     let wait = wait_param(p);
@@ -116,7 +116,7 @@ fn execute_command(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRe
     // `engine.execute` is programmatic: engine commands run directly with their default
     // params and never open a dialog (an agent would otherwise get a modal instead of a
     // result). `ui.menu.invoke` behaves like a menu click, so it may open the dialog.
-    if req.method == "engine.execute" && photocraft_engine::commands::find(id).is_some() {
+    if req.method == "engine.execute" && lienzo_engine::commands::find(id).is_some() {
         return run_waiting(app, wait, |app| {
             // These bypass `menus::invoke`: a Type box drag in progress applies its box first.
             crate::type_box_preview::end_drag(app);
@@ -129,7 +129,7 @@ fn execute_command(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRe
     run_waiting(app, wait, |app| crate::menus::invoke(app, ctx, id, params))
 }
 
-fn jobs_cancel(app: &mut PhotocraftApp, p: &Value) -> Outcome {
+fn jobs_cancel(app: &mut LienzoApp, p: &Value) -> Outcome {
     let all = p.get("job").is_none_or(Value::is_null);
     match p.get("job").and_then(Value::as_u64) {
         // Same reply as the engine's `jobs.cancel`: `{cancelled: n}`, plus `notCancelled:
@@ -144,7 +144,7 @@ fn jobs_cancel(app: &mut PhotocraftApp, p: &Value) -> Outcome {
     }
 }
 
-fn cancel_each(app: &mut PhotocraftApp, ids: Vec<JobId>) -> CancelReport {
+fn cancel_each(app: &mut LienzoApp, ids: Vec<JobId>) -> CancelReport {
     let mut report = CancelReport::default();
     for id in ids {
         match crate::jobs_ui::try_cancel(app, id) {
@@ -157,7 +157,7 @@ fn cancel_each(app: &mut PhotocraftApp, ids: Vec<JobId>) -> CancelReport {
 
 // ---- the shell: view state, windows, GPU, focus, screenshots ----
 
-fn shell_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
+fn shell_methods(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
     let p = &req.params;
     Some(match req.method.as_str() {
         "ui.set" => ui_set(app, ctx, p),
@@ -193,7 +193,7 @@ fn shell_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequ
     })
 }
 
-fn simulate_gpu_loss(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn simulate_gpu_loss(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     if p.get("destroy").and_then(Value::as_bool).unwrap_or(false) {
         let destroyed = app.destroy_window_device();
         ctx.request_repaint();
@@ -201,9 +201,9 @@ fn simulate_gpu_loss(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) ->
     }
     let error = p.get("error").and_then(Value::as_bool).unwrap_or(false);
     let fault = if error {
-        photocraft_gpu::Fault::Error("simulated error (ui.gpu.simulateLoss)".into())
+        lienzo_gpu::Fault::Error("simulated error (ui.gpu.simulateLoss)".into())
     } else {
-        photocraft_gpu::Fault::Lost("simulated (ui.gpu.simulateLoss)".into())
+        lienzo_gpu::Fault::Lost("simulated (ui.gpu.simulateLoss)".into())
     };
     let active = match app.gpu_health() {
         Some(h) => {
@@ -217,7 +217,7 @@ fn simulate_gpu_loss(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) ->
     ok(json!({"wasActive": active, "gpuInfo": app.perf.gpu_info}))
 }
 
-fn screenshot(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn screenshot(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     let parsed =
         input_object(p, None, &["path", "focus"]).and_then(|p| Ok((input_choice(&p, "path", "path", &[])?.map(str::to_string), bool_field(&p, "focus")?)));
     let (path, focus) = match parsed {
@@ -228,7 +228,7 @@ fn screenshot(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcom
     if focus.unwrap_or(true) {
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
     }
-    // The capture itself is admitted by `PhotocraftApp::drain_control` (budget and
+    // The capture itself is admitted by `LienzoApp::drain_control` (budget and
     // geometry) and issued from a later `App::ui` pass once open/close animations
     // (modals, popups) have settled (see `screenshot.rs`).
     let token = app.ui.alloc_id();
@@ -238,7 +238,7 @@ fn screenshot(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcom
 
 // ---- ui.set: every field is validated and materialized into a `UiSet` before the first one is applied ----
 
-fn ui_set(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn ui_set(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     if let Some(field) = p.as_object().and_then(|o| o.keys().find(|k| !UI_SET_FIELDS.contains(&k.as_str()))) {
         return err(format!("unknown field `{field}` (fields: {})", UI_SET_FIELDS.join(", ")));
     }
@@ -259,7 +259,7 @@ struct UiSet {
 }
 
 impl UiSet {
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         let tools = ToolSet::parse(app, p)?;
         let crop = CropSet::parse(app, p)?;
         let panels = PanelSet::parse(app, p)?;
@@ -273,7 +273,7 @@ impl UiSet {
     }
 
     /// Apply (nothing but the final `brushSize` command can fail).
-    fn apply(mut self, app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> std::result::Result<Value, String> {
+    fn apply(mut self, app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> std::result::Result<Value, String> {
         // All fields are validated. Select the requested frame thumbnail before applying the
         // remaining view state, so a denied selection leaves the other fields intact.
         self.tools.select_frame_target(app)?;
@@ -305,8 +305,8 @@ fn theme_param(p: &Value) -> std::result::Result<Option<crate::theme::ThemeKind>
 // -- tools: stroke, tool, gradient, eyedropper, Content-Aware Move, tile grid, layer filter --
 
 struct ToolSet {
-    gradient_blend: Option<photocraft_color::BlendMode>,
-    shape_stroke: Option<Option<photocraft_doc::ShapeStroke>>,
+    gradient_blend: Option<lienzo_color::BlendMode>,
+    shape_stroke: Option<Option<lienzo_doc::ShapeStroke>>,
     frame_shape: Option<String>,
     frame_sides: Option<u32>,
     frame_target: Option<crate::frame_tool::Target>,
@@ -326,7 +326,7 @@ struct ToolSet {
 
 impl ToolSet {
     /// Validate the complete tool patch before applying any field; omitted settings are retained.
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         Ok(Self {
             gradient_blend: gradient_blend_param(p)?,
             shape_stroke: shape_stroke_param(app, p)?,
@@ -351,7 +351,7 @@ impl ToolSet {
         })
     }
 
-    fn select_frame_target(&self, app: &mut PhotocraftApp) -> std::result::Result<(), String> {
+    fn select_frame_target(&self, app: &mut LienzoApp) -> std::result::Result<(), String> {
         let Some(target) = self.frame_target else { return Ok(()) };
         if let Some(id) = crate::frame_tool::selected(app).map(|l| l.id) {
             crate::frame_tool::select_result(app, id, target)?;
@@ -363,7 +363,7 @@ impl ToolSet {
     }
 
     /// Apply a validated patch, selecting the tool before its per-tool settings.
-    fn apply(self, app: &mut PhotocraftApp) {
+    fn apply(self, app: &mut LienzoApp) {
         if let Some(shape) = &self.frame_shape {
             app.ui.frame_tool.ellipse = shape == "ellipse";
             app.ui.frame_tool.shape.clone_from(shape);
@@ -415,7 +415,7 @@ impl ToolSet {
         }
     }
 
-    fn apply_gradient_and_trace(&self, app: &mut PhotocraftApp) {
+    fn apply_gradient_and_trace(&self, app: &mut LienzoApp) {
         let gradient_before = app.ui.tool_options.clone();
         if let Some(mode) = self.gradient_blend {
             app.ui.tool_options.gradient_blend_mode = mode;
@@ -473,16 +473,16 @@ fn pen_path_op_param(p: &Value) -> std::result::Result<Option<String>, String> {
         .ok_or_else(|| "penPathOp must be one of newLayer, combine, subtract, intersect, exclude".to_string())
 }
 
-fn gradient_blend_param(p: &Value) -> std::result::Result<Option<photocraft_color::BlendMode>, String> {
+fn gradient_blend_param(p: &Value) -> std::result::Result<Option<lienzo_color::BlendMode>, String> {
     let Some(value) = p.get("gradientBlendMode") else { return Ok(None) };
     let Some(name) = value.as_str() else { return Err("gradientBlendMode must be a blend mode name".into()) };
-    photocraft_engine::commands::blend_from_str(name)
-        .filter(|m| photocraft_color::BlendMode::LAYER_MODES.contains(m))
+    lienzo_engine::commands::blend_from_str(name)
+        .filter(|m| lienzo_color::BlendMode::LAYER_MODES.contains(m))
         .map(Some)
         .ok_or_else(|| format!("unknown gradient blend mode `{name}`"))
 }
 
-fn shape_stroke_param(app: &PhotocraftApp, p: &Value) -> std::result::Result<Option<Option<photocraft_doc::ShapeStroke>>, String> {
+fn shape_stroke_param(app: &LienzoApp, p: &Value) -> std::result::Result<Option<Option<lienzo_doc::ShapeStroke>>, String> {
     let Some(v) = p.get("shapeStroke") else { return Ok(None) };
     if let Some(object) = v.as_object() {
         let keys = ["width", "opacity", "align", "cap", "join", "miterLimit", "dashes", "dashOffset"];
@@ -491,8 +491,8 @@ fn shape_stroke_param(app: &PhotocraftApp, p: &Value) -> std::result::Result<Opt
         }
     }
     let o = &app.ui.tool_options;
-    let base = o.shape_stroke.stroke(o.stroke_width, photocraft_doc::Fill::Solid(photocraft_doc::Color::BLACK));
-    Ok(Some(photocraft_engine::vector_cmds::parse_stroke(v, Some(base), photocraft_doc::Color::BLACK)?))
+    let base = o.shape_stroke.stroke(o.stroke_width, lienzo_doc::Fill::Solid(lienzo_doc::Color::BLACK));
+    Ok(Some(lienzo_engine::vector_cmds::parse_stroke(v, Some(base), lienzo_doc::Color::BLACK)?))
 }
 
 fn tool_param(p: &Value) -> std::result::Result<Option<Tool>, String> {
@@ -520,14 +520,14 @@ fn stroke_trace_param(p: &Value) -> std::result::Result<Option<&'static str>, St
 
 fn eyedropper_size_param(p: &Value) -> std::result::Result<Option<u32>, String> {
     let Some(v) = p.get("eyedropperSampleSize") else { return Ok(None) };
-    photocraft_engine::sample_cmds::size_param("ui.set", &json!({"size": v}))
+    lienzo_engine::sample_cmds::size_param("ui.set", &json!({"size": v}))
         .map(Some)
-        .map_err(|_| format!("eyedropperSampleSize must be \"point\" or one of {:?}", photocraft_engine::sample_cmds::SAMPLE_SIZES))
+        .map_err(|_| format!("eyedropperSampleSize must be \"point\" or one of {:?}", lienzo_engine::sample_cmds::SAMPLE_SIZES))
 }
 
 fn eyedropper_sample_param(p: &Value) -> std::result::Result<Option<String>, String> {
     let Some(v) = p.get("eyedropperSample") else { return Ok(None) };
-    let ids: Vec<&str> = photocraft_engine::sample_cmds::SampleLayers::ALL.iter().map(|(_, n)| *n).collect();
+    let ids: Vec<&str> = lienzo_engine::sample_cmds::SampleLayers::ALL.iter().map(|(_, n)| *n).collect();
     let id = v.as_str().filter(|id| ids.contains(id)).ok_or_else(|| format!("eyedropperSample must be one of {}", ids.join(", ")))?;
     Ok(Some(id.to_string()))
 }
@@ -543,7 +543,7 @@ struct CropSet {
 }
 
 impl CropSet {
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         // The Crop tool's overlay menu (#1919).
         let overlay = crop_overlay_param(p)?;
         let overlay_show = crop_overlay_show_param(p)?;
@@ -559,7 +559,7 @@ impl CropSet {
         Ok(Self { overlay, overlay_show, orientation, content_aware, shield })
     }
 
-    fn apply(self, app: &mut PhotocraftApp) {
+    fn apply(self, app: &mut LienzoApp) {
         let o = &mut app.ui.tool_options;
         if let Some(k) = self.overlay {
             o.crop_overlay = k;
@@ -615,7 +615,7 @@ fn crop_fill_param(p: &Value) -> std::result::Result<Option<bool>, String> {
 
 /// The `panels` patch with its `task_bar` merged into the bar's current place, so `{"at": [x, y]}`
 /// keeps a pin and `{"pinned": true}` keeps a dragged position (#10890).
-fn panels_patch(app: &PhotocraftApp, patch: Option<&Value>) -> std::result::Result<Option<Value>, String> {
+fn panels_patch(app: &LienzoApp, patch: Option<&Value>) -> std::result::Result<Option<Value>, String> {
     let Some(mut patch) = patch.cloned() else { return Ok(None) };
     // Saved panels read an unknown side as the default; a control request is still refused.
     if let Some(side) = patch.get("toolbar_side") {
@@ -647,7 +647,7 @@ struct PanelSet {
 }
 
 impl PanelSet {
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         Ok(Self {
             // The Histogram panel: its options, the dragged tonal range ([from, to] levels or
             // null) and Uncached Refresh.
@@ -669,7 +669,7 @@ impl PanelSet {
     }
 
     /// Everything that precedes the theme.
-    fn apply_options(&mut self, app: &mut PhotocraftApp) {
+    fn apply_options(&mut self, app: &mut LienzoApp) {
         self.apply_histogram(app);
         if let Some(v) = self.panels.take() {
             app.ui.panels = v;
@@ -681,7 +681,7 @@ impl PanelSet {
         }
     }
 
-    fn apply_histogram(&mut self, app: &mut PhotocraftApp) {
+    fn apply_histogram(&mut self, app: &mut LienzoApp) {
         if let Some(h) = self.histogram_panel.take() {
             app.ui.histogram_panel = h;
             crate::histogram_panel::persist_options(app);
@@ -694,7 +694,7 @@ impl PanelSet {
         }
     }
 
-    fn apply_mask_targets(&self, app: &mut PhotocraftApp) {
+    fn apply_mask_targets(&self, app: &mut LienzoApp) {
         if let Some(m) = self.mask_target {
             app.end_filter_mask_view();
             app.ui.filter_mask_target = None;
@@ -722,7 +722,7 @@ impl PanelSet {
         }
     }
 
-    fn apply_dock(&mut self, app: &mut PhotocraftApp) {
+    fn apply_dock(&mut self, app: &mut LienzoApp) {
         if let Some(v) = self.dock_tabs.take() {
             app.ui.dock_tabs = v;
         }
@@ -733,7 +733,7 @@ impl PanelSet {
     }
 
     /// Applies the Color panel state and queues the requested end-dock width for the next frame.
-    fn apply_color_and_width(&mut self, app: &mut PhotocraftApp, ctx: &egui::Context) {
+    fn apply_color_and_width(&mut self, app: &mut LienzoApp, ctx: &egui::Context) {
         if let Some(v) = self.color_panel.take() {
             app.ui.color_panel = v;
         }
@@ -750,7 +750,7 @@ fn histogram_range_param(p: &Value) -> std::result::Result<Option<Option<[u8; 2]
 }
 
 /// Target the active smart object's filter mask (FILE-215-3): it needs smart filters.
-fn filter_mask_target_param(app: &PhotocraftApp, p: &Value) -> std::result::Result<Option<bool>, String> {
+fn filter_mask_target_param(app: &LienzoApp, p: &Value) -> std::result::Result<Option<bool>, String> {
     let target = bool_field(p, "filterMaskTarget")?;
     if target == Some(true) {
         check_filter_mask_target(app)?;
@@ -758,11 +758,11 @@ fn filter_mask_target_param(app: &PhotocraftApp, p: &Value) -> std::result::Resu
     Ok(target)
 }
 
-fn check_filter_mask_target(app: &PhotocraftApp) -> std::result::Result<(), String> {
-    use photocraft_engine::channel_cmds::ChannelTarget;
+fn check_filter_mask_target(app: &LienzoApp) -> std::result::Result<(), String> {
+    use lienzo_engine::channel_cmds::ChannelTarget;
     let st = app.session.active().ok_or("filterMaskTarget needs an open document")?;
     let l = st.active_layer.and_then(|id| st.doc.layer(id)).ok_or("filterMaskTarget needs an active layer")?;
-    if !matches!(&l.content, photocraft_doc::LayerContent::Smart(sm) if !sm.smart_filters.is_empty()) {
+    if !matches!(&l.content, lienzo_doc::LayerContent::Smart(sm) if !sm.smart_filters.is_empty()) {
         return Err("filterMaskTarget needs an active smart object with smart filters".into());
     }
     let composite = matches!(st.channel_view.target, ChannelTarget::Composite | ChannelTarget::LayerMask | ChannelTarget::VectorMask);
@@ -782,7 +782,7 @@ struct ViewSet {
 }
 
 impl ViewSet {
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         let zoom = f32_field(p, "zoom")?;
         let rotation = f32_field(p, "rotation")?;
         if rotation.is_some() && app.session.active_index().is_none() {
@@ -793,7 +793,7 @@ impl ViewSet {
         Ok(Self { zoom, rotation, center, fit })
     }
 
-    fn apply(&self, app: &mut PhotocraftApp) {
+    fn apply(&self, app: &mut LienzoApp) {
         let Some(i) = app.session.active_index() else { return };
         if self.zoom.is_some() || self.center.is_some() || self.rotation.is_some() || self.fit {
             app.ui.views[i].zoom_animating = false;
@@ -850,7 +850,7 @@ struct BrushSet {
 }
 
 impl BrushSet {
-    fn parse(app: &PhotocraftApp, p: &Value) -> std::result::Result<Self, String> {
+    fn parse(app: &LienzoApp, p: &Value) -> std::result::Result<Self, String> {
         let section = uint_field(p, "brushSection")?;
         let tab = uint_field(p, "brushTab")?;
         let brushes_view = brushes_view_param(p)?;
@@ -873,7 +873,7 @@ impl BrushSet {
         })
     }
 
-    fn apply(&self, app: &mut PhotocraftApp) -> std::result::Result<(), String> {
+    fn apply(&self, app: &mut LienzoApp) -> std::result::Result<(), String> {
         if let Some(i) = self.section {
             app.ui.brush_section = (i as usize).min(crate::brush_panel::SECTIONS.len() - 1);
         }
@@ -890,7 +890,7 @@ impl BrushSet {
         Ok(())
     }
 
-    fn apply_picker(&self, app: &mut PhotocraftApp) {
+    fn apply_picker(&self, app: &mut LienzoApp) {
         let list = &mut app.ui.brush_picker_list;
         if let Some(v) = self.picker_name {
             list.show_name = v;
@@ -915,7 +915,7 @@ fn brushes_view_param(p: &Value) -> std::result::Result<Option<crate::brush_pane
     serde_json::from_value(v.clone()).map(Some).map_err(|e| format!("brushesView: {e} (list, grid)"))
 }
 
-fn check_picker_parts(app: &PhotocraftApp, parts: [Option<bool>; 3]) -> std::result::Result<(), String> {
+fn check_picker_parts(app: &LienzoApp, parts: [Option<bool>; 3]) -> std::result::Result<(), String> {
     if parts.iter().all(Option::is_none) {
         return Ok(());
     }
@@ -950,15 +950,15 @@ fn picker_param(p: &Value) -> std::result::Result<Option<Option<[f32; 2]>>, Stri
 /// applied; non-numeric values keep the API's historical silent no-op.
 fn brush_size_param(p: &Value) -> std::result::Result<Option<f64>, String> {
     let Some(size) = p.get("brushSize").and_then(Value::as_f64) else { return Ok(None) };
-    if !size.is_finite() || size > f64::from(photocraft_paint::MAX_BRUSH_SIZE) {
-        return Err(format!("brushSize must be finite and at most {} px", photocraft_paint::MAX_BRUSH_SIZE));
+    if !size.is_finite() || size > f64::from(lienzo_paint::MAX_BRUSH_SIZE) {
+        return Err(format!("brushSize must be finite and at most {} px", lienzo_paint::MAX_BRUSH_SIZE));
     }
     Ok(Some(size))
 }
 
 // ---- dialogs ----
 
-fn dialog_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
+fn dialog_methods(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
     let p = &req.params;
     let s = |k: &str| str_param(p, k);
     let u = |k: &str| u64_param(p, k);
@@ -996,7 +996,7 @@ fn dialog_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlReq
     })
 }
 
-fn dialog_open(app: &mut PhotocraftApp, p: &Value) -> Outcome {
+fn dialog_open(app: &mut LienzoApp, p: &Value) -> Outcome {
     let kind = match str_param(p, "kind").unwrap_or("") {
         "newDocument" | "NewDocument" => DialogKind::NewDocument,
         "about" | "About" => DialogKind::About,
@@ -1014,7 +1014,7 @@ fn dialog_open(app: &mut PhotocraftApp, p: &Value) -> Outcome {
 }
 
 /// The dialog kinds that open through their own module rather than `open_dialog`.
-fn open_named_dialog(app: &mut PhotocraftApp, p: &Value, kind: &str) -> Outcome {
+fn open_named_dialog(app: &mut LienzoApp, p: &Value, kind: &str) -> Outcome {
     let opened = |id: Option<u64>, missing: &str| match id {
         Some(id) => ok(json!({"dialog": id})),
         None => err(missing),
@@ -1026,14 +1026,14 @@ fn open_named_dialog(app: &mut PhotocraftApp, p: &Value, kind: &str) -> Outcome 
         "deleteCropPreset" => opened(crate::crop_presets::open_delete(app), "no crop presets are saved"),
         "command" | "Command" => {
             let Some(cmd) = str_param(p, "command") else { return err("command dialogs need `command`") };
-            let label = photocraft_engine::commands::find(cmd).map(|c| c.label).unwrap_or(cmd);
+            let label = lienzo_engine::commands::find(cmd).map(|c| c.label).unwrap_or(cmd);
             ok(json!({"dialog": crate::dialogs::open_command_dialog(app, cmd, label)}))
         }
         other => err(format!("unknown dialog kind `{other}`")),
     }
 }
 
-fn color_picker_dialog(app: &mut PhotocraftApp, p: &Value) -> Outcome {
+fn color_picker_dialog(app: &mut LienzoApp, p: &Value) -> Outcome {
     if let Some(style) = p.get("textStyle") {
         return text_style_color_picker(app, p, style);
     }
@@ -1060,7 +1060,7 @@ fn color_picker_dialog(app: &mut PhotocraftApp, p: &Value) -> Outcome {
     ok(json!({"dialog": crate::color_picker_ui::open(app, target)}))
 }
 
-fn text_style_color_picker(app: &mut PhotocraftApp, p: &Value, style: &Value) -> Outcome {
+fn text_style_color_picker(app: &mut LienzoApp, p: &Value, style: &Value) -> Outcome {
     if ["parent", "effect", "field", "target"].iter().any(|key| p.get(*key).is_some()) {
         return err("textStyle cannot be combined with another picker target");
     }
@@ -1079,7 +1079,7 @@ fn text_style_color_picker(app: &mut PhotocraftApp, p: &Value, style: &Value) ->
     }
 }
 
-fn shell_dialog_set(app: &mut PhotocraftApp, p: &Value) -> Outcome {
+fn shell_dialog_set(app: &mut LienzoApp, p: &Value) -> Outcome {
     let Some(field) = str_param(p, "field") else { return err("need `dialog` and `field`") };
     let value = p.get("value").cloned().unwrap_or(Value::Null);
     match app.ui.shell.dialog.as_mut() {
@@ -1091,7 +1091,7 @@ fn shell_dialog_set(app: &mut PhotocraftApp, p: &Value) -> Outcome {
     }
 }
 
-fn shell_dialog_confirm(app: &mut PhotocraftApp, ctx: &egui::Context) -> Outcome {
+fn shell_dialog_confirm(app: &mut LienzoApp, ctx: &egui::Context) -> Outcome {
     let Some((kind, fields)) = app.ui.shell.dialog.clone() else { return err("no shell dialog is open") };
     if let Some((command, params)) = crate::workspace_ui::dialog_command(&kind, &fields)
         && let Some(authorize) = app.services.automation_command.as_ref()
@@ -1102,7 +1102,7 @@ fn shell_dialog_confirm(app: &mut PhotocraftApp, ctx: &egui::Context) -> Outcome
     wrap(crate::workspace_ui::confirm(app, ctx))
 }
 
-fn discard_dialog_confirm(app: &mut PhotocraftApp, ctx: &egui::Context, choice: &str) -> Outcome {
+fn discard_dialog_confirm(app: &mut LienzoApp, ctx: &egui::Context, choice: &str) -> Outcome {
     if choice != "cancel"
         && let Some((command, params)) = crate::discard_ui::pending_command(app)
         && let Some(authorize) = app.services.automation_command.as_ref()
@@ -1113,7 +1113,7 @@ fn discard_dialog_confirm(app: &mut PhotocraftApp, ctx: &egui::Context, choice: 
     wrap(crate::discard_ui::answer_control(app, ctx, choice))
 }
 
-fn dialog_set(app: &mut PhotocraftApp, p: &Value) -> Outcome {
+fn dialog_set(app: &mut LienzoApp, p: &Value) -> Outcome {
     let (Some(id), Some(field)) = (u64_param(p, "dialog"), str_param(p, "field")) else { return err("need `dialog` and `field`") };
     let value = p.get("value").cloned().unwrap_or(Value::Null);
     // A Color Picker previewing in this dialog owns its fields until its OK or Cancel: an edit now
@@ -1140,7 +1140,7 @@ fn dialog_set(app: &mut PhotocraftApp, p: &Value) -> Outcome {
     }
 }
 
-fn dialog_confirm_or_apply(app: &mut PhotocraftApp, req: &ControlRequest, id: u64) -> Outcome {
+fn dialog_confirm_or_apply(app: &mut LienzoApp, req: &ControlRequest, id: u64) -> Outcome {
     let apply = req.method == "ui.dialog.apply";
     let command = app.ui.dialogs.iter().find(|dialog| dialog.id == id).and_then(|dialog| {
         if apply {
@@ -1160,7 +1160,7 @@ fn dialog_confirm_or_apply(app: &mut PhotocraftApp, req: &ControlRequest, id: u6
 
 // ---- synthetic input: pointer events, clicks, keys, text ----
 
-fn input_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
+fn input_methods(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
     let p = &req.params;
     Some(match req.method.as_str() {
         "ui.pointer" => pointer(app, ctx, p),
@@ -1176,7 +1176,7 @@ fn input_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequ
     })
 }
 
-fn click(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value, click: bool) -> Outcome {
+fn click(app: &mut LienzoApp, ctx: &egui::Context, p: &Value, click: bool) -> Outcome {
     let fields: &[&str] = if click { &["x", "y", "button", "count"] } else { &["x", "y"] };
     let parsed = (|| -> std::result::Result<_, String> {
         let p = input_object(p, None, fields)?;
@@ -1208,7 +1208,7 @@ fn click(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value, click: bool) -
     Outcome::AfterInput
 }
 
-fn key(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn key(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     let parsed = (|| -> std::result::Result<_, String> {
         let p = input_object(p, None, &["key", "modifiers", "shift", "alt", "command", "ctrl"])?;
         let Some(name) = input_choice(&p, "key", "key", &[])? else { return Err("missing `key`".into()) };
@@ -1255,7 +1255,7 @@ struct PointerGesture {
 }
 
 /// Validate every sample before starting a gesture, then respect modal, button and temporary-tool ownership.
-fn pointer(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
+fn pointer(app: &mut LienzoApp, ctx: &egui::Context, p: &Value) -> Outcome {
     // Every field and event is validated before the first event runs, so a rejected call
     // changes nothing (#2449).
     let parsed = match parse_pointer(p) {
@@ -1299,7 +1299,7 @@ fn pointer(app: &mut PhotocraftApp, ctx: &egui::Context, p: &Value) -> Outcome {
 
 /// Dialog samplers run first; block new Move gestures while allowing an active one to finish.
 /// The Move tool is the one the event acts as: ⌘ makes most other tools the Move tool.
-fn modal_blocks_move_pointer(app: &PhotocraftApp, event: ToolEvent, mods: egui::Modifiers) -> bool {
+fn modal_blocks_move_pointer(app: &LienzoApp, event: ToolEvent, mods: egui::Modifiers) -> bool {
     crate::canvas::event_tool(app, mods) == Tool::Move
         && (!app.ui.dialogs.is_empty()
             || app.ui.layers_panel_dialog.is_some()
@@ -1349,7 +1349,7 @@ fn parse_pointer_event(i: usize, e: &Value) -> std::result::Result<PointerSample
 }
 
 /// Whether a modal tool, picker or context menu took the event instead of the canvas.
-fn pointer_event_intercepted(app: &mut PhotocraftApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
+fn pointer_event_intercepted(app: &mut LienzoApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
     let took = pointer_eyedropper_took(app, ctx, g, s) || color_range_took(app, g, s);
     if took && matches!(s.ev, ToolEvent::Up { .. }) && !g.secondary && !g.middle {
         release_taken_drag(app, g);
@@ -1361,7 +1361,7 @@ fn pointer_event_intercepted(app: &mut PhotocraftApp, ctx: &egui::Context, g: &P
 /// Range) took the primary release: a transform handle drag or Move drag begun before it
 /// ends, so later moves can't resume either without a new press. The Move drag ends where it
 /// last was, since the release's coordinates belong to the sampler.
-fn release_taken_drag(app: &mut PhotocraftApp, g: &PointerGesture) {
+fn release_taken_drag(app: &mut LienzoApp, g: &PointerGesture) {
     crate::tools::transform_tool::release_handle_drag(app);
     if let Some([x, y]) = app.drag.as_ref().map(|d| d.points.last().map_or(d.start, |p| [p[0], p[1]])) {
         tool_event(app, ToolEvent::Up { x, y }, g.mods);
@@ -1375,7 +1375,7 @@ fn release_taken_drag(app: &mut PhotocraftApp, g: &PointerGesture) {
 /// frame or Straighten drag is one too, though the Crop tool keeps it apart from `app.drag`. While
 /// one is open, a second primary press (no mouse can make one) is dropped: it neither centres the
 /// window nor reaches the tool, so no locator press splits the gesture's moves and release.
-fn preview_locator_took(app: &mut PhotocraftApp, g: &PointerGesture, s: &PointerSample) -> bool {
+fn preview_locator_took(app: &mut LienzoApp, g: &PointerGesture, s: &PointerSample) -> bool {
     if crate::filter_preview_ui::locator(app).is_none() {
         return false;
     }
@@ -1390,7 +1390,7 @@ fn preview_locator_took(app: &mut PhotocraftApp, g: &PointerGesture, s: &Pointer
     true
 }
 
-fn pointer_eyedropper_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
+fn pointer_eyedropper_took(app: &mut LienzoApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
     let (x, y) = (s.x, s.y);
     let down = matches!(s.ev, ToolEvent::Down { .. });
     // With the Color Picker on top the image is its eyedropper, as for the mouse.
@@ -1427,7 +1427,7 @@ fn pointer_eyedropper_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &Poi
 
 /// The dialog owns all pointer events, including Up: no underlying brush stroke
 /// or context menu may leak through while inspecting a Color Range preview.
-fn color_range_took(app: &mut PhotocraftApp, g: &PointerGesture, s: &PointerSample) -> bool {
+fn color_range_took(app: &mut LienzoApp, g: &PointerGesture, s: &PointerSample) -> bool {
     if !app.ui.dialogs.last().is_some_and(|d| crate::color_range_ui::owns(&d.fields)) {
         return false;
     }
@@ -1445,11 +1445,11 @@ fn color_range_took(app: &mut PhotocraftApp, g: &PointerGesture, s: &PointerSamp
 
 /// Right-click: the transform box's menu, the layer list, or a canvas menu. Whether it opens
 /// only on the press, the event is consumed either way.
-fn secondary_menu_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
+fn secondary_menu_took(app: &mut LienzoApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
     secondary_transform_or_crop_took(app, ctx, g, s) || secondary_canvas_menu_took(app, ctx, g, s)
 }
 
-fn secondary_transform_or_crop_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
+fn secondary_transform_or_crop_took(app: &mut LienzoApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
     let (x, y) = (s.x, s.y);
     let down = matches!(s.ev, ToolEvent::Down { .. });
     // Right-click while transforming: the box's menu, as on the canvas.
@@ -1484,7 +1484,7 @@ fn secondary_transform_or_crop_took(app: &mut PhotocraftApp, ctx: &egui::Context
     false
 }
 
-fn secondary_canvas_menu_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
+fn secondary_canvas_menu_took(app: &mut LienzoApp, ctx: &egui::Context, g: &PointerGesture, s: &PointerSample) -> bool {
     let (x, y) = (s.x, s.y);
     let down = matches!(s.ev, ToolEvent::Down { .. });
     // A Magnetic Lasso border being drawn: no menu over it, as on the canvas (#11689).
@@ -1516,7 +1516,7 @@ fn secondary_canvas_menu_took(app: &mut PhotocraftApp, ctx: &egui::Context, g: &
 }
 
 /// Hand an event nothing intercepted to the active tool.
-fn forward_pointer_event(app: &mut PhotocraftApp, g: &PointerGesture, s: PointerSample) {
+fn forward_pointer_event(app: &mut LienzoApp, g: &PointerGesture, s: PointerSample) {
     // A simulated pen: tilt/rotation reach the stroke like a real stylus's (see `stylus`).
     if s.pen != (None, None, None) {
         let (tilt_x, tilt_y, rotation) = (s.pen.0.unwrap_or(0.0), s.pen.1.unwrap_or(0.0), s.pen.2.unwrap_or(0.0));
@@ -1544,7 +1544,7 @@ fn forward_pointer_event(app: &mut PhotocraftApp, g: &PointerGesture, s: Pointer
 // ---- the application: open, save, quit ----
 
 /// The application-level control methods: open, save and quit.
-fn app_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
+fn app_methods(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Option<Outcome> {
     let p = &req.params;
     Some(match req.method.as_str() {
         "app.open" => match str_param(p, "path") {
@@ -1577,7 +1577,7 @@ fn app_methods(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlReques
 
 /// The `app.open` control method: opens a path through the configured automation read
 /// capability, with optional high-memory approval.
-fn app_open(app: &mut PhotocraftApp, path: &str, approved: bool) -> Outcome {
+fn app_open(app: &mut LienzoApp, path: &str, approved: bool) -> Outcome {
     if let Some(outcome) = open_pcraft_directory(app, path) {
         return outcome;
     }
@@ -1604,8 +1604,8 @@ fn app_open(app: &mut PhotocraftApp, path: &str, approved: bool) -> Outcome {
 /// Directory .pcraft (the native on-disk form) loads through a capability-scoped
 /// source; the single-file (zip) form falls back to the bytes path, as do all
 /// other formats. `None` means "not a directory .pcraft".
-fn open_pcraft_directory(app: &mut PhotocraftApp, path: &str) -> Option<Outcome> {
-    if !path.rsplit_once('.').is_some_and(|(_, ext)| ext.eq_ignore_ascii_case(photocraft_format::EXTENSION)) {
+fn open_pcraft_directory(app: &mut LienzoApp, path: &str) -> Option<Outcome> {
+    if !path.rsplit_once('.').is_some_and(|(_, ext)| ext.eq_ignore_ascii_case(lienzo_format::EXTENSION)) {
         return None;
     }
     let open = app.services.automation_open_pcraft.as_mut()?;

@@ -3,7 +3,7 @@
 //! source per document; by default the oldest state held (Photoshop's default is the first
 //! snapshot, the document as opened, which that state is until it falls off the history).
 //!
-//! A state source is kept by state, not by index ([`photocraft_ops::History::set_brush_source`]),
+//! A state source is kept by state, not by index ([`lienzo_ops::History::set_brush_source`]),
 //! so it stays on its state while older states fall off, and that state is kept when it would fall
 //! off the history itself. A snapshot source is kept by snapshot id ([`HistorySource::Snapshot`]),
 //! a separate namespace from the states. Once the source state or snapshot is deleted, or a redo
@@ -19,7 +19,7 @@
 
 use std::sync::Arc;
 
-use photocraft_doc::Document;
+use lienzo_doc::Document;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -35,7 +35,7 @@ fn bad(msg: impl Into<String>) -> EngineError {
 /// are separate, so snapshot 1 and state row 1 never stand for each other.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HistorySource {
-    /// A History panel row ([`photocraft_ops::History::row_id`]).
+    /// A History panel row ([`lienzo_ops::History::row_id`]).
     State(usize),
     /// A History panel snapshot ([`crate::history_cmds::Snapshot::id`]).
     Snapshot(u64),

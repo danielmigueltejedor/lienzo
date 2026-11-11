@@ -4,21 +4,21 @@
 use egui::{Key, Modifiers};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::panels::toolbar::{TOOL_SECTIONS, next_slot_tool, toolbar};
 use crate::state::Tool;
 
 const HEALING: [Tool; 6] = [Tool::SpotHealing, Tool::Remove, Tool::Healing, Tool::Patch, Tool::ContentAwareMove, Tool::RedEye];
 const BRUSH: [Tool; 4] = [Tool::Brush, Tool::Pencil, Tool::ColorReplacement, Tool::MixerBrush];
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 20, "height": 10})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app
 }
 
-fn press(app: &mut PhotocraftApp, key: Key, modifiers: Modifiers) {
+fn press(app: &mut LienzoApp, key: Key, modifiers: Modifiers) {
     let ctx = egui::Context::default();
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
@@ -95,7 +95,7 @@ fn shift_b_follows_the_reference_sequence() {
     assert_eq!(shift_sequence(Key::B, 5), want);
 }
 
-fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
+fn frame(app: &mut LienzoApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) {
     let mut out = ctx.run_ui(
         egui::RawInput {
             time: Some(time),
@@ -113,7 +113,7 @@ fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<eg
 fn pointer_alt_click_steps_the_healing_and_brush_slots_in_the_new_order() {
     let mut app = app();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if crate::theme::Tokens::get(&ctx).pro { 30.0 } else { 36.0 };

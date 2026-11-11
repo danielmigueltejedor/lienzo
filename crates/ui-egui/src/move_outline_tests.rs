@@ -4,18 +4,18 @@
 
 use egui::{Event, PointerButton, Pos2};
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{LAYER_EDGES, ViewXform};
 use crate::state::{Tool, View};
 
 /// A 64×64 document with two painted layers: A covers (8..24)², B covers (40..56)². B is active,
 /// the Move tool (Auto-Select on) is current and View › Show › Layer Edges is on.
-fn app() -> (PhotocraftApp, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, LayerId, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     let mut ids = Vec::new();
@@ -53,9 +53,9 @@ fn app() -> (PhotocraftApp, LayerId, LayerId) {
     (app, ids[0], ids[1])
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(400.0, 340.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             app.last_canvas_rect = ui.max_rect();
             let v = app.ui.views[0].clone();
             crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
@@ -66,18 +66,18 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn xf(app: &PhotocraftApp) -> ViewXform {
+fn xf(app: &LienzoApp) -> ViewXform {
     let v = &app.ui.views[0];
     ViewXform { rect: app.last_canvas_rect, zoom: v.zoom / app.ppp, center: v.center, flip: false, rotation: 0.0, aspect: 1.0 }
 }
 
 /// The screen point of document point `p`.
-fn at(h: &Harness<'_, PhotocraftApp>, p: [f32; 2]) -> Pos2 {
+fn at(h: &Harness<'_, LienzoApp>, p: [f32; 2]) -> Pos2 {
     xf(h.state()).to_screen(p[0], p[1])
 }
 
 /// The Layer Edges outlines the last frame drew.
-fn edges(h: &Harness<'_, PhotocraftApp>) -> Vec<egui::Rect> {
+fn edges(h: &Harness<'_, LienzoApp>) -> Vec<egui::Rect> {
     h.output()
         .shapes
         .iter()
@@ -89,15 +89,15 @@ fn edges(h: &Harness<'_, PhotocraftApp>) -> Vec<egui::Rect> {
 }
 
 /// The outline Layer Edges draws around document rect `r`.
-fn outline(h: &Harness<'_, PhotocraftApp>, r: Rect) -> Vec<egui::Rect> {
+fn outline(h: &Harness<'_, LienzoApp>, r: Rect) -> Vec<egui::Rect> {
     vec![xf(h.state()).doc_rect(r)]
 }
 
-fn button(h: &mut Harness<'_, PhotocraftApp>, pos: Pos2, pressed: bool) {
+fn button(h: &mut Harness<'_, LienzoApp>, pos: Pos2, pressed: bool) {
     h.event(Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
 }
 
-fn active(h: &Harness<'_, PhotocraftApp>) -> Option<LayerId> {
+fn active(h: &Harness<'_, LienzoApp>) -> Option<LayerId> {
     h.state().session.active().unwrap().active_layer
 }
 

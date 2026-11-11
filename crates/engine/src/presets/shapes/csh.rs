@@ -38,8 +38,8 @@ fn import(s: &mut Session, p: &Value) -> Result<Value> {
         false,
         move |ctx| {
             ctx.check()?;
-            let (bytes, stem) = crate::preset_import_cmds::file_bytes_limited(&params, CMD, ".csh file", photocraft_psd::csh::MAX_FILE_BYTES as u64)?;
-            let shapes = photocraft_psd::csh::parse(&bytes).map_err(|e| bad(CMD, e.to_string()))?;
+            let (bytes, stem) = crate::preset_import_cmds::file_bytes_limited(&params, CMD, ".csh file", lienzo_psd::csh::MAX_FILE_BYTES as u64)?;
+            let shapes = lienzo_psd::csh::parse(&bytes).map_err(|e| bad(CMD, e.to_string()))?;
             if shapes.is_empty() {
                 return Err(bad(CMD, "the CSH set contains no shapes"));
             }
@@ -50,14 +50,14 @@ fn import(s: &mut Session, p: &Value) -> Result<Value> {
                 // The parser validates ordering; widen before subtraction for signed bounds.
                 let width = u32::try_from(i64::from(right) - i64::from(left)).map_err(|_| bad(CMD, "shape width exceeds supported bounds"))?;
                 let height = u32::try_from(i64::from(bottom) - i64::from(top)).map_err(|_| bad(CMD, "shape height exceeds supported bounds"))?;
-                let path = photocraft_io::vector_map::path_from_records(&shape.path, width, height);
+                let path = lienzo_io::vector_map::path_from_records(&shape.path, width, height);
                 if path.is_empty() {
                     return Err(bad(CMD, format!("shape {:?} has no path", shape.name)));
                 }
                 let path = fit(&path, [0.0, 0.0, 100.0, 100.0], true);
                 // Photoshop stores some preset names as `$$$/…/Key=Shown`. The Shapes panel
                 // renders the stored name, so keep the text after `=`.
-                let shown = photocraft_doc::pattern::display_name(&shape.name);
+                let shown = lienzo_doc::pattern::display_name(&shape.name);
                 let name = if shown.trim().is_empty() { "Shape".to_owned() } else { shown.to_owned() };
                 // Keep opaque IDs unchanged. An anonymous preset remains usable by name;
                 // repeated IDs are checked against geometry when a filter resolves them.

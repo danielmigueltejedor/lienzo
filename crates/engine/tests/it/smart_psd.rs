@@ -1,13 +1,13 @@
-//! Smart objects and smart filters made in PhotoCraft survive a PSD save and open (#215): the
+//! Smart objects and smart filters made in Lienzo survive a PSD save and open (#215): the
 //! layer comes back as a live smart object (not pixels) with the same nested document (embedded
 //! in `lnk2` as a PSB), transform, filter list and filter mask, and re-renders like before.
 //!
-//! Set `PHOTOCRAFT_SMART_PSD_OUT=<dir>` to keep the exported files (for opening in Photoshop).
+//! Set `LIENZO_SMART_PSD_OUT=<dir>` to keep the exported files (for opening in Photoshop).
 
-use photocraft_doc::{Document, LayerContent, SmartObject, SmartSource};
-use photocraft_engine::Session;
-use photocraft_engine::smart_cmds::{decode_source, refresh_layer, source_bytes};
-use photocraft_geom::Rect;
+use lienzo_doc::{Document, LayerContent, SmartObject, SmartSource};
+use lienzo_engine::Session;
+use lienzo_engine::smart_cmds::{decode_source, refresh_layer, source_bytes};
+use lienzo_geom::Rect;
 use serde_json::json;
 
 const W: i32 = 96;
@@ -25,7 +25,7 @@ fn session(depth: u64) -> Session {
         for y in r.y0..r.y1 {
             for x in r.x0..r.x1 {
                 let v = ((x * 7 + y * 13) % 23) as f32 / 22.0;
-                data.extend(photocraft_raster::from_rgba(&fmt, [v, 1.0 - v, ((x * y) % 7) as f32 / 6.0, 1.0]));
+                data.extend(lienzo_raster::from_rgba(&fmt, [v, 1.0 - v, ((x * y) % 7) as f32 / 6.0, 1.0]));
             }
         }
         surf.write_region(r, &data);
@@ -52,7 +52,7 @@ fn max_diff(a: &[[f32; 4]], b: &[[f32; 4]]) -> f32 {
 
 /// Every block with inner structure re-parses strictly (`TaggedBlock::check_structure`).
 fn structure_errors(bytes: &[u8]) -> Vec<String> {
-    let f = photocraft_psd::PsdFile::from_bytes(bytes).unwrap();
+    let f = lienzo_psd::PsdFile::from_bytes(bytes).unwrap();
     let mut errs = Vec::new();
     for b in &f.global_blocks {
         if let Err(e) = b.check_structure() {
@@ -70,7 +70,7 @@ fn structure_errors(bytes: &[u8]) -> Vec<String> {
 }
 
 fn keep(name: &str, bytes: &[u8]) {
-    if let Ok(dir) = std::env::var("PHOTOCRAFT_SMART_PSD_OUT") {
+    if let Ok(dir) = std::env::var("LIENZO_SMART_PSD_OUT") {
         std::fs::write(std::path::Path::new(&dir).join(name), bytes).unwrap();
     }
 }
@@ -94,12 +94,12 @@ fn smart_objects_and_filters_survive_psd() {
         let SmartSource::Embedded { bytes: pcraft, .. } = &before.source else { panic!("embedded") };
         let nested = decode_source("x.pcraft", pcraft).unwrap();
 
-        let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
         assert!(!out.warnings.iter().any(|w| w.contains("pixels")), "{:?}", out.warnings);
         assert_eq!(structure_errors(&out.bytes), Vec::<String>::new());
         keep(&format!("smart-{depth}.psd"), &out.bytes);
 
-        let back = photocraft_io::import("x.psd", &out.bytes).unwrap().document;
+        let back = lienzo_io::import("x.psd", &out.bytes).unwrap().document;
         let (bid, after) = smart(&back);
         assert!(matches!(after.source, SmartSource::Linked { .. }), "depth {depth}: source in lnk2");
         // Same filters, blending and settings (numbers may come back as floats, defaults spelled out).
@@ -128,17 +128,17 @@ fn smart_objects_and_filters_survive_psd() {
         assert!(name.ends_with(".psb"), "{name}");
         let inner = decode_source(&name, &src).unwrap();
         assert_eq!((inner.size, inner.layers.len(), inner.depth), (nested.size, nested.layers.len(), nested.depth));
-        assert!(max_diff(&photocraft_compose::flatten(&inner).px, &photocraft_compose::flatten(&nested).px) <= 1.0 / 255.0 + 1e-6);
+        assert!(max_diff(&lienzo_compose::flatten(&inner).px, &lienzo_compose::flatten(&nested).px) <= 1.0 / 255.0 + 1e-6);
         // And it re-renders from that source like the original did.
-        let mut l = back.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+        let mut l = back.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
         assert!(refresh_layer(&back, &mut l).unwrap());
         let mut rerendered = back.clone();
-        *rerendered.layer_mut(photocraft_doc::LayerId(bid)).unwrap() = l;
-        let d = max_diff(&photocraft_compose::flatten(&rerendered).px, &photocraft_compose::flatten(&doc).px);
+        *rerendered.layer_mut(lienzo_doc::LayerId(bid)).unwrap() = l;
+        let d = max_diff(&lienzo_compose::flatten(&rerendered).px, &lienzo_compose::flatten(&doc).px);
         assert!(d <= 2.0 / 255.0, "depth {depth}: re-render differs by {d}");
 
         // Saving the re-imported file again keeps the same embedded file (no growth).
-        let again = photocraft_io::export(&back, "psd", &Default::default()).unwrap();
+        let again = lienzo_io::export(&back, "psd", &Default::default()).unwrap();
         assert_eq!(structure_errors(&again.bytes), Vec::<String>::new());
         assert!(again.bytes.len() <= out.bytes.len() + 64, "{} vs {}", again.bytes.len(), out.bytes.len());
     }
@@ -170,10 +170,10 @@ fn camera_raw_psd_filters_survive_re_editing_native_save_and_undo() {
         s.execute("select.deselect", json!({})).unwrap();
         s.execute("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap();
         let before = s.active().unwrap().doc.clone();
-        let out = photocraft_io::export(&before, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&before, "psd", &Default::default()).unwrap();
         assert!(out.warnings.is_empty(), "{:?}", out.warnings);
         assert!(structure_errors(&out.bytes).is_empty());
-        let back = photocraft_io::import("camera-raw.psd", &out.bytes).unwrap().document;
+        let back = lienzo_io::import("camera-raw.psd", &out.bytes).unwrap().document;
         let (layer, imported) = smart(&back);
         let (_, original) = smart(&before);
         let mask_values = |sm: &SmartObject| {
@@ -184,8 +184,8 @@ fn camera_raw_psd_filters_survive_re_editing_native_save_and_undo() {
         assert_eq!(imported.smart_filters.len(), 3);
         assert_eq!(imported.smart_filters[1].command, "filter.cameraRaw");
         assert_eq!(mask_values(&imported), mask_values(&original));
-        let expected = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &original.smart_filters[1].params).unwrap();
-        let actual = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &imported.smart_filters[1].params).unwrap();
+        let expected = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &original.smart_filters[1].params).unwrap();
+        let actual = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &imported.smart_filters[1].params).unwrap();
         assert_eq!(actual, expected, "{depth}-bit");
         let template = imported.smart_filters[1].params["__cameraRawPsd"].clone();
         let mut edited = Session::new();
@@ -197,76 +197,76 @@ fn camera_raw_psd_filters_survive_re_editing_native_save_and_undo() {
         assert_eq!(smart(&edited.active().unwrap().doc).1.smart_filters[1].params["exposure"], imported.smart_filters[1].params["exposure"]);
         edited.redo();
         assert_eq!(*edited.active().unwrap().doc, *changed);
-        let native = photocraft_format::save_to_bytes(&changed, &Default::default()).unwrap();
-        let native_back = photocraft_format::load_from_bytes(&native).unwrap();
+        let native = lienzo_format::save_to_bytes(&changed, &Default::default()).unwrap();
+        let native_back = lienzo_format::load_from_bytes(&native).unwrap();
         assert_eq!(smart(&native_back).1.smart_filters, smart(&changed).1.smart_filters);
-        let out = photocraft_io::export(&native_back, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&native_back, "psd", &Default::default()).unwrap();
         assert!(out.warnings.is_empty(), "{:?}", out.warnings);
         assert!(structure_errors(&out.bytes).is_empty());
-        let back = photocraft_io::import("edited.psd", &out.bytes).unwrap().document;
+        let back = lienzo_io::import("edited.psd", &out.bytes).unwrap().document;
         let (_, after) = smart(&back);
         assert_eq!(after.smart_filters.len(), 3);
-        let params = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &after.smart_filters[1].params).unwrap();
+        let params = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &after.smart_filters[1].params).unwrap();
         assert_eq!((params.exposure, params.curve_lights), (0.0, 0.0));
         assert_eq!(params.hsl_hue, expected.hsl_hue);
         assert_eq!(mask_values(&after), mask_values(&original));
         let mut unfiltered = after.clone();
         unfiltered.smart_filters.clear();
-        assert!(photocraft_engine::smart_cmds::render(&back, &unfiltered).unwrap().is_some());
+        assert!(lienzo_engine::smart_cmds::render(&back, &unfiltered).unwrap().is_some());
     }
 }
 
-/// Private, user-supplied files remain outside the repository. Set PHOTOCRAFT_CAMERA_RAW_PSD
-/// to check a Camera Raw fixture and PHOTOCRAFT_SMART_PSD_OUT to retain exports for manual checks.
+/// Private, user-supplied files remain outside the repository. Set LIENZO_CAMERA_RAW_PSD
+/// to check a Camera Raw fixture and LIENZO_SMART_PSD_OUT to retain exports for manual checks.
 #[test]
 #[ignore = "requires a user-supplied Camera Raw PSD"]
 fn camera_raw_psd_fixture() {
-    let path = std::env::var("PHOTOCRAFT_CAMERA_RAW_PSD").expect("set PHOTOCRAFT_CAMERA_RAW_PSD");
+    let path = std::env::var("LIENZO_CAMERA_RAW_PSD").expect("set LIENZO_CAMERA_RAW_PSD");
     let bytes = std::fs::read(&path).unwrap();
-    let imported = photocraft_io::import("fixture.psd", &bytes).unwrap();
+    let imported = lienzo_io::import("fixture.psd", &bytes).unwrap();
     let (_, sm) = smart(&imported.document);
     let index = sm
         .smart_filters
         .iter()
         .position(|f| {
-            photocraft_io::smart_map::item_for_filter(f).ok().is_some_and(
-                |item| matches!(item.get("Fltr"), Some(photocraft_psd::descriptor::Value::Descriptor(d)) if d.class_id.is("Adobe Camera Raw Filter")),
-            )
+            lienzo_io::smart_map::item_for_filter(f)
+                .ok()
+                .is_some_and(|item| matches!(item.get("Fltr"), Some(lienzo_psd::descriptor::Value::Descriptor(d)) if d.class_id.is("Adobe Camera Raw Filter")))
         })
         .expect("a Camera Raw filter");
-    let original_item = photocraft_io::smart_map::item_for_filter(&sm.smart_filters[index]).unwrap();
-    let out = photocraft_io::export(&imported.document, "psd", &Default::default()).unwrap();
+    let original_item = lienzo_io::smart_map::item_for_filter(&sm.smart_filters[index]).unwrap();
+    let out = lienzo_io::export(&imported.document, "psd", &Default::default()).unwrap();
     assert!(!out.warnings.iter().any(|w| w.contains("smart filter")), "{:?}", out.warnings);
     assert!(structure_errors(&out.bytes).is_empty());
     keep("camera-raw-roundtrip.psd", &out.bytes);
-    let back = photocraft_io::import("roundtrip.psd", &out.bytes).unwrap().document;
+    let back = lienzo_io::import("roundtrip.psd", &out.bytes).unwrap().document;
     let (layer, _) = smart(&back);
-    assert_eq!(photocraft_io::smart_map::item_for_filter(&smart(&back).1.smart_filters[index]).unwrap(), original_item);
-    let native = photocraft_format::save_to_bytes(&back, &Default::default()).unwrap();
-    assert_eq!(smart(&photocraft_format::load_from_bytes(&native).unwrap()).1.smart_filters, smart(&back).1.smart_filters);
-    if sm.smart_filters[index].command == photocraft_io::smart_map::UNSUPPORTED_FILTER {
-        assert_eq!(smart(&back).1.smart_filters[index].command, photocraft_io::smart_map::UNSUPPORTED_FILTER);
+    assert_eq!(lienzo_io::smart_map::item_for_filter(&smart(&back).1.smart_filters[index]).unwrap(), original_item);
+    let native = lienzo_format::save_to_bytes(&back, &Default::default()).unwrap();
+    assert_eq!(smart(&lienzo_format::load_from_bytes(&native).unwrap()).1.smart_filters, smart(&back).1.smart_filters);
+    if sm.smart_filters[index].command == lienzo_io::smart_map::UNSUPPORTED_FILTER {
+        assert_eq!(smart(&back).1.smart_filters[index].command, lienzo_io::smart_map::UNSUPPORTED_FILTER);
         println!("Camera Raw settings survive PSD and native saves; active unmapped controls keep this filter opaque");
         return;
     }
     let mut s = Session::new();
     s.add_document(back, None);
     s.execute("layer.smartFilter.setParams", json!({"layer": layer, "index": index, "params": {"exposure": 0.5}})).unwrap();
-    let out = photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap();
+    let out = lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap();
     assert!(!out.warnings.iter().any(|w| w.contains("smart filter")), "{:?}", out.warnings);
     assert!(structure_errors(&out.bytes).is_empty());
     keep("camera-raw-edited.psd", &out.bytes);
-    let back = photocraft_io::import("edited.psd", &out.bytes).unwrap().document;
+    let back = lienzo_io::import("edited.psd", &out.bytes).unwrap().document;
     let after = &smart(&back).1.smart_filters[index];
     assert_eq!(after.params["exposure"], 0.5);
     let mut expected = original_item;
     let mut fltr = match expected.get("Fltr").unwrap() {
-        photocraft_psd::descriptor::Value::Descriptor(d) => d.clone(),
+        lienzo_psd::descriptor::Value::Descriptor(d) => d.clone(),
         _ => panic!("Fltr must be a descriptor"),
     };
-    fltr.items.iter_mut().find(|(key, _)| key.is("Ex12")).unwrap().1 = photocraft_psd::descriptor::Value::Double(0.5);
-    expected.items.iter_mut().find(|(key, _)| key.is("Fltr")).unwrap().1 = photocraft_psd::descriptor::Value::Descriptor(fltr);
-    assert_eq!(photocraft_io::smart_map::item_for_filter(after).unwrap(), expected, "only Exposure changes");
+    fltr.items.iter_mut().find(|(key, _)| key.is("Ex12")).unwrap().1 = lienzo_psd::descriptor::Value::Double(0.5);
+    expected.items.iter_mut().find(|(key, _)| key.is("Fltr")).unwrap().1 = lienzo_psd::descriptor::Value::Descriptor(fltr);
+    assert_eq!(lienzo_io::smart_map::item_for_filter(after).unwrap(), expected, "only Exposure changes");
 }
 
 /// Every colour model: the smart object, its filters and the filter cache's unfiltered pixels
@@ -283,23 +283,23 @@ fn smart_filters_survive_psd_in_every_colour_model() {
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
         s.execute("filter.blur.gaussianBlur", json!({"radius": 1.5})).unwrap();
         let doc = s.active().unwrap().doc.clone();
-        let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
         assert!(!out.warnings.iter().any(|w| w.contains("smart")), "{mode} {depth}: {:?}", out.warnings);
         assert_eq!(structure_errors(&out.bytes), Vec::<String>::new());
-        let back = photocraft_io::import("x.psd", &out.bytes).unwrap().document;
+        let back = lienzo_io::import("x.psd", &out.bytes).unwrap().document;
         let ((_, a), (_, b)) = (smart(&doc), smart(&back));
         assert_eq!(b.smart_filters.len(), 1, "{mode} {depth}");
         assert_eq!(b.smart_filters[0].command, a.smart_filters[0].command);
         // The cache's unfiltered planes decode back to the unfiltered rendering.
-        let f = photocraft_psd::PsdFile::from_bytes(&out.bytes).unwrap();
-        let fx = f.global_blocks.iter().find(|g| &g.key == b"FEid").map(|g| photocraft_psd::filter_effects::FilterEffects::parse(&g.data).unwrap()).unwrap();
+        let f = lienzo_psd::PsdFile::from_bytes(&out.bytes).unwrap();
+        let fx = f.global_blocks.iter().find(|g| &g.key == b"FEid").map(|g| lienzo_psd::filter_effects::FilterEffects::parse(&g.data).unwrap()).unwrap();
         let item = &fx.items[0];
         let (w, h) = item.rect.size().unwrap();
         let bits = u16::try_from(item.depth).unwrap();
         let first = item.slots[0].as_ref().unwrap().decode(w, h, bits).unwrap();
         let mut unfiltered = a.clone();
         unfiltered.smart_filters.clear();
-        let px = photocraft_engine::smart_cmds::render(&doc, &unfiltered).unwrap().unwrap();
+        let px = lienzo_engine::smart_cmds::render(&doc, &unfiltered).unwrap().unwrap();
         let (x, y) = (10 - item.rect.left, 8 - item.rect.top);
         let at = (y as usize * w + x as usize) * usize::from(bits / 8);
         let stored = if bits == 8 { f32::from(first[at]) / 255.0 } else { f32::from(u16::from_be_bytes([first[at], first[at + 1]])) / 65535.0 };
@@ -309,7 +309,7 @@ fn smart_filters_survive_psd_in_every_colour_model() {
     }
 }
 
-/// Writes sample files for checking in Photoshop (`PHOTOCRAFT_SMART_PSD_OUT`): per depth, a
+/// Writes sample files for checking in Photoshop (`LIENZO_SMART_PSD_OUT`): per depth, a
 /// plain layer, a smart object without filters, and one with filters.
 #[test]
 #[ignore = "writes files for a manual Photoshop check"]
@@ -322,16 +322,16 @@ fn photoshop_samples() {
         s.execute("edit.fill", json!({"color": "#c83c28"})).unwrap();
         s.execute("select.deselect", json!({})).unwrap();
         let tag = format!("{mode}{depth}");
-        keep(&format!("plain-{tag}.psd"), &photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
+        keep(&format!("plain-{tag}.psd"), &lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
-        keep(&format!("nofilter-{tag}.psd"), &photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
+        keep(&format!("nofilter-{tag}.psd"), &lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
         s.execute("filter.blur.gaussianBlur", json!({"radius": 3})).unwrap();
-        keep(&format!("gauss-{tag}.psd"), &photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
+        keep(&format!("gauss-{tag}.psd"), &lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes);
     }
 }
 
 /// PSD export of a 24 MP smart object versus the same layer as pixels (release:
-/// `cargo test --release -p photocraft-engine --test it -- --ignored --nocapture smart_psd::perf`).
+/// `cargo test --release -p lienzo-engine --test it -- --ignored --nocapture smart_psd::perf`).
 #[test]
 #[ignore = "benchmark"]
 fn perf_24mp_smart_object_export() {
@@ -348,7 +348,7 @@ fn perf_24mp_smart_object_export() {
             for x in r.x0..r.x1 {
                 // Photo-like: smooth gradients plus a little texture (RLE can't collapse it).
                 let v = (x as f32 / w as f32) * 0.7 + (((x * 31 + y * 17) % 29) as f32 / 29.0) * 0.1;
-                data.extend(photocraft_raster::from_rgba(&fmt, [v, (y as f32 / h as f32) * 0.8, 1.0 - v, 1.0]));
+                data.extend(lienzo_raster::from_rgba(&fmt, [v, (y as f32 / h as f32) * 0.8, 1.0 - v, 1.0]));
             }
         }
         surf.write_region(r, &data);
@@ -357,7 +357,7 @@ fn perf_24mp_smart_object_export() {
     .unwrap();
     let time = |doc: &Document| {
         let t = std::time::Instant::now();
-        let out = photocraft_io::export(doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(doc, "psd", &Default::default()).unwrap();
         (t.elapsed().as_secs_f64(), out.bytes.len(), out.warnings)
     };
     let (tf, sf, _) = time(&s.active().unwrap().doc);
@@ -384,21 +384,21 @@ fn edited_psd_smart_objects_drop_their_old_file() {
     let mut s = session(8);
     s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let doc = s.active().unwrap().doc.clone();
-    let first = photocraft_io::export(&doc, "psd", &Default::default()).unwrap().bytes;
+    let first = lienzo_io::export(&doc, "psd", &Default::default()).unwrap().bytes;
     // Re-open, edit the contents (a new embedded file), save: one embedded file, the new one.
     let mut s2 = Session::new();
-    s2.add_document(photocraft_io::import("a.psd", &first).unwrap().document, None);
+    s2.add_document(lienzo_io::import("a.psd", &first).unwrap().document, None);
     let (id, _) = smart(&s2.active().unwrap().doc);
-    s2.select_layer(photocraft_doc::LayerId(id)).unwrap();
+    s2.select_layer(lienzo_doc::LayerId(id)).unwrap();
     s2.execute("layer.smartObjects.editContents", json!({})).unwrap();
     s2.execute("image.adjustments.invert", json!({})).unwrap();
     s2.execute("layer.smartObjects.saveContents", json!({})).unwrap();
-    let parent = s2.documents().iter().position(|d| d.doc.layer(photocraft_doc::LayerId(id)).is_some()).unwrap();
+    let parent = s2.documents().iter().position(|d| d.doc.layer(lienzo_doc::LayerId(id)).is_some()).unwrap();
     let doc2 = s2.documents()[parent].doc.clone();
-    let second = photocraft_io::export(&doc2, "psd", &Default::default()).unwrap().bytes;
-    let f = photocraft_psd::PsdFile::from_bytes(&second).unwrap();
-    let uuids: Vec<String> = f.global_blocks.iter().filter(|b| &b.key == b"lnk2").flat_map(|b| photocraft_io::linked::block_uuids(&b.data)).collect();
-    let back = photocraft_io::import("b.psd", &second).unwrap().document;
+    let second = lienzo_io::export(&doc2, "psd", &Default::default()).unwrap().bytes;
+    let f = lienzo_psd::PsdFile::from_bytes(&second).unwrap();
+    let uuids: Vec<String> = f.global_blocks.iter().filter(|b| &b.key == b"lnk2").flat_map(|b| lienzo_io::linked::block_uuids(&b.data)).collect();
+    let back = lienzo_io::import("b.psd", &second).unwrap().document;
     let (_, sm) = smart(&back);
     let SmartSource::Linked { path } = &sm.source else { panic!() };
     assert_eq!(uuids, vec![path.clone()]);
@@ -409,11 +409,11 @@ fn edited_psd_smart_objects_drop_their_old_file() {
 /// through, and keeps that map through PSD export, `.pcraft` and a PSD re-import.
 #[test]
 fn displace_psd_filter_renders_with_its_embedded_map() {
-    use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
+    use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
     for depth in [8, 16, 32] {
         let mut s = session(depth);
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
-        let id = photocraft_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
+        let id = lienzo_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
         // Photoshop's layout: height, width, mode 3, horizontal plane (all right), vertical plane
         // (neutral), padding. 128/255 is a hair over mid-grey: a sub-pixel vertical shift.
         let (mw, mh) = (12u32, 8u32);
@@ -435,7 +435,7 @@ fn displace_psd_filter_renders_with_its_embedded_map() {
             .with("hasoptions", Value::Boolean(true))
             .with("Fltr", Value::Descriptor(fltr))
             .with("filterID", Value::Integer(1148416108));
-        let filter = photocraft_io::smart_map::filter_from_item(&item);
+        let filter = lienzo_io::smart_map::filter_from_item(&item);
         assert_eq!(filter.command, "filter.distort.displace");
         s.edit("displace", |doc, _| {
             let mut l = doc.layer(id).unwrap().clone();
@@ -452,15 +452,15 @@ fn displace_psd_filter_renders_with_its_embedded_map() {
         // right, so it moves left over the canvas edge and leaves its right edge.
         assert!(alpha(&doc, 2) > 0.99 && alpha(&doc, 75) < 0.01, "depth {depth}: {} {}", alpha(&doc, 2), alpha(&doc, 75));
 
-        let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
         assert!(out.warnings.is_empty(), "{:?}", out.warnings);
         assert_eq!(structure_errors(&out.bytes), Vec::<String>::new());
-        let back = photocraft_io::import("displace.psd", &out.bytes).unwrap().document;
-        let native = photocraft_format::load_from_bytes(&photocraft_format::save_to_bytes(&back, &Default::default()).unwrap()).unwrap();
+        let back = lienzo_io::import("displace.psd", &out.bytes).unwrap().document;
+        let native = lienzo_format::load_from_bytes(&lienzo_format::save_to_bytes(&back, &Default::default()).unwrap()).unwrap();
         for doc in [&back, &native] {
             let (bid, after) = smart(doc);
             assert_eq!(after.smart_filters, vec![filter.clone()], "depth {depth}");
-            let mut l = doc.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+            let mut l = doc.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
             assert!(refresh_layer(doc, &mut l).unwrap());
             let LayerContent::Smart(sm) = &l.content else { panic!("smart") };
             let (a, b) = (sm.cache.as_ref().unwrap(), smart(&s.active().unwrap().doc).1.cache.unwrap());
@@ -474,19 +474,19 @@ fn displace_psd_filter_renders_with_its_embedded_map() {
 /// that file and the replaced contents come out displaced.
 #[test]
 fn displace_psd_filter_with_only_a_map_path_renders_after_replace_contents() {
-    use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
+    use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
     let dir = std::env::temp_dir().join(format!("pcraft-9162-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let png = |name: &str, size: (u32, u32), c: [f32; 4]| {
         let d = Document::with_background(
             "m",
-            photocraft_geom::Size::new(size.0, size.1),
-            photocraft_color::ColorMode::Rgb,
-            photocraft_color::SampleType::U8,
-            photocraft_color::Color::rgba(c[0], c[1], c[2], c[3]),
+            lienzo_geom::Size::new(size.0, size.1),
+            lienzo_color::ColorMode::Rgb,
+            lienzo_color::SampleType::U8,
+            lienzo_color::Color::rgba(c[0], c[1], c[2], c[3]),
         );
         let path = dir.join(name);
-        std::fs::write(&path, photocraft_io::export(&d, "png", &Default::default()).unwrap().bytes).unwrap();
+        std::fs::write(&path, lienzo_io::export(&d, "png", &Default::default()).unwrap().bytes).unwrap();
         path.to_str().unwrap().to_string()
     };
     // Red is the horizontal map (full right), green the vertical one (about neutral), as in the
@@ -515,17 +515,17 @@ fn displace_psd_filter_with_only_a_map_path_renders_after_replace_contents() {
     for depth in [8, 16, 32] {
         let mut s = session(depth);
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
-        let id = photocraft_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
+        let id = lienzo_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
         s.edit("displace", |doc, _| {
             let LayerContent::Smart(sm) = &mut doc.layer_mut(id).unwrap().content else { panic!("smart") };
-            sm.smart_filters.push(photocraft_io::smart_map::filter_from_item(&item));
+            sm.smart_filters.push(lienzo_io::smart_map::filter_from_item(&item));
             Ok(())
         })
         .unwrap();
-        let psd = photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes;
+        let psd = lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes;
         // The issue's flow: open the PSD, Replace Contents of the smart object.
         let mut s2 = Session::new();
-        s2.add_document(photocraft_io::import("pc-displace-repro.psd", &psd).unwrap().document, None);
+        s2.add_document(lienzo_io::import("pc-displace-repro.psd", &psd).unwrap().document, None);
         let (sid, _) = smart(&s2.active().unwrap().doc);
         let out = s2.execute("layer.smartObjects.replaceContents", json!({"layer": sid, "path": design})).unwrap();
         assert_eq!(out["warnings"], json!([]), "depth {depth}");
@@ -543,7 +543,7 @@ fn displace_psd_filter_with_only_a_map_path_renders_after_replace_contents() {
 /// its planes through PSD export, `.pcraft` and a PSD re-import.
 #[test]
 fn perspective_warp_psd_filter_renders_warped() {
-    use photocraft_psd::descriptor::{Descriptor, UnicodeString, Value};
+    use lienzo_psd::descriptor::{Descriptor, UnicodeString, Value};
     let pnts = |p: &[[f64; 2]]| {
         let px = |v: f64| Value::UnitFloat { unit: *b"#Pxl", value: v };
         Value::List(p.iter().map(|q| Value::Descriptor(Descriptor::new("Pnt ").with("Hrzn", px(q[0])).with("Vrtc", px(q[1])))).collect())
@@ -563,8 +563,8 @@ fn perspective_warp_psd_filter_renders_warped() {
     for depth in [8, 16, 32] {
         let mut s = session(depth);
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
-        let id = photocraft_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
-        let filter = photocraft_io::smart_map::filter_from_item(&item);
+        let id = lienzo_doc::LayerId(s.active().unwrap().active_layer.unwrap().0);
+        let filter = lienzo_io::smart_map::filter_from_item(&item);
         assert_eq!(filter.command, "layer.smartObjects.perspectiveWarp");
         s.edit("perspective warp", |doc, _| {
             let mut l = doc.layer(id).unwrap().clone();
@@ -579,16 +579,16 @@ fn perspective_warp_psd_filter_renders_warped() {
         let alpha = |doc: &Document, x: i32, y: i32| smart(doc).1.cache.unwrap().pixel(x, y)[3];
         assert!(alpha(&doc, 20, 30) > 0.99 && alpha(&doc, 70, 30) < 0.01 && alpha(&doc, 45, 10) < 0.01, "depth {depth}: warped");
 
-        let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
         assert!(out.warnings.is_empty(), "{:?}", out.warnings);
         assert_eq!(structure_errors(&out.bytes), Vec::<String>::new());
         keep(&format!("perspective-warp-{depth}.psd"), &out.bytes);
-        let back = photocraft_io::import("perspective.psd", &out.bytes).unwrap().document;
-        let native = photocraft_format::load_from_bytes(&photocraft_format::save_to_bytes(&back, &Default::default()).unwrap()).unwrap();
+        let back = lienzo_io::import("perspective.psd", &out.bytes).unwrap().document;
+        let native = lienzo_format::load_from_bytes(&lienzo_format::save_to_bytes(&back, &Default::default()).unwrap()).unwrap();
         for doc in [&back, &native] {
             let (bid, after) = smart(doc);
             assert_eq!(after.smart_filters, vec![filter.clone()], "depth {depth}");
-            let mut l = doc.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+            let mut l = doc.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
             assert!(refresh_layer(doc, &mut l).unwrap());
             let LayerContent::Smart(sm) = &l.content else { panic!("smart") };
             let (a, b) = (sm.cache.as_ref().unwrap(), smart(&s.active().unwrap().doc).1.cache.unwrap());
@@ -600,7 +600,7 @@ fn perspective_warp_psd_filter_renders_warped() {
 
 /// A version-2 `liFD` item, as in Photoshop CS2's `lnkD` block: the fields every version has, and
 /// none of the version 5–7 fields after the file data.
-fn lifd_v2(f: &photocraft_io::linked::LinkedFile) -> Vec<u8> {
+fn lifd_v2(f: &lienzo_io::linked::LinkedFile) -> Vec<u8> {
     let mut item = b"liFD".to_vec();
     item.extend_from_slice(&2u32.to_be_bytes());
     item.push(f.uuid.len() as u8);
@@ -608,7 +608,7 @@ fn lifd_v2(f: &photocraft_io::linked::LinkedFile) -> Vec<u8> {
     let name: Vec<u16> = f.file_name.encode_utf16().collect();
     item.extend_from_slice(&(name.len() as u32).to_be_bytes());
     item.extend(name.iter().flat_map(|u| u.to_be_bytes()));
-    item.extend_from_slice(&photocraft_io::linked::file_type(&f.bytes));
+    item.extend_from_slice(&lienzo_io::linked::file_type(&f.bytes));
     item.extend_from_slice(b"8BIM");
     item.extend_from_slice(&(f.bytes.len() as u64).to_be_bytes());
     item.push(0); // no open-file descriptor
@@ -622,14 +622,14 @@ fn lifd_v2(f: &photocraft_io::linked::LinkedFile) -> Vec<u8> {
 /// `doc` saved as PSD, then rewritten into Photoshop CS2's layout: no `SoLd`, and `lnkD` with
 /// version-2 items.
 fn cs2_layout(doc: &Document) -> Vec<u8> {
-    let out = photocraft_io::export(doc, "psd", &Default::default()).unwrap();
-    let mut file = photocraft_psd::PsdFile::from_bytes(&out.bytes).unwrap();
+    let out = lienzo_io::export(doc, "psd", &Default::default()).unwrap();
+    let mut file = lienzo_psd::PsdFile::from_bytes(&out.bytes).unwrap();
     for rec in file.layers_mut() {
         rec.blocks.retain(|b| !matches!(&b.key, b"SoLd" | b"SoLE"));
     }
     assert!(file.layers().iter().any(|l| l.block(b"PlLd").is_some()));
     let links = file.global_blocks.iter_mut().find(|b| &b.key == b"lnk2").unwrap();
-    let files = photocraft_io::linked::parse_linked_files(&links.data);
+    let files = lienzo_io::linked::parse_linked_files(&links.data);
     assert_eq!(files.len(), 1);
     links.key = *b"lnkD";
     links.data = files.iter().flat_map(lifd_v2).collect();
@@ -650,25 +650,25 @@ fn cs2_plld_only_smart_object_opens_its_contents() {
     let SmartSource::Embedded { bytes: pcraft, .. } = &before.source else { panic!("embedded") };
     let nested = decode_source("x.pcraft", pcraft).unwrap();
 
-    let back = photocraft_io::import("cs2.psd", &cs2_layout(&doc)).unwrap().document;
+    let back = lienzo_io::import("cs2.psd", &cs2_layout(&doc)).unwrap().document;
     let (bid, after) = smart(&back);
     for (a, b) in after.transform.m.iter().zip(before.transform.m) {
         assert!((a - b).abs() < 1e-9, "transform {:?} vs {:?}", after.transform, before.transform);
     }
-    let (name, src) = photocraft_engine::smart_cmds::contents_of(&back, photocraft_doc::LayerId(bid)).expect("the contents are available");
+    let (name, src) = lienzo_engine::smart_cmds::contents_of(&back, lienzo_doc::LayerId(bid)).expect("the contents are available");
     let inner = decode_source(&name, &src).unwrap();
     assert_eq!((inner.size, inner.layers.len()), (nested.size, nested.layers.len()));
     // It re-renders where it was placed.
-    let mut l = back.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+    let mut l = back.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
     assert!(refresh_layer(&back, &mut l).unwrap());
     let mut rerendered = back.clone();
-    *rerendered.layer_mut(photocraft_doc::LayerId(bid)).unwrap() = l;
-    let d = max_diff(&photocraft_compose::flatten(&rerendered).px, &photocraft_compose::flatten(&doc).px);
+    *rerendered.layer_mut(lienzo_doc::LayerId(bid)).unwrap() = l;
+    let d = max_diff(&lienzo_compose::flatten(&rerendered).px, &lienzo_compose::flatten(&doc).px);
     assert!(d <= 2.0 / 255.0, "re-render differs by {d}");
     // And Edit Contents (the double-click) opens the nested document.
     let mut s2 = Session::new();
     s2.add_document(back, None);
-    s2.select_layer(photocraft_doc::LayerId(bid)).unwrap();
+    s2.select_layer(lienzo_doc::LayerId(bid)).unwrap();
     s2.execute("layer.smartObjects.editContents", json!({})).unwrap();
     assert_eq!(s2.active().unwrap().doc.size, nested.size);
 }
@@ -687,19 +687,19 @@ fn cs2_plld_only_warped_smart_object_stays_warped() {
     let (_, before) = smart(&doc);
     assert!(before.warp.is_some());
 
-    let back = photocraft_io::import("cs2.psd", &cs2_layout(&doc)).unwrap().document;
+    let back = lienzo_io::import("cs2.psd", &cs2_layout(&doc)).unwrap().document;
     let (bid, after) = smart(&back);
     assert_eq!(after.warp, before.warp);
-    assert!(photocraft_engine::smart_cmds::contents_of(&back, photocraft_doc::LayerId(bid)).is_ok(), "the contents are available");
+    assert!(lienzo_engine::smart_cmds::contents_of(&back, lienzo_doc::LayerId(bid)).is_ok(), "the contents are available");
     // Re-rendered from its source, it is still warped where it was placed.
     let rerender = |warp| {
-        let mut l = back.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+        let mut l = back.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
         let LayerContent::Smart(sm) = &mut l.content else { panic!() };
         sm.warp = warp;
         assert!(refresh_layer(&back, &mut l).unwrap());
         let mut d = back.clone();
-        *d.layer_mut(photocraft_doc::LayerId(bid)).unwrap() = l;
-        max_diff(&photocraft_compose::flatten(&d).px, &photocraft_compose::flatten(&doc).px)
+        *d.layer_mut(lienzo_doc::LayerId(bid)).unwrap() = l;
+        max_diff(&lienzo_compose::flatten(&d).px, &lienzo_compose::flatten(&doc).px)
     };
     let d = rerender(after.warp.clone());
     assert!(d <= 2.0 / 255.0, "re-render differs by {d}");
@@ -717,15 +717,15 @@ fn cs2_plld_only_smart_object_saves_its_new_transform() {
     s.execute("edit.transform", json!({"layer": id, "matrix": [0.75, 0, 0, 0.75, 10, 4]})).unwrap();
     let cs2 = cs2_layout(&s.active().unwrap().doc);
     let plld = |bytes: &[u8]| {
-        let f = photocraft_psd::PsdFile::from_bytes(bytes).unwrap();
+        let f = lienzo_psd::PsdFile::from_bytes(bytes).unwrap();
         let rec = f.layers().iter().find(|l| l.block(b"PlLd").is_some()).cloned().expect("a placed layer");
         (rec.block(b"PlLd").unwrap().data.clone(), rec.block(b"SoLd").is_some())
     };
-    let back = photocraft_io::import("cs2.psd", &cs2).unwrap().document;
+    let back = lienzo_io::import("cs2.psd", &cs2).unwrap().document;
     let (bid, _) = smart(&back);
 
     // Unedited: the CS2 record is written back as it was.
-    let same = photocraft_io::export(&back, "psd", &Default::default()).unwrap().bytes;
+    let same = lienzo_io::export(&back, "psd", &Default::default()).unwrap().bytes;
     assert_eq!(plld(&same), (plld(&cs2).0, false));
 
     // Moved and scaled: written with the new placement, and it reopens there.
@@ -734,15 +734,15 @@ fn cs2_plld_only_smart_object_saves_its_new_transform() {
     s2.execute("edit.transform", json!({"layer": bid, "matrix": [0.5, 0, 0, 0.5, 20, 12]})).unwrap();
     let edited = s2.active().unwrap().doc.clone();
     let (_, want) = smart(&edited);
-    let saved = photocraft_io::export(&edited, "psd", &Default::default()).unwrap().bytes;
+    let saved = lienzo_io::export(&edited, "psd", &Default::default()).unwrap().bytes;
     assert!(structure_errors(&saved).is_empty(), "{:?}", structure_errors(&saved));
     assert_ne!(plld(&saved).0, plld(&cs2).0, "the old PlLd record was written back");
-    let again = photocraft_io::import("again.psd", &saved).unwrap().document;
+    let again = lienzo_io::import("again.psd", &saved).unwrap().document;
     let (aid, got) = smart(&again);
     for (a, b) in got.transform.m.iter().zip(want.transform.m) {
         assert!((a - b).abs() < 1e-9, "transform {:?} vs {:?}", got.transform, want.transform);
     }
-    assert!(photocraft_engine::smart_cmds::contents_of(&again, photocraft_doc::LayerId(aid)).is_ok(), "the contents are available");
+    assert!(lienzo_engine::smart_cmds::contents_of(&again, lienzo_doc::LayerId(aid)).is_ok(), "the contents are available");
 }
 
 /// Photoshop stores a smart object's filtered pixels without its filter mask and mixes the
@@ -751,8 +751,8 @@ fn cs2_plld_only_smart_object_saves_its_new_transform() {
 /// mixes them back to what the document showed.
 #[test]
 fn a_soft_filter_mask_is_stored_the_way_photoshop_stores_it() {
-    use photocraft_doc::LayerMask;
-    use photocraft_raster::Surface;
+    use lienzo_doc::LayerMask;
+    use lienzo_raster::Surface;
     let mut s = session(8);
     s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     s.execute("filter.blur.gaussianBlur", json!({"radius": 4})).unwrap();
@@ -763,7 +763,7 @@ fn a_soft_filter_mask_is_stored_the_way_photoshop_stores_it() {
         let l = doc.layer_mut(id).unwrap();
         let LayerContent::Smart(sm) = &mut l.content else { panic!("smart") };
         let mut m = LayerMask::reveal_all();
-        m.surface = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        m.surface = Surface::new(lienzo_color::PixelFormat::GRAY8);
         let r = Rect::new(0, 0, W, H);
         m.surface.write_region(r, &(0..H).flat_map(|_| (0..W).map(|x| x as f32 / (W - 1) as f32)).collect::<Vec<_>>());
         sm.filter_mask = Some(m);
@@ -776,10 +776,10 @@ fn a_soft_filter_mask_is_stored_the_way_photoshop_stores_it() {
     // The same smart object with the mask switched off: filtered everywhere.
     let mut unmasked = sm.clone();
     unmasked.filter_mask.as_mut().unwrap().enabled = false;
-    let filtered = photocraft_engine::smart_cmds::render(&doc, &unmasked).unwrap().unwrap();
+    let filtered = lienzo_engine::smart_cmds::render(&doc, &unmasked).unwrap().unwrap();
 
-    let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
-    let file = photocraft_psd::PsdFile::from_bytes(&out.bytes).unwrap();
+    let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
+    let file = lienzo_psd::PsdFile::from_bytes(&out.bytes).unwrap();
     let name = doc.layer(id).unwrap().name.clone();
     let record = (0..file.layers().len()).filter_map(|i| file.layer(i)).find(|l| l.name() == name).unwrap();
     let img = record.rgba8().unwrap();
@@ -795,8 +795,8 @@ fn a_soft_filter_mask_is_stored_the_way_photoshop_stores_it() {
         assert!((f32::from(stored[c]) / 255.0 - want[c]).abs() <= 1.5 / 255.0, "channel {c}: stored {stored:?}, filtered {want:?}, mixed {half:?}");
     }
     // Opening the file mixes the unfiltered pixels back in: it shows what the document showed.
-    let back = photocraft_io::import("x.psd", &out.bytes).unwrap().document;
-    let d = max_diff(&photocraft_compose::flatten(&back).px, &photocraft_compose::flatten(&doc).px);
+    let back = lienzo_io::import("x.psd", &out.bytes).unwrap().document;
+    let d = max_diff(&lienzo_compose::flatten(&back).px, &lienzo_compose::flatten(&doc).px);
     assert!(d <= 2.0 / 255.0, "re-opened differs by {d}");
 }
 
@@ -819,11 +819,11 @@ fn hue_saturation_smart_filter_survives_psd_and_re_renders() {
         let adjusted = before.cache.clone().unwrap();
         assert!(plain.pixel(20, 20) != adjusted.pixel(20, 20), "depth {depth}: the filter changes pixels");
 
-        let out = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
+        let out = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
         assert!(out.warnings.is_empty(), "{:?}", out.warnings);
         assert_eq!(structure_errors(&out.bytes), Vec::<String>::new());
         keep(&format!("hue-sat-{depth}.psd"), &out.bytes);
-        let back = photocraft_io::import("hue-sat.psd", &out.bytes).unwrap().document;
+        let back = lienzo_io::import("hue-sat.psd", &out.bytes).unwrap().document;
         let (bid, after) = smart(&back);
         assert_eq!(after.smart_filters.len(), 1);
         let f = &after.smart_filters[0];
@@ -832,7 +832,7 @@ fn hue_saturation_smart_filter_survives_psd_and_re_renders() {
             assert_eq!(&f.params[k], v, "depth {depth}: {k}");
         }
         // Re-rendered from the source (as replaceContents / relink do), the filter still applies.
-        let mut l = back.layer(photocraft_doc::LayerId(bid)).unwrap().clone();
+        let mut l = back.layer(lienzo_doc::LayerId(bid)).unwrap().clone();
         assert!(refresh_layer(&back, &mut l).unwrap());
         let LayerContent::Smart(sm) = &l.content else { panic!("smart") };
         let cache = sm.cache.as_ref().unwrap();

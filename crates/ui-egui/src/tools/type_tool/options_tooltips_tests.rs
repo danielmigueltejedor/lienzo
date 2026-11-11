@@ -9,19 +9,19 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 const FAMILY_TIP: &str = "Search and select fonts";
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.run("type.create", json!({"text": "Sample", "font": "Inter", "size": 18})).unwrap();
     app
 }
 
 /// `draw` in a row, once the app's fonts are set up (the first pass has none).
-fn harness(draw: fn(&mut PhotocraftApp, &mut egui::Ui)) -> Harness<'static, PhotocraftApp> {
+fn harness(draw: fn(&mut LienzoApp, &mut egui::Ui)) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1400.0, 600.0)).build_ui_state(
         move |ui, app| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
@@ -30,16 +30,16 @@ fn harness(draw: fn(&mut PhotocraftApp, &mut egui::Ui)) -> Harness<'static, Phot
         },
         app(),
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
-fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     super::options_bar::options_bar(app, ui);
 }
 
-fn character_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn character_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     ui.vertical(|ui| super::panel::character_panel(app, ui, false));
 }
 
@@ -47,16 +47,16 @@ fn description(n: egui_kittest::Node<'_>) -> Option<String> {
     n.accesskit_node().description().map(|d| d.to_string())
 }
 
-fn described_by_label(h: &Harness<'static, PhotocraftApp>, label: &str) -> Vec<String> {
+fn described_by_label(h: &Harness<'static, LienzoApp>, label: &str) -> Vec<String> {
     h.query_all_by_label(label).filter_map(description).collect()
 }
 
-fn described_by_role(h: &Harness<'static, PhotocraftApp>, role: Role) -> Vec<String> {
+fn described_by_role(h: &Harness<'static, LienzoApp>, role: Role) -> Vec<String> {
     h.query_all_by_role(role).filter_map(description).collect()
 }
 
 /// Every text shape drawn this frame, tooltips included.
-fn drawn(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn drawn(h: &Harness<'static, LienzoApp>) -> Vec<String> {
     fn collect(shape: &egui::Shape, text: &mut Vec<String>) {
         match shape {
             egui::Shape::Text(shape) => text.push(shape.galley.job.text.clone()),

@@ -4,7 +4,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 fn with_tags(layout: ChannelLayout, sample: SampleType) -> Image {
     let mut img = synth(9, 7, layout, sample, 5, 0.3);
@@ -66,7 +66,7 @@ fn extra_samples_round_trip() {
 
 /// Tall enough that the default strip size (about 1 MB) cannot hold every row, so a writer
 /// that only fills the first strip, or predicts across the wrong sample count, cannot hide.
-/// The spot plane is checked with the `tiff` crate, not PhotoCraft's decoder.
+/// The spot plane is checked with the `tiff` crate, not Lienzo's decoder.
 #[test]
 fn multi_strip_spot_round_trip_and_dump() {
     let w = 800u32;

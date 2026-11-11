@@ -6,15 +6,15 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
-use photocraft_cms::Profile;
-use photocraft_doc::{ColorMode, Document};
+use lienzo_cms::Profile;
+use lienzo_doc::{ColorMode, Document};
 use serde_json::{Map, Value, json};
 
-use photocraft_engine::export_preset_cmds::{DEFAULT_RESAMPLE, RESAMPLE, export_resample};
+use lienzo_engine::export_preset_cmds::{DEFAULT_RESAMPLE, RESAMPLE, export_resample};
 
 use crate::state::DialogKind;
 use crate::theme::Tokens;
-use crate::{ExportSettings, PhotocraftApp};
+use crate::{ExportSettings, LienzoApp};
 
 const FORMATS: [(&str, &str); 7] = [("png", "PNG"), ("jpg", "JPG"), ("webp", "WebP"), ("tif", "TIFF"), ("tga", "TGA"), ("ico", "ICO"), ("jxl", "JPEG XL")];
 
@@ -68,7 +68,7 @@ fn valid_setting(key: &str, v: &Value) -> bool {
 
 /// The dialog is seeded from the settings it was used with last (see [`COMMAND`]); a value that
 /// no longer matches a control (a hand-edited preferences file) is left at its default.
-fn seed_remembered(app: &PhotocraftApp, f: &mut Map<String, Value>) {
+fn seed_remembered(app: &LienzoApp, f: &mut Map<String, Value>) {
     let Some(Value::Object(saved)) = app.session.prefs().dialogs.get(COMMAND) else { return };
     for key in SETTINGS {
         let Some(v) = saved.get(key).filter(|v| valid_setting(key, v)) else { continue };
@@ -83,14 +83,14 @@ fn seed_remembered(app: &PhotocraftApp, f: &mut Map<String, Value>) {
 }
 
 /// Record the settings for the next Export As (see [`seed_remembered`]).
-fn remember(app: &mut PhotocraftApp, f: &Map<String, Value>) {
+fn remember(app: &mut LienzoApp, f: &Map<String, Value>) {
     let saved = settings_of(f);
     app.session.prefs.edit(|p| {
         p.dialogs.insert(COMMAND.into(), Value::Object(saved));
     });
 }
 
-pub fn open(app: &mut PhotocraftApp) -> Result<u64, String> {
+pub fn open(app: &mut LienzoApp) -> Result<u64, String> {
     let size = app.session.active().ok_or("no document")?.doc.size;
     open_sized(app, size.width, size.height)
 }
@@ -98,7 +98,7 @@ pub fn open(app: &mut PhotocraftApp) -> Result<u64, String> {
 /// The dialog with its size fields fitted to a `src_w` × `src_h` source: the document, or the
 /// layer Layer › Export As exports. Fitting the document first would replace a remembered pixel
 /// size the document can't take with the percent, even when the layer can take it.
-fn open_sized(app: &mut PhotocraftApp, src_w: u32, src_h: u32) -> Result<u64, String> {
+fn open_sized(app: &mut LienzoApp, src_w: u32, src_h: u32) -> Result<u64, String> {
     let mut f = Map::new();
     f.insert("__export".into(), json!(true));
     f.insert("__label".into(), json!("Export As"));
@@ -152,9 +152,9 @@ fn fit_size(f: &mut Map<String, Value>, src_w: f64, src_h: f64) {
 }
 
 /// Layer › Export As…: the same dialog for just the active layer (trimmed to its pixels).
-pub fn open_layer(app: &mut PhotocraftApp, layer: photocraft_doc::LayerId) -> Result<u64, String> {
+pub fn open_layer(app: &mut LienzoApp, layer: lienzo_doc::LayerId) -> Result<u64, String> {
     let st = app.session.active().ok_or("no document")?;
-    let ldoc = photocraft_engine::layer_menu_cmds::layer_document(&st.doc, layer).map_err(|e| e.to_string())?;
+    let ldoc = lienzo_engine::layer_menu_cmds::layer_document(&st.doc, layer).map_err(|e| e.to_string())?;
     // The size fields follow the layer's trimmed size, so the dialog shows and edits the size
     // the layer exports at.
     let id = open_sized(app, ldoc.size.width, ldoc.size.height)?;
@@ -168,7 +168,7 @@ pub fn open_layer(app: &mut PhotocraftApp, layer: photocraft_doc::LayerId) -> Re
 
 /// Layer › Export As… with several layers (artboards, say) selected: the same dialog, then one
 /// file per layer with its settings (#3629). The preview shows the first layer.
-pub fn open_layers(app: &mut PhotocraftApp, layers: &[photocraft_doc::LayerId]) -> Result<u64, String> {
+pub fn open_layers(app: &mut LienzoApp, layers: &[lienzo_doc::LayerId]) -> Result<u64, String> {
     let (first, n) = match layers {
         [] => return Err("no selected layers".into()),
         [one] => return open_layer(app, *one),
@@ -184,7 +184,7 @@ pub fn open_layers(app: &mut PhotocraftApp, layers: &[photocraft_doc::LayerId]) 
 }
 
 /// Layer › Quick Export as PNG.
-pub fn quick_export_layer_png(app: &mut PhotocraftApp, layer: photocraft_doc::LayerId) -> Result<Value, String> {
+pub fn quick_export_layer_png(app: &mut LienzoApp, layer: lienzo_doc::LayerId) -> Result<Value, String> {
     let mut f = Map::new();
     f.insert("format".into(), json!("png"));
     f.insert("transparency".into(), json!(true));
@@ -195,7 +195,7 @@ pub fn quick_export_layer_png(app: &mut PhotocraftApp, layer: photocraft_doc::La
 
 /// Export each selected layer separately, with one destination prompt for the batch.
 /// The chosen path names the first file; subsequent files have numbered sibling names.
-pub fn quick_export_selected_layers_png(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn quick_export_selected_layers_png(app: &mut LienzoApp) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document")?;
     let layers = st.selected_layers();
     if layers.len() == 1 {
@@ -207,7 +207,7 @@ pub fn quick_export_selected_layers_png(app: &mut PhotocraftApp) -> Result<Value
     // Capture all sources before showing the dialog: changing selection or document while it
     // is open cannot change which layers get exported.
     let docs: Vec<_> =
-        layers.into_iter().map(|id| photocraft_engine::layer_menu_cmds::layer_document(&st.doc, id).map_err(|e| e.to_string())).collect::<Result<_, _>>()?;
+        layers.into_iter().map(|id| lienzo_engine::layer_menu_cmds::layer_document(&st.doc, id).map_err(|e| e.to_string())).collect::<Result<_, _>>()?;
     let suggested = format!("{}.png", export_name(&st.doc.name));
     app.pick_export(&suggested, move |app, path| {
         if !path.to_ascii_lowercase().ends_with(".png") {
@@ -271,20 +271,20 @@ fn batch_paths(path: &str, docs: &[Document]) -> Vec<String> {
 /// The document a dialog exports: the whole image, or one layer (`__layer`).
 fn source_document_from(doc: Arc<Document>, f: &Map<String, Value>) -> Result<Arc<Document>, String> {
     match f.get("__layer").and_then(Value::as_u64) {
-        Some(id) => photocraft_engine::layer_menu_cmds::layer_document(&doc, photocraft_doc::LayerId(id)).map(Arc::new).map_err(|e| e.to_string()),
+        Some(id) => lienzo_engine::layer_menu_cmds::layer_document(&doc, lienzo_doc::LayerId(id)).map(Arc::new).map_err(|e| e.to_string()),
         None => Ok(doc),
     }
 }
 
-fn source_document(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Arc<Document>, String> {
+fn source_document(app: &LienzoApp, f: &Map<String, Value>) -> Result<Arc<Document>, String> {
     source_document_from(app.session.active().ok_or("no document")?.doc.clone(), f)
 }
 
-fn effective_source_profile(app: &PhotocraftApp, doc: &Document) -> Arc<Profile> {
+fn effective_source_profile(app: &LienzoApp, doc: &Document) -> Arc<Profile> {
     doc.icc_profile
         .as_ref()
-        .and_then(|bytes| photocraft_engine::color_cmds::profile_from_bytes(bytes).ok())
-        .filter(|profile| profile.color_space == photocraft_engine::color_cmds::mode_space(doc.mode))
+        .and_then(|bytes| lienzo_engine::color_cmds::profile_from_bytes(bytes).ok())
+        .filter(|profile| profile.color_space == lienzo_engine::color_cmds::mode_space(doc.mode))
         .unwrap_or_else(|| app.session.color.working(doc.mode))
 }
 
@@ -321,9 +321,9 @@ fn export_document(doc: &Document, f: &Map<String, Value>, max_side: Option<u32>
     if srgb {
         copy.icc_profile = Some(source_profile.to_bytes());
     }
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.add_document(copy, None);
-    if srgb && (doc.mode != ColorMode::Rgb || !source_profile.same_bytes(photocraft_cms::Builtin::Srgb.profile())) {
+    if srgb && (doc.mode != ColorMode::Rgb || !source_profile.same_bytes(lienzo_cms::Builtin::Srgb.profile())) {
         session.execute("edit.convertToProfile", json!({"profile": "srgb", "intent": "perceptual"})).map_err(|e| e.to_string())?;
     }
     let (w, h) = export_pixels(f64::from(doc.size.width), f64::from(doc.size.height), f, max_side)?;
@@ -427,7 +427,7 @@ fn export_pixels(src_w: f64, src_h: f64, f: &Map<String, Value>, max_side: Optio
 
 /// Export As already supports lossy WebP; reuse the Quick Export defaults when
 /// choosing that format so both flows expose the same quality and lossless options.
-fn set_format_defaults(f: &mut Map<String, Value>, fmt: &str, prefs: &photocraft_engine::prefs::Export) {
+fn set_format_defaults(f: &mut Map<String, Value>, fmt: &str, prefs: &lienzo_engine::prefs::Export) {
     f.insert("format".into(), json!(fmt));
     match fmt {
         "jpg" => {
@@ -452,8 +452,8 @@ fn lossless(f: &Map<String, Value>) -> bool {
 
 /// TGA bits per pixel: `"24"` or `"32"`; `"auto"` (the default) is 32 with an alpha channel or
 /// transparency, else 24, as Export As wrote before it offered the choice.
-fn tga_bits(f: &Map<String, Value>) -> Option<photocraft_io::TgaBits> {
-    s(f, "tgaBits").parse().ok().and_then(photocraft_io::TgaBits::from_bits)
+fn tga_bits(f: &Map<String, Value>) -> Option<lienzo_io::TgaBits> {
+    s(f, "tgaBits").parse().ok().and_then(lienzo_io::TgaBits::from_bits)
 }
 
 fn settings(f: &Map<String, Value>) -> ExportSettings {
@@ -463,7 +463,7 @@ fn settings(f: &Map<String, Value>) -> ExportSettings {
     ExportSettings {
         jpeg_quality: (fmt == "jpg").then_some(quality),
         // Photoshop's 1-7 Export As presets measured 4:2:0 at 1-4 and 4:4:4 at 5-7.
-        // An exact mapping to 1-100 is unestablished; reuse PhotoCraft's Save for Web cutoff.
+        // An exact mapping to 1-100 is unestablished; reuse Lienzo's Save for Web cutoff.
         jpeg_chroma_subsampling: fmt == "jpg" && quality <= 50,
         webp_lossless: fmt != "webp" || lossless(f),
         webp_quality: (fmt == "webp" && !lossless(f)).then_some(quality),
@@ -496,7 +496,7 @@ fn scaled_estimate(bytes: usize, doc: &Document, proxy: &Document, f: &Map<Strin
 }
 
 /// Estimated size (bytes) from the already prepared proxy encode, scaled by pixel count.
-fn estimate(app: &PhotocraftApp, doc: &Document, proxy: &Document, f: &Map<String, Value>) -> Option<u64> {
+fn estimate(app: &LienzoApp, doc: &Document, proxy: &Document, f: &Map<String, Value>) -> Option<u64> {
     let export = app.services.export.as_ref()?;
     let (bytes, _) = export(proxy, &format!("estimate.{}", s_fmt(f)), &settings(f)).ok()?;
     Some(scaled_estimate(bytes.len(), doc, proxy, f))
@@ -510,11 +510,11 @@ struct PreviewPixels {
 }
 
 fn preview_pixels(proxy: &Document, estimate: Option<u64>) -> PreviewPixels {
-    let img = photocraft_compose::thumbnail(proxy, 360);
+    let img = lienzo_compose::thumbnail(proxy, 360);
     PreviewPixels { estimate, width: img.width as usize, height: img.height as usize, rgba: img.pixels }
 }
 
-fn preview_sync(app: &PhotocraftApp, doc: &Document, f: &Map<String, Value>, source_profile: &Profile) -> Result<PreviewPixels, String> {
+fn preview_sync(app: &LienzoApp, doc: &Document, f: &Map<String, Value>, source_profile: &Profile) -> Result<PreviewPixels, String> {
     let proxy = preview_proxy(doc, f, source_profile)?;
     Ok(preview_pixels(&proxy, estimate(app, doc, &proxy, f)))
 }
@@ -609,7 +609,7 @@ fn poll_or_start_preview(
 /// The native exporter uses this same IO encoder. Keep the entire estimate off the UI thread.
 #[cfg(not(target_arch = "wasm32"))]
 fn estimate_native(doc: &Document, proxy: &Document, f: &Map<String, Value>) -> Option<u64> {
-    let bytes = photocraft_io::export(proxy, &format!("estimate.{}", s_fmt(f)), &settings(f).io_options()).ok()?.bytes;
+    let bytes = lienzo_io::export(proxy, &format!("estimate.{}", s_fmt(f)), &settings(f).io_options()).ok()?.bytes;
     Some(scaled_estimate(bytes.len(), doc, proxy, f))
 }
 
@@ -630,7 +630,7 @@ fn exact_estimate(doc: &Document, f: &Map<String, Value>, source_profile: &Profi
         return None;
     }
     let full = export_document(doc, f, None, source_profile).ok()?;
-    let bytes = photocraft_io::export(&full, &format!("estimate.{}", s_fmt(f)), &settings(f).io_options()).ok()?.bytes;
+    let bytes = lienzo_io::export(&full, &format!("estimate.{}", s_fmt(f)), &settings(f).io_options()).ok()?.bytes;
     u64::try_from(bytes.len()).ok()
 }
 
@@ -773,7 +773,7 @@ fn resample_label(label: &str) -> &'static str {
     }
 }
 
-fn apply_preset(f: &mut Map<String, Value>, settings: &photocraft_engine::export_preset_cmds::ExportPresetSettings, src_w: f64, src_h: f64) {
+fn apply_preset(f: &mut Map<String, Value>, settings: &lienzo_engine::export_preset_cmds::ExportPresetSettings, src_w: f64, src_h: f64) {
     f.insert("format".into(), json!(settings.format));
     f.insert("quality".into(), json!(settings.quality));
     f.insert("lossless".into(), json!(settings.lossless));
@@ -821,7 +821,7 @@ fn preset_settings(f: &Map<String, Value>) -> Value {
     })
 }
 
-fn preset_fields(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, src_w: f64, src_h: f64) {
+fn preset_fields(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, src_w: f64, src_h: f64) {
     let t = Tokens::get(ui.ctx());
     ui.add_space(8.0);
     let names: Vec<String> = app.session.presets.export_presets.iter().map(|p| p.name.clone()).collect();
@@ -892,7 +892,7 @@ fn preset_fields(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String,
     }
 }
 
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let Some(doc) = app.session.active().map(|s| s.doc.clone()) else { return };
     let source_profile = effective_source_profile(app, &doc);
@@ -1038,10 +1038,10 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Valu
 }
 
 /// Export with the dialog's settings: choose a path, render, encode, write.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     remember(app, f);
     if let Some(layers) = f.get("__layers").and_then(Value::as_array) {
-        let ids: Vec<_> = layers.iter().filter_map(Value::as_u64).map(photocraft_doc::LayerId).collect();
+        let ids: Vec<_> = layers.iter().filter_map(Value::as_u64).map(lienzo_doc::LayerId).collect();
         return confirm_layers(app, f, &ids);
     }
     let doc = source_document(app, f)?;
@@ -1064,7 +1064,7 @@ pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value,
 }
 
 /// Exports `doc` to `path` with the dialog settings `f` (Export As, and its replayed action step).
-fn write_export(app: &mut PhotocraftApp, doc: &Document, f: &Map<String, Value>, path: &str, source_profile: &Profile) -> Result<Value, String> {
+fn write_export(app: &mut LienzoApp, doc: &Document, f: &Map<String, Value>, path: &str, source_profile: &Profile) -> Result<Value, String> {
     let out = export_document(doc, f, None, source_profile)?;
     crate::app::ensure_memory_to_save(&out, path)?;
     let export = app.services.export.as_ref().ok_or("no exporter configured")?;
@@ -1082,7 +1082,7 @@ fn write_export(app: &mut PhotocraftApp, doc: &Document, f: &Map<String, Value>,
 
 /// Replays a recorded Export As step (#7207): the active document exported to the recorded `path`
 /// with the recorded settings, without the dialog. The remembered dialog settings are untouched.
-pub(crate) fn replay(app: &mut PhotocraftApp, params: &Value) -> Result<Value, String> {
+pub(crate) fn replay(app: &mut LienzoApp, params: &Value) -> Result<Value, String> {
     let path = params.get("path").and_then(Value::as_str).filter(|p| !p.is_empty()).ok_or("Export As needs a `path`")?;
     let f = params.as_object().map(settings_of).unwrap_or_default();
     if let Some(format) = f.get("format").filter(|v| !valid_setting("format", v)) {
@@ -1101,11 +1101,11 @@ pub(crate) fn replay(app: &mut PhotocraftApp, params: &Value) -> Result<Value, S
 /// [`confirm`] for several layers: one destination prompt, then each layer exported with the
 /// dialog's settings and named as Quick Export names a selection's files. The layers are captured
 /// when asked, so changing the selection or document meanwhile can't change what is exported.
-fn confirm_layers(app: &mut PhotocraftApp, f: &Map<String, Value>, ids: &[photocraft_doc::LayerId]) -> Result<Value, String> {
+fn confirm_layers(app: &mut LienzoApp, f: &Map<String, Value>, ids: &[lienzo_doc::LayerId]) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document")?;
     let source_profile = effective_source_profile(app, &st.doc);
     let docs: Vec<Document> =
-        ids.iter().map(|id| photocraft_engine::layer_menu_cmds::layer_document(&st.doc, *id).map_err(|e| e.to_string())).collect::<Result<_, _>>()?;
+        ids.iter().map(|id| lienzo_engine::layer_menu_cmds::layer_document(&st.doc, *id).map_err(|e| e.to_string())).collect::<Result<_, _>>()?;
     if docs.is_empty() {
         return Err("no selected layers".into());
     }
@@ -1136,7 +1136,7 @@ fn confirm_layers(app: &mut PhotocraftApp, f: &Map<String, Value>, ids: &[photoc
 /// File › Export › Quick Export as PNG: the format, quality, metadata, colour space and location
 /// from File › Export › Export Preferences (engine `file.export.quickExport`). On the web (no
 /// file system) it falls back to a PNG download through the export service.
-pub fn quick_export_png(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn quick_export_png(app: &mut LienzoApp) -> Result<Value, String> {
     if !cfg!(target_arch = "wasm32") {
         let prefs = app.session.prefs().export.clone();
         let fmt = serde_json::to_value(prefs.quick_export_format).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_else(|| "png".into());
@@ -1145,7 +1145,7 @@ pub fn quick_export_png(app: &mut PhotocraftApp) -> Result<Value, String> {
         // Same Folder writes beside the document's file without asking, except when that would
         // replace the file itself (a document opened from photo.png): then the save dialog asks,
         // so replacing it is the user's choice (#6599).
-        if same && saved && !photocraft_engine::web_cmds::quick_export_target_is_own_file(&app.session) {
+        if same && saved && !lienzo_engine::web_cmds::quick_export_target_is_own_file(&app.session) {
             return quick_export(app, json!({}));
         }
         let st = app.session.active().ok_or("no document")?;
@@ -1164,7 +1164,7 @@ pub fn quick_export_png(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Runs Quick Export with `p` (an explicit `path`, or none for the document's folder).
-fn quick_export(app: &mut PhotocraftApp, p: Value) -> Result<Value, String> {
+fn quick_export(app: &mut LienzoApp, p: Value) -> Result<Value, String> {
     let r = app.run("file.export.quickExport", p)?;
     let template = "Exported {path}";
     app.ui.status = crate::i18n::fmt(tl!(template), &[("path", r["path"].as_str().unwrap_or_default())]);

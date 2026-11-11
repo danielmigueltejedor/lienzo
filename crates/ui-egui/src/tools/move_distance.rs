@@ -11,10 +11,10 @@
 //! so a pointer resting on the canvas costs nothing per frame.
 
 use egui::{Color32, Pos2, Stroke, pos2, vec2};
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_engine::snap::{layer_rect, union};
+use lienzo_doc::{DocId, Document, LayerId};
+use lienzo_engine::snap::{layer_rect, union};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
@@ -102,7 +102,7 @@ pub(crate) struct Cache {
 
 /// The selected layers' box and the box to measure it to with the pointer at `at` (document px):
 /// the layer a click there would Auto-Select, or the canvas where that is no other layer.
-fn boxes(app: &mut PhotocraftApp, at: [f64; 2]) -> Option<([f64; 4], [f64; 4])> {
+fn boxes(app: &mut LienzoApp, at: [f64; 2]) -> Option<([f64; 4], [f64; 4])> {
     if !at[0].is_finite() || !at[1].is_finite() {
         return None;
     }
@@ -117,7 +117,7 @@ fn boxes(app: &mut PhotocraftApp, at: [f64; 2]) -> Option<([f64; 4], [f64; 4])> 
     let d = &st.doc;
     let a = union(selected.iter().filter(|id| !d.is_background(**id)).filter_map(|id| tree_rect(d, *id)));
     let canvas = [0.0, 0.0, d.size.width as f64, d.size.height as f64];
-    let hovered = photocraft_engine::pick_cmds::move_auto_select_target(d, at[0], at[1], group).filter(|id| {
+    let hovered = lienzo_engine::pick_cmds::move_auto_select_target(d, at[0], at[1], group).filter(|id| {
         // The selection itself (or a layer in a selected group) isn't another layer.
         !d.is_background(*id) && !selected.iter().any(|s| *s == *id || d.path_of(*id).zip(d.path_of(*s)).is_some_and(|(p, q)| p.starts_with(&q)))
     });
@@ -129,7 +129,7 @@ fn boxes(app: &mut PhotocraftApp, at: [f64; 2]) -> Option<([f64; 4], [f64; 4])> 
 /// What to measure now: the ⌥-drag's original and copy while it duplicates, else, with ⌘ held
 /// (`command`) and no button down (`pressed`), the selection and what's under the pointer `at`.
 /// `None` when Smart Guides are off or another tool is current.
-pub(crate) fn current(app: &mut PhotocraftApp, at: Option<[f64; 2]>, command: bool, pressed: bool) -> Option<Overlay> {
+pub(crate) fn current(app: &mut LienzoApp, at: Option<[f64; 2]>, command: bool, pressed: bool) -> Option<Overlay> {
     if app.ui.tool != Tool::Move || !app.ui.view.shows(app.ui.view.show.smart_guides) || app.ui.transform.is_some() {
         return None;
     }
@@ -144,7 +144,7 @@ pub(crate) fn current(app: &mut PhotocraftApp, at: Option<[f64; 2]>, command: bo
 }
 
 /// An ⌥-drag that has duplicated the layers: the original's box and the copy's where it is now.
-fn duplicate_drag(app: &PhotocraftApp) -> Option<([f64; 4], [f64; 4])> {
+fn duplicate_drag(app: &LienzoApp) -> Option<([f64; 4], [f64; 4])> {
     if !crate::move_mods::duplicated(app) {
         return None;
     }
@@ -162,7 +162,7 @@ fn on(c: Color32) -> Color32 {
 }
 
 /// Draws the measurements on the active document's canvas in the Smart Guides colour.
-pub(crate) fn draw(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, idx: usize, hover: Option<Pos2>) {
+pub(crate) fn draw(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform, idx: usize, hover: Option<Pos2>) {
     if app.session.active_index() != Some(idx) {
         return;
     }
@@ -249,8 +249,8 @@ mod tests {
 
     /// The `snap_ui` test document: a target box at (300..350, 200..260) and the selected mover
     /// at (40..90, 40..80) on a 400×300 canvas.
-    fn app_with_boxes() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app_with_boxes() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.run("layer.new.layer", json!({"name": "target"})).unwrap();
         app.run("select.rect", json!({"x": 300, "y": 200, "width": 50, "height": 60})).unwrap();
@@ -336,7 +336,7 @@ mod tests {
         let mut app = app_with_boxes();
         app.ui.tool_options.move_auto_select = false;
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 let ctx = ui.ctx().clone();
                 if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
@@ -345,14 +345,14 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         let v = &mut h.state_mut().ui.views[0];
         v.zoom = 1.0;
         v.center = [200.0, 150.0];
         v.fit_pending = false;
         h.run_steps(2);
-        let screen = |h: &egui_kittest::Harness<'_, PhotocraftApp>, x: f32, y: f32| {
+        let screen = |h: &egui_kittest::Harness<'_, LienzoApp>, x: f32, y: f32| {
             let app = h.state();
             let v = &app.ui.views[0];
             let xf = ViewXform {
@@ -380,7 +380,7 @@ mod tests {
         h.run_steps(2);
         let boxes = h.state().move_distance.as_ref().and_then(|c| c.boxes);
         assert_eq!(boxes, Some(([40.0, 40.0, 90.0, 80.0], [300.0, 200.0, 350.0, 260.0])));
-        if let Ok(path) = std::env::var("PHOTOCRAFT_MOVE_DISTANCE_SCREENSHOT") {
+        if let Ok(path) = std::env::var("LIENZO_MOVE_DISTANCE_SCREENSHOT") {
             h.render().unwrap().save(path).unwrap();
         }
         assert_eq!(h.state().session.active().unwrap().revision, revision, "hovering changed nothing");

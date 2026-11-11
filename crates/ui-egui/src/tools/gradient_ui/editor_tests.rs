@@ -6,8 +6,8 @@ use egui_kittest::{
     kittest::{NodeT, Queryable},
 };
 
-fn editor(layer: bool) -> (Harness<'static, PhotocraftApp>, Sink) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn editor(layer: bool) -> (Harness<'static, LienzoApp>, Sink) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
     let mut params = json!({"stops": [[0, "#ff0000"], [0.5, "#00ff00"], [1, "#0000ff"]], "transparency": [[0, 25], [0.5, 60], [1, 100]]});
     let sink = if layer {
@@ -19,15 +19,15 @@ fn editor(layer: bool) -> (Harness<'static, PhotocraftApp>, Sink) {
         app.run("gradient.presets.select", params).unwrap();
         Sink::Preset
     };
-    let mut h = Harness::builder().with_size(vec2(1000.0, 900.0)).build_ui_state(|ui, app: &mut PhotocraftApp| editor_window(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+    let mut h = Harness::builder().with_size(vec2(1000.0, 900.0)).build_ui_state(|ui, app: &mut LienzoApp| editor_window(app, ui.ctx()), app);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
     h.run_steps(2);
     h.state_mut().ui.panels.gradient_editor = true;
     h.run_steps(4);
     (h, sink)
 }
 
-fn click(h: &mut Harness<PhotocraftApp>, pos: Pos2) {
+fn click(h: &mut Harness<LienzoApp>, pos: Pos2) {
     h.event(egui::Event::PointerMoved(pos));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
@@ -36,12 +36,12 @@ fn click(h: &mut Harness<PhotocraftApp>, pos: Pos2) {
     h.run_steps(3);
 }
 
-fn select(h: &mut Harness<PhotocraftApp>, location: f32, opacity: bool) {
+fn select(h: &mut Harness<LienzoApp>, location: f32, opacity: bool) {
     let rect = h.get_by_label("Gradient stops").rect();
     click(h, pos2(rect.left() + 8.0 + location * (rect.width() - 16.0), rect.top() + if opacity { 6.0 } else { 50.0 }));
 }
 
-fn type_number(h: &mut Harness<PhotocraftApp>, index: usize, value: &str, commit: bool) {
+fn type_number(h: &mut Harness<LienzoApp>, index: usize, value: &str, commit: bool) {
     h.get_all_by_role(egui::accesskit::Role::SpinButton).nth(index).unwrap().click();
     h.run_steps(2);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -147,7 +147,7 @@ fn preset_editor_opacity_fields_do_not_edit_document_history() {
 
 /// Press at `points[0]`, move through the rest, then release at the last one; `during` runs while
 /// the button is still down at the last point.
-fn drag_through(h: &mut Harness<PhotocraftApp>, points: &[Pos2], during: impl FnOnce(&mut Harness<PhotocraftApp>)) {
+fn drag_through(h: &mut Harness<LienzoApp>, points: &[Pos2], during: impl FnOnce(&mut Harness<LienzoApp>)) {
     let (Some(&from), Some(&to)) = (points.first(), points.last()) else { return };
     h.event(egui::Event::PointerMoved(from));
     h.run_steps(1);
@@ -167,18 +167,18 @@ fn drag_through(h: &mut Harness<PhotocraftApp>, points: &[Pos2], during: impl Fn
 }
 
 /// A stop marker's centre on the strip: colour stops under the bar, opacity stops above it.
-fn marker(h: &Harness<PhotocraftApp>, location: f32, opacity: bool) -> Pos2 {
+fn marker(h: &Harness<LienzoApp>, location: f32, opacity: bool) -> Pos2 {
     let rect = h.get_by_label("Gradient stops").rect();
     pos2(rect.left() + 8.0 + location * (rect.width() - 16.0), rect.top() + if opacity { 6.0 } else { 50.0 })
 }
 
-fn counts(h: &Harness<PhotocraftApp>, sink: Sink) -> (usize, usize) {
+fn counts(h: &Harness<LienzoApp>, sink: Sink) -> (usize, usize) {
     let Fill::Gradient { stops, opacity_stops, .. } = sink.fill(h.state()).unwrap() else { panic!() };
     (stops.len(), opacity_stops.len())
 }
 
 /// The strip as drawn while the pointer is down: the pending edit applied to the gradient.
-fn shown(h: &Harness<PhotocraftApp>, sink: Sink) -> (usize, usize) {
+fn shown(h: &Harness<LienzoApp>, sink: Sink) -> (usize, usize) {
     let f = sink.fill(h.state()).unwrap();
     let pending = match sink {
         Sink::Layer(_) => h.state().gradient.panel.as_ref().map(|(.., p)| p.clone()),
@@ -297,7 +297,7 @@ fn a_stop_dragged_the_other_way_comes_off_too() {
 
 /// Press on a stop, drag a little along the bar, then move to each of `then` in its own frame;
 /// the last move and the release arrive in the same frame, as a quick flick does.
-fn flick(h: &mut Harness<PhotocraftApp>, from: Pos2, then: &[Pos2]) {
+fn flick(h: &mut Harness<LienzoApp>, from: Pos2, then: &[Pos2]) {
     h.event(egui::Event::PointerMoved(from));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });

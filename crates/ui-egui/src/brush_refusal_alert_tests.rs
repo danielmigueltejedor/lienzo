@@ -9,8 +9,8 @@ use super::*;
 use crate::canvas::{ToolEvent, tool_event};
 
 /// A 64 × 64 document with a painted layer active, black foreground, `tool`.
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#dc1e1e"})).unwrap();
@@ -20,26 +20,26 @@ fn app(tool: Tool) -> PhotocraftApp {
     app
 }
 
-fn active(app: &PhotocraftApp) -> u64 {
+fn active(app: &LienzoApp) -> u64 {
     app.session.active().unwrap().active_layer.unwrap().0
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
 /// A press, a short drag and the release with the active tool.
-fn stroke(app: &mut PhotocraftApp) {
+fn stroke(app: &mut LienzoApp) {
     tool_event(app, ToolEvent::Down { x: 20.0, y: 32.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Move { x: 44.0, y: 32.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: 44.0, y: 32.0 }, Modifiers::NONE);
 }
 
-fn alerts(app: &PhotocraftApp) -> Vec<String> {
+fn alerts(app: &LienzoApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message").and_then(Value::as_str).map(str::to_string)).collect()
 }
 
-fn refused(app: &mut PhotocraftApp, want: &str) {
+fn refused(app: &mut LienzoApp, want: &str) {
     let before = steps(app);
     stroke(app);
     assert_eq!(alerts(app), [want], "the alert, once");
@@ -70,7 +70,7 @@ fn lock_all() {
 fn a_group_is_active() {
     let mut app = app(Tool::Brush);
     app.run("layer.new.group", json!({})).unwrap();
-    assert!(app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(active(&app))).unwrap().is_group());
+    assert!(app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(active(&app))).unwrap().is_group());
     refused(&mut app, "Could not use the brush tool because the pixels in a group cannot be edited without merging the group.");
 }
 
@@ -100,7 +100,7 @@ fn other_tools_keep_the_status_bar() {
     app.run("layer.setProps", json!({"layer": id, "visible": false})).unwrap();
     stroke(&mut app);
     assert!(alerts(&app).is_empty());
-    assert_eq!(app.ui.status, photocraft_engine::hidden_target::HIDDEN);
+    assert_eq!(app.ui.status, lienzo_engine::hidden_target::HIDDEN);
     assert_eq!(tool_name(Tool::Pencil), None);
     assert_eq!(tool_name(Tool::Brush), Some("brush tool"), "the one place that names the tool");
 }

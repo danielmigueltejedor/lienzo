@@ -4,15 +4,15 @@
 //! Two places hold patterns, as in Photoshop:
 //! - the **library** ([`PatternLibrary`], on the [`Session`]): built-in procedural patterns plus
 //!   defined and imported ones. Library edits are app state, not document history.
-//! - the **document** ([`photocraft_doc::Document::patterns`]): the patterns its layers use
+//! - the **document** ([`lienzo_doc::Document::patterns`]): the patterns its layers use
 //!   (saved in PSD `Patt` blocks and `.pcraft`). Commands that apply a pattern copy it into the
 //!   document in the same history step, so a document always renders on its own.
 //!
 //! Patterns are referenced by `"pattern": id | name` (document first, then library).
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Color, Document, Fill, Layer, LayerContent, Pattern, Rect};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Color, Document, Fill, Layer, LayerContent, Pattern, Rect};
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -152,7 +152,7 @@ fn library_pattern<'a>(s: &'a Session, key: &str) -> Option<&'a Pattern> {
     if key.is_empty() {
         return crate::presets::patterns::current(s).or(s.patterns.items.first());
     }
-    photocraft_doc::pattern::find(&s.patterns.items, key, key)
+    lienzo_doc::pattern::find(&s.patterns.items, key, key)
 }
 
 /// The id of the pattern [`resolve`] finds, without reading a saved pattern's pixels: for checks
@@ -160,7 +160,7 @@ fn library_pattern<'a>(s: &'a Session, key: &str) -> Option<&'a Pattern> {
 pub fn resolve_id(s: &Session, key: &str) -> Option<String> {
     if !key.is_empty()
         && let Some(d) = s.active()
-        && let Some(p) = photocraft_doc::pattern::find(&d.doc.patterns, key, key)
+        && let Some(p) = lienzo_doc::pattern::find(&d.doc.patterns, key, key)
     {
         return Some(p.id.clone());
     }
@@ -173,7 +173,7 @@ pub fn resolve_id(s: &Session, key: &str) -> Option<String> {
 pub fn resolve(s: &Session, key: &str) -> Option<Pattern> {
     if !key.is_empty()
         && let Some(d) = s.active()
-        && let Some(p) = photocraft_doc::pattern::find(&d.doc.patterns, key, key)
+        && let Some(p) = lienzo_doc::pattern::find(&d.doc.patterns, key, key)
     {
         return Some(p.clone());
     }
@@ -191,7 +191,7 @@ pub(crate) fn resolve_param(s: &Session, cmd: &str, p: &Value) -> Result<Pattern
 /// names, as the reference application plays such a step. The error says why: no such pattern,
 /// or a saved library pattern whose pixels can't be read.
 pub(crate) fn resolve_or_named(s: &Session, key: &str, p: &Value) -> std::result::Result<Pattern, String> {
-    use photocraft_doc::pattern::find;
+    use lienzo_doc::pattern::find;
     let name = p.get("patternName").and_then(Value::as_str).filter(|n| !n.is_empty());
     // `find` with an empty name looks up the id alone; both empty find nothing.
     let in_doc = |id: &str, name: &str| s.active().and_then(|d| find(&d.doc.patterns, id, name)).map(|p| (p, false));
@@ -233,8 +233,8 @@ pub fn ensure_in_doc(doc: &mut Document, pat: &Pattern) {
 /// Resolves the pattern of a Pattern Overlay / pattern stroke built from params (its `name`
 /// holds the requested key) into a real pattern: returns the effect with name and id filled in,
 /// plus the pattern to copy into the document.
-pub fn resolve_effect(s: &Session, fx: photocraft_doc::Effect) -> Result<(photocraft_doc::Effect, Option<Pattern>)> {
-    use photocraft_doc::Effect;
+pub fn resolve_effect(s: &Session, fx: lienzo_doc::Effect) -> Result<(lienzo_doc::Effect, Option<Pattern>)> {
+    use lienzo_doc::Effect;
     match fx {
         Effect::PatternOverlay { common, name, id, scale, angle, link, phase } => {
             let key = if id.is_empty() { name } else { id };
@@ -289,11 +289,11 @@ fn composite_surface_in_bands(doc: &Document, r: Rect, band_rows: u32) -> (Surfa
     let mut top = 0;
     while top < height {
         let rows = band_rows.min(height - top);
-        let buf = photocraft_compose::render(doc, Rect::new(r.x0, r.y0 + top as i32, r.x1, r.y0 + (top + rows) as i32));
+        let buf = lienzo_compose::render(doc, Rect::new(r.x0, r.y0 + top as i32, r.x1, r.y0 + (top + rows) as i32));
         px.clear();
         px.resize(buf.px.len() * n, 0.0f32);
         for (o, p) in px.chunks_exact_mut(n).zip(&buf.px) {
-            photocraft_raster::from_rgba_into(&fmt, *p, o);
+            lienzo_raster::from_rgba_into(&fmt, *p, o);
         }
         let band = Rect::new(0, top as i32, width as i32, (top + rows) as i32);
         s.write_region(band, &px);
@@ -345,7 +345,7 @@ fn define(s: &mut Session, p: &Value) -> Result<Value> {
     // A pattern the compositor could not hold would define but paint nothing: 8 bits go to the
     // edge limit, 16-bit documents to 33,554,432 px in all, float to 16,777,216 (4096 × 4096).
     let sample = doc.pixel_format().sample;
-    let max_px = photocraft_doc::pattern::max_paint_pixels(sample);
+    let max_px = lienzo_doc::pattern::max_paint_pixels(sample);
     if u64::from(r.width()) * u64::from(r.height()) > max_px {
         return Err(bad(cmd, format!("patterns in a {}-bit document are limited to {max_px} px in all", sample.bytes() * 8)));
     }
@@ -371,7 +371,7 @@ fn define(s: &mut Session, p: &Value) -> Result<Value> {
 fn library_index(s: &Session, cmd: &str, p: &Value) -> Result<usize> {
     let key = p.get("pattern").and_then(Value::as_str).ok_or_else(|| bad(cmd, "missing `pattern` (id or name)"))?;
     let found =
-        photocraft_doc::pattern::find(&s.patterns.items, key, key).map(|f| f.id.clone()).ok_or_else(|| bad(cmd, format!("no library pattern \"{key}\"")))?;
+        lienzo_doc::pattern::find(&s.patterns.items, key, key).map(|f| f.id.clone()).ok_or_else(|| bad(cmd, format!("no library pattern \"{key}\"")))?;
     Ok(s.patterns.items.iter().position(|q| q.id == found).unwrap_or(0))
 }
 
@@ -405,10 +405,10 @@ fn import(s: &mut Session, p: &Value) -> Result<Value> {
     // A file on disk, or its bytes (a dropped file, the web build).
     let bytes = match (p.get("path").and_then(Value::as_str), p.get("data").and_then(Value::as_str)) {
         (Some(path), _) => std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))?,
-        (None, Some(b64)) => photocraft_paint::tile::b64_decode(b64).ok_or_else(|| bad(cmd, "`data` is not base64"))?,
+        (None, Some(b64)) => lienzo_paint::tile::b64_decode(b64).ok_or_else(|| bad(cmd, "`data` is not base64"))?,
         (None, None) => return Err(bad(cmd, "missing `path` (.pat file) or `data`")),
     };
-    let pats = photocraft_io::pattern_map::read_pat(&bytes).map_err(EngineError::Other)?;
+    let pats = lienzo_io::pattern_map::read_pat(&bytes).map_err(EngineError::Other)?;
     let mut ids = Vec::new();
     for pat in pats {
         ids.push(pat.id.clone());
@@ -427,7 +427,7 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
         }
         None => s.patterns.items.iter().map(|p| full(s, p).map_err(|e| bad(cmd, e))).collect::<Result<_>>()?,
     };
-    let bytes = photocraft_io::pattern_map::write_pat(&pats).map_err(EngineError::Other)?;
+    let bytes = lienzo_io::pattern_map::write_pat(&pats).map_err(EngineError::Other)?;
     crate::file_cmds::write_file(path, &bytes)?;
     Ok(json!({"path": path, "count": pats.len(), "bytes": bytes.len()}))
 }
@@ -451,11 +451,11 @@ pub(crate) fn placement(cmd: &str, p: &Value) -> Result<(f32, f32, bool, (f32, f
 /// above `active`. The Pattern Fill dialog previews it on a copy of the document.
 pub(crate) fn insert_fill_layer(
     doc: &mut Document,
-    active: &mut Option<photocraft_doc::LayerId>,
+    active: &mut Option<lienzo_doc::LayerId>,
     pat: &Pattern,
     p: &Value,
     default_mask: bool,
-) -> Result<photocraft_doc::LayerId> {
+) -> Result<lienzo_doc::LayerId> {
     let (scale, angle, link, phase) = placement("layer.newFillLayer.pattern", p)?;
     ensure_in_doc(doc, pat);
     let fill = Fill::Pattern { name: pat.name.clone(), scale, id: pat.id.clone(), angle, link, phase };
@@ -510,9 +510,9 @@ fn brush_texture(s: &mut Session, p: &Value) -> Result<Value> {
             l * q[3] + (1.0 - q[3])
         }));
     });
-    let tile = photocraft_paint::GrayTile::from_f32(pat.width, pat.height, &lum);
+    let tile = lienzo_paint::GrayTile::from_f32(pat.width, pat.height, &lum);
     let t = &mut s.tools.brush.texture;
-    t.pattern = photocraft_paint::Pattern::Tile(tile);
+    t.pattern = lienzo_paint::Pattern::Tile(tile);
     t.enabled = p.get("enabled").and_then(Value::as_bool).unwrap_or(true);
     if let Some(sc) = p.get("scale").and_then(Value::as_f64) {
         t.scale = (sc as f32 / 100.0).clamp(0.01, 10.0);
@@ -523,7 +523,7 @@ fn brush_texture(s: &mut Session, p: &Value) -> Result<Value> {
 /// A swatch colour for UIs (average of the tile), straight RGB.
 pub fn average_color(p: &Pattern) -> Color {
     // A pattern too large to paint is averaged over its paintable top-left corner.
-    let side = photocraft_doc::pattern::MAX_PAINT_PIXELS.isqrt() as u32;
+    let side = lienzo_doc::pattern::MAX_PAINT_PIXELS.isqrt() as u32;
     let (w, h) = (p.width.min(side), p.height.min(side));
     let mut s = [0.0f32; 3];
     for_each_band(p, w, h, |band| s = band.iter().fold(s, |a, q| [a[0] + q[0], a[1] + q[1], a[2] + q[2]]));
@@ -535,8 +535,8 @@ pub fn average_color(p: &Pattern) -> Color {
 /// at a time in row-major order.
 fn for_each_band(p: &Pattern, w: u32, h: u32, mut f: impl FnMut(&[[f32; 4]])) {
     let mut band = Vec::new();
-    for top in (0..h).step_by(photocraft_doc::pattern::BAND_ROWS as usize) {
-        let bottom = (top + photocraft_doc::pattern::BAND_ROWS).min(h);
+    for top in (0..h).step_by(lienzo_doc::pattern::BAND_ROWS as usize) {
+        let bottom = (top + lienzo_doc::pattern::BAND_ROWS).min(h);
         band.clear();
         band.resize(w as usize * (bottom - top) as usize, [0.0f32; 4]);
         p.surface.read_rgba_into(Rect::new(0, top as i32, w as i32, bottom as i32), &mut band);
@@ -632,7 +632,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::LayerId;
+    use lienzo_doc::LayerId;
 
     fn session(depth: u64) -> Session {
         let mut s = Session::new();
@@ -641,7 +641,7 @@ mod tests {
     }
 
     fn pixel(s: &Session, x: i32, y: i32) -> [f32; 4] {
-        let b = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(x, y, x + 1, y + 1));
+        let b = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(x, y, x + 1, y + 1));
         b.px[0]
     }
 
@@ -685,7 +685,7 @@ mod tests {
         // The same file as bytes (a dropped file, the web build).
         let bytes = std::fs::read(path).unwrap();
         s.execute("pattern.delete", json!({"pattern": "Crimson"})).unwrap();
-        let v = s.execute("pattern.import", json!({"data": photocraft_paint::tile::b64_encode(&bytes)})).unwrap();
+        let v = s.execute("pattern.import", json!({"data": lienzo_paint::tile::b64_encode(&bytes)})).unwrap();
         assert_eq!(v["count"], v["imported"].as_array().unwrap().len());
         assert_eq!(resolve(&s, "Crimson").unwrap().id, id);
         std::fs::remove_dir_all(dir).ok();
@@ -786,7 +786,7 @@ mod tests {
         let mut s = Session::new();
         s.execute("file.new", json!({"width": 40, "height": 30, "depth": 8})).unwrap();
         // A 32-bit 5000 x 5000 pattern (declared only: 400 MB as a working copy, past the cap).
-        let surface = photocraft_raster::Surface::new(photocraft_doc::PixelFormat::RGBA32F);
+        let surface = lienzo_raster::Surface::new(lienzo_doc::PixelFormat::RGBA32F);
         s.patterns.items.push(Pattern { id: "huge".into(), name: "Huge".into(), width: 5000, height: 5000, surface });
         let list = s.execute("pattern.list", json!({})).unwrap();
         let huge = list.as_array().unwrap().iter().find(|p| p["name"] == "Huge").unwrap().clone();
@@ -898,7 +898,7 @@ mod tests {
         assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().effects.items.len(), 2);
         s.execute("brush.texturePattern", json!({"pattern": "Dots", "scale": 50})).unwrap();
         assert!(s.tools.brush.texture.enabled);
-        assert!(matches!(s.tools.brush.texture.pattern, photocraft_paint::Pattern::Tile(_)));
+        assert!(matches!(s.tools.brush.texture.pattern, lienzo_paint::Pattern::Tile(_)));
     }
 
     #[test]

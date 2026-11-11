@@ -1,5 +1,5 @@
 //! Fonts a host serves next to the app, for the platform shell that fetches them (the web build;
-//! see `photocraft_text::served`): reading the manifest, the families to fetch, and installing
+//! see `lienzo_text::served`): reading the manifest, the families to fetch, and installing
 //! what arrived, which registers the files and re-renders the type layers drawn without them.
 //! A served script fallback (Arabic, Japanese…) also joins the UI's font stack: the web build has
 //! no system fonts, so it is what draws an Arabic or Japanese interface.
@@ -9,11 +9,11 @@ use std::sync::{Arc, Mutex, PoisonError};
 use egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
 use egui::{FontData, FontFamily};
 
-use photocraft_doc::{LayerContent, TextLayer};
-use photocraft_engine::TypeLayerRef;
-pub use photocraft_text::served::{ServedFont, add_families, add_fonts, is_relative_path, parse_manifest, request_for_languages, take_requests};
+use lienzo_doc::{LayerContent, TextLayer};
+use lienzo_engine::TypeLayerRef;
+pub use lienzo_text::served::{ServedFont, add_families, add_fonts, is_relative_path, parse_manifest, request_for_languages, take_requests};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Layers whose document was busy with a background job when their font arrived.
 static PENDING: Mutex<Vec<TypeLayerRef>> = Mutex::new(Vec::new());
@@ -36,7 +36,7 @@ pub fn ui_faces() -> Vec<(String, Arc<FontData>)> {
 
 /// The egui font name of the interface language's served script fallback, if the host serves one.
 fn ui_language_face() -> Option<String> {
-    photocraft_text::served::fallback_for_language(crate::i18n::current().code()).map(|f| face_name(&f))
+    lienzo_text::served::fallback_for_language(crate::i18n::current().code()).map(|f| face_name(&f))
 }
 
 fn face_name(family: &str) -> String {
@@ -46,7 +46,7 @@ fn face_name(family: &str) -> String {
 /// Puts a delivered script fallback at the end of every UI font family, once. A file egui cannot
 /// read is left out: egui panics on a configured font it cannot parse.
 fn add_ui_face(ctx: &egui::Context, family: &str, bytes: &[u8]) {
-    if !photocraft_text::cjk::font_face_is_readable(bytes, 0) {
+    if !lienzo_text::cjk::font_face_is_readable(bytes, 0) {
         log::warn!("the served font {family:?} is not a readable font file; the interface does not use it");
         return;
     }
@@ -84,20 +84,20 @@ fn add_ui_face(ctx: &egui::Context, family: &str, bytes: &[u8]) {
 /// showing Photoshop's pixels (not edited yet) keeps them, as it does when its font is installed
 /// from the start. A script fallback also joins the UI's font stack. Call it every frame: it also
 /// retries the layers of a document that was busy.
-pub fn install(app: &mut PhotocraftApp, ctx: &egui::Context, delivered: Vec<(String, Vec<u8>)>) {
+pub fn install(app: &mut LienzoApp, ctx: &egui::Context, delivered: Vec<(String, Vec<u8>)>) {
     let mut layers = std::mem::take(&mut *PENDING.lock().unwrap_or_else(PoisonError::into_inner));
     if !delivered.is_empty() {
         let families: Vec<String> = delivered.iter().map(|(f, _)| f.clone()).collect();
         // Decided before the fonts are in: "shows our own layout" compares the layer's pixels
         // with what the engine draws now, that is with the fallback font.
         pick(&app.session, &families, &mut layers);
-        let fallbacks = photocraft_text::served::script_fallback_families();
+        let fallbacks = lienzo_text::served::script_fallback_families();
         for (family, bytes) in &delivered {
             if fallbacks.contains(family) {
                 add_ui_face(ctx, family, bytes);
             }
         }
-        let mut eng = photocraft_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
+        let mut eng = lienzo_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
         for (family, bytes) in delivered {
             let added = eng.fonts.register_font_data(bytes);
             if !added.contains(&family) {
@@ -114,7 +114,7 @@ pub fn install(app: &mut PhotocraftApp, ctx: &egui::Context, delivered: Vec<(Str
 /// Adds to `layers` the type layers to redraw once `families` arrive, in every open document and
 /// in its first History snapshot (the document as opened), which is checked on its own: since
 /// then its layers may have been edited (a PSD layer re-rendered) or deleted (#6087).
-fn pick(session: &photocraft_engine::Session, families: &[String], layers: &mut Vec<TypeLayerRef>) {
+fn pick(session: &lienzo_engine::Session, families: &[String], layers: &mut Vec<TypeLayerRef>) {
     for st in session.documents() {
         let first = st.snapshots.iter().find(|s| s.id == 0).map(|s| &s.doc);
         // While it still is the open document, a layer picked there is picked in the snapshot too
@@ -144,14 +144,14 @@ fn pick(session: &photocraft_engine::Session, families: &[String], layers: &mut 
 /// Should the layer be redrawn when `families` arrive: it uses one of them, or its text is in a
 /// script one of them is the served fallback for?
 fn redraws_for(t: &TextLayer, families: &[String]) -> bool {
-    uses_family(t, families) || families.iter().any(|f| photocraft_text::served::falls_back_to(&t.text, f))
+    uses_family(t, families) || families.iter().any(|f| lienzo_text::served::falls_back_to(&t.text, f))
 }
 
 /// Does the layer use one of `families`, by name or through the PostScript name a PSD gave?
 fn uses_family(t: &TextLayer, families: &[String]) -> bool {
     t.char_runs().iter().any(|r| {
         families.contains(&r.style.font_family)
-            || r.style.postscript_name.as_deref().is_some_and(|ps| families.contains(&photocraft_text::fonts::guess_from_postscript(ps).family))
+            || r.style.postscript_name.as_deref().is_some_and(|ps| families.contains(&lienzo_text::fonts::guess_from_postscript(ps).family))
     })
 }
 
@@ -165,9 +165,9 @@ mod tests {
         assert!(uses_family(&t, &["Open Sans".into()]));
         assert!(!uses_family(&t, &["Lato".into()]));
         let mut psd = TextLayer { text: "Hi".into(), font_family: "Inter".into(), ..Default::default() };
-        psd.runs = vec![photocraft_doc::text::TextRun {
+        psd.runs = vec![lienzo_doc::text::TextRun {
             len: 2,
-            style: photocraft_doc::text::CharStyle { font_family: "Inter".into(), postscript_name: Some("Lato-Bold".into()), ..Default::default() },
+            style: lienzo_doc::text::CharStyle { font_family: "Inter".into(), postscript_name: Some("Lato-Bold".into()), ..Default::default() },
         }];
         assert!(uses_family(&psd, &["Lato".into()]));
     }
@@ -177,17 +177,17 @@ mod tests {
     /// picked in both without being checked twice.
     #[test]
     fn the_first_snapshot_is_picked_on_its_own() {
-        use photocraft_doc::LayerId;
+        use lienzo_doc::LayerId;
         use serde_json::json;
         let family = "Served Test Pick";
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 200, "height": 100, "background": "transparent"})).unwrap();
         let id = LayerId(s.execute("type.create", json!({"text": "Hello", "size": 24, "font": family})).unwrap()["layer"].as_u64().unwrap());
         let doc = (*s.active().unwrap().doc).clone();
         s.add_document(doc, None);
         let doc_id = s.active().unwrap().doc.id;
         let key = |first_snapshot| TypeLayerRef { doc: doc_id, layer: id, first_snapshot };
-        let picked = |s: &photocraft_engine::Session| {
+        let picked = |s: &lienzo_engine::Session| {
             let mut layers = Vec::new();
             pick(s, &[family.into()], &mut layers);
             layers.retain(|l| l.doc == doc_id);
@@ -204,7 +204,7 @@ mod tests {
     fn a_layer_in_a_script_redraws_when_that_scripts_fallback_arrives() {
         // Thai: other tests use other scripts (the served catalog is process-wide).
         let thai = "Served Test Thai";
-        photocraft_text::served::add_fonts(&parse_manifest(&format!("{thai} | Regular | fonts/t/T.ttf | Thai\n")).0);
+        lienzo_text::served::add_fonts(&parse_manifest(&format!("{thai} | Regular | fonts/t/T.ttf | Thai\n")).0);
         let layer = |text: &str| TextLayer { text: text.into(), font_family: "Inter".into(), ..Default::default() };
         assert!(redraws_for(&layer("สวัสดี"), &[thai.into()]), "Thai text set in Inter falls back to it");
         assert!(!redraws_for(&layer("hello"), &[thai.into()]));
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn the_interface_languages_served_face_comes_first_in_the_ui_stack() {
         let (jpan, hans) = ("Served Test Jpan", "Served Test Hans");
-        photocraft_text::served::add_fonts(&parse_manifest(&format!("{jpan} | Regular | fonts/j/J.ttf | Jpan\n{hans} | Regular | fonts/h/H.ttf | Hans\n")).0);
+        lienzo_text::served::add_fonts(&parse_manifest(&format!("{jpan} | Regular | fonts/j/J.ttf | Jpan\n{hans} | Regular | fonts/h/H.ttf | Hans\n")).0);
         crate::i18n::set_current(crate::i18n::Lang::from_code("zh-hans").expect("Simplified Chinese"));
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);

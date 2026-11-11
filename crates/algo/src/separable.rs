@@ -5,7 +5,7 @@
 //! [`OperatorRegion`] is the region rule that goes with it: which source pixels an output area
 //! reads, with the edge pixels repeated at the extent as the CPU filters do.
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 use crate::{FilterParams, blur};
 
@@ -72,8 +72,8 @@ impl OperatorRegion {
 mod tests {
     use super::*;
     use crate::Halo;
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_raster::{Interrupt, Surface};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_raster::{Interrupt, Surface};
 
     const RADII: [f32; 11] = [0.01, 0.05, 0.1, 0.3, 0.8, 2.0, 4.0, 4.5, 12.0, 40.0, 250.0];
 

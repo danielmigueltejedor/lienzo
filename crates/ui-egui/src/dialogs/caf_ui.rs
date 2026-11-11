@@ -20,17 +20,17 @@
 //!
 //! What the workspace holds is plain data (the sampling option, brush strokes, lasso edits and
 //! fill settings); OK and Apply run `edit.contentAwareFill` with it, and the preview runs the same
-//! plan ([`photocraft_engine::edit_menu_cmds::content_aware_plan`]), so the preview is exactly
+//! plan ([`lienzo_engine::edit_menu_cmds::content_aware_plan`]), so the preview is exactly
 //! what gets written. The settings are remembered for the next time (`prefs.dialogs`).
 
 use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
-use photocraft_algo::content_aware::{SamplingStroke, paint_strokes};
-use photocraft_doc::LayerId;
-use photocraft_engine::edit_menu_cmds::{MAX_CAF_EDITS, MAX_CAF_POINTS};
-use photocraft_geom::Rect;
+use lienzo_algo::content_aware::{SamplingStroke, paint_strokes};
+use lienzo_doc::LayerId;
+use lienzo_engine::edit_menu_cmds::{MAX_CAF_EDITS, MAX_CAF_POINTS};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::theme::Tokens;
 use crate::widgets;

@@ -176,7 +176,7 @@ fn gradient_params(t: &Descriptor) -> Option<Map<String, Value>> {
 /// [`gradient_params`] plus the recorded descriptor, for Save Actions.
 fn gradient_step(t: &Descriptor) -> Option<Value> {
     let mut p = gradient_params(t)?;
-    p.insert(GRADIENT_DESCRIPTOR.into(), photocraft_paint::tile::b64_encode(&t.to_bytes()).into());
+    p.insert(GRADIENT_DESCRIPTOR.into(), lienzo_paint::tile::b64_encode(&t.to_bytes()).into());
     Some(Value::Object(p))
 }
 
@@ -186,7 +186,7 @@ fn gradient_step(t: &Descriptor) -> Option<Value> {
 /// transparency stops: Photoshop's Set replaces the whole gradient, where the command keeps the
 /// layer's own transparency.
 fn gradient_desc(p: &Value, set: bool) -> Option<Descriptor> {
-    if let Some(t) = jstr(p, GRADIENT_DESCRIPTOR).and_then(photocraft_paint::tile::b64_decode).and_then(|b| Descriptor::from_bytes(&b).ok()) {
+    if let Some(t) = jstr(p, GRADIENT_DESCRIPTOR).and_then(lienzo_paint::tile::b64_decode).and_then(|b| Descriptor::from_bytes(&b).ok()) {
         let (mut a, mut b) = (Value::Object(gradient_params(&t)?), p.clone());
         b.as_object_mut()?.remove(GRADIENT_DESCRIPTOR);
         super::convert::normalise(&mut a);
@@ -314,7 +314,7 @@ fn blending_options_to(p: &Value) -> Option<Descriptor> {
     if let Some(b) = blend_if {
         t = t.with("Blnd", blend_if_to(b)?);
         if let Some(fx) = jstr(p, EFFECTS_SCALE) {
-            let fx = photocraft_paint::tile::b64_decode(fx).and_then(|b| Descriptor::from_bytes(&b).ok())?;
+            let fx = lienzo_paint::tile::b64_decode(fx).and_then(|b| Descriptor::from_bytes(&b).ok())?;
             if !scale_only(&fx) {
                 return None;
             }
@@ -872,7 +872,7 @@ fn adjustment_layer_to(id: &str, p: &Value) -> Option<Descriptor> {
         None | Some(Value::Null) => None,
         Some(v) => {
             let label = v.as_str()?;
-            if crate::commands::blend_from_str(label)? == photocraft_doc::BlendMode::PassThrough {
+            if crate::commands::blend_from_str(label)? == lienzo_doc::BlendMode::PassThrough {
                 return None;
             }
             Some(blend_ps(label)?)
@@ -1124,7 +1124,7 @@ fn layer_set_from(d: &Descriptor, r: &[ReferenceItem]) -> Mapped {
         // the mode go with Blend If into one step, saved back as the one `set`.
         if t.items.iter().all(|(k, v)| BLENDING_DIALOG.iter().any(|b| k.is(b)) || ADVANCED_BLENDING.iter().any(|(a, _)| k.is(a)) || is_scale_only(k, v)) {
             if let Some(D::Descriptor(fx)) = t.get("Lefx") {
-                advanced.insert(EFFECTS_SCALE.into(), photocraft_paint::tile::b64_encode(&fx.to_bytes()).into());
+                advanced.insert(EFFECTS_SCALE.into(), lienzo_paint::tile::b64_encode(&fx.to_bytes()).into());
             }
             for (key, param) in [("Opct", "opacity"), ("fillOpacity", "fillOpacity")] {
                 if let Some(v) = get_num(t, key) {

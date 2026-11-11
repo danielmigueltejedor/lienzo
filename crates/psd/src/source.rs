@@ -117,7 +117,7 @@ impl ReadAt for FileSource {
         }
         let n = buf.len();
         let failed = |e: std::io::Error| PsdError::Read(format!("reading {n} bytes at offset {offset}: {e}"));
-        // Bounded reads, as `photocraft-format`'s `read_file` makes them: some Windows file
+        // Bounded reads, as `lienzo-format`'s `read_file` makes them: some Windows file
         // systems reject a single read of gigabytes (#375).
         let mut done = 0usize;
         while done < n {
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn file_source_reads_at_offsets() {
         use std::io::Write;
-        let dir = std::env::temp_dir().join(format!("photocraft-psd-source-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("lienzo-psd-source-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("f.bin");
         std::fs::File::create(&path).unwrap().write_all(&[9, 8, 7, 6, 5]).unwrap();

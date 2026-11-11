@@ -1,6 +1,6 @@
 use super::selection::floating_outline;
 use super::view_xform::ViewXform;
-use super::{Color32, LayerContent, PhotocraftApp, Pos2, Rect, Stroke, Tool, Vec2, vec2};
+use super::{Color32, LayerContent, LienzoApp, Pos2, Rect, Stroke, Tool, Vec2, vec2};
 
 /// View › Show › Layer Edges: the colour of the active layer's outline.
 pub(crate) const LAYER_EDGES: Color32 = Color32::from_rgb(0x2d, 0x8c, 0xeb);
@@ -8,13 +8,13 @@ pub(crate) const LAYER_EDGES: Color32 = Color32::from_rgb(0x2d, 0x8c, 0xeb);
 /// View › Show › Layer Edges: the active layer's content bounds (cached per tile) where the canvas
 /// shows them. During a Move drag that is at the offset the image was drawn with this frame, so
 /// the outline moves in lockstep with the layer's pixels (#2413).
-pub(crate) fn layer_edges_rect(app: &PhotocraftApp, idx: usize) -> Option<photocraft_geom::Rect> {
+pub(crate) fn layer_edges_rect(app: &LienzoApp, idx: usize) -> Option<lienzo_geom::Rect> {
     if !app.ui.view.shows(app.ui.view.show.layer_edges) {
         return None;
     }
     let st = app.session.documents().get(idx)?;
     let id = st.active_layer?;
-    let b = st.doc.layer(id)?.surface().map(photocraft_compose::bounds::content_bounds)?;
+    let b = st.doc.layer(id)?.surface().map(lienzo_compose::bounds::content_bounds)?;
     if b.is_empty() {
         return None;
     }
@@ -28,7 +28,7 @@ pub(crate) fn layer_edges_rect(app: &PhotocraftApp, idx: usize) -> Option<photoc
 /// A corner radius drag hides the box, as in Photoshop. So does View › Extras (⌘H, #6699): the
 /// controls are an Extra, hidden and inert until Extras comes back, while Show Transform Controls
 /// keeps its setting.
-pub(super) fn transform_controls_layers(app: &PhotocraftApp) -> Vec<&photocraft_doc::Layer> {
+pub(super) fn transform_controls_layers(app: &LienzoApp) -> Vec<&lienzo_doc::Layer> {
     if app.ui.tool != Tool::Move
         || !app.ui.tool_options.move_show_transform
         || !app.ui.view.extras
@@ -44,7 +44,7 @@ pub(super) fn transform_controls_layers(app: &PhotocraftApp) -> Vec<&photocraft_
     selected.into_iter().filter_map(|id| st.doc.layer(id)).filter(|l| several || !crate::doc_props_ui::is_background(&st.doc, l)).collect()
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Control-channel presses use document coordinates, but the canvas owns the screen-sized
     /// handle and rotation hit areas. Start the same session before forwarding the press.
     pub(crate) fn begin_move_transform_controls(&mut self, ctx: &egui::Context, x: f64, y: f64) -> ControlsPress {
@@ -59,13 +59,13 @@ impl PhotocraftApp {
 
 /// Move tool › Show Transform Controls: the boxes Free Transform would open on the selected
 /// layers, joined into one.
-pub(super) fn transform_controls_rect(app: &PhotocraftApp, xf: &ViewXform) -> Option<Rect> {
+pub(super) fn transform_controls_rect(app: &LienzoApp, xf: &ViewXform) -> Option<Rect> {
     let st = app.session.active()?;
     let layers = transform_controls_layers(app);
-    let b = layers.iter().map(|l| photocraft_engine::transform_cmds::transform_frame(&st.doc, l)).filter(|b| !b.is_empty()).reduce(|a, b| a.union(&b))?;
+    let b = layers.iter().map(|l| lienzo_engine::transform_cmds::transform_frame(&st.doc, l)).filter(|b| !b.is_empty()).reduce(|a, b| a.union(&b))?;
     // Floating selected pixels are framed by their outline, as their ants are (#7538), not by the
     // selection they were cut with; a frame round other selected layers too keeps them all.
-    let alone = matches!(layers.as_slice(), [l] if photocraft_engine::float_cmds::floating(st).is_some_and(|f| f.layer == l.id));
+    let alone = matches!(layers.as_slice(), [l] if lienzo_engine::float_cmds::floating(st).is_some_and(|f| f.layer == l.id));
     let b = app.session.active_index().filter(|_| alone).and_then(|idx| floating_outline(app, idx)).map_or(b, |o| o.content_bounds());
     let (dx, dy) = crate::move_ui::floating_offset(app).unwrap_or((0, 0));
     let b = b.translate(dx, dy);
@@ -142,12 +142,12 @@ pub(crate) enum ControlsPress {
 /// Enter the existing Free Transform session when a Move-tool transform control is pressed: on
 /// every selected layer, as the frame shows them (#6501). With the Background among them the press
 /// shows the locked-layer alert and changes nothing (#11101).
-pub(super) fn begin_transform_controls_at(app: &mut PhotocraftApp, ctx: &egui::Context, xf: &ViewXform, p: Pos2) -> ControlsPress {
+pub(super) fn begin_transform_controls_at(app: &mut LienzoApp, ctx: &egui::Context, xf: &ViewXform, p: Pos2) -> ControlsPress {
     let Some(r) = transform_controls_rect(app, xf) else { return ControlsPress::Missed };
     if !transform_controls_hit(r, p) {
         return ControlsPress::Missed;
     }
-    let background = app.session.active().is_some_and(|st| photocraft_engine::transform_cmds::background_among(&st.doc, &st.selected_layers()).is_some());
+    let background = app.session.active().is_some_and(|st| lienzo_engine::transform_cmds::background_among(&st.doc, &st.selected_layers()).is_some());
     if background {
         let message = serde_json::json!({ "message": tl!(CONTROLS_LOCKED) });
         app.ui.open_dialog(crate::state::DialogKind::Error, message.as_object().cloned().unwrap_or_default());
@@ -164,7 +164,7 @@ pub(super) fn begin_transform_controls_at(app: &mut PhotocraftApp, ctx: &egui::C
 
 /// Move tool › Show Transform Controls: the selected layers' bounding box, with its eight handles,
 /// and the outline of every selected shape layer, as in Photoshop.
-pub(super) fn draw_transform_controls(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub(super) fn draw_transform_controls(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let Some(r) = transform_controls_rect(app, xf) else { return };
     let accent = crate::theme::Tokens::get(painter.ctx()).accent;
     let to_scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);

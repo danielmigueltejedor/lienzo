@@ -8,7 +8,7 @@
 //! distance of one at 50 %. Each view keeps its own zoom and rotation. Documents in hidden tabs
 //! keep their views.
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::View;
 
 /// The view a Hand drag moves itself: a document's view in the main window, or a document window.
@@ -20,12 +20,12 @@ pub enum Source {
 
 /// The view that the canvas of document `idx` being drawn shows: the document window
 /// `canvas::extra_windows` is drawing, or else the document's view in the main window.
-pub fn source(app: &PhotocraftApp, idx: usize) -> Source {
+pub fn source(app: &LienzoApp, idx: usize) -> Source {
     app.drawing_window.map_or(Source::Main(idx), Source::Window)
 }
 
 /// Whether a Hand drag scrolls every shown view: Scroll All Windows is on, or Shift is held.
-pub fn active(app: &PhotocraftApp, shift: bool) -> bool {
+pub fn active(app: &LienzoApp, shift: bool) -> bool {
     app.ui.tool_options.hand_scroll_all || shift
 }
 
@@ -48,7 +48,7 @@ pub struct ClampGeometry {
 /// Move the other shown views after one step of a Hand drag or glide, which moved the dragged view's
 /// center from `before` to `view.center`. With Overscroll off, both centers are taken where the
 /// dragged view is clamped to, so a view held at its pan limit moves the others no further.
-pub fn follow_step(app: &mut PhotocraftApp, enabled: bool, source: Source, before: [f32; 2], view: &View, geometry: ClampGeometry) {
+pub fn follow_step(app: &mut LienzoApp, enabled: bool, source: Source, before: [f32; 2], view: &View, geometry: ClampGeometry) {
     if !enabled {
         return;
     }
@@ -63,7 +63,7 @@ pub fn follow_step(app: &mut PhotocraftApp, enabled: bool, source: Source, befor
 
 /// Whether the main window shows the Home screen or an open-file card instead of a document
 /// canvas, as `tabs::documents` draws it.
-fn main_canvas_hidden(app: &mut PhotocraftApp) -> bool {
+fn main_canvas_hidden(app: &mut LienzoApp) -> bool {
     let n = app.session.documents().len();
     let opening = !app.jobs.opens.is_empty();
     (!opening && app.ui.chrome.shows_home(n, app.session.prefs().general.auto_show_home_screen)) || app.jobs.focus.is_some()
@@ -71,7 +71,7 @@ fn main_canvas_hidden(app: &mut PhotocraftApp) -> bool {
 
 /// Move every shown view except `source` by `delta`, a distance in document pixels: each view's
 /// center moves by the same number of its own document's pixels.
-pub fn follow(app: &mut PhotocraftApp, source: Source, delta: [f32; 2]) {
+pub fn follow(app: &mut LienzoApp, source: Source, delta: [f32; 2]) {
     if !(delta[0].is_finite() && delta[1].is_finite()) || delta == [0.0, 0.0] {
         return;
     }
@@ -118,8 +118,8 @@ mod tests {
 
     /// Three documents of different sizes, the first two tiled side by side and the third in a
     /// hidden tab.
-    fn app_with_tiles() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app_with_tiles() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         for (w, h) in [(400, 300), (800, 600), (200, 100)] {
             app.run("file.new", json!({"width": w, "height": h})).unwrap();
         }
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn a_drag_in_a_floated_document_scrolls_the_visible_docked_document() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.run("file.new", json!({"width": 800, "height": 600})).unwrap();
         app.sync_views();
@@ -241,7 +241,7 @@ mod tests {
             if home {
                 app.ui.chrome.home = Some(app.session.documents().len());
             } else {
-                let job = photocraft_engine::jobs::JobId(9);
+                let job = lienzo_engine::jobs::JobId(9);
                 app.jobs.opens.push(crate::jobs_ui::OpenTab { job, name: "opening.psd".into(), path: None, slot: None, order: None });
                 app.jobs.focus = Some(job);
             }
@@ -274,7 +274,7 @@ mod tests {
     /// and with a dialog open over the canvas when `dialog` is set.
     fn drag_on_canvas_with(option: bool, shift: bool, sticky_shift: bool, in_window: bool, dialog: bool) -> ([f32; 2], [f32; 2], [f32; 2]) {
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 2000, "height": 1500})).unwrap();
         app.run("file.new", json!({"width": 1000, "height": 750})).unwrap();
         app.run("prefs.set", json!({"path": "tools.enableFlickPanning", "value": false})).unwrap();
@@ -299,7 +299,7 @@ mod tests {
         let mut v = if in_window { view(0.5, [500.0, 375.0], 0.0) } else { view(1.0, [1000.0, 750.0], 0.0) };
         let rect = Rect::from_min_size(Pos2::ZERO, vec2(400.0, 300.0));
         let modifiers = if shift { egui::Modifiers::SHIFT } else { egui::Modifiers::NONE };
-        let mut frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+        let mut frame = |app: &mut LienzoApp, events: Vec<egui::Event>| {
             let input = egui::RawInput { screen_rect: Some(rect), events, ..Default::default() };
             let mut out = ctx.run_ui(input, |ui| {
                 // The open dialog's modal layer leaves the canvas widget inert (`dialogs::pan_delta`).
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn with_overscroll_off_the_other_windows_follow_the_clamped_center() {
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 2000, "height": 1500})).unwrap();
         app.run("file.new", json!({"width": 1000, "height": 750})).unwrap();
         app.run("prefs.set", json!({"values": {"tools.enableFlickPanning": false, "tools.overscroll": false}})).unwrap();
@@ -397,7 +397,7 @@ mod tests {
         // A 400 × 300 canvas at 100 % keeps the center 200 px or more inside the left edge.
         let mut v = view(1.0, [220.0, 750.0], 0.0);
         let rect = Rect::from_min_size(Pos2::ZERO, vec2(400.0, 300.0));
-        let mut frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+        let mut frame = |app: &mut LienzoApp, events: Vec<egui::Event>| {
             let input = egui::RawInput { screen_rect: Some(rect), events, ..Default::default() };
             let mut out = ctx.run_ui(input, |ui| {
                 v = crate::canvas::canvas_view(app, ui, 0, rect, v.clone(), true);
@@ -425,7 +425,7 @@ mod tests {
     #[test]
     fn a_flick_panning_glide_moves_the_other_windows_too() {
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 2000, "height": 1500})).unwrap();
         app.run("file.new", json!({"width": 1000, "height": 750})).unwrap();
         app.run("prefs.set", json!({"path": "tools.enableFlickPanning", "value": true})).unwrap();
@@ -443,7 +443,7 @@ mod tests {
         });
         let mut v = view(1.0, [1000.0, 750.0], 0.0);
         let rect = Rect::from_min_size(Pos2::ZERO, vec2(400.0, 300.0));
-        let mut frame = |app: &mut PhotocraftApp, events: Vec<egui::Event>| -> [f32; 2] {
+        let mut frame = |app: &mut LienzoApp, events: Vec<egui::Event>| -> [f32; 2] {
             let input = egui::RawInput { screen_rect: Some(rect), events, ..Default::default() };
             let mut out = ctx.run_ui(input, |ui| {
                 v = crate::canvas::canvas_view(app, ui, 0, rect, v.clone(), true);
@@ -478,12 +478,12 @@ mod tests {
     fn the_hand_tool_options_bar_shows_scroll_all_windows() {
         use egui_kittest::Harness;
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.sync_views();
         app.ui.tool = Tool::Hand;
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -491,7 +491,7 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.run_steps(4);
         assert!(!h.state().ui.tool_options.hand_scroll_all, "off by default");
         h.get_by_label("Scroll All Windows").click();
@@ -504,7 +504,7 @@ mod tests {
 
     /// The Hand tool's options bar with Scroll All Windows on, two tiled documents and a document
     /// window, as `the_hand_tool_options_bar_shows_scroll_all_windows` draws it.
-    fn options_bar_with_scroll_all() -> egui_kittest::Harness<'static, PhotocraftApp> {
+    fn options_bar_with_scroll_all() -> egui_kittest::Harness<'static, LienzoApp> {
         use egui_kittest::Harness;
         let mut app = app_with_tiles();
         app.ui.tool = Tool::Hand;
@@ -520,7 +520,7 @@ mod tests {
             position: None,
         });
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -528,7 +528,7 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.run_steps(4);
         h
     }

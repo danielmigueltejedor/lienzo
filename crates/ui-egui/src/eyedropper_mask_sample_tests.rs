@@ -1,21 +1,21 @@
 use egui::Modifiers;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
-use crate::{PhotocraftApp, Services};
+use crate::{LienzoApp, Services};
 
 const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 /// Select the Eyedropper and target a fully revealed mask on a red pixel layer or an Invert adjustment above it.
-fn app_with_mask(adjustment: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
+fn app_with_mask(adjustment: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
     app.run("file.new", json!({"width": 8, "height": 8, "background": "transparent"})).unwrap();
     app.session
         .edit("Paint red", |doc, _| {
             let surface = doc.layers[0].surface_mut().unwrap();
-            surface.fill_rect(Rect::new(0, 0, 8, 8), &photocraft_raster::from_rgba(&surface.format(), RED));
+            surface.fill_rect(Rect::new(0, 0, 8, 8), &lienzo_raster::from_rgba(&surface.format(), RED));
             Ok(())
         })
         .unwrap();
@@ -26,7 +26,7 @@ fn app_with_mask(adjustment: bool) -> PhotocraftApp {
     app
 }
 
-fn paint_mask(app: &mut PhotocraftApp, rect: Rect, gray: f32) {
+fn paint_mask(app: &mut LienzoApp, rect: Rect, gray: f32) {
     let layer = app.session.active().unwrap().active_layer.unwrap();
     app.session
         .edit("Paint mask", |doc, _| {
@@ -36,7 +36,7 @@ fn paint_mask(app: &mut PhotocraftApp, rect: Rect, gray: f32) {
         .unwrap();
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64, mods: Modifiers) {
+fn click(app: &mut LienzoApp, x: f64, y: f64, mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x, y }, mods);
 }
@@ -85,7 +85,7 @@ fn composite_modes_and_pixel_targets_still_sample_the_image() {
         let sample = app.run("document.sampleColor", json!({"x": 4.5, "y": 4.5, "sampleLayer": mode})).unwrap();
         let [r, g, b, _]: [f32; 4] = serde_json::from_value(sample).unwrap();
         click(&mut app, 4.5, 4.5, Modifiers::NONE);
-        assert_eq!(app.session.tools.foreground, gray(photocraft_color::convert::rgb_to_gray([r, g, b])), "{mode}");
+        assert_eq!(app.session.tools.foreground, gray(lienzo_color::convert::rgb_to_gray([r, g, b])), "{mode}");
     }
     // An adjustment's content thumbnail can still route painting to its mask. That is not an
     // explicit Eyedropper target.
@@ -108,7 +108,7 @@ fn composite_modes_and_pixel_targets_still_sample_the_image() {
 /// A white raster mask beside another selected target cannot take over that target's sample.
 #[test]
 fn vector_alpha_quick_mask_and_temporary_samples_keep_their_source() {
-    let red_gray = gray(photocraft_color::convert::rgb_to_gray([1.0, 0.0, 0.0]));
+    let red_gray = gray(lienzo_color::convert::rgb_to_gray([1.0, 0.0, 0.0]));
     let mut app = app_with_mask(false);
     app.ui.tool_options.eyedropper_sample = "current".into();
     app.ui.tool = Tool::Brush;
@@ -148,7 +148,7 @@ fn filter_mask_target_keeps_the_image_based_sample() {
     app.ui.tool_options.eyedropper_sample = "current".into();
     let sample = app.run("document.sampleColor", json!({"x": 4.5, "y": 4.5, "sampleLayer": "current"})).unwrap();
     let [r, g, b, a]: [f32; 4] = serde_json::from_value(sample).unwrap();
-    let want = gray(photocraft_color::convert::rgb_to_gray([r, g, b]));
+    let want = gray(lienzo_color::convert::rgb_to_gray([r, g, b]));
     assert!(a > 0.0 && want != gray(1.0), "the image and layer mask are distinct");
     click(&mut app, 4.5, 4.5, Modifiers::NONE);
     assert_eq!(app.session.tools.foreground, want);
@@ -161,7 +161,7 @@ fn invalid_mask_samples_leave_both_swatches_unchanged() {
     app.ui.tool_options.eyedropper_sample = "current".into();
     app.run("tools.setColors", json!({"foreground": [0.2, 0.2, 0.2, 1.0], "background": [0.8, 0.8, 0.8, 1.0]})).unwrap();
     let before = (app.session.tools.foreground, app.session.tools.background);
-    let assert_unchanged = |app: &PhotocraftApp| assert_eq!((app.session.tools.foreground, app.session.tools.background), before);
+    let assert_unchanged = |app: &LienzoApp| assert_eq!((app.session.tools.foreground, app.session.tools.background), before);
     for (x, y) in [(-0.1, 1.0), (1.0, 8.0), (f64::NAN, 1.0), (1.0, f64::INFINITY)] {
         for mods in [Modifiers::NONE, Modifiers::ALT] {
             click(&mut app, x, y, mods);

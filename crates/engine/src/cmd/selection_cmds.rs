@@ -2,10 +2,10 @@
 //! (expand/contract/border/smooth/feather), Grow, Similar, Lasso.
 //! Selections are grayscale coverage surfaces clipped to the canvas.
 
-use photocraft_algo::selection::{self as sel, SelectionMode};
-use photocraft_doc::Document;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::selection::{self as sel, SelectionMode};
+use lienzo_doc::Document;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -75,7 +75,7 @@ fn sample_pixels(s: &Session, all_layers: bool, window: Option<Rect>) -> Result<
         _ => {
             // The composite allocates inside compose; report a failure at its boundary.
             crate::allocation::checkpoint("sampling pixels for a selection")?;
-            Ok((area, photocraft_compose::render(&d.doc, area).into_px()))
+            Ok((area, lienzo_compose::render(&d.doc, area).into_px()))
         }
     }
 }
@@ -130,7 +130,7 @@ pub(crate) fn sample_rgba8(s: &Session, all_layers: bool) -> Result<(Rect, Vec<[
         (false, Some(surf)) => Ok((area, sel::rgba8_image(surf, area))),
         _ => {
             let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-            Ok((area, photocraft_compose::render(&d.doc, area).px.iter().map(|p| p.map(q)).collect()))
+            Ok((area, lienzo_compose::render(&d.doc, area).px.iter().map(|p| p.map(q)).collect()))
         }
     }
 }
@@ -170,10 +170,10 @@ fn parse_color(p: &Value) -> [f32; 3] {
 }
 
 /// Composite RGB (the compositor's output profile for the document) → CIE Lab D50.
-fn lab_transform(s: &Session) -> Result<std::sync::Arc<photocraft_cms::Transform>> {
+fn lab_transform(s: &Session) -> Result<std::sync::Arc<lienzo_cms::Transform>> {
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let src = crate::color_cmds::composite_profile(&d.doc);
-    photocraft_cms::cached(&src, photocraft_cms::Builtin::LabD50.profile(), photocraft_cms::TransformOptions::default())
+    lienzo_cms::cached(&src, lienzo_cms::Builtin::LabD50.profile(), lienzo_cms::TransformOptions::default())
         .map_err(|e| EngineError::Other(format!("colour management: {e}")))
 }
 
@@ -182,14 +182,14 @@ fn decode_lab(v: [f32; 3]) -> [f32; 3] {
     [v[0] * 100.0, v[1] * 255.0 - 128.0, v[2] * 255.0 - 128.0]
 }
 
-fn colour_to_lab(t: &photocraft_cms::Transform, rgb: [f32; 3]) -> [f32; 3] {
+fn colour_to_lab(t: &lienzo_cms::Transform, rgb: [f32; 3]) -> [f32; 3] {
     let mut out = [0.0f32; 3];
     t.eval(&rgb.map(|v| v.clamp(0.0, 1.0)), &mut out);
     decode_lab(out)
 }
 
 /// RGBA pixels → Lab + alpha (L, a, b, alpha).
-fn pixels_to_lab(t: &photocraft_cms::Transform, px: &[[f32; 4]]) -> Vec<[f32; 4]> {
+fn pixels_to_lab(t: &lienzo_cms::Transform, px: &[[f32; 4]]) -> Vec<[f32; 4]> {
     let src: Vec<[f32; 4]> = px.iter().map(|p| [p[0].clamp(0.0, 1.0), p[1].clamp(0.0, 1.0), p[2].clamp(0.0, 1.0), p[3]]).collect();
     let mut out = vec![[0.0f32; 4]; px.len()];
     t.convert_f32(src.as_flattened(), 4, out.as_flattened_mut(), 4, true);
@@ -203,7 +203,7 @@ fn pixels_to_lab(t: &photocraft_cms::Transform, px: &[[f32; 4]]) -> Vec<[f32; 4]
 /// Prepared Sampled Colors query shared by the command and its interactive preview.
 /// Samples always come from the original document; reducing an image must not change them.
 pub struct ColorRangeSamples {
-    to_lab: std::sync::Arc<photocraft_cms::Transform>,
+    to_lab: std::sync::Arc<lienzo_cms::Transform>,
     range: sel::LabRange,
     grid: bool,
     fuzziness: f32,
@@ -246,7 +246,7 @@ impl ColorRangeSamples {
                 };
                 let px = match pixel {
                     Some(px) => px,
-                    None => photocraft_compose::render(doc, r).px.first().copied().unwrap_or([0.0; 4]),
+                    None => lienzo_compose::render(doc, r).px.first().copied().unwrap_or([0.0; 4]),
                 };
                 samples.push(sel::RangeSample { color: [px[0], px[1], px[2]], at: Some(((x - area.x0) as f32, (y - area.y0) as f32)) });
             }
@@ -301,9 +301,9 @@ impl ColorRangeSamples {
         // "Subtract from Sample" reshapes it (sel::LabRange::subtract).
         let to_lab = lab_transform(s)?;
         // 8-bit documents are compared on the 8-bit Lab grid, samples and pixels alike.
-        let grid = s.active().is_some_and(|d| d.doc.depth == photocraft_doc::SampleType::U8);
+        let grid = s.active().is_some_and(|d| d.doc.depth == lienzo_doc::SampleType::U8);
         let q = |c: [f32; 3]| if grid { sel::quantize_lab8(c) } else { c };
-        let colour_to_lab = |t: &photocraft_cms::Transform, c: [f32; 3]| q(colour_to_lab(t, c));
+        let colour_to_lab = |t: &lienzo_cms::Transform, c: [f32; 3]| q(colour_to_lab(t, c));
         let foreground = || {
             let [r, g, b, _] = s.tools.foreground;
             sel::LabRange::point(colour_to_lab(&to_lab, [r, g, b]))
@@ -351,7 +351,7 @@ fn color_range_area(doc: &Document, m: SelectionMode) -> Rect {
     }
     // content_bounds orders raw tile coordinates by their differences. Reject coordinates
     // outside the pixel-addressable range before those differences can overflow.
-    let valid = (i32::MIN / photocraft_geom::TILE_SIZE)..=(i32::MAX / photocraft_geom::TILE_SIZE);
+    let valid = (i32::MIN / lienzo_geom::TILE_SIZE)..=(i32::MAX / lienzo_geom::TILE_SIZE);
     if selection.tiles().any(|(tile, _)| !valid.contains(&tile.tx) || !valid.contains(&tile.ty)) {
         return canvas;
     }
@@ -647,14 +647,14 @@ fn lasso(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The History step name for `historyName` `n`: refused when it has a control or line-break
 /// character anywhere; otherwise without its invisible end padding (see
-/// [`photocraft_plugins::manifest::trim_name`]), so a name that looks like "Patch Tool" is "Patch Tool",
+/// [`lienzo_plugins::manifest::trim_name`]), so a name that looks like "Patch Tool" is "Patch Tool",
 /// and then held to the plug-in menu-label rule.
 fn history_name(n: &str) -> Option<&str> {
     if n.chars().any(|c| c.is_control() || matches!(c, '\u{2028}' | '\u{2029}')) {
         return None;
     }
-    let t = photocraft_plugins::manifest::trim_name(n);
-    photocraft_plugins::manifest::printable_name(t).then_some(t)
+    let t = lienzo_plugins::manifest::trim_name(n);
+    lienzo_plugins::manifest::printable_name(t).then_some(t)
 }
 
 /// Selects the polygon `pts` with the lasso tools' `mode`, `antiAlias` and `feather` params, as

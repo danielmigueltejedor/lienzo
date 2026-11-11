@@ -9,11 +9,11 @@
 //! (#11473). The corner radius widgets (`corner_radius`) keep priority on a press.
 
 use egui::{Color32, CursorIcon, Modifiers, Pos2, Stroke, vec2};
-use photocraft_doc::LayerContent;
-use photocraft_geom::Affine;
+use lienzo_doc::LayerContent;
+use lienzo_geom::Affine;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::Tool;
 use crate::tool_cursor;
@@ -41,7 +41,7 @@ const PICK_PX: f64 = 6.0;
 pub struct Drag {
     /// The document and its revision at the press: a drag outlives neither a switch to another
     /// document nor an edit under it (Undo, say).
-    doc: photocraft_doc::DocId,
+    doc: lienzo_doc::DocId,
     revision: u64,
     /// The tool it started with: a switch to another tool ends it, even one that shows the box.
     tool: Tool,
@@ -59,7 +59,7 @@ pub struct Drag {
 
 /// The tools that show the box, while View › Extras and View › Show › Target Path show paths
 /// (the overlay draws it only then, so a hidden handle must not take a press either).
-fn shows(app: &PhotocraftApp) -> bool {
+fn shows(app: &LienzoApp) -> bool {
     app.ui.transform.is_none()
         && app.ui.view.shows(app.ui.view.show.target_path)
         && matches!(app.ui.tool, Tool::PathSelection | Tool::Rectangle | Tool::EllipseShape | Tool::Triangle | Tool::Polygon | Tool::Star | Tool::Line)
@@ -67,7 +67,7 @@ fn shows(app: &PhotocraftApp) -> bool {
 
 /// The selected shape layers and the box round their paths. `None` unless at least one layer is
 /// selected and all are shape layers.
-fn selection(app: &PhotocraftApp) -> Option<(Vec<u64>, [f64; 4])> {
+fn selection(app: &LienzoApp) -> Option<(Vec<u64>, [f64; 4])> {
     let st = app.session.active()?;
     let ids = st.selected_layers();
     if ids.is_empty() {
@@ -138,14 +138,14 @@ fn scaled_rect(r: [f64; 4], fixed: [f64; 2], s: [f64; 2]) -> [f64; 4] {
     [a.min(b), c.min(d), a.max(b), c.max(d)]
 }
 
-fn zoom(app: &PhotocraftApp) -> f64 {
+fn zoom(app: &LienzoApp) -> f64 {
     f64::from(app.point_zoom().max(0.01))
 }
 
 /// The handle within grabbing distance of document point `p`, the nearest; else the side whose
 /// line it is on or just outside, as that side's middle handle, unless an unselected shape is
 /// there. The handles come first, so a corner keeps its press where the sides' bands meet it.
-fn hit(app: &PhotocraftApp, p: [f64; 2]) -> Option<[i8; 2]> {
+fn hit(app: &LienzoApp, p: [f64; 2]) -> Option<[i8; 2]> {
     if !shows(app) {
         return None;
     }
@@ -164,7 +164,7 @@ fn hit(app: &PhotocraftApp, p: [f64; 2]) -> Option<[i8; 2]> {
 /// Whether the topmost shape at document point `p` is one the box doesn't hold, picked as Path
 /// Selection picks: a press on a neighbouring shape in a side's band selects or draws there, as
 /// the tool does, instead of scaling the selection.
-fn on_other_shape(app: &PhotocraftApp, layers: &[u64], p: [f64; 2], tol: f64) -> bool {
+fn on_other_shape(app: &LienzoApp, layers: &[u64], p: [f64; 2], tol: f64) -> bool {
     app.session.active().and_then(|st| crate::vector_ui::pick_shape_at(&st.doc, p, tol)).is_some_and(|id| !layers.contains(&id.0))
 }
 
@@ -188,7 +188,7 @@ pub(crate) fn edge_hit(r: [f64; 4], p: [f64; 2], band: f64, line: f64) -> Option
 
 /// The scale cursor over a handle at document point `p`, or while one is dragged, turned with the
 /// view (its rotation, flip and pixel aspect) as Free Transform's.
-pub fn cursor(app: &PhotocraftApp, xf: &ViewXform, p: [f64; 2]) -> Option<CursorIcon> {
+pub fn cursor(app: &LienzoApp, xf: &ViewXform, p: [f64; 2]) -> Option<CursorIcon> {
     let (handle, r) = match app.ui.shape_box.as_ref() {
         Some(d) => (d.handle, d.rect),
         None => (hit(app, p)?, selection(app)?.1),
@@ -207,7 +207,7 @@ pub fn cursor(app: &PhotocraftApp, xf: &ViewXform, p: [f64; 2]) -> Option<Cursor
 
 /// Drop a handle drag without applying it (Esc, or its document or tool gone); the rest of the
 /// press, its moves and release, does nothing.
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     if app.ui.shape_box.take().is_some() {
         app.cancelled_vector_drag = true;
     }
@@ -215,7 +215,7 @@ pub fn cancel(app: &mut PhotocraftApp) {
 
 /// Cancel a handle drag whose tool, document or document revision is no longer the one it
 /// started on, or whose box is hidden now. Run every frame from `sync_views`.
-pub fn cancel_stale(app: &mut PhotocraftApp) {
+pub fn cancel_stale(app: &mut LienzoApp) {
     let Some(d) = app.ui.shape_box.as_ref() else { return };
     let current = app.session.active().is_some_and(|st| st.doc.id == d.doc && st.revision == d.revision);
     if !current || app.ui.tool != d.tool || !shows(app) {
@@ -224,7 +224,7 @@ pub fn cancel_stale(app: &mut PhotocraftApp) {
 }
 
 /// Canvas pointer events for the box; false when the event is not its.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     match ev {
         ToolEvent::Down { x, y, .. } => {
             if mods.command {
@@ -268,7 +268,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
                 "reference": fixed,
                 // Named by the command: with background jobs on, the step lands after `run`
                 // returns, so a rename here would rename the step before it.
-                "stepName": photocraft_engine::transform_cmds::TRANSFORM_PATH,
+                "stepName": lienzo_engine::transform_cmds::TRANSFORM_PATH,
             });
             if let Err(e) = app.run("edit.transform", params) {
                 app.ui.status = e;
@@ -280,7 +280,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
 }
 
 /// The box and its handles, and while a handle is dragged the scaled outlines.
-pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32) {
+pub fn draw(app: &LienzoApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32) {
     if !shows(app) {
         return;
     }
@@ -292,7 +292,7 @@ pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 
         let map = Affine { m: [d.scale[0], 0.0, 0.0, d.scale[1], fixed[0] * (1.0 - d.scale[0]), fixed[1] * (1.0 - d.scale[1])] };
         if let Some(st) = app.session.active() {
             for id in &d.layers {
-                if let Some(LayerContent::Shape(sh)) = st.doc.layer(photocraft_doc::LayerId(*id)).map(|l| &l.content) {
+                if let Some(LayerContent::Shape(sh)) = st.doc.layer(lienzo_doc::LayerId(*id)).map(|l| &l.content) {
                     crate::vector_ui::draw_outline(painter, &sh.path.transform(&map), to_scr, accent);
                 }
             }

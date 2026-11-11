@@ -3505,7 +3505,7 @@ cameraRaw	Color	Renk
 	Modify Date	Değiştirilme Tarihi
 	Mosaic	Mozaik
 	Motion Blur	Hareket Bulanıklığı
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Yerel dosya sürükle ve bırak özelliği henüz Wayland'de desteklenmiyor. Dosya › Aç'ı kullanın veya Lienzo'ı XWayland altında `WAYLAND_DISPLAY= photocraft` ile çalıştırın.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Yerel dosya sürükle ve bırak özelliği henüz Wayland'de desteklenmiyor. Dosya › Aç'ı kullanın veya Lienzo'ı XWayland altında `WAYLAND_DISPLAY= lienzo` ile çalıştırın.
 	Neon Glow	Neon Işıma
 	New Guide Layout	Yeni Kılavuz Düzeni
 	New Path	Yeni Yol

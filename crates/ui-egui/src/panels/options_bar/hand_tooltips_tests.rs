@@ -6,11 +6,11 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn hand_bar() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn hand_bar() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 3000, "height": 2000})).unwrap();
     // The bar's fonts are installed after the first frame, so it starts on a tool without "100%".
     app.ui.tool = Tool::Move;
@@ -22,7 +22,7 @@ fn hand_bar() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
     h.state_mut().ui.tool = Tool::Hand;
     h.run_steps(4);
     h

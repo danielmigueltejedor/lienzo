@@ -9,24 +9,24 @@ use std::time::{Duration, Instant};
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_engine::jobs::{JobId, Started};
+use lienzo_engine::jobs::{JobId, Started};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
-fn app_harness() -> Harness<'static, PhotocraftApp> {
+fn app_harness() -> Harness<'static, LienzoApp> {
     app_harness_with(crate::Services::default())
 }
 
 /// [`app_harness`] over the given services (the beep test records the hook's calls).
-fn app_harness_with(services: crate::Services) -> Harness<'static, PhotocraftApp> {
+fn app_harness_with(services: crate::Services) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_max_steps(8).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut s = photocraft_engine::Session::new();
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 320, "height": 240})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         s.execute("edit.fill", json!({"color": "#3366cc"})).unwrap();
-        let mut app = PhotocraftApp::new(s, services);
+        let mut app = LienzoApp::new(s, services);
         app.background_jobs = true;
         app
     });
@@ -35,7 +35,7 @@ fn app_harness_with(services: crate::Services) -> Harness<'static, PhotocraftApp
 }
 
 /// A fake document job that runs until `gate` opens (or it is cancelled), reporting 40 %.
-fn slow_job(app: &mut PhotocraftApp, gate: &Arc<AtomicBool>) -> JobId {
+fn slow_job(app: &mut LienzoApp, gate: &Arc<AtomicBool>) -> JobId {
     let gate = gate.clone();
     let r = app
         .session
@@ -65,13 +65,13 @@ fn slow_job(app: &mut PhotocraftApp, gate: &Arc<AtomicBool>) -> JobId {
 }
 
 /// Step frames for `ms` of wall time; returns (frames, slowest frame in ms).
-fn frames_for(h: &mut Harness<'_, PhotocraftApp>, ms: u64) -> (u64, f64) {
+fn frames_for(h: &mut Harness<'_, LienzoApp>, ms: u64) -> (u64, f64) {
     frames_for_at_least(h, ms, 0)
 }
 
 /// Prove the frame loop advances while a gated worker stays blocked, without assuming a
 /// minimum frame rate on software-rendered CI machines. Also wait for the progress modal.
-fn frames_for_at_least(h: &mut Harness<'_, PhotocraftApp>, ms: u64, min_frames: u64) -> (u64, f64) {
+fn frames_for_at_least(h: &mut Harness<'_, LienzoApp>, ms: u64, min_frames: u64) -> (u64, f64) {
     let t = Instant::now();
     let (mut n, mut worst) = (0, 0.0f64);
     while t.elapsed() < Duration::from_millis(ms) || n < min_frames {
@@ -86,7 +86,7 @@ fn frames_for_at_least(h: &mut Harness<'_, PhotocraftApp>, ms: u64, min_frames: 
 
 /// Step at least `min` frames and until `ready` holds; returns (frames, slowest frame in ms).
 /// The test fails when `ready` still does not hold after 60 s.
-fn frames_until(h: &mut Harness<'_, PhotocraftApp>, min: u64, ready: impl Fn(&Harness<'_, PhotocraftApp>) -> bool) -> (u64, f64) {
+fn frames_until(h: &mut Harness<'_, LienzoApp>, min: u64, ready: impl Fn(&Harness<'_, LienzoApp>) -> bool) -> (u64, f64) {
     let t = Instant::now();
     let (mut n, mut worst) = (0, 0.0f64);
     while n < min || !ready(h) {
@@ -246,7 +246,7 @@ fn accepted_control_job_applies_after_its_dispatch_deadline() {
 }
 
 /// The control reply for `job`, once the app's frame loop has applied it.
-fn job_reply(h: &mut Harness<'static, PhotocraftApp>, job: JobId) -> Value {
+fn job_reply(h: &mut Harness<'static, LienzoApp>, job: JobId) -> Value {
     let (tx, rx) = std::sync::mpsc::channel();
     h.state_mut().jobs.waiters.push((job, tx));
     let t = Instant::now();
@@ -265,13 +265,13 @@ fn job_reply(h: &mut Harness<'static, PhotocraftApp>, job: JobId) -> Value {
 fn menu_and_dialog_requests_wait_for_jobs_unless_asked_not_to() {
     let mut h = app_harness();
     let ctx = h.ctx.clone();
-    let control = |h: &mut Harness<'static, PhotocraftApp>, method: &str, params: Value| {
+    let control = |h: &mut Harness<'static, LienzoApp>, method: &str, params: Value| {
         let (req, _rx) = crate::ControlRequest::new(method, params);
         crate::control::handle(h.state_mut(), &ctx, &req)
     };
     // The job a request started: deferred while waiting, `{job, pending}` at once otherwise.
     // Lets it land and checks the filter's result.
-    let land = |h: &mut Harness<'static, PhotocraftApp>, what: &str, outcome: crate::control::Outcome, wait: bool| {
+    let land = |h: &mut Harness<'static, LienzoApp>, what: &str, outcome: crate::control::Outcome, wait: bool| {
         let job = match (outcome, wait) {
             (crate::control::Outcome::AfterJob(job), true) => job,
             (crate::control::Outcome::Done(v), false) => {
@@ -283,7 +283,7 @@ fn menu_and_dialog_requests_wait_for_jobs_unless_asked_not_to() {
         let reply = job_reply(h, job);
         assert!(reply["result"]["filter"].is_object(), "{what}: {reply}");
     };
-    let steps = |h: &Harness<'static, PhotocraftApp>| h.state().session.active().unwrap().history.past_len();
+    let steps = |h: &Harness<'static, LienzoApp>| h.state().session.active().unwrap().history.past_len();
     for wait in [true, false] {
         let before = steps(&h);
         let outcome = control(&mut h, "ui.menu.invoke", json!({"id": "filter.blur.blurMore", "wait": wait}));
@@ -298,18 +298,18 @@ fn menu_and_dialog_requests_wait_for_jobs_unless_asked_not_to() {
 }
 
 fn psd_bytes() -> Vec<u8> {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     let doc = (*s.active().unwrap().doc).clone();
-    photocraft_io::export(&doc, "x.psd", &Default::default()).unwrap().bytes
+    lienzo_io::export(&doc, "x.psd", &Default::default()).unwrap().bytes
 }
 
 #[test]
 fn files_open_in_the_background_with_a_tab_and_cancel_closes_it() {
     let mut h = app_harness();
     let bytes = psd_bytes();
-    h.state_mut().open_file("/tmp/photocraft-test/bg.psd", &bytes).unwrap();
+    h.state_mut().open_file("/tmp/lienzo-test/bg.psd", &bytes).unwrap();
     // The tab is there before the document.
     assert_eq!(h.state().jobs.opens.len(), 1);
     assert_eq!(h.state().session.documents().len(), 1);
@@ -320,11 +320,11 @@ fn files_open_in_the_background_with_a_tab_and_cancel_closes_it() {
     h.run_steps(2);
     let st = h.state().session.active().unwrap();
     assert_eq!(st.doc.size.width, 64);
-    assert_eq!(st.path.as_deref(), Some("/tmp/photocraft-test/bg.psd"));
-    assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/photocraft-test/bg.psd"));
+    assert_eq!(st.path.as_deref(), Some("/tmp/lienzo-test/bg.psd"));
+    assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/lienzo-test/bg.psd"));
 
     // Cancel: the half-open tab closes, no document is added.
-    h.state_mut().open_file("/tmp/photocraft-test/bg2.psd", &bytes).unwrap();
+    h.state_mut().open_file("/tmp/lienzo-test/bg2.psd", &bytes).unwrap();
     let job = h.state().jobs.opens[0].job;
     crate::jobs_ui::cancel(h.state_mut(), job);
     h.run_steps(3);
@@ -362,7 +362,7 @@ fn the_opening_card_keeps_a_long_name_and_cancel_inside() {
 #[test]
 fn templates_open_untitled_in_the_background() {
     let mut h = app_harness();
-    h.state_mut().open_file("/tmp/photocraft-test/card.psdt", &psd_bytes()).unwrap();
+    h.state_mut().open_file("/tmp/lienzo-test/card.psdt", &psd_bytes()).unwrap();
     assert_eq!(h.state().jobs.opens[0].name, "Untitled-1");
     let t = Instant::now();
     while !h.state().jobs.opens.is_empty() && t.elapsed() < Duration::from_secs(30) {
@@ -371,7 +371,7 @@ fn templates_open_untitled_in_the_background() {
     h.run_steps(2);
     let st = h.state().session.active().unwrap();
     assert_eq!((st.doc.name.as_str(), st.path.as_deref()), ("Untitled-1", None));
-    assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/photocraft-test/card.psdt"));
+    assert_eq!(h.state().ui.recent_files.first().map(String::as_str), Some("/tmp/lienzo-test/card.psdt"));
 }
 
 /// Gates for a fake save: it encodes until `encode` opens and writes until `write` opens
@@ -419,11 +419,11 @@ impl Gates {
     }
 }
 
-fn noticed(app: &PhotocraftApp, text: &str) -> bool {
+fn noticed(app: &LienzoApp, text: &str) -> bool {
     app.ui.notices.iter().any(|n| n.title.contains(text) || n.lines.iter().any(|l| l.contains(text)))
 }
 
-fn step_until(h: &mut Harness<'_, PhotocraftApp>, done: impl Fn(&PhotocraftApp) -> bool) {
+fn step_until(h: &mut Harness<'_, LienzoApp>, done: impl Fn(&LienzoApp) -> bool) {
     let t = Instant::now();
     while !done(h.state()) && t.elapsed() < Duration::from_secs(30) {
         h.step();
@@ -436,7 +436,7 @@ fn saves_run_in_the_background_and_are_recorded_when_they_end() {
     let mut h = app_harness();
     let gates = Gates { write: Arc::new(AtomicBool::new(true)), ..Gates::default() };
     h.state_mut().services.save_file = Some(gates.save(None));
-    let r = h.state_mut().save_as(Some("/tmp/photocraft-test/big.psd".into())).unwrap();
+    let r = h.state_mut().save_as(Some("/tmp/lienzo-test/big.psd".into())).unwrap();
     assert_eq!(r["pending"], true);
     assert_eq!(r["job"].as_u64(), h.state().jobs.saves.first().map(|s| s.job.0), "control clients get the job to wait on");
     assert!(h.state().saving());
@@ -459,10 +459,10 @@ fn saves_run_in_the_background_and_are_recorded_when_they_end() {
 
     gates.encode.store(true, Ordering::Relaxed);
     step_until(&mut h, |a| !a.saving());
-    assert_eq!(gates.written(), ["/tmp/photocraft-test/big.psd"]);
+    assert_eq!(gates.written(), ["/tmp/lienzo-test/big.psd"]);
     let st = h.state().session.active().unwrap();
     assert!(!st.is_dirty());
-    assert_eq!(st.path.as_deref(), Some("/tmp/photocraft-test/big.psd"));
+    assert_eq!(st.path.as_deref(), Some("/tmp/lienzo-test/big.psd"));
     assert_eq!(st.doc.name, "big.psd", "the document takes the saved file's name, as a synchronous Save As does");
     assert_eq!(h.state().ui.status, "Saved big.psd: a warning");
     assert!(noticed(h.state(), "a warning"), "the export warnings are shown");
@@ -479,7 +479,7 @@ fn save_in_background_off_blocks_the_app_until_the_file_is_written() {
     let gates = Gates { write: Arc::new(AtomicBool::new(true)), ..Gates::default() };
     h.state_mut().services.save_file = Some(gates.save(None));
     h.state_mut().ui.tool = crate::state::Tool::Move;
-    let r = h.state_mut().save_as(Some("/tmp/photocraft-test/fg.psd".into())).unwrap();
+    let r = h.state_mut().save_as(Some("/tmp/lienzo-test/fg.psd".into())).unwrap();
     assert_eq!(r["pending"], true, "the same background job does the work");
     h.run_steps(1);
     // The dialog is up from the first frame (no delay), titled with the save, then its stage.
@@ -513,12 +513,12 @@ fn save_in_background_off_blocks_the_app_until_the_file_is_written() {
             assert!(h.query_by_label("Esc to cancel").is_some(), "the dialog stays up until the save ends");
         }
     }
-    assert_eq!(gates.written(), ["/tmp/photocraft-test/fg.psd"], "the file is complete before the close goes on");
+    assert_eq!(gates.written(), ["/tmp/lienzo-test/fg.psd"], "the file is complete before the close goes on");
     assert!(!h.state().jobs.close_after_saves, "then the held close is repeated");
     h.run_steps(2);
     assert!(h.query_by_label("Esc to cancel").is_none(), "the dialog is gone");
     let st = h.state().session.active().unwrap();
-    assert_eq!(st.path.as_deref(), Some("/tmp/photocraft-test/fg.psd"));
+    assert_eq!(st.path.as_deref(), Some("/tmp/lienzo-test/fg.psd"));
     assert!(!st.is_dirty());
     h.key_press(egui::Key::B);
     h.run_steps(2);
@@ -533,7 +533,7 @@ fn a_failed_or_cancelled_foreground_save_leaves_the_document_unsaved() {
     h.state_mut().run("prefs.set", json!({"path": "fileHandling.saveInBackground", "value": false})).unwrap();
     let gates = Gates::open();
     h.state_mut().services.save_file = Some(gates.save(Some("disk full")));
-    h.state_mut().save_as(Some("/tmp/photocraft-test/f.psd".into())).unwrap();
+    h.state_mut().save_as(Some("/tmp/lienzo-test/f.psd".into())).unwrap();
     step_until(&mut h, |a| !a.saving());
     let st = h.state().session.active().unwrap();
     assert!(st.is_dirty() && st.path.is_none());
@@ -542,7 +542,7 @@ fn a_failed_or_cancelled_foreground_save_leaves_the_document_unsaved() {
 
     gates.encode.store(false, Ordering::Relaxed);
     h.state_mut().services.save_file = Some(gates.save(None));
-    h.state_mut().save_as(Some("/tmp/photocraft-test/g.psd".into())).unwrap();
+    h.state_mut().save_as(Some("/tmp/lienzo-test/g.psd".into())).unwrap();
     h.run_steps(2);
     h.key_press(egui::Key::Escape);
     step_until(&mut h, |a| !a.saving());
@@ -558,7 +558,7 @@ fn a_failed_save_or_one_cancelled_while_encoding_leaves_the_document_unsaved() {
     let mut h = app_harness();
     let gates = Gates::open();
     h.state_mut().services.save_file = Some(gates.save(Some("disk full")));
-    h.state_mut().save_as(Some("/tmp/photocraft-test/a.psd".into())).unwrap();
+    h.state_mut().save_as(Some("/tmp/lienzo-test/a.psd".into())).unwrap();
     step_until(&mut h, |a| !a.saving());
     let st = h.state().session.active().unwrap();
     assert!(st.is_dirty() && st.path.is_none());
@@ -566,7 +566,7 @@ fn a_failed_save_or_one_cancelled_while_encoding_leaves_the_document_unsaved() {
 
     gates.encode.store(false, Ordering::Relaxed);
     h.state_mut().services.save_file = Some(gates.save(None));
-    h.state_mut().save_as(Some("/tmp/photocraft-test/b.psd".into())).unwrap();
+    h.state_mut().save_as(Some("/tmp/lienzo-test/b.psd".into())).unwrap();
     h.run_steps(2);
     h.key_press(egui::Key::Escape);
     step_until(&mut h, |a| !a.saving());
@@ -577,7 +577,7 @@ fn a_failed_save_or_one_cancelled_while_encoding_leaves_the_document_unsaved() {
 }
 
 /// Step until the save in `h` has started writing.
-fn until_writing(h: &mut Harness<'_, PhotocraftApp>) {
+fn until_writing(h: &mut Harness<'_, LienzoApp>) {
     let t = Instant::now();
     while h.state().session.jobs().first().is_none_or(|j| j.message != "Writing") && t.elapsed() < Duration::from_secs(30) {
         h.step();
@@ -589,7 +589,7 @@ fn a_save_that_has_started_writing_cannot_be_cancelled() {
     let mut h = app_harness();
     let gates = Gates { encode: Arc::new(AtomicBool::new(true)), ..Gates::default() };
     h.state_mut().services.save_file = Some(gates.save(None));
-    h.state_mut().save_as(Some("/tmp/photocraft-test/w.psd".into())).unwrap();
+    h.state_mut().save_as(Some("/tmp/lienzo-test/w.psd".into())).unwrap();
     until_writing(&mut h);
     let job = h.state().jobs.saves[0].job;
     crate::jobs_ui::cancel(h.state_mut(), job);
@@ -600,7 +600,7 @@ fn a_save_that_has_started_writing_cannot_be_cancelled() {
 
     gates.write.store(true, Ordering::Relaxed);
     step_until(&mut h, |a| !a.saving());
-    assert_eq!(gates.written(), ["/tmp/photocraft-test/w.psd"]);
+    assert_eq!(gates.written(), ["/tmp/lienzo-test/w.psd"]);
     assert!(!h.state().session.active().unwrap().is_dirty(), "the written save is recorded");
 }
 
@@ -626,7 +626,7 @@ fn file_save(gates: &Gates) -> crate::SaveFileFn {
 
 /// A file holding `old`, in a fresh directory named for the test.
 fn old_file(test: &str) -> String {
-    let dir = std::env::temp_dir().join(format!("photocraft-jobs-ui-{}-{test}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-jobs-ui-{}-{test}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("w.psd");
@@ -634,7 +634,7 @@ fn old_file(test: &str) -> String {
     path.to_string_lossy().into_owned()
 }
 
-fn control(h: &mut Harness<'static, PhotocraftApp>, method: &str, params: Value) -> Value {
+fn control(h: &mut Harness<'static, LienzoApp>, method: &str, params: Value) -> Value {
     let (req, _rx) = crate::ControlRequest::new(method, params);
     let ctx = h.ctx.clone();
     let crate::control::Outcome::Done(v) = crate::control::handle(h.state_mut(), &ctx, &req) else { panic!("{method} replies at once") };
@@ -714,7 +714,7 @@ fn a_running_save_shows_its_percentage_in_the_status_bar_and_tab_title() {
             Ok(Vec::new())
         });
         h.state_mut().services.save_file = Some(save);
-        h.state_mut().save_as(Some("/tmp/photocraft-test/pct.psd".into())).unwrap();
+        h.state_mut().save_as(Some("/tmp/lienzo-test/pct.psd".into())).unwrap();
         let t = Instant::now();
         while h.query_by_label("Saving 45%").is_none() && t.elapsed() < Duration::from_secs(30) {
             h.step();
@@ -724,12 +724,12 @@ fn a_running_save_shows_its_percentage_in_the_status_bar_and_tab_title() {
         gate.store(true, Ordering::Relaxed);
         step_until(&mut h, |a| !a.saving());
         assert!(h.query_by_label_contains("Saving").is_none(), "{theme:?}: the readout and the tab suffix are gone once saved");
-        assert_eq!(h.state().session.active().unwrap().path.as_deref(), Some("/tmp/photocraft-test/pct.psd"));
+        assert_eq!(h.state().session.active().unwrap().path.as_deref(), Some("/tmp/lienzo-test/pct.psd"));
     }
 }
 
 /// One frame with the window's close button pressed; whether the guard cancelled the close.
-fn press_window_close(app: &mut PhotocraftApp) -> bool {
+fn press_window_close(app: &mut LienzoApp) -> bool {
     let mut info = egui::ViewportInfo::default();
     info.events.push(egui::ViewportEvent::Close);
     let mut input = egui::RawInput::default();
@@ -740,7 +740,7 @@ fn press_window_close(app: &mut PhotocraftApp) -> bool {
 }
 
 /// A clean document (so the close prompt has nothing to ask) saved as a copy in the background.
-fn save_a_copy(h: &mut Harness<'static, PhotocraftApp>, gates: &Gates, path: &str) {
+fn save_a_copy(h: &mut Harness<'static, LienzoApp>, gates: &Gates, path: &str) {
     h.state_mut().services.save_file = Some(gates.save(None));
     let st = h.state_mut().session.active_mut().unwrap();
     st.saved_revision = st.revision;
@@ -752,13 +752,13 @@ fn save_a_copy(h: &mut Harness<'static, PhotocraftApp>, gates: &Gates, path: &st
 fn quitting_waits_for_a_background_save_to_finish() {
     let mut h = app_harness();
     let gates = Gates { write: Arc::new(AtomicBool::new(true)), ..Gates::default() };
-    save_a_copy(&mut h, &gates, "/tmp/photocraft-test/copy.psd");
+    save_a_copy(&mut h, &gates, "/tmp/lienzo-test/copy.psd");
     assert!(press_window_close(h.state_mut()), "the close waits for the save");
     assert!(h.state().jobs.close_after_saves);
 
     gates.encode.store(true, Ordering::Relaxed);
     step_until(&mut h, |a| !a.saving());
-    assert_eq!(gates.written(), ["/tmp/photocraft-test/copy.psd"]);
+    assert_eq!(gates.written(), ["/tmp/lienzo-test/copy.psd"]);
     assert!(!h.state().jobs.close_after_saves, "the close is repeated once the save ends");
 }
 
@@ -769,7 +769,7 @@ fn a_failed_save_does_not_close_the_window_over_its_error() {
     h.state_mut().services.save_file = Some(gates.save(Some("disk full")));
     let st = h.state_mut().session.active_mut().unwrap();
     st.saved_revision = st.revision;
-    h.state_mut().write_document("/tmp/photocraft-test/copy.psd".into(), &crate::ExportSettings::default(), true).unwrap();
+    h.state_mut().write_document("/tmp/lienzo-test/copy.psd".into(), &crate::ExportSettings::default(), true).unwrap();
     assert!(press_window_close(h.state_mut()));
     gates.encode.store(true, Ordering::Relaxed);
     step_until(&mut h, |a| !a.saving());
@@ -794,7 +794,7 @@ fn a_cancelled_save_still_counts_until_its_worker_returns() {
     }));
     let st = h.state_mut().session.active_mut().unwrap();
     st.saved_revision = st.revision;
-    h.state_mut().write_document("/tmp/photocraft-test/c.psd".into(), &crate::ExportSettings::default(), true).unwrap();
+    h.state_mut().write_document("/tmp/lienzo-test/c.psd".into(), &crate::ExportSettings::default(), true).unwrap();
     while !encode.load(Ordering::Relaxed) {
         std::thread::sleep(Duration::from_millis(1));
     }
@@ -805,7 +805,7 @@ fn a_cancelled_save_still_counts_until_its_worker_returns() {
     assert!(h.state().saving(), "but its worker is still running");
     assert!(press_window_close(h.state_mut()), "quitting waits for the worker");
     assert!(
-        h.state_mut().save_as(Some("/tmp/photocraft-test/c.psd".into())).unwrap_err().contains("still running"),
+        h.state_mut().save_as(Some("/tmp/lienzo-test/c.psd".into())).unwrap_err().contains("still running"),
         "a second save to the same file waits for it too"
     );
 
@@ -901,7 +901,7 @@ fn interactive_batch_shows_its_read_only_input_and_asks_after_escape() {
             "Batch",
             false,
             move |ctx| {
-                let mut scratch = photocraft_engine::Session::new();
+                let mut scratch = lienzo_engine::Session::new();
                 scratch.execute("file.new", json!({"name": "input.png", "width": 16, "height": 12, "background": "#00ff00"}))?;
                 ctx.publish_batch_preview("/source/input.png", scratch.active().map(|state| state.doc.clone()));
                 let _ = ready_tx.send(());
@@ -956,7 +956,7 @@ fn printing_keeps_drawing_and_reports_only_the_final_spooler_result() {
                     if success {
                         Ok(json!({"sent": true, "spooler": "request id is Office-42", "pdf": null}))
                     } else {
-                        Err(photocraft_engine::EngineError::Other("queue refused".into()))
+                        Err(lienzo_engine::EngineError::Other("queue refused".into()))
                     }
                 },
                 |_, result| Ok(result),
@@ -996,15 +996,15 @@ fn printing_keeps_drawing_and_reports_only_the_final_spooler_result() {
         }
     }
     // The job and its status do not ask the system spooler for its printers.
-    assert_eq!(photocraft_engine::print_cmds::system_printer_listings(), 0, "a test asked the system spooler for its printers");
+    assert_eq!(lienzo_engine::print_cmds::system_printer_listings(), 0, "a test asked the system spooler for its printers");
 }
 
-fn layer_count(app: &PhotocraftApp) -> usize {
+fn layer_count(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
 /// Free Transform the active layer to the right half of the canvas, then ↩.
-fn transform_and_commit(h: &mut Harness<'static, PhotocraftApp>, copy: bool) {
+fn transform_and_commit(h: &mut Harness<'static, LienzoApp>, copy: bool) {
     let ctx = h.ctx.clone();
     let app = h.state_mut();
     if copy { crate::transform_tool::begin_copy(app, &ctx) } else { crate::transform_tool::begin(app, &ctx) }.unwrap();
@@ -1062,12 +1062,12 @@ fn esc_cancels_a_background_free_transform_commit() {
 }
 
 /// Warp the active layer into an arc, then ↩.
-fn warp_and_commit(h: &mut Harness<'static, PhotocraftApp>) {
+fn warp_and_commit(h: &mut Harness<'static, LienzoApp>) {
     let ctx = h.ctx.clone();
     let app = h.state_mut();
     crate::transform_tool::begin(app, &ctx).unwrap();
     let t = app.ui.transform.as_mut().unwrap();
-    t.warp = Some(photocraft_geom::warp::Warp::preset(photocraft_geom::warp::WarpStyle::Arc, 40.0, t.rect));
+    t.warp = Some(lienzo_geom::warp::Warp::preset(lienzo_geom::warp::WarpStyle::Arc, 40.0, t.rect));
     crate::transform_tool::commit(app);
 }
 
@@ -1093,7 +1093,7 @@ fn a_warp_commit_runs_in_the_background_and_keeps_its_preview() {
     assert_eq!(st.history.undo_label(), Some("Warp"));
     // The arc bulges the layer past its old edges.
     let b = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
-    assert_ne!(b, photocraft_geom::Rect::new(0, 0, 320, 240), "the layer was warped");
+    assert_ne!(b, lienzo_geom::Rect::new(0, 0, 320, 240), "the layer was warped");
 }
 
 #[test]
@@ -1111,7 +1111,7 @@ fn esc_cancels_a_background_warp_commit() {
     let st = app.session.active().unwrap();
     assert_eq!(st.history.past_len(), steps);
     let id = st.active_layer.unwrap();
-    let px = |d: &photocraft_doc::Document| d.layer(id).unwrap().surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 320, 240));
+    let px = |d: &lienzo_doc::Document| d.layer(id).unwrap().surface().unwrap().read_region(lienzo_geom::Rect::new(0, 0, 320, 240));
     assert_eq!(px(&st.doc), px(&before), "the layer is untouched");
 }
 
@@ -1119,11 +1119,11 @@ fn esc_cancels_a_background_warp_commit() {
 /// type in a font that isn't installed.
 #[test]
 fn background_open_warns_about_missing_fonts() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 40, "height": 20})).unwrap();
     s.execute("type.create", json!({"text": "Hi", "x": 2, "y": 12, "size": 10, "font": "NoSuchFamily4559"})).unwrap();
     let doc = (*s.active().unwrap().doc).clone();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     // What the open job leaves behind: the decoded document in the session, then its result.
     let (index, _) = app.session.open_document(doc, None);
     let id = app.session.documents()[index].doc.id;
@@ -1132,34 +1132,34 @@ fn background_open_warns_about_missing_fonts() {
     assert!(app.ui.notices.last().is_some_and(|n| n.title.contains("poster.psd") && n.lines == want), "{:?}", app.ui.notices);
 }
 
-fn identity_app() -> PhotocraftApp {
-    let mut session = photocraft_engine::Session::new();
+fn identity_app() -> LienzoApp {
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 8, "height": 6})).unwrap();
     session.execute("layer.new.layer", json!({})).unwrap();
     session.execute("edit.fill", json!({"color": "#336699"})).unwrap();
     session.active_mut().unwrap().path = Some("accepted-control.pcraft".into());
     assert!(session.active().unwrap().is_dirty());
-    PhotocraftApp::new(session, crate::Services::default())
+    LienzoApp::new(session, crate::Services::default())
 }
 
-fn identity_png(profile: Option<photocraft_cms::Builtin>) -> Vec<u8> {
+fn identity_png(profile: Option<lienzo_cms::Builtin>) -> Vec<u8> {
     let app = identity_app();
     let mut doc = (*app.session.active().unwrap().doc).clone();
     doc.icc_profile = profile.map(|profile| profile.profile().to_bytes());
-    photocraft_io::export(&doc, "synthetic.png", &Default::default()).unwrap().bytes
+    lienzo_io::export(&doc, "synthetic.png", &Default::default()).unwrap().bytes
 }
 
 /// Complete the real decoder/apply path without delivering its result to the UI yet. This is
 /// the same boundary as a poll that applies all ready jobs before handling their UI events.
-fn completed_identity_open(app: &mut PhotocraftApp, name: &str, bytes: Vec<u8>) -> Value {
-    match app.session.start_open(name, photocraft_engine::jobs::OpenSource::Bytes(Arc::new(bytes))).unwrap() {
+fn completed_identity_open(app: &mut LienzoApp, name: &str, bytes: Vec<u8>) -> Value {
+    match app.session.start_open(name, lienzo_engine::jobs::OpenSource::Bytes(Arc::new(bytes))).unwrap() {
         Started::Done(result) => result,
         Started::Job(job) => app.session.wait_job(job).unwrap(),
     }
 }
 
 struct IdentityControl {
-    doc: Arc<photocraft_doc::Document>,
+    doc: Arc<lienzo_doc::Document>,
     path: Option<String>,
     revision: u64,
     saved_revision: u64,
@@ -1168,7 +1168,7 @@ struct IdentityControl {
 }
 
 impl IdentityControl {
-    fn capture(app: &PhotocraftApp) -> Self {
+    fn capture(app: &LienzoApp) -> Self {
         let state = app.session.active().unwrap();
         Self {
             doc: state.doc.clone(),
@@ -1180,7 +1180,7 @@ impl IdentityControl {
         }
     }
 
-    fn assert_untouched(&self, app: &PhotocraftApp) {
+    fn assert_untouched(&self, app: &LienzoApp) {
         let state = app.session.documents().iter().find(|state| state.doc.id == self.doc.id).expect("the accepted control remains open");
         assert!(Arc::ptr_eq(&state.doc, &self.doc), "the accepted control's pixels and document data must not change");
         assert_eq!(state.path, self.path, "an import must not rebind another document's save path");
@@ -1194,7 +1194,7 @@ impl IdentityControl {
 
 /// Exercise the consumer separately from the engine result-schema regression: the identity is
 /// observed from the real imported document, then supplied even on the old producer.
-fn identified_result(app: &PhotocraftApp, mut result: Value) -> (Value, photocraft_doc::DocId) {
+fn identified_result(app: &LienzoApp, mut result: Value) -> (Value, lienzo_doc::DocId) {
     let id = app.session.documents()[result["document"].as_u64().unwrap() as usize].doc.id;
     result["docId"] = json!(id.0);
     (result, id)
@@ -1264,7 +1264,7 @@ fn open_identity_keeps_same_poll_results_in_the_profile_queue() {
     let mut app = identity_app();
     let control = IdentityControl::capture(&app);
     app.session.execute("edit.colorSettings", json!({"askOnMismatch": true, "askOnMissing": false, "policyRgb": "preserve"})).unwrap();
-    let mismatched = identity_png(photocraft_cms::Builtin::from_id("adobe-rgb-compat"));
+    let mismatched = identity_png(lienzo_cms::Builtin::from_id("adobe-rgb-compat"));
     let prompt = completed_identity_open(&mut app, "profile.png", mismatched);
     assert!(prompt["held"].as_u64().is_some());
     let first = completed_identity_open(&mut app, "first.png", identity_png(None));

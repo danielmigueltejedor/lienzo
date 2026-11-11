@@ -1,6 +1,6 @@
 //! Layer > Smart Objects > Embed Linked and Embed All Linked (#11401).
 
-use photocraft_doc::{LayerContent, SmartSource};
+use lienzo_doc::{LayerContent, SmartSource};
 use serde_json::json;
 
 use crate::Session;
@@ -15,7 +15,7 @@ fn painted_layer(s: &mut Session, red: f32) {
     s.execute("layer.new.layer", json!({})).unwrap();
     s.edit("setup", |doc, active| {
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
-        surf.fill_rect(photocraft_geom::Rect::new(2, 2, 10, 10), &[red, 1.0 - red, 0.0, 1.0]);
+        surf.fill_rect(lienzo_geom::Rect::new(2, 2, 10, 10), &[red, 1.0 - red, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -83,7 +83,7 @@ fn embed_all_linked_embeds_both_linked_objects_in_one_undoable_step() {
     assert!(is_linked(&s, ids[0]) && is_linked(&s, ids[1]) && !is_linked(&s, ids[2]));
     assert!(s.is_enabled("layer.smartObjects.embedAllLinked"));
     let before = s.active().unwrap().history.entries().len();
-    let files: Vec<Vec<u8>> = (0..2).map(|i| photocraft_format::read_file(&dir.join(format!("linked{i}.pcraft"))).unwrap()).collect();
+    let files: Vec<Vec<u8>> = (0..2).map(|i| lienzo_format::read_file(&dir.join(format!("linked{i}.pcraft"))).unwrap()).collect();
     assert_ne!(files[0], files[1], "the fixtures differ");
     let third = embedded(&s, ids[2]);
 

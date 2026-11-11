@@ -1,6 +1,6 @@
-use super::PhotocraftApp;
+use super::LienzoApp;
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Whether the title bar's free gap gets the drag overlay this frame: the app draws its title
     /// strip (`chrome`: not hidden by the screen mode) and a dialog's modal layer covers it. Not
     /// only with the custom title bar: on macOS the strip under the traffic lights is the window's

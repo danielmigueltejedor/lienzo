@@ -1,6 +1,6 @@
 //! Undo/redo history.
 //!
-//! Because pixel tiles are `Arc`-shared copy-on-write (see `photocraft-raster`), a full
+//! Because pixel tiles are `Arc`-shared copy-on-write (see `lienzo-raster`), a full
 //! [`Document`] clone costs O(layers + tiles) pointer copies, not pixel copies. History therefore
 //! stores whole-document snapshots per transaction, which is simple, obviously correct, and the
 //! same approach Photoshop's History panel exposes to users (one state per step).
@@ -14,7 +14,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
-use photocraft_doc::{Document, LayerId};
+use lienzo_doc::{Document, LayerId};
 
 mod tiles;
 

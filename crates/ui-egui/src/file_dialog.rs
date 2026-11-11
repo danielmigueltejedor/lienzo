@@ -1,7 +1,7 @@
 //! File dialogs that never block the event loop (#673, #574).
 //!
-//! A command that needs a file asks with [`PhotocraftApp::ask_file`] (or one of its wrappers) and
-//! hands over what to do with the answer. [`PhotocraftApp::poll_file_dialog`], every frame, shows
+//! A command that needs a file asks with [`LienzoApp::ask_file`] (or one of its wrappers) and
+//! hands over what to do with the answer. [`LienzoApp::poll_file_dialog`], every frame, shows
 //! the queued dialog through [`Services::file_dialog`](crate::Services::file_dialog) with the
 //! window as its parent (so it is modal to the window, as Photoshop's are) and continues the
 //! action once the platform shell answers through the [`FileDialogReply`], from any thread. The
@@ -15,10 +15,10 @@
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 
-use photocraft_doc::DocId;
+use lienzo_doc::DocId;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::file_open::display_name;
 
 /// What a file or folder dialog asks the user for.
@@ -72,10 +72,10 @@ impl FileDialogReply {
 pub type FileDialogFn = Box<dyn FnMut(FileDialogRequest, Option<&eframe::Frame>, FileDialogReply)>;
 
 /// What to do with the answer (`None`: cancelled).
-type Then = Box<dyn FnOnce(&mut PhotocraftApp, Option<FileDialogAnswer>) -> Result<Value, String>>;
+type Then = Box<dyn FnOnce(&mut LienzoApp, Option<FileDialogAnswer>) -> Result<Value, String>>;
 
 /// The path a save writes to for the path the save dialog answered (see [`saved_path`]).
-type SavedPath = Box<dyn Fn(&PhotocraftApp, &str) -> String>;
+type SavedPath = Box<dyn Fn(&LienzoApp, &str) -> String>;
 
 /// The file dialog in progress.
 pub(crate) struct Pending {
@@ -94,7 +94,7 @@ pub(crate) struct Pending {
 pub(crate) const CANCELLED: &str = "cancelled";
 const UNEXPECTED: &str = "the file dialog gave an unexpected answer";
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Whether a file dialog is open (or about to be shown).
     pub fn file_dialog_open(&self) -> bool {
         self.file_dialog.is_some()
@@ -245,7 +245,7 @@ impl PhotocraftApp {
     }
 
     /// `X.PSD` → `X.psd`, only the extension: the stem and the folders keep the user's spelling.
-    fn lowercased_extension(app: &PhotocraftApp, path: String) -> String {
+    fn lowercased_extension(app: &LienzoApp, path: String) -> String {
         if !app.session.prefs().file_handling.lowercase_extension {
             return path;
         }
@@ -424,8 +424,8 @@ impl PhotocraftApp {
 /// The path a save writes to for the path the save dialog answered: its extension lowercased
 /// when Preferences ▸ File Handling › Lowercase Extension is on, and a name without one given
 /// `suggested_ext`, the suggested file's.
-fn saved_path(app: &PhotocraftApp, answered: &str, suggested_ext: Option<&str>) -> String {
-    let path = PhotocraftApp::lowercased_extension(app, answered.to_string());
+fn saved_path(app: &LienzoApp, answered: &str, suggested_ext: Option<&str>) -> String {
+    let path = LienzoApp::lowercased_extension(app, answered.to_string());
     match suggested_ext {
         Some(ext) if Path::new(&path).extension().is_none() => Path::new(&path).with_extension(ext).to_string_lossy().into_owned(),
         _ => path,
@@ -467,7 +467,7 @@ fn read_picked(answer: FileDialogAnswer) -> Result<(String, Vec<u8>), String> {
         FileDialogAnswer::ContentsMany(files) => files.into_iter().next().ok_or_else(|| CANCELLED.into()),
         FileDialogAnswer::Paths(paths) => {
             let path = paths.into_iter().next().ok_or(CANCELLED)?;
-            let bytes = photocraft_format::read_file(std::path::Path::new(&path)).map_err(|e| format!("{}: {e}", display_name(&path)))?;
+            let bytes = lienzo_format::read_file(std::path::Path::new(&path)).map_err(|e| format!("{}: {e}", display_name(&path)))?;
             Ok((path, bytes))
         }
         FileDialogAnswer::FolderTo(_) => Err(UNEXPECTED.into()),

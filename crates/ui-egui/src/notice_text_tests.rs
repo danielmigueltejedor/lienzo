@@ -9,7 +9,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// The refusal the report quotes, as the notice shows it.
@@ -17,14 +17,14 @@ const MESSAGE: &str = "Free Transform: not enough memory for transforming pixels
 
 /// The whole app with a filled layer on a 2000 x 1500 document, the Move tool, and the refusal in
 /// an error notice.
-fn app_harness() -> Harness<'static, PhotocraftApp> {
+fn app_harness() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_max_steps(8).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut s = photocraft_engine::Session::new();
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 2000, "height": 1500})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         s.execute("edit.fill", json!({"color": "#3366cc"})).unwrap();
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = LienzoApp::new(s, crate::Services::default());
         app.ui.tool = Tool::Move;
         app
     });
@@ -35,20 +35,20 @@ fn app_harness() -> Harness<'static, PhotocraftApp> {
 }
 
 /// The notice's message (the status bar shows it too, on one line: the notice wraps it).
-fn notice_text(h: &Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn notice_text(h: &Harness<'static, LienzoApp>) -> egui::Rect {
     let rects: Vec<egui::Rect> = h.get_all_by_label(MESSAGE).map(|n| n.rect()).collect();
     rects.into_iter().max_by(|a, b| a.height().total_cmp(&b.height())).unwrap()
 }
 
 /// The document's layers (bounds) and History length.
-fn document(h: &Harness<'static, PhotocraftApp>) -> (Vec<Option<photocraft_geom::Rect>>, usize) {
+fn document(h: &Harness<'static, LienzoApp>) -> (Vec<Option<lienzo_geom::Rect>>, usize) {
     let st = h.state().session.active().unwrap();
     (st.doc.walk().iter().map(|(_, _, l)| l.surface().map(|s| s.content_bounds())).collect(), st.history.past_len())
 }
 
 /// One frame with `events`, through the app's `raw_input_hook` as on the desktop; the text it
 /// copied.
-fn frame(h: &mut Harness<'static, PhotocraftApp>, events: Vec<egui::Event>) -> Vec<String> {
+fn frame(h: &mut Harness<'static, LienzoApp>, events: Vec<egui::Event>) -> Vec<String> {
     let ctx = h.ctx.clone();
     let mut raw = h.input_mut().clone();
     raw.events.extend(events);
@@ -59,13 +59,13 @@ fn frame(h: &mut Harness<'static, PhotocraftApp>, events: Vec<egui::Event>) -> V
 }
 
 /// The primary button pressed or released at `p`, then a frame without events.
-fn button(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, pressed: bool) {
+fn button(h: &mut Harness<'static, LienzoApp>, p: Pos2, pressed: bool) {
     frame(h, vec![egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE }]);
     frame(h, vec![]);
 }
 
 /// A primary-button drag from `from` to `to` in ten moves.
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2) {
+fn drag(h: &mut Harness<'static, LienzoApp>, from: Pos2, to: Pos2) {
     frame(h, vec![egui::Event::PointerMoved(from)]);
     button(h, from, true);
     for i in 1..=10 {

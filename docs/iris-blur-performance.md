@@ -83,16 +83,16 @@ the same harness on the base revision to reproduce a comparison.
 ```powershell
 $env:CARGO_TARGET_DIR = 'target/agent-iris-blur'
 $env:RAYON_NUM_THREADS = '8'
-cargo run --release -p photocraft-algo --example bench_iris -- 6000 4000 3
-cargo run --release -p photocraft-algo --example bench_iris -- 6000 6000 3
-cargo run --release -p photocraft-algo --example bench_iris -- 1500 1000 5 4
-cargo run --release -p photocraft-algo --example bench_iris -- 2000 1334 5
-cargo run --release -p photocraft-algo --example bench_iris -- 128 96 5
-cargo test --release -p photocraft-algo iris_profile_baseline_stages -- --ignored --nocapture
+cargo run --release -p lienzo-algo --example bench_iris -- 6000 4000 3
+cargo run --release -p lienzo-algo --example bench_iris -- 6000 6000 3
+cargo run --release -p lienzo-algo --example bench_iris -- 1500 1000 5 4
+cargo run --release -p lienzo-algo --example bench_iris -- 2000 1334 5
+cargo run --release -p lienzo-algo --example bench_iris -- 128 96 5
+cargo test --release -p lienzo-algo iris_profile_baseline_stages -- --ignored --nocapture
 ```
 
 The 2000×1334 run is a preview-sized stress workload at fixed blur parameters.
-PhotoCraft actually reduces 24 MP by factor four to 1500×1000 (its factor is the
+Lienzo actually reduces 24 MP by factor four to 1500×1000 (its factor is the
 ceiling of sqrt(pixels/2,500,000)). The separate 1500×1000 run models that existing
 filtered-proxy workload directly: top-level document blur 15/80/300 becomes
 3.75/20/75; the nested multiple-pin JSON amounts retain their existing values.

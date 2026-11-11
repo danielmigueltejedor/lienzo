@@ -30,6 +30,9 @@ skip = [
     "docs/upstream-readme.md",
 ]
 
+# Run after renaming: shorter names change how rustfmt wraps lines and sorts imports.
+after = [["cargo", "fmt", "--all"]]
+
 # Lines that keep this app's value when upstream's tree is rebranded (the sync passes --pin-from).
 [[pin]]
 file = "Cargo.toml"

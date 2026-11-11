@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 
 use super::*;
 use crate::Services;
@@ -30,7 +30,7 @@ impl ExternalSvgSession for NativeTestSession {
     }
 }
 
-fn fixture() -> (PhotocraftApp, Saves, Calls) {
+fn fixture() -> (LienzoApp, Saves, Calls) {
     let saves = Saves::default();
     let calls = Calls::default();
     let (queue, launched) = (saves.clone(), calls.clone());
@@ -42,14 +42,14 @@ fn fixture() -> (PhotocraftApp, Saves, Calls) {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.session.execute("file.new", json!({"width":64,"height":64})).unwrap();
-    photocraft_engine::file_cmds::place_bytes(&mut app.session, "Artwork.svg", SVG.as_bytes().to_vec(), None, &json!({"smartObject":true})).unwrap();
+    lienzo_engine::file_cmds::place_bytes(&mut app.session, "Artwork.svg", SVG.as_bytes().to_vec(), None, &json!({"smartObject":true})).unwrap();
     app.sync_views();
     (app, saves, calls)
 }
 
-fn open(app: &mut PhotocraftApp) {
+fn open(app: &mut LienzoApp) {
     assert!(intercept(app, "layer.smartObjects.editContents", &json!({})).unwrap().unwrap()["deferred"].as_bool().unwrap());
 }
 
@@ -147,7 +147,7 @@ fn prompt_and_escape_never_launch_or_change_document() {
     open(&mut app);
     open(&mut app);
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     let mut input = egui::RawInput::default();
     input.events.push(egui::Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE });
     let mut output = ctx.run_ui(input, |ui| show(&mut app, ui.ctx()));
@@ -456,10 +456,10 @@ fn saved_changes_wait_on_implicit_mask_then_resume_without_another_save() {
     confirm(&mut app).unwrap();
     let st = app.session.active_mut().unwrap();
     let layer = st.active_layer.unwrap();
-    Arc::make_mut(&mut st.doc).layer_mut(layer).unwrap().mask = Some(photocraft_doc::LayerMask::reveal_all());
-    st.channel_view.color_hidden = vec![true; photocraft_engine::channel_cmds::color_count(&st.doc)];
+    Arc::make_mut(&mut st.doc).layer_mut(layer).unwrap().mask = Some(lienzo_doc::LayerMask::reveal_all());
+    st.channel_view.color_hidden = vec![true; lienzo_engine::channel_cmds::color_count(&st.doc)];
     st.channel_view.alpha_visible.clear();
-    assert_eq!(st.channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Composite);
+    assert_eq!(st.channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Composite);
     assert!(st.channel_view.layer_mask.is_none());
     let before = st.doc.clone();
     let revision = st.revision;
@@ -554,7 +554,7 @@ fn bounded_sessions_require_reuse_or_closing_a_document() {
     for _ in 0..MAX_SESSIONS {
         open(&mut app);
         confirm(&mut app).unwrap();
-        photocraft_engine::file_cmds::place_bytes(&mut app.session, "Artwork.svg", SVG.as_bytes().to_vec(), None, &json!({"smartObject":true})).unwrap();
+        lienzo_engine::file_cmds::place_bytes(&mut app.session, "Artwork.svg", SVG.as_bytes().to_vec(), None, &json!({"smartObject":true})).unwrap();
     }
     open(&mut app);
     assert!(confirm(&mut app).unwrap_err().contains("limit: 8"));
@@ -572,10 +572,10 @@ fn capture_smart_svg_visual_fixtures() {
         let mut ready = false;
         let lang = crate::i18n::lang_from_tag("en").unwrap();
         let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 620.0)).wgpu().build_ui_state(
-            move |ui, app: &mut PhotocraftApp| {
+            move |ui, app: &mut LienzoApp| {
                 let _language = crate::i18n::language_scope(lang);
                 if !ready {
-                    PhotocraftApp::setup_context(ui.ctx(), theme);
+                    LienzoApp::setup_context(ui.ctx(), theme);
                     ready = true;
                     return;
                 }
@@ -585,7 +585,7 @@ fn capture_smart_svg_visual_fixtures() {
         );
         harness.ctx.set_os(egui::os::OperatingSystem::Windows);
         harness.run_steps(5);
-        harness.render().unwrap().save(directory.join(format!("photocraft-smart-svg-editor-{}-en.png", theme.id()))).unwrap();
+        harness.render().unwrap().save(directory.join(format!("lienzo-smart-svg-editor-{}-en.png", theme.id()))).unwrap();
     }
 }
 
@@ -598,7 +598,7 @@ fn embedded_ai_link_table_handoff_preserves_source_until_saved_and_undo_restores
     let original = b"%PDF-1.6\nsynthetic vector".to_vec();
     {
         let doc = Arc::make_mut(&mut app.session.active_mut().unwrap().doc);
-        let payload = photocraft_io::linked::encode_linked_file(&photocraft_io::linked::LinkedFile {
+        let payload = lienzo_io::linked::encode_linked_file(&lienzo_io::linked::LinkedFile {
             uuid: "embedded-ai".into(),
             file_name: "Logo.ai".into(),
             bytes: original.clone(),
@@ -643,10 +643,10 @@ fn capture_embedded_vector_conversion_prompt() {
     let mut ready = false;
     let lang = crate::i18n::lang_from_tag("en").unwrap();
     let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 620.0)).wgpu().build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             let _language = crate::i18n::language_scope(lang);
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Pro);
+                LienzoApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Pro);
                 ready = true;
                 return;
             }
@@ -655,7 +655,7 @@ fn capture_embedded_vector_conversion_prompt() {
         app,
     );
     harness.run_steps(5);
-    harness.render().unwrap().save(directory.join("photocraft-embedded-vector-editor-en.png")).unwrap();
+    harness.render().unwrap().save(directory.join("lienzo-embedded-vector-editor-en.png")).unwrap();
 }
 
 /// Filter Gallery owns a document preview even though `distort.active()` excludes it.
@@ -679,7 +679,7 @@ fn saved_changes_wait_for_filter_gallery_and_resume_after_cancel() {
     assert!(app.smart_svg.editing.first().unwrap().saved.is_none());
     let state = app.session.active().unwrap();
     let LayerContent::Smart(smart) = &state.doc.layer(state.active_layer.unwrap()).unwrap().content else { panic!("smart object") };
-    let photocraft_doc::SmartSource::Embedded { bytes, .. } = &smart.source else { panic!("embedded") };
+    let lienzo_doc::SmartSource::Embedded { bytes, .. } = &smart.source else { panic!("embedded") };
     assert_eq!(bytes.as_slice(), changed.as_bytes());
 }
 
@@ -699,8 +699,8 @@ fn saved_changes_wait_through_quick_mask_and_resume_without_another_save() {
     poll(&mut app, &ctx);
     assert!(app.smart_svg.editing.first().unwrap().saved.is_none());
     let st = app.session.active().unwrap();
-    let photocraft_doc::LayerContent::Smart(sm) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("smart object") };
-    let photocraft_doc::SmartSource::Embedded { bytes, .. } = &sm.source else { panic!("embedded") };
+    let lienzo_doc::LayerContent::Smart(sm) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("smart object") };
+    let lienzo_doc::SmartSource::Embedded { bytes, .. } = &sm.source else { panic!("embedded") };
     assert_eq!(bytes.as_slice(), SVG.replace("red", "blue").as_bytes());
 }
 

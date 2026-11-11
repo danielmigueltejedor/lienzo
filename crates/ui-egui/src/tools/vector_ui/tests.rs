@@ -32,18 +32,18 @@ fn path_curves_stay_smooth_at_any_zoom() {
     }
     // Through path_lines too: a closed subpath of two curved segments.
     let mut path = Path::default();
-    path.subpaths.push(photocraft_doc::vector::Subpath {
+    path.subpaths.push(lienzo_doc::vector::Subpath {
         knots: vec![
-            photocraft_doc::vector::Knot {
-                anchor: photocraft_geom::Point::new(0.0, 0.0),
-                in_ctrl: photocraft_geom::Point::new(0.0, 40.0),
-                out_ctrl: photocraft_geom::Point::new(0.0, -40.0),
+            lienzo_doc::vector::Knot {
+                anchor: lienzo_geom::Point::new(0.0, 0.0),
+                in_ctrl: lienzo_geom::Point::new(0.0, 40.0),
+                out_ctrl: lienzo_geom::Point::new(0.0, -40.0),
                 smooth: true,
             },
-            photocraft_doc::vector::Knot {
-                anchor: photocraft_geom::Point::new(60.0, 0.0),
-                in_ctrl: photocraft_geom::Point::new(60.0, -40.0),
-                out_ctrl: photocraft_geom::Point::new(60.0, 40.0),
+            lienzo_doc::vector::Knot {
+                anchor: lienzo_geom::Point::new(60.0, 0.0),
+                in_ctrl: lienzo_geom::Point::new(60.0, -40.0),
+                out_ctrl: lienzo_geom::Point::new(60.0, 40.0),
                 smooth: true,
             },
         ],
@@ -60,8 +60,8 @@ fn all_shape_tools_and_open_pen_use_the_complete_stroke_defaults() {
         let mut a = app();
         a.ui.tool_options.stroke_width = 5.0;
         a.ui.tool_options.shape_stroke = crate::shape_stroke_ui::StrokeOptions {
-            cap: photocraft_doc::LineCap::Square,
-            join: photocraft_doc::LineJoin::Bevel,
+            cap: lienzo_doc::LineCap::Square,
+            join: lienzo_doc::LineJoin::Bevel,
             dashes: vec![4.0, 2.0, 1.0, 3.0],
             dash_offset: -0.5,
             opacity: 0.4,
@@ -124,8 +124,8 @@ fn freeform_straight_segments_keep_the_captured_saved_path_and_reject_a_foreign_
     assert_eq!(app.session.active().unwrap().history.past_len(), n);
 }
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app
@@ -146,7 +146,7 @@ fn paths_context_menu_uses_the_clicked_row_and_dispatches_commands() {
     let entries = path_context_actions(&first, doc, None);
     assert_eq!(entries[0].1, "path.toSelection");
     assert_eq!(entries[0].2["name"], "First");
-    assert!(entries.iter().all(|(_, id, _)| photocraft_engine::commands::find(id).is_some()));
+    assert!(entries.iter().all(|(_, id, _)| lienzo_engine::commands::find(id).is_some()));
     let (_, id, params) = entries.into_iter().find(|(_, id, _)| *id == "path.toSelection").unwrap();
     app.run(id, params).unwrap();
     assert!(app.session.active().unwrap().doc.selection.is_some());
@@ -228,7 +228,7 @@ fn double_clicking_a_path_name_renames_it_in_place() {
     // 60 fps steps, so two clicks a frame apart count as a double-click.
     let mut h = Harness::builder().with_size(vec2(320.0, 260.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app| paths_panel(app, ui), app);
     h.run_steps(3);
-    let rename = |h: &mut Harness<'_, PhotocraftApp>, row: &str, text: &str| {
+    let rename = |h: &mut Harness<'_, LienzoApp>, row: &str, text: &str| {
         let name = h.get_by_label(row).rect().left_center() + vec2(60.0, 0.0);
         h.event(egui::Event::PointerMoved(name));
         h.run_steps(30);
@@ -242,7 +242,7 @@ fn double_clicking_a_path_name_renames_it_in_place() {
         h.key_press(egui::Key::Enter);
         h.run_steps(3);
     };
-    let names = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().doc.paths.iter().map(|p| p.name.clone()).collect::<Vec<_>>();
+    let names = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().doc.paths.iter().map(|p| p.name.clone()).collect::<Vec<_>>();
     rename(&mut h, "First", "Outline");
     assert_eq!(names(&h), ["Outline"]);
     assert!(h.state().session.active().unwrap().doc.work_path.is_some(), "renaming a saved path leaves the work path alone");
@@ -268,7 +268,7 @@ fn saved_path_context_menu_offers_rename() {
 }
 
 /// How many shapes the path overlay paints for `app` this frame.
-fn overlay_shapes(app: &PhotocraftApp, ctx: &egui::Context) -> usize {
+fn overlay_shapes(app: &LienzoApp, ctx: &egui::Context) -> usize {
     let doc = app.session.active().unwrap().doc.clone();
     let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
         let rect = Rect::from_min_size(Pos2::ZERO, vec2(400.0, 400.0));
@@ -368,7 +368,7 @@ fn show_target_path_and_extras_hide_the_path_outlines() {
     app.run("path.set", json!({"path": path})).unwrap();
     assert!(app.session.active().unwrap().doc.work_path.is_some());
     finish_shape(&mut app, Tool::Rectangle, [100.0, 100.0], [160.0, 150.0], egui::Modifiers::NONE);
-    let toggle = |app: &mut PhotocraftApp, id: &str| crate::menus::invoke(app, &ctx, id, Value::Null).unwrap();
+    let toggle = |app: &mut LienzoApp, id: &str| crate::menus::invoke(app, &ctx, id, Value::Null).unwrap();
     for tool in [Tool::Pen, Tool::PathSelection, Tool::DirectSelection, Tool::Rectangle] {
         app.ui.tool = tool;
         assert!(app.ui.view.show.target_path && app.ui.view.extras);
@@ -532,7 +532,7 @@ fn path_mode_shape_drags_add_to_the_work_path() {
 /// subpath, nor stays a subtracted one that would cut the work path under it).
 #[test]
 fn path_mode_custom_shape_joins_its_hole_to_it() {
-    use photocraft_doc::PathOp;
+    use lienzo_doc::PathOp;
     let mut app = app();
     app.ui.tool_options.shape_mode = "path".into();
     finish_shape(&mut app, Tool::Rectangle, [100.0, 100.0], [140.0, 130.0], egui::Modifiers::NONE);
@@ -566,15 +566,15 @@ fn path_mode_custom_shape_hole_leaves_the_work_path_under_it() {
 fn path_mode_custom_shapes_keep_their_area() {
     let mut app = app();
     app.ui.tool_options.shape_mode = "path".into();
-    let rect = photocraft_geom::Rect::from_xywh(0, 0, 200, 200);
-    for g in photocraft_engine::presets::shapes::builtin() {
+    let rect = lienzo_geom::Rect::from_xywh(0, 0, 200, 200);
+    for g in lienzo_engine::presets::shapes::builtin() {
         for shape in g.items {
             app.run("path.delete", json!({"name": "work"})).ok();
             app.ui.presets_ui.custom_shape = shape.name.clone();
             finish_shape(&mut app, Tool::CustomShape, [10.0, 10.0], [190.0, 190.0], egui::Modifiers::NONE);
             let work = app.session.active().unwrap().doc.work_path.clone().expect("a work path");
-            let want = photocraft_engine::presets::shapes::fit(&shape.path, [10.0, 10.0, 180.0, 180.0], false);
-            let (a, b) = (photocraft_vector::path_coverage(&work, rect), photocraft_vector::path_coverage(&want, rect));
+            let want = lienzo_engine::presets::shapes::fit(&shape.path, [10.0, 10.0, 180.0, 180.0], false);
+            let (a, b) = (lienzo_vector::path_coverage(&work, rect), lienzo_vector::path_coverage(&want, rect));
             let off = a.iter().zip(&b).filter(|(a, b)| (*a - *b).abs() > 0.5).count();
             assert_eq!(off, 0, "{}: {off} pixels differ", shape.name);
         }
@@ -582,9 +582,9 @@ fn path_mode_custom_shapes_keep_their_area() {
 }
 
 /// Coverage of the work path at pixel `(x, y)`.
-fn work_covered(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn work_covered(app: &LienzoApp, x: i32, y: i32) -> f32 {
     let path = app.session.active().unwrap().doc.work_path.clone().expect("a work path");
-    photocraft_vector::fill_rasterizer(&path, photocraft_vector::DEFAULT_TOLERANCE).render(photocraft_geom::Rect::from_xywh(x, y, 1, 1))[0]
+    lienzo_vector::fill_rasterizer(&path, lienzo_vector::DEFAULT_TOLERANCE).render(lienzo_geom::Rect::from_xywh(x, y, 1, 1))[0]
 }
 
 /// CodeRabbit on #9456: a custom shape that starts the work path brings its fill rule, so an
@@ -605,7 +605,7 @@ fn path_mode_custom_shape_starts_the_work_path_with_its_fill_rule() {
     app.ui.presets_ui.custom_shape = "Even-Odd Star".into();
     finish_shape(&mut app, Tool::CustomShape, [20.0, 20.0], [120.0, 120.0], egui::Modifiers::NONE);
     let work = app.session.active().unwrap().doc.work_path.clone().expect("a work path");
-    assert_eq!(work.fill_rule, photocraft_doc::vector::FillRule::EvenOdd);
+    assert_eq!(work.fill_rule, lienzo_doc::vector::FillRule::EvenOdd);
     let b = work.control_bounds().unwrap();
     let (cx, cy) = (((b.0 + b.2) / 2.0) as i32, ((b.1 + b.3) / 2.0) as i32);
     assert_eq!(work_covered(&app, cx, cy), 0.0, "the star's centre stays empty");
@@ -639,8 +639,8 @@ fn shift_pressed_during_a_shape_drag_constrains_it() {
 fn shape_preview_is_the_committed_path() {
     let mut app = app();
     app.ui.tool_options.corner_radius = 8.0;
-    let preview = |app: &PhotocraftApp, tool, end| {
-        shape_geometry(&app.ui.tool_options, tool, [10.0, 10.0], end, egui::Modifiers::ALT).and_then(|p| photocraft_engine::vector_cmds::shape_path(&p).ok())
+    let preview = |app: &LienzoApp, tool, end| {
+        shape_geometry(&app.ui.tool_options, tool, [10.0, 10.0], end, egui::Modifiers::ALT).and_then(|p| lienzo_engine::vector_cmds::shape_path(&p).ok())
     };
     for tool in [Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Line] {
         let shown = preview(&app, tool, [60.0, 30.0]).unwrap();
@@ -650,8 +650,8 @@ fn shape_preview_is_the_committed_path() {
         assert_eq!(sh.path, shown, "{tool:?}");
     }
     assert!(preview(&app, Tool::Rectangle, [10.2, 40.0]).is_none(), "too thin to draw");
-    assert!(photocraft_engine::vector_cmds::shape_path(&json!({"kind": "nope", "rect": [0, 0, 5, 5]})).is_err());
-    assert!(photocraft_engine::vector_cmds::shape_path(&json!({"kind": "rect"})).is_err());
+    assert!(lienzo_engine::vector_cmds::shape_path(&json!({"kind": "nope", "rect": [0, 0, 5, 5]})).is_err());
+    assert!(lienzo_engine::vector_cmds::shape_path(&json!({"kind": "rect"})).is_err());
 }
 
 #[test]
@@ -765,7 +765,7 @@ fn pen_shift_drag_turns_handles_to_45_degrees_live() {
 #[test]
 fn an_unclosed_path_stays_with_its_document() {
     // Both pens claim the document at their first anchor.
-    let open_path = |app: &mut PhotocraftApp| {
+    let open_path = |app: &mut LienzoApp| {
         for (x, y) in [(20.0, 20.0), (120.0, 60.0)] {
             if app.ui.tool == Tool::CurvaturePen {
                 curvature_down(app, x, y);
@@ -776,7 +776,7 @@ fn an_unclosed_path_stays_with_its_document() {
             }
         }
     };
-    let work = |app: &PhotocraftApp, i: usize| app.session.documents()[i].doc.work_path.clone();
+    let work = |app: &LienzoApp, i: usize| app.session.documents()[i].doc.work_path.clone();
     // File › New commits the path to its original document.
     for tool in [Tool::Pen, Tool::CurvaturePen] {
         let mut app = app();
@@ -821,7 +821,7 @@ fn an_unclosed_path_stays_with_its_document() {
         assert!(app.session.set_active(0));
     }
     open_path(&mut app);
-    let shapes = |app: &PhotocraftApp| {
+    let shapes = |app: &LienzoApp| {
         let ctx = egui::Context::default();
         let doc = app.session.active().unwrap().doc.clone();
         let xf = ViewXform {
@@ -837,7 +837,7 @@ fn an_unclosed_path_stays_with_its_document() {
         out.shapes.len()
     };
     // Same view, pen present vs absent: the difference is the path itself, nothing else.
-    let drawn = |app: &mut PhotocraftApp| {
+    let drawn = |app: &mut LienzoApp| {
         let with_pen = shapes(app);
         let pen = app.ui.pen.take();
         let without = shapes(app);
@@ -870,7 +870,7 @@ fn pen_overlay_uses_the_view_document_even_during_direct_selection() {
     let other = app.session.active().unwrap().doc.clone();
     let xf =
         ViewXform { rect: Rect::from_min_size(Pos2::ZERO, vec2(400.0, 300.0)), zoom: 1.0, center: [100.0, 100.0], flip: false, rotation: 0.0, aspect: 1.0 };
-    let shapes = |app: &PhotocraftApp, doc: &Document, modifiers| {
+    let shapes = |app: &LienzoApp, doc: &Document, modifiers| {
         let ctx = egui::Context::default();
         let mut output = ctx.run_ui(egui::RawInput { events: vec![egui::Event::ModifiersChanged(modifiers)], ..Default::default() }, |ui| {
             draw_overlay(app, ui.painter(), &xf, doc)
@@ -913,7 +913,7 @@ fn failed_stale_pen_commit_preserves_the_draft_until_retry() {
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.ui.tool_options.vector_mode = "shape".into();
         app.ui.selected_path = Some("foreign named path".into());
-        app.session.authorize = Some(|_, _| Err(photocraft_engine::EngineError::Other("test rejection".into())));
+        app.session.authorize = Some(|_, _| Err(lienzo_engine::EngineError::Other("test rejection".into())));
         match action {
             "pen" => pen_down(&mut app, 150.0, 150.0, false),
             "curvature" => curvature_down(&mut app, 150.0, 150.0),
@@ -960,7 +960,7 @@ fn new_document_reports_a_failed_work_path_save_and_retains_the_draft() {
     pen_up(&mut app);
     let mut draft = app.ui.pen.clone();
     draft.as_mut().unwrap().commit_failed = true;
-    app.session.authorize = Some(|id, _| if id == "path.set" { Err(photocraft_engine::EngineError::Other("test rejection".into())) } else { Ok(()) });
+    app.session.authorize = Some(|id, _| if id == "path.set" { Err(lienzo_engine::EngineError::Other("test rejection".into())) } else { Ok(()) });
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     assert!(app.ui.status_error);
     assert!(app.ui.status.contains("test rejection"));
@@ -993,14 +993,14 @@ fn new_document_preserves_a_single_pen_anchor_as_a_work_path() {
         assert!(app.ui.pen.is_none());
         let path = app.session.documents()[0].doc.work_path.as_ref().unwrap();
         assert_eq!(path.subpaths[0].knots.len(), 1);
-        assert_eq!(path.subpaths[0].knots[0].anchor, photocraft_geom::Point::new(20.0, 30.0));
+        assert_eq!(path.subpaths[0].knots[0].anchor, lienzo_geom::Point::new(20.0, 30.0));
         assert!(app.session.active().unwrap().doc.work_path.is_none());
     }
 }
 
 #[test]
 fn stale_pen_commits_to_its_owner_across_document_changes() {
-    use photocraft_doc::{ColorMode, SampleType, Size};
+    use lienzo_doc::{ColorMode, SampleType, Size};
     for tool in [Tool::Pen, Tool::CurvaturePen] {
         for action in ["switch", "open", "closeOther", "pen", "curvature", "undo", "commit"] {
             let mut app = app();
@@ -1016,7 +1016,7 @@ fn stale_pen_commits_to_its_owner_across_document_changes() {
                 }
             }
             let owner = app.ui.pen_doc.unwrap();
-            let expected = photocraft_engine::vector_cmds::parse_path(&pen_to_json(app.ui.pen.as_ref().unwrap(), false)).unwrap();
+            let expected = lienzo_engine::vector_cmds::parse_path(&pen_to_json(app.ui.pen.as_ref().unwrap(), false)).unwrap();
             app.ui.direct_selection.target = Some(crate::direct_select::PathRef::Pen);
             app.ui.direct_selection.anchors = vec![[0, 1]];
             assert!(app.session.set_active(0));
@@ -1061,7 +1061,7 @@ fn stale_pen_commits_to_its_owner_across_document_changes() {
 fn a_new_pen_path_joins_the_selected_path() {
     let mut app = app();
     app.ui.tool = Tool::Pen;
-    let draw = |app: &mut PhotocraftApp, x: f64| {
+    let draw = |app: &mut LienzoApp, x: f64| {
         for (dx, dy) in [(0.0, 0.0), (40.0, 0.0), (40.0, 40.0)] {
             pen_down(app, x + dx, 20.0 + dy, false);
             pen_up(app);
@@ -1069,7 +1069,7 @@ fn a_new_pen_path_joins_the_selected_path() {
         pen_down(app, x + 0.5, 20.5, false); // close
         pen_up(app);
     };
-    let work = |app: &PhotocraftApp| app.session.active().unwrap().doc.work_path.clone().unwrap();
+    let work = |app: &LienzoApp| app.session.active().unwrap().doc.work_path.clone().unwrap();
     draw(&mut app, 20.0);
     assert_eq!(app.ui.selected_path.as_deref(), Some("work"));
     draw(&mut app, 120.0);
@@ -1180,8 +1180,8 @@ fn pen_undo_of_first_anchor_cancels_empty_draft() {
 #[test]
 fn new_fill_layer_takes_the_selected_path_as_its_vector_mask() {
     let mut app = app();
-    let layer = |app: &PhotocraftApp, r: Result<Value, String>| {
-        let id = photocraft_doc::LayerId(r.unwrap()["layer"].as_u64().unwrap());
+    let layer = |app: &LienzoApp, r: Result<Value, String>| {
+        let id = lienzo_doc::LayerId(r.unwrap()["layer"].as_u64().unwrap());
         app.session.active().unwrap().doc.layer(id).unwrap().clone()
     };
     // Drawing a work path with the Pen selects it.
@@ -1238,9 +1238,9 @@ fn pen_last_anchor_can_be_broken_and_reshaped_while_drawing() {
     use crate::canvas::{ToolEvent, tool_event};
     let mut app = app();
     app.ui.tool = Tool::Pen;
-    let down = |app: &mut PhotocraftApp, x, y| tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
-    let move_to = |app: &mut PhotocraftApp, x, y| tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
-    let up = |app: &mut PhotocraftApp, x, y| tool_event(app, ToolEvent::Up { x, y }, egui::Modifiers::NONE);
+    let down = |app: &mut LienzoApp, x, y| tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
+    let move_to = |app: &mut LienzoApp, x, y| tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
+    let up = |app: &mut LienzoApp, x, y| tool_event(app, ToolEvent::Up { x, y }, egui::Modifiers::NONE);
 
     down(&mut app, 20.0, 20.0);
     up(&mut app, 20.0, 20.0);
@@ -1315,12 +1315,12 @@ fn live_rectangle_corner_radius_edit_preserves_other_corners_and_history() {
     let mut app = app();
     let created = app.run("shape.create", json!({"kind": "roundedRect", "rect": [10, 10, 150, 100], "radii": [5, 10, 15, 20]})).unwrap();
     let id = created["layer"].as_u64().unwrap();
-    let get_radii = |app: &PhotocraftApp| {
+    let get_radii = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
-        let shape = st.doc.layer(photocraft_doc::LayerId(id)).unwrap();
+        let shape = st.doc.layer(lienzo_doc::LayerId(id)).unwrap();
         match &shape.content {
             LayerContent::Shape(sh) => match &sh.live {
-                Some(photocraft_doc::vector::LiveShape::Rect { radii, .. }) => *radii,
+                Some(lienzo_doc::vector::LiveShape::Rect { radii, .. }) => *radii,
                 _ => panic!("rectangle must remain a live shape"),
             },
             _ => panic!("expected shape layer"),
@@ -1363,21 +1363,21 @@ fn shape_colour_picker_stays_put_while_dragging() {
     let mut app = app();
     let id = app.run("shape.create", json!({"kind": "rect", "rect": [10, 10, 100, 60], "fill": "#3070c0"})).unwrap()["layer"].as_u64().unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1440.0, 900.0)).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             // Fonts set up after the first frame only apply from the next one.
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
-            egui::Panel::right("properties").resizable(false).exact_size(285.0).show(ui, |ui| shape_properties(app, ui, photocraft_doc::LayerId(id)));
+            egui::Panel::right("properties").resizable(false).exact_size(285.0).show(ui, |ui| shape_properties(app, ui, lienzo_doc::LayerId(id)));
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(4);
     let label = h.query_all(egui_kittest::kittest::by().label("Fill").include_labels()).next().expect("the Fill label").rect();
     // The swatch is right of its label.
     let swatch = egui::pos2(label.right() + 17.0, label.center().y);
-    let press = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, pos, pressed| {
+    let press = |h: &mut egui_kittest::Harness<'_, LienzoApp>, pos, pressed| {
         h.event(egui::Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
         h.step();
     };
@@ -1386,13 +1386,13 @@ fn shape_colour_picker_stays_put_while_dragging() {
     press(&mut h, swatch, true);
     press(&mut h, swatch, false);
     h.run_steps(3);
-    let popup = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let popup = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         h.ctx.memory(|m| m.areas().visible_layer_ids().into_iter().filter(|l| l.order == egui::Order::Foreground).find_map(|l| m.area_rect(l.id)))
     };
     let opened = popup(&h).expect("the picker opened");
-    let fill = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let fill = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         let st = h.state().session.active().unwrap();
-        match &st.doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
+        match &st.doc.layer(lienzo_doc::LayerId(id)).unwrap().content {
             LayerContent::Shape(sh) => sh.fill.clone(),
             _ => None,
         }
@@ -1420,7 +1420,7 @@ fn shape_options_bar_edits_the_selected_shape() {
     let mut app = app();
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
     finish_shape(&mut app, Tool::Rectangle, [20.0, 20.0], [120.0, 100.0], Default::default());
-    let shape = |app: &PhotocraftApp| {
+    let shape = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
             LayerContent::Shape(sh) => (sh.fill.clone(), sh.stroke.clone()),
@@ -1429,16 +1429,16 @@ fn shape_options_bar_edits_the_selected_shape() {
     };
     assert!(shape(&app).0.is_some() && shape(&app).1.is_none());
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1100.0, 48.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal_centered(|ui| options_bar(app, ui, Tool::Rectangle));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
-    let click_fill = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+    let click_fill = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
         let label = h.query_all(egui_kittest::kittest::by().label("Fill:").include_labels()).next().expect("the Fill label").rect();
         let at = egui::pos2(label.right() + h.ctx.global_style().spacing.item_spacing.x + 7.0, label.center().y);
         h.hover_at(at);
@@ -1460,7 +1460,7 @@ fn shape_options_bar_edits_the_selected_shape() {
     h.run_steps(2);
     let stroke = shape(h.state()).1.expect("the width field stroked the shape");
     assert_eq!(stroke.width, 6.0);
-    assert_eq!(stroke.paint, photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(0.0, 0.0, 1.0, 1.0)));
+    assert_eq!(stroke.paint, lienzo_doc::Fill::Solid(lienzo_doc::Color::rgba(0.0, 0.0, 1.0, 1.0)));
     // Fill off.
     click_fill(&mut h);
     assert_eq!(shape(h.state()).0, None, "unchecking Fill removed the shape's fill");
@@ -1484,7 +1484,7 @@ fn path_selection_options_bar_edits_the_selected_shape() {
     let mut app = app();
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
     finish_shape(&mut app, Tool::Rectangle, [20.0, 20.0], [120.0, 100.0], Default::default());
-    let shape = |app: &PhotocraftApp| {
+    let shape = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
             LayerContent::Shape(sh) => (sh.fill.clone(), sh.stroke.clone()),
@@ -1493,16 +1493,16 @@ fn path_selection_options_bar_edits_the_selected_shape() {
     };
     assert!(shape(&app).0.is_some() && shape(&app).1.is_none());
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1100.0, 48.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal_centered(|ui| options_bar(app, ui, Tool::PathSelection));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
-    let click_fill = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+    let click_fill = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
         let label = h.query_all(egui_kittest::kittest::by().label("Fill:").include_labels()).next().expect("the Fill label").rect();
         let at = egui::pos2(label.right() + h.ctx.global_style().spacing.item_spacing.x + 7.0, label.center().y);
         h.hover_at(at);
@@ -1524,7 +1524,7 @@ fn path_selection_options_bar_edits_the_selected_shape() {
     h.run_steps(2);
     let stroke = shape(h.state()).1.expect("the width field stroked the shape");
     assert_eq!(stroke.width, 6.0);
-    assert_eq!(stroke.paint, photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(0.0, 0.0, 1.0, 1.0)));
+    assert_eq!(stroke.paint, lienzo_doc::Fill::Solid(lienzo_doc::Color::rgba(0.0, 0.0, 1.0, 1.0)));
     // Fill toggle.
     click_fill(&mut h);
     assert_eq!(shape(h.state()).0, None, "unchecking Fill removed the shape's fill");
@@ -1548,15 +1548,15 @@ fn path_rows_dragged_onto_the_trash_are_deleted() {
     app.run("path.set", json!({"name": "Path 1", "path": path})).unwrap();
     app.run("path.set", json!({"name": "work", "path": path})).unwrap();
     app.ui.selected_path = Some("work".into());
-    let mut h = egui_kittest::Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut PhotocraftApp| paths_panel(app, ui), app);
+    let mut h = egui_kittest::Harness::builder().with_size(vec2(300.0, 400.0)).build_ui_state(|ui, app: &mut LienzoApp| paths_panel(app, ui), app);
     h.run_steps(3);
-    let trash = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let trash = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         let buttons: Vec<Rect> = h
             .ctx
             .viewport(|v| v.prev_pass.widgets.layers().flat_map(|(_, w)| w.iter()).filter(|w| w.rect.size() == vec2(26.0, 26.0)).map(|w| w.rect).collect());
         buttons.into_iter().max_by(|a, b| a.center().x.total_cmp(&b.center().x)).unwrap().center()
     };
-    let drag = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, from: Pos2, to: Pos2| {
+    let drag = |h: &mut egui_kittest::Harness<'_, LienzoApp>, from: Pos2, to: Pos2| {
         h.event(egui::Event::PointerMoved(from));
         h.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
         h.step();

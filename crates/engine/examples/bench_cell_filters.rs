@@ -1,11 +1,11 @@
 //! Time the actual menu command on a 24 MP layer, including history commit.
-//! RAYON_NUM_THREADS=16 cargo run --release -p photocraft-engine --example bench_cell_filters -- crystallize 10 5 8
+//! RAYON_NUM_THREADS=16 cargo run --release -p lienzo-engine --example bench_cell_filters -- crystallize 10 5 8
 //! Arguments: crystallize|pointillize, cell size, repeats (1..9), depth (8|16|32), layer|background.
 //! Run the same example at the base and changed revisions; compare the output hashes.
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::json;
 use std::time::Instant;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -65,8 +65,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut s = Session::new();
         s.execute("file.new", json!({"width":w,"height":h,"depth":depth,"background":if kind == "background" { "white" } else { "transparent" }}))?;
         s.edit("fixture", |doc, _| {
-            let layer = doc.layers.first_mut().ok_or(photocraft_engine::EngineError::Other("no layer".into()))?;
-            let surface = layer.surface_mut().ok_or(photocraft_engine::EngineError::Other("no surface".into()))?;
+            let layer = doc.layers.first_mut().ok_or(lienzo_engine::EngineError::Other("no layer".into()))?;
+            let surface = layer.surface_mut().ok_or(lienzo_engine::EngineError::Other("no surface".into()))?;
             *surface = source.clone();
             Ok(())
         })?;

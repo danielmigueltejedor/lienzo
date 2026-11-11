@@ -1,5 +1,5 @@
 use super::options_bar::reveal_focused_control;
-use super::{Align2, Color32, PhotocraftApp, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Tool, c32, icons, json, pos2, vec2};
+use super::{Align2, Color32, LienzoApp, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Tool, c32, icons, json, pos2, vec2};
 use crate::state::ToolbarSide;
 
 // ----------------------------------------------------------------------------- toolbar
@@ -117,7 +117,7 @@ pub(crate) fn more_flyout_open(ctx: &egui::Context) -> bool {
 /// Right-click on the "…" button opens a flyout with one row, "Edit Toolbar…", drawn like a tool
 /// flyout. The row runs `edit.toolbar` and closes the flyout; Escape or a press outside closes it
 /// without running anything.
-fn more_slot_flyout(app: &mut PhotocraftApp, ui: &mut egui::Ui, button: &egui::Response, t: &Tokens, side: ToolbarSide) {
+fn more_slot_flyout(app: &mut LienzoApp, ui: &mut egui::Ui, button: &egui::Response, t: &Tokens, side: ToolbarSide) {
     let open_id = more_flyout_id();
     let open = ui.data(|d| d.get_temp::<bool>(open_id)).unwrap_or(false);
     if button.secondary_clicked() {
@@ -164,7 +164,7 @@ fn more_slot_flyout(app: &mut PhotocraftApp, ui: &mut egui::Ui, button: &egui::R
 
 /// The tool palette panel, on the side `panels.toolbar_side` resolves to, with its width
 /// toggle and Move Toolbar header buttons.
-pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn toolbar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let (_, bx) = toolbar_columns(t.pro);
     let m = if t.pro { 5i8 } else { 7i8 };
@@ -580,7 +580,7 @@ pub(super) fn chips_height(pro: bool, studio: bool, wide: bool) -> f32 {
 /// Photoshop's foreground / background colour chips: the Default Colors (D) and Switch Colors (X)
 /// icons above them, the foreground chip over the background one, all centred in the toolbar
 /// column and kept inside it.
-pub(super) fn color_chips(app: &mut PhotocraftApp, ui: &mut egui::Ui, two_columns: bool, column: f32) {
+pub(super) fn color_chips(app: &mut LienzoApp, ui: &mut egui::Ui, two_columns: bool, column: f32) {
     let t = Tokens::get(ui.ctx());
     // Studio themes: round chips stacked vertically, the controls below them.
     let studio = t.round_chips;
@@ -718,7 +718,7 @@ pub(super) fn color_chips(app: &mut PhotocraftApp, ui: &mut egui::Ui, two_column
 
 /// Run Switch Colors or Default Colors from the chips. As in Photoshop, characters highlighted
 /// in the type layer being edited take the new foreground colour, like picking one (#5690).
-fn chip_command(app: &mut PhotocraftApp, id: &str) {
+fn chip_command(app: &mut LienzoApp, id: &str) {
     if app.run(id, json!({})).is_ok() {
         crate::type_tool::foreground_changed(app);
     }

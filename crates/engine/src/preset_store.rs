@@ -51,8 +51,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::Read;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use photocraft_paint::tile::PREVIEW_SIDE;
-use photocraft_paint::{BrushPreset, BrushSettings, GrayTile, Pattern, PresetCaptures, StoredTile, TipShape};
+use lienzo_paint::tile::PREVIEW_SIDE;
+use lienzo_paint::{BrushPreset, BrushSettings, GrayTile, Pattern, PresetCaptures, StoredTile, TipShape};
 use serde::{Deserialize, Serialize};
 
 use crate::Session;
@@ -93,7 +93,7 @@ pub const MAX_GROUPS: usize = 4096;
 /// Most presets loaded from one group file.
 pub const MAX_PRESETS_PER_GROUP: usize = 50_000;
 
-const GROUP_FORMAT: &str = "photocraft-brush-group";
+const GROUP_FORMAT: &str = "lienzo-brush-group";
 const TIP_MAGIC: &[u8; 6] = b"PCTIP1";
 const TIP_HEADER: usize = 6 + 1 + 4 + 4;
 
@@ -222,7 +222,7 @@ impl PresetBackend for DirBackend {
         let path = self.path(name)?;
         let dir = path.parent().ok_or_else(|| format!("{name}: no parent directory"))?;
         std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-        photocraft_format::atomic_write(&path, bytes).map_err(|e| format!("{name}: {e}"))
+        lienzo_format::atomic_write(&path, bytes).map_err(|e| format!("{name}: {e}"))
     }
     fn remove(&self, name: &str) -> Result<(), String> {
         match std::fs::remove_file(self.path(name)?) {
@@ -573,7 +573,7 @@ pub struct PresetStore {
     cache: Mutex<TipCache>,
     /// The stored pattern last read in full, so painting with it again doesn't re-read its file
     /// (a texture can be tens of megabytes). One: the pattern in use.
-    pattern_cache: Mutex<Option<photocraft_doc::Pattern>>,
+    pattern_cache: Mutex<Option<lienzo_doc::Pattern>>,
 }
 
 /// A loaded store: the presets on disk plus what the session should hide.
@@ -1080,7 +1080,7 @@ impl PresetStore {
 
     /// The full pixels of a stored pattern the library holds as a preview: the last one read is
     /// kept, so only switching patterns reads a file.
-    pub fn load_pattern(&self, id: &str) -> Result<photocraft_doc::Pattern, String> {
+    pub fn load_pattern(&self, id: &str) -> Result<lienzo_doc::Pattern, String> {
         let mut cache = self.pattern_cache.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(p) = cache.as_ref().filter(|p| p.id == id) {
             return Ok(p.clone());
@@ -1126,7 +1126,7 @@ impl PresetStore {
 
 fn builtin_names() -> &'static [String] {
     static NAMES: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
-    NAMES.get_or_init(|| photocraft_paint::presets::builtin().into_iter().map(|p| p.name).collect())
+    NAMES.get_or_init(|| lienzo_paint::presets::builtin().into_iter().map(|p| p.name).collect())
 }
 
 impl Session {

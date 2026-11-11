@@ -8,9 +8,9 @@
 //! transparent backdrop of the isolated layer, so it can look different afterwards; no single
 //! layer of pixels can blend one part Multiply and another Screen.
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{Knockout, Layer, LayerContent, LayerId};
-use photocraft_raster::{Surface, from_rgba_into};
+use lienzo_color::BlendMode;
+use lienzo_doc::{Knockout, Layer, LayerContent, LayerId};
+use lienzo_raster::{Surface, from_rgba_into};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -21,7 +21,7 @@ const ID: &str = "layer.rasterize.layerStyle";
 /// Whether Rasterize › Layer Style applies to `l`: visible effects on a layer whose content can
 /// become pixels (not a group or an adjustment layer).
 pub fn can_bake(l: &Layer) -> bool {
-    photocraft_compose::effects::has_effects(l) && !matches!(l.content, LayerContent::Group(_) | LayerContent::Adjustment(_))
+    lienzo_compose::effects::has_effects(l) && !matches!(l.content, LayerContent::Group(_) | LayerContent::Adjustment(_))
 }
 
 /// Some selected layer (or the active one) has effects to bake.
@@ -50,7 +50,7 @@ fn bake_one(s: &mut Session, id: LayerId, key: &str) -> Result<bool> {
         let canvas = doc.bounds();
         let fmt = doc.pixel_format();
         // The pixels (also those past the canvas) and everything the effects reach from them.
-        let area = photocraft_compose::layer_bounds(&l, canvas).inflate(photocraft_compose::effects::margin(&l).max(0));
+        let area = lienzo_compose::layer_bounds(&l, canvas).inflate(lienzo_compose::effects::margin(&l).max(0));
         let mut alone = l.clone();
         alone.visible = true;
         alone.opacity = 1.0;
@@ -65,12 +65,12 @@ fn bake_one(s: &mut Session, id: LayerId, key: &str) -> Result<bool> {
             // Render the layer on its own with the document's settings (mode, depth, global
             // light, patterns), then put the real stack back.
             let stack = std::mem::replace(&mut doc.layers, vec![alone]);
-            let buf = photocraft_compose::render(doc, area);
+            let buf = lienzo_compose::render(doc, area);
             doc.layers = stack;
             let n = fmt.channels();
             data = vec![0.0f32; buf.px.len() * n];
             // Separate CMYK through the document's profile, the one the render read it with.
-            photocraft_color::convert::with_cmyk_space(photocraft_compose::cmyk_space(doc).as_ref(), || {
+            lienzo_color::convert::with_cmyk_space(lienzo_compose::cmyk_space(doc).as_ref(), || {
                 for (p, out) in buf.px.iter().zip(data.chunks_exact_mut(n)) {
                     from_rgba_into(&fmt, *p, out);
                 }

@@ -10,7 +10,7 @@
 //! into hard pie wedges fanning out across the canvas (#189), and translucent overlaps doubled up.
 
 use egui::{Color32, ColorImage, Rect, TextureHandle, TextureOptions, pos2};
-use photocraft_paint::{BrushSettings, StrokePoint, StrokeRenderer};
+use lienzo_paint::{BrushSettings, StrokePoint, StrokeRenderer};
 
 /// Longest side of the mask, in mask pixels (big documents are stamped at a reduced scale).
 const MAX_SIDE: u32 = 1024;
@@ -43,7 +43,7 @@ struct Dabs {
     /// Any coverage counts in full ([`Trail::feed_reach`]).
     reach: bool,
     /// Document pixels the last "finish now" tail (a lone first dab, smoothing catch-up) covered.
-    tail: photocraft_geom::Rect,
+    tail: lienzo_geom::Rect,
 }
 
 impl Trail {
@@ -81,7 +81,7 @@ impl Trail {
     }
 
     /// Show the coverage the brush's own dabs leave along the drag, as the stroke commit renders
-    /// it (`photocraft_paint::retouch::stroke_coverage`): soft edges for a soft brush, the size and
+    /// it (`lienzo_paint::retouch::stroke_coverage`): soft edges for a soft brush, the size and
     /// shape each dab takes from pen pressure and dynamics. `brush` is asked for once, on the first
     /// call. What finishing the stroke now would add (the press's lone first dab) shows too.
     pub fn feed_dabs(&mut self, points: &[[f64; 3]], brush: impl FnOnce() -> BrushSettings) {
@@ -108,8 +108,7 @@ impl Trail {
         if self.dabs.is_some() && self.fed >= points.len() {
             return;
         }
-        let mut dabs =
-            self.dabs.take().unwrap_or_else(|| Dabs { renderer: StrokeRenderer::new(&brush(), None, 1.0), reach, tail: photocraft_geom::Rect::EMPTY });
+        let mut dabs = self.dabs.take().unwrap_or_else(|| Dabs { renderer: StrokeRenderer::new(&brush(), None, 1.0), reach, tail: lienzo_geom::Rect::EMPTY });
         let new: Vec<StrokePoint> = points
             .get(self.fed..)
             .unwrap_or(&[])
@@ -121,7 +120,7 @@ impl Trail {
         dabs.renderer.push(&new);
         let mut changed = dabs.renderer.take_dirty_rect().union(&dabs.tail);
         let tail = dabs.renderer.tail_preview().map(|mut t| (t.take_dirty_rect(), t));
-        dabs.tail = tail.as_ref().map_or(photocraft_geom::Rect::EMPTY, |(r, _)| *r);
+        dabs.tail = tail.as_ref().map_or(lienzo_geom::Rect::EMPTY, |(r, _)| *r);
         changed = changed.union(&dabs.tail);
         let tail = tail.map(|(_, t)| t);
         let renderer = &dabs.renderer;
@@ -138,7 +137,7 @@ impl Trail {
     /// mask pixel per k x k) a thin Remove stroke can fall between the centres, and every pixel it
     /// touches is removed. `touches` says whether `cov` can be above 0 anywhere in a document
     /// rectangle, so blocks the stroke never reached aren't scanned pixel by pixel.
-    fn restamp(&mut self, r: photocraft_geom::Rect, block: bool, touches: impl Fn(photocraft_geom::Rect) -> bool, cov: impl Fn(i32, i32) -> f32) {
+    fn restamp(&mut self, r: lienzo_geom::Rect, block: bool, touches: impl Fn(lienzo_geom::Rect) -> bool, cov: impl Fn(i32, i32) -> f32) {
         if r.is_empty() {
             return;
         }
@@ -169,7 +168,7 @@ impl Trail {
                 let i = y * self.w + x;
                 let base = self.base.get(i).copied().unwrap_or(0);
                 let mut c = 0.0f32;
-                let skip = base == u8::MAX || !touches(photocraft_geom::Rect::new(dx0, dy0, dx1, dy1));
+                let skip = base == u8::MAX || !touches(lienzo_geom::Rect::new(dx0, dy0, dx1, dy1));
                 'block: for dy in if skip { 0..0 } else { dy0..dy1 } {
                     for dx in dx0..dx1 {
                         let v = cov(dx, dy);
@@ -314,7 +313,7 @@ mod tests {
         reach.feed_reach(&pts, || brush.clone());
         let mut soft = Trail::new([200, 100]);
         soft.feed_dabs(&pts, || brush.clone());
-        let r = photocraft_paint::tip_reach(10.0, 0.0);
+        let r = lienzo_paint::tip_reach(10.0, 0.0);
         assert!(r > 15.0, "a soft tip reaches past its 10 px radius: {r}");
         assert_eq!(reach.coverage(100, 50 + 14), 255, "4 px past the radius, still removed");
         assert!(soft.coverage(100, 50 + 14) < 128, "where the soft coverage is faint");

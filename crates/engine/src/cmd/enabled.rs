@@ -45,7 +45,7 @@ pub(crate) fn has_paintable(s: &Session) -> std::result::Result<(), String> {
 
 /// Surface a paint command writes to: the layer's pixels, its mask with `"target":"mask"`, or a
 /// smart object's filter mask with `"target":"filterMask"`.
-pub(crate) fn paint_surface<'a>(doc: &'a mut Document, id: LayerId, p: &Value) -> Result<&'a mut photocraft_raster::Surface> {
+pub(crate) fn paint_surface<'a>(doc: &'a mut Document, id: LayerId, p: &Value) -> Result<&'a mut lienzo_raster::Surface> {
     if is_mask_target(p) {
         check_all_unlocked(doc, id)?;
     } else {

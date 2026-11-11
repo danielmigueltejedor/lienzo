@@ -83,7 +83,7 @@ fn transparency_goes_in_the_sheet_mask_array_like_photoshop() {
         let written: Vec<usize> = slots.iter().enumerate().filter(|(_, s)| s.1).map(|(i, _)| i).collect();
         assert_eq!((slots.len(), written), (26, vec![0, 1, 2, 25]), "{depth}-bit");
         assert!(!block_has_user_mask(&block));
-        // The layout older PhotoCraft builds wrote still opens, and is detected.
+        // The layout older Lienzo builds wrote still opens, and is detected.
         block[slots[24].0..end].rotate_left(4);
         let (slots, _) = vma_slots(&block, &p);
         assert!(slots[24].1 && !slots[25].1);

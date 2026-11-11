@@ -1,7 +1,7 @@
-use photocraft_doc::{Adjustment, LayerContent};
-use photocraft_engine::{Session, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
+use lienzo_doc::{Adjustment, LayerContent};
+use lienzo_engine::{Session, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
 use serde_json::json;
 
 const CUBE: &[u8] = b"LUT_3D_SIZE 2\n1 1 1\n0 1 1\n1 0 1\n0 0 1\n1 1 0\n0 1 0\n1 0 0\n0 0 0\n";
@@ -39,11 +39,11 @@ fn fixture(depth: u32) -> Session {
 }
 
 fn pixels(s: &Session) -> Vec<[f32; 4]> {
-    photocraft_compose::flatten(&s.active().unwrap().doc).into_px()
+    lienzo_compose::flatten(&s.active().unwrap().doc).into_px()
 }
 
 fn saved(s: &Session) -> Vec<u8> {
-    photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
+    lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
 }
 
 /// Original invert tables exercise text CUBE/3DL and binary UTF-16 LOOK decoding.
@@ -56,8 +56,7 @@ fn samples() -> Vec<(&'static str, Vec<u8>)> {
             }
         }
     }
-    let hex: String =
-        photocraft_cms::lutfile::LutFile::identity(2).data.into_iter().flat_map(|v| (1.0 - v).to_le_bytes()).map(|b| format!("{b:02X}")).collect();
+    let hex: String = lienzo_cms::lutfile::LutFile::identity(2).data.into_iter().flat_map(|v| (1.0 - v).to_le_bytes()).map(|b| format!("{b:02X}")).collect();
     let look = format!("<look><LUT><size>2</size><data>{hex}</data></LUT></look>");
     let le = [vec![0xff, 0xfe], look.encode_utf16().flat_map(u16::to_le_bytes).collect()].concat();
     let be = [vec![0xfe, 0xff], look.encode_utf16().flat_map(u16::to_be_bytes).collect()].concat();
@@ -131,8 +130,8 @@ fn encoded_lookup_keeps_its_bytes_in_a_saved_adjustment() {
         p.as_object_mut().unwrap().remove("__atnColorLookup");
         let mut s = fixture(8);
         s.execute("layer.newAdjustmentLayer.colorLookup", p).unwrap();
-        let psd = photocraft_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes;
-        let doc = photocraft_io::import("lookup.psd", &psd).unwrap().document;
+        let psd = lienzo_io::export(&s.active().unwrap().doc, "psd", &Default::default()).unwrap().bytes;
+        let doc = lienzo_io::import("lookup.psd", &psd).unwrap().document;
         let source = doc
             .walk()
             .into_iter()
@@ -246,7 +245,7 @@ fn recorded_dither_changes_float_pixels_within_its_documented_bound() {
     let plain = render(false);
     // Opaque, unsaturated fixture pixels include nonzero ordered offsets.
     assert!(plain.iter().all(|p| p[3] == 1.0 && p[..3].iter().all(|v| (0.01..0.99).contains(v))));
-    assert!((0..2).any(|y| (0..3).any(|x| photocraft_compose::adjust::bayer4(x, y) != 0.0)));
+    assert!((0..2).any(|y| (0..3).any(|x| lienzo_compose::adjust::bayer4(x, y) != 0.0)));
     let dithered = render(true);
     let mut changed = false;
     for (a, b) in dithered.iter().zip(&plain) {

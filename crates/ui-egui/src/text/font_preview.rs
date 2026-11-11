@@ -4,10 +4,10 @@ use std::collections::VecDeque;
 use std::sync::PoisonError;
 
 use egui::{ColorImage, Rect, TextureHandle, TextureOptions, pos2, vec2};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::TextLayer;
-use photocraft_engine::prefs::FontPreview;
-use photocraft_geom::Affine;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::TextLayer;
+use lienzo_engine::prefs::FontPreview;
+use lienzo_geom::Affine;
 
 const SAMPLE: &str = "AaBbCc";
 /// Alef, lam, meem and ain: a face lacking any of them is not treated as an Arabic face.
@@ -80,7 +80,7 @@ fn sample_texts(chars: &[char]) -> (String, Option<&'static str>) {
     (SAMPLE.into(), arabic.then_some(ARABIC_SAMPLE))
 }
 
-fn render(engine: &mut photocraft_text::TextEngine, family: &str, text: &str, slot: f32, scale: u32, size: f32) -> Option<ColorImage> {
+fn render(engine: &mut lienzo_text::TextEngine, family: &str, text: &str, slot: f32, scale: u32, size: f32) -> Option<ColorImage> {
     if text.is_empty() {
         return None;
     }
@@ -91,17 +91,17 @@ fn render(engine: &mut photocraft_text::TextEngine, family: &str, text: &str, sl
     let height = (scaled(HEIGHT, size) as u32 * scale) as usize;
     let transform = Affine::translate(f64::from(-bounds[0]), f64::from((height as f32 - (bounds[3] - bounds[1])) / 2.0 - bounds[1]));
     // Reject oversized ink before the rasterizer allocates a surface (malformed installed fonts).
-    let ink = photocraft_text::render::ink_rect(&layout, &transform);
+    let ink = lienzo_text::render::ink_rect(&layout, &transform);
     if ink.is_empty() || ink.width() > width as u32 * 4 || ink.height() > height as u32 * 4 {
         return None;
     }
-    let rendered = photocraft_text::render::rasterize(&layout, &transform, PixelFormat::new(ColorMode::Rgb, SampleType::U8, true), layer.antialias);
+    let rendered = lienzo_text::render::rasterize(&layout, &transform, PixelFormat::new(ColorMode::Rgb, SampleType::U8, true), layer.antialias);
     let mut rgba = vec![[0u8; 4]; width * height];
-    rendered.surface.read_rgba8_into(photocraft_geom::Rect::new(0, 0, width as i32, height as i32), &mut rgba);
+    rendered.surface.read_rgba8_into(lienzo_geom::Rect::new(0, 0, width as i32, height as i32), &mut rgba);
     Some(ColorImage::from_rgba_unmultiplied([width, height], &rgba.into_iter().flat_map(|p| [255, 255, 255, p[3]]).collect::<Vec<_>>()))
 }
 
-fn images(engine: &mut photocraft_text::TextEngine, family: &str, scale: u32, size: f32) -> Option<SampleImages> {
+fn images(engine: &mut lienzo_text::TextEngine, family: &str, scale: u32, size: f32) -> Option<SampleImages> {
     // Unknown/unreadable families keep their plain menu label, rather than a misleading fallback.
     if !engine.fonts.has_family(family) {
         return None;
@@ -114,7 +114,7 @@ fn images(engine: &mut photocraft_text::TextEngine, family: &str, scale: u32, si
 
 fn key(ctx: &egui::Context, family: &str, size: f32) -> Key {
     let scale = ctx.pixels_per_point().ceil().clamp(1.0, 4.0) as u32;
-    (family.to_owned(), scale, photocraft_text::fonts::shared_generation(), size as u32)
+    (family.to_owned(), scale, lienzo_text::fonts::shared_generation(), size as u32)
 }
 
 /// Width a row reserves for its samples: wider once a painted row showed the family covers
@@ -143,7 +143,7 @@ pub(crate) fn paint(ui: &egui::Ui, family: &str, row: Rect, size: f32) {
         Some(samples)
     });
     let samples = cached.unwrap_or_else(|| {
-        let samples = images(&mut photocraft_text::shared().lock().unwrap_or_else(PoisonError::into_inner), family, scale, size).map(|img| {
+        let samples = images(&mut lienzo_text::shared().lock().unwrap_or_else(PoisonError::into_inner), family, scale, size).map(|img| {
             let load = |image| ctx.load_texture(format!("font-sample-{family}"), image, TextureOptions::LINEAR);
             Samples { latin: load(img.latin), arabic: img.arabic.map(load) }
         });
@@ -187,11 +187,11 @@ pub(crate) fn paint_text(ui: &egui::Ui, family: &str, text: &str, rect: Rect, si
     let ctx = ui.ctx();
     let scale = ctx.pixels_per_point().ceil().clamp(1.0, 4.0) as u32;
     let slot = rect.width().clamp(1.0, 4096.0);
-    let key: TextKey = (family.to_owned(), text.to_owned(), scale, photocraft_text::fonts::shared_generation(), size as u32, slot as u32);
+    let key: TextKey = (family.to_owned(), text.to_owned(), scale, lienzo_text::fonts::shared_generation(), size as u32, slot as u32);
     let id = egui::Id::unique("font-menu-text-previews");
     let cached = ctx.data_mut(|d| d.get_temp_mut_or_default::<TextCache>(id).0.iter().find(|(k, _)| *k == key).map(|(_, t)| t.clone()));
     let texture = cached.unwrap_or_else(|| {
-        let mut engine = photocraft_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
+        let mut engine = lienzo_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
         let image = engine.fonts.has_family(family).then(|| render(&mut engine, family, text, slot, scale, size)).flatten();
         drop(engine);
         let texture = image.map(|image| ctx.load_texture(format!("font-text-{family}"), image, TextureOptions::LINEAR));
@@ -216,7 +216,7 @@ pub(crate) fn paint_text(ui: &egui::Ui, family: &str, text: &str, rect: Rect, si
 mod tests {
     use super::*;
 
-    fn image(engine: &mut photocraft_text::TextEngine, family: &str, scale: u32) -> Option<ColorImage> {
+    fn image(engine: &mut lienzo_text::TextEngine, family: &str, scale: u32) -> Option<ColorImage> {
         images(engine, family, scale, MEDIUM).map(|i| i.latin)
     }
 
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn previews_use_the_requested_face_and_scale() {
-        let mut engine = photocraft_text::TextEngine::new();
+        let mut engine = lienzo_text::TextEngine::new();
         let sans = image(&mut engine, "Inter", 1).expect("bundled sans");
         let mono = image(&mut engine, "JetBrains Mono", 1).expect("bundled mono");
         assert_eq!(sans.size, [100, 24]);
@@ -246,14 +246,14 @@ mod tests {
         let Some((_, [w, h])) = sample(FontPreview::Huge) else { panic!("Huge previews") };
         assert!(w > 100.0 && h > 24.0, "Huge is bigger than Medium: {w}×{h}");
         assert!(sample(FontPreview::Small).unwrap().1[0] < sample(FontPreview::ExtraLarge).unwrap().1[0], "sizes are ordered");
-        let mut engine = photocraft_text::TextEngine::new();
+        let mut engine = lienzo_text::TextEngine::new();
         let big = images(&mut engine, "Inter", 1, 32.0).unwrap().latin;
         assert_eq!(big.size, [178, 43], "the box follows the size");
     }
 
     #[test]
     fn latin_only_families_get_no_arabic_sample() {
-        let mut engine = photocraft_text::TextEngine::new();
+        let mut engine = lienzo_text::TextEngine::new();
         for family in ["Inter", "JetBrains Mono"] {
             assert!(images(&mut engine, family, 1, MEDIUM).expect("bundled").arabic.is_none(), "{family}");
         }
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn a_system_arabic_face_renders_both_samples() {
-        let mut engine = photocraft_text::TextEngine::new();
+        let mut engine = lienzo_text::TextEngine::new();
         engine.fonts.load_system_fonts();
         let candidates: Vec<String> = engine.fonts.families().into_iter().filter(|f| sample_texts(&engine.fonts.charmap(f, 400, false)).1.is_some()).collect();
         // A face can map the Arabic characters to blank glyphs (#5259): `render` then rightly gives

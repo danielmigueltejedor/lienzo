@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use egui::{Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::shape_gradient_ui::{self as shape_gradient, GradientChoices};
 use crate::shape_paint_ui::PaintChange;
 use crate::theme::Tokens;
@@ -54,13 +54,13 @@ pub(crate) struct Library {
 }
 
 /// The Recently Used Colors, newest first (at most [`MAX_RECENT`]; unreadable entries skipped).
-pub(crate) fn recent_colors(session: &photocraft_engine::Session) -> Vec<[f32; 3]> {
+pub(crate) fn recent_colors(session: &lienzo_engine::Session) -> Vec<[f32; 3]> {
     session.prefs().recent_colors.iter().filter_map(|h| crate::color_picker_ui::parse_hex(h)).take(MAX_RECENT).collect()
 }
 
 /// Put `rgb` at the front of the Recently Used Colors (once), as Photoshop does for a colour that
 /// was used.
-pub(crate) fn remember(app: &mut PhotocraftApp, rgb: [f32; 3]) {
+pub(crate) fn remember(app: &mut LienzoApp, rgb: [f32; 3]) {
     if rgb.iter().any(|c| !c.is_finite()) {
         return;
     }
@@ -80,14 +80,14 @@ fn c32(c: [f32; 3]) -> Color32 {
 
 /// The popover's lists. Rebuilt only when what they show changes, so drawing the swatches every
 /// frame costs a lookup.
-pub(crate) fn library(session: &photocraft_engine::Session, ctx: &egui::Context) -> Arc<Library> {
+pub(crate) fn library(session: &lienzo_engine::Session, ctx: &egui::Context) -> Arc<Library> {
     let c = &session.color.settings;
     let recent = &session.prefs().recent_colors;
     let key = egui::Id::unique(("paint-picker-library", session.presets.rev, &c.working_rgb, &c.working_cmyk, &c.working_gray, recent));
     if let Some(v) = ctx.data(|d| d.get_temp::<Arc<Library>>(key)) {
         return v;
     }
-    let conv = photocraft_engine::presets::swatches::SwatchConv::new(session);
+    let conv = lienzo_engine::presets::swatches::SwatchConv::new(session);
     let swatches = session
         .presets
         .swatches
@@ -118,12 +118,12 @@ pub(crate) fn library(session: &photocraft_engine::Session, ctx: &egui::Context)
 }
 
 /// The paint type the popover opens on: the shape's current paint.
-fn kind_of(fill: Option<&photocraft_doc::Fill>) -> Kind {
+fn kind_of(fill: Option<&lienzo_doc::Fill>) -> Kind {
     match fill {
         None => Kind::None,
-        Some(photocraft_doc::Fill::Solid(_)) => Kind::Solid,
-        Some(photocraft_doc::Fill::Gradient { .. }) => Kind::Gradient,
-        Some(photocraft_doc::Fill::Pattern { .. }) => Kind::Pattern,
+        Some(lienzo_doc::Fill::Solid(_)) => Kind::Solid,
+        Some(lienzo_doc::Fill::Gradient { .. }) => Kind::Gradient,
+        Some(lienzo_doc::Fill::Pattern { .. }) => Kind::Pattern,
     }
 }
 
@@ -189,7 +189,7 @@ fn picker_button(ui: &mut egui::Ui) -> bool {
     const STEPS: usize = 6;
     for i in 0..=STEPS {
         let x = inner.left() + inner.width() * i as f32 / STEPS as f32;
-        let hue = photocraft_color::convert::hsb_to_rgb([360.0 * i as f32 / STEPS as f32, 1.0, 1.0]);
+        let hue = lienzo_color::convert::hsb_to_rgb([360.0 * i as f32 / STEPS as f32, 1.0, 1.0]);
         mesh.colored_vertex(pos2(x, inner.top()), c32(hue));
         mesh.colored_vertex(pos2(x, inner.bottom()), Color32::WHITE);
         if i > 0 {
@@ -252,7 +252,7 @@ fn grid(ui: &mut egui::Ui, n: usize, mut draw: impl FnMut(&mut egui::Ui, usize))
 pub(crate) fn body(
     ui: &mut egui::Ui,
     lib: &Library,
-    fill: Option<&photocraft_doc::Fill>,
+    fill: Option<&lienzo_doc::Fill>,
     original: [f32; 4],
     gradients: &GradientChoices,
     id: egui::Id,
@@ -264,7 +264,7 @@ pub(crate) fn body(
     let tab_id = id.with("paint-picker-tab");
     let mut tab = ui.data(|d| d.get_temp::<(Kind, Kind)>(tab_id)).filter(|(was, _)| *was == current).map_or(current, |(_, tab)| tab);
     let solid_now = match fill {
-        Some(photocraft_doc::Fill::Solid(c)) => Some(c.to_rgb()),
+        Some(lienzo_doc::Fill::Solid(c)) => Some(c.to_rgb()),
         _ => None,
     };
     ui.set_width(WIDTH);
@@ -298,7 +298,7 @@ pub(crate) fn body(
     });
     ui.add_space(6.0);
     match (tab, fill) {
-        (Kind::Gradient, Some(g @ photocraft_doc::Fill::Gradient { .. })) => {
+        (Kind::Gradient, Some(g @ lienzo_doc::Fill::Gradient { .. })) => {
             if let Some(edited) = shape_gradient::gradient_tab(ui, g, gradients, id) {
                 out = Some(PaintChange::Gradient(edited));
             }
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn remember_moves_a_colour_to_the_front_once_and_caps_the_row() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         for i in 0..20 {
             remember(&mut app, [i as f32 / 255.0, 0.0, 0.0]);
         }

@@ -4,12 +4,12 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::{Tool, ToolOptions};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 100, "height": 60})).unwrap();
     app.run("paint.pencil", json!({"points": [[16, 30], [28, 30]], "size": 4, "color": "#0000ff"})).unwrap();
     app.run("select.rect", json!({"x": 6, "y": 14, "width": 32, "height": 32})).unwrap();
@@ -17,13 +17,13 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn blue(app: &PhotocraftApp, x: i32, y: i32) -> bool {
+fn blue(app: &LienzoApp, x: i32, y: i32) -> bool {
     let st = app.session.active().unwrap();
     let layer = st.active_layer.and_then(|id| st.doc.layer(id)).unwrap();
     layer.surface().unwrap().rgba(x, y)[0] < 0.5
 }
 
-fn drop_patch(app: &mut PhotocraftApp) {
+fn drop_patch(app: &mut LienzoApp) {
     let m = egui::Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: 22.0, y: 30.0, pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Move { x: 72.0, y: 30.0, pressure: 1.0 }, m);
@@ -33,7 +33,7 @@ fn drop_patch(app: &mut PhotocraftApp) {
 #[test]
 fn fresh_start_and_reset_tool_leave_transform_on_drop_on() {
     assert!(ToolOptions::default().cam_transform_on_drop);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(app.ui.tool_options.cam_transform_on_drop, "a fresh start leaves Transform On Drop on");
     app.ui.tool = Tool::ContentAwareMove;
     app.ui.tool_options.cam_transform_on_drop = false;

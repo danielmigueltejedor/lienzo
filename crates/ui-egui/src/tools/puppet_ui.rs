@@ -12,13 +12,13 @@
 use std::sync::Arc;
 
 use egui::{Color32, Stroke, TextureHandle, pos2, vec2};
-use photocraft_algo::puppet::{ITERATIONS, PuppetDensity, PuppetMesh, PuppetMode, PuppetPin, PuppetSolver, PuppetWarp, build_mesh};
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::puppet::{ITERATIONS, PuppetDensity, PuppetMesh, PuppetMode, PuppetPin, PuppetSolver, PuppetWarp, build_mesh};
+use lienzo_doc::{DocId, Document, LayerId};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 
 pub struct PuppetSession {
@@ -187,7 +187,7 @@ fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
 }
 
 /// Starts Puppet Warp on the active layer.
-pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context, command: &str) -> Result<(), String> {
+pub fn begin(app: &mut LienzoApp, ctx: &egui::Context, command: &str) -> Result<(), String> {
     if let Some(why) = app.session.disabled_reason(command) {
         return Err(why);
     }
@@ -236,7 +236,7 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context, command: &str) -> Res
     Ok(())
 }
 
-pub fn commit(app: &mut PhotocraftApp) {
+pub fn commit(app: &mut LienzoApp) {
     let Some(s) = app.distort.puppet.take() else { return };
     if s.warp.is_identity() {
         return;
@@ -247,7 +247,7 @@ pub fn commit(app: &mut PhotocraftApp) {
 }
 
 /// Control channel: `edit.puppetWarp {"ui": {...}}` while the mode is active.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut LienzoApp, ui: &Value) -> Result<Value, String> {
     if ui.get("commit").and_then(Value::as_bool) == Some(true) {
         commit(app);
         return Ok(json!({"committed": true}));
@@ -293,7 +293,7 @@ pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
     Ok(s.describe())
 }
 
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) {
     let tol = crate::distort_ui::tolerance(app);
     let Some(s) = app.distort.puppet.as_mut() else { return };
     match ev {
@@ -395,7 +395,7 @@ pub fn draw(s: &PuppetSession, painter: &egui::Painter, xf: &ViewXform) {
     }
 }
 
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let Some(s) = app.distort.puppet.as_mut() else { return };
     // Pin depth, rotation and Remove All Pins are undoable pin edits too.
     let pins_before = s.warp.pins.clone();

@@ -1,7 +1,7 @@
 use super::tabs::{open_on_double_click, paint_dots};
-use super::{PhotocraftApp, Rect, Sense};
+use super::{LienzoApp, Rect, Sense};
 
-pub(super) fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn start_screen(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let area = ui.available_rect_before_wrap();
     paint_dots(ui, area, app.session.prefs().interface.show_canvas_dots);
     open_on_double_click(app, ui, area);
@@ -45,7 +45,7 @@ pub(super) fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
 }
 
-fn render_start_actions_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, avail_w: f32) {
+fn render_start_actions_row(app: &mut LienzoApp, ui: &mut egui::Ui, avail_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let btn_w = ((avail_w - 12.0) / 2.0).clamp(0.0, 150.0);
 
@@ -79,7 +79,7 @@ fn render_start_actions_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, avail_w:
     });
 }
 
-fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
+fn render_start_rail(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
 
     ui.add_space(8.0);
@@ -187,7 +187,7 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
     render_rail_link(app, ui, rail_w, tl!("GitHub"), "link-2", crate::links::GITHUB);
 }
 
-fn render_rail_link(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32, label: &str, icon_name: &str, url: &str) {
+fn render_rail_link(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32, label: &str, icon_name: &str, url: &str) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(rail_w, 28.0), Sense::click());
     let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand).on_hover_text(url);
@@ -203,7 +203,7 @@ fn render_rail_link(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32, lab
     }
 }
 
-fn render_start_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, recent: &[String], content_w: f32) {
+fn render_start_content(app: &mut LienzoApp, ui: &mut egui::Ui, recent: &[String], content_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
     ui.add_space(8.0);
 
@@ -237,7 +237,7 @@ fn render_start_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, recent: &[St
     ui.add_space(24.0);
 }
 
-fn render_first_run_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, content_w: f32) {
+fn render_first_run_content(app: &mut LienzoApp, ui: &mut egui::Ui, content_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
 
     let drop_w = 540.0f32.min(content_w - 24.0);
@@ -282,7 +282,7 @@ fn render_first_run_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, content_
 }
 
 /// Hint displayed on the start screen for opening files.
-pub(crate) fn start_screen_drop_hint(_app: &PhotocraftApp) -> std::borrow::Cow<'static, str> {
+pub(crate) fn start_screen_drop_hint(_app: &LienzoApp) -> std::borrow::Cow<'static, str> {
     tl!("Drop an image or PSD anywhere to open it.").into()
 }
 

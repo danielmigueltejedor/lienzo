@@ -6,20 +6,20 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::opacity_keys::press;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.tool = tool;
     app
 }
 
-fn options_bar(tool: Tool, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn options_bar(tool: Tool, theme: crate::theme::ThemeKind) -> Harness<'static, LienzoApp> {
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             if !ready {
                 crate::theme::install_fonts(ui.ctx());
                 crate::theme::apply(ui.ctx(), theme);
@@ -35,7 +35,7 @@ fn options_bar(tool: Tool, theme: crate::theme::ThemeKind) -> Harness<'static, P
 }
 
 /// Types `text` into the options bar's Opacity field and presses Enter.
-fn type_opacity(h: &mut Harness<'_, PhotocraftApp>, text: &str) -> f32 {
+fn type_opacity(h: &mut Harness<'_, LienzoApp>, text: &str) -> f32 {
     // "Opacity:" in the Photoshop-look themes, "Opacity" in the others.
     let field = h
         .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::SpinButton))

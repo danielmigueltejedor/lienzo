@@ -1,8 +1,8 @@
 use super::*;
 use serde_json::json;
 
-fn app(doc: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(doc: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     if doc {
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         app.sync_views();
@@ -11,7 +11,7 @@ fn app(doc: bool) -> PhotocraftApp {
 }
 
 fn layout(doc: bool) -> Layout {
-    photocraft_layout(&crate::menus::menu_items(&app(doc)), Lang::EN, "auto")
+    lienzo_layout(&crate::menus::menu_items(&app(doc)), Lang::EN, "auto")
 }
 
 fn ids(nodes: &[Node]) -> Vec<String> {
@@ -27,7 +27,7 @@ fn ids(nodes: &[Node]) -> Vec<String> {
 }
 
 #[test]
-fn photocraft_gets_a_mac_app_menu() {
+fn lienzo_gets_a_mac_app_menu() {
     let l = layout(true);
     let app = &l.bar.menus[0];
     assert_eq!((app.title.as_str(), app.role), ("Lienzo", MenuRole::App));
@@ -51,9 +51,9 @@ fn moved_items_leave_their_old_menus() {
     assert_eq!(titles, ["Lienzo", "File", "Edit", "Image", "Layer", "Type", "Select", "Filter", "View", "Window", "Help"]);
 }
 
-/// PhotoCraft keeps Photoshop's ⌘H, ⌘M, ⌘W and ⌘, (Hide Layers): the system items give way.
+/// Lienzo keeps Photoshop's ⌘H, ⌘M, ⌘W and ⌘, (Hide Layers): the system items give way.
 #[test]
-fn clashes_are_resolved_in_photocrafts_favour() {
+fn clashes_are_resolved_in_lienzos_favour() {
     let l = layout(true);
     let clash = |sc: &str| l.clashes.iter().find(|c| c.shortcut == sc).map(|c| c.command.as_str());
     assert_eq!(clash("Cmd+H"), Some("view.extras"));
@@ -76,7 +76,7 @@ fn a_saved_cmd_comma_on_settings_gives_way_to_hide_layers() {
     let mut a = app(true);
     // Loaded as saved, not set through Edit › Keyboard Shortcuts (which would clear Hide Layers' row).
     a.session.prefs.edit(|p| p.shortcuts.insert("edit.preferences.general".into(), "Cmd+,".into()));
-    let l = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
+    let l = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
     let comma: Vec<&str> = l.bar.items().into_iter().filter(|it| it.shortcut.as_deref() == Some("Cmd+,")).map(|it| it.id.as_str()).collect();
     assert_eq!(comma, ["layer.hideLayers"]);
     let clash = l.clashes.iter().find(|c| c.shortcut == "Cmd+,").unwrap();
@@ -146,7 +146,7 @@ fn a_saved_cmd_comma_on_about_takes_the_key_from_settings() {
         // As above: Hide Layers' default ⌘, would be a second owner.
         p.shortcuts.insert("layer.hideLayers".into(), String::new());
     });
-    let l = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
+    let l = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
     let comma: Vec<&str> = l.bar.items().into_iter().filter(|it| it.shortcut.as_deref() == Some("Cmd+,")).map(|it| it.id.as_str()).collect();
     assert_eq!(comma, ["help.about"]);
     assert_ne!(l.bar.find("edit.preferences.general").unwrap().shortcut.as_deref(), Some("Cmd+,"));
@@ -210,7 +210,7 @@ fn an_imported_kys_set_owns_the_system_keys_it_binds() {
 fn themes_move_to_the_app_menus_appearance() {
     let mut a = app(false);
     a.ui.theme = crate::theme::ThemeKind::Classic;
-    let l = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
+    let l = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
     let app_menu = l.bar.menu(MenuRole::App).unwrap();
     let Some(Node::Submenu { children, .. }) = app_menu.children.iter().find(|n| matches!(n, Node::Submenu { label, .. } if label == "Appearance")) else {
         panic!("an Appearance submenu");
@@ -225,10 +225,10 @@ fn themes_move_to_the_app_menus_appearance() {
     assert_eq!(l.bar.find("window.theme.system").unwrap().checked, Some(false));
     let window = ids(&l.bar.menu(MenuRole::Window).unwrap().children);
     assert!(!window.iter().any(|id| id.starts_with("window.theme.") || id == "[Theme]"), "{window:?}");
-    a.session.prefs.edit(|p| p.interface.appearance_mode = photocraft_engine::prefs::AppearanceMode::Auto);
+    a.session.prefs.edit(|p| p.interface.appearance_mode = lienzo_engine::prefs::AppearanceMode::Auto);
     for palette in [crate::theme::ThemeKind::Classic, crate::theme::ThemeKind::ProMedium] {
         a.ui.theme = palette;
-        let automatic = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
+        let automatic = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto");
         assert_eq!(automatic.bar.find("window.theme.system").unwrap().checked, Some(true));
         for kind in crate::theme::ThemeKind::ALL {
             assert_eq!(automatic.bar.find(&format!("window.theme.{}", kind.id())).unwrap().checked, Some(false));
@@ -240,7 +240,7 @@ fn themes_move_to_the_app_menus_appearance() {
 /// the preference checked; choosing one sets `interface.language`.
 #[test]
 fn the_app_menu_switches_the_ui_language() {
-    let l = photocraft_layout(&crate::menus::menu_items(&app(false)), Lang::EN, "ja");
+    let l = lienzo_layout(&crate::menus::menu_items(&app(false)), Lang::EN, "ja");
     let app_menu = l.bar.menu(MenuRole::App).unwrap();
     let Some(Node::Submenu { children, .. }) = app_menu.children.iter().find(|n| matches!(n, Node::Submenu { label, .. } if label == "Language")) else {
         panic!("a Language submenu");
@@ -249,7 +249,7 @@ fn the_app_menu_switches_the_ui_language() {
     assert_eq!(l.bar.find("app.language.ja").map(|it| (it.label.as_str(), it.checked)), Some(("日本語", Some(true))));
     assert_eq!(l.bar.find("app.language.auto").and_then(|it| it.checked), Some(false));
     // Native names stay native in another UI language.
-    let de = photocraft_layout(&crate::menus::menu_items(&app(false)), Lang::from_pref("de"), "de");
+    let de = lienzo_layout(&crate::menus::menu_items(&app(false)), Lang::from_pref("de"), "de");
     assert_eq!(de.bar.find("app.language.ja").map(|it| it.label.as_str()), Some("日本語"));
     let mut a = app(false);
     let ctx = egui::Context::default();
@@ -303,14 +303,14 @@ fn the_documents_follow_bring_all_to_front() {
     let mut a = app(true);
     a.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     a.sync_views();
-    let bar = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto").bar;
+    let bar = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto").bar;
     let window = ids(&bar.menu(MenuRole::Window).unwrap().children);
     assert_eq!(window[window.len() - 4..], ["<BringAllToFront>", "---", "window.document.0", "window.document.1"]);
     assert_eq!(bar.find("window.document.1").and_then(|i| i.checked), Some(true));
     assert_eq!(bar.find("window.document.0").and_then(|i| i.checked), Some(false));
 
     a.session.set_active(0);
-    let switched = photocraft_layout(&crate::menus::menu_items(&a), Lang::EN, "auto").bar;
+    let switched = lienzo_layout(&crate::menus::menu_items(&a), Lang::EN, "auto").bar;
     assert_eq!(switched.find("window.document.0").and_then(|i| i.checked), Some(true));
     assert_eq!((structure_key(&switched), window_key(&switched)), (structure_key(&bar), window_key(&bar)), "a check moves in place");
 }
@@ -358,7 +358,7 @@ impl Backend for Fake {
     }
 }
 
-/// A key equivalent reaches PhotoCraft's own key handling as the key press it was, so the
+/// A key equivalent reaches Lienzo's own key handling as the key press it was, so the
 /// shortcut runs once, through the same rules as without a native menu.
 #[test]
 fn key_equivalents_run_through_the_normal_shortcut_path() {
@@ -397,11 +397,11 @@ fn a_paste_key_equivalent_pastes_once() {
         let ctx = egui::Context::default();
         app.run("select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 4})).unwrap();
         app.run("edit.copy", json!({})).unwrap();
-        let layers = |app: &PhotocraftApp| app.session.active().unwrap().doc.layer_count();
+        let layers = |app: &LienzoApp| app.session.active().unwrap().doc.layer_count();
         let before = layers(&app);
         let paste = Chord::parse("Cmd+V").unwrap();
         app.services.native_menu = Some(NativeMenu::new(Box::new(Fake { synced: Default::default(), events: vec![Event::Key(paste)] })));
-        let step = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+        let step = |app: &mut LienzoApp, events: Vec<egui::Event>| {
             let mut raw = egui::RawInput { events, ..Default::default() };
             eframe::App::raw_input_hook(app, &ctx, &mut raw);
             frame(&ctx, raw, |ui| {
@@ -450,7 +450,7 @@ fn an_open_dialog_blocks_menu_clicks_except_view_navigation() {
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "image.imageSize", json!({})).unwrap();
     assert!(!app.ui.dialogs.is_empty(), "Image Size opened its dialog");
-    let size = |app: &PhotocraftApp| app.session.active().map(|d| (d.doc.size.width, d.doc.size.height));
+    let size = |app: &LienzoApp| app.session.active().map(|d| (d.doc.size.width, d.doc.size.height));
     let zoom = app.ui.views[0].zoom;
     let events = vec![Event::Click("image.imageRotation.90cw".into()), Event::Click("view.zoomIn".into())];
     app.services.native_menu = Some(NativeMenu::new(Box::new(Fake { synced: synced.clone(), events })));
@@ -480,7 +480,7 @@ fn cut_selected_type_from_native_menu_matches_keyboard_cut() {
         let synced = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
         let mut app = app(true);
         let ctx = egui::Context::default();
-        let id = photocraft_doc::LayerId(app.run("type.create", json!({"text": "Hello", "size": 12, "x": 4, "y": 24})).unwrap()["layer"].as_u64().unwrap());
+        let id = lienzo_doc::LayerId(app.run("type.create", json!({"text": "Hello", "size": 12, "x": 4, "y": 24})).unwrap()["layer"].as_u64().unwrap());
         crate::menus::invoke(&mut app, &ctx, "type.editText", json!({})).unwrap();
         let edit = app.ui.text_edit.as_ref().unwrap();
         assert_eq!((edit.anchor, edit.caret), (0, 5));
@@ -501,7 +501,7 @@ fn cut_selected_type_from_native_menu_matches_keyboard_cut() {
         });
         out.textures_delta.clear();
         assert_eq!(out.platform_output.commands, [egui::OutputCommand::CopyText("Hello".into())]);
-        let photocraft_doc::LayerContent::Text(text) = &app.session.active().unwrap().doc.layer(id).unwrap().content else { panic!("type layer changed kind") };
+        let lienzo_doc::LayerContent::Text(text) = &app.session.active().unwrap().doc.layer(id).unwrap().content else { panic!("type layer changed kind") };
         assert!(text.text.is_empty());
         let edit = app.ui.text_edit.as_ref().unwrap();
         assert_eq!((edit.anchor, edit.caret), (0, 0));
@@ -516,13 +516,13 @@ fn copy_and_paste_type_from_native_menu() {
     let synced = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let mut app = app(true);
     let ctx = egui::Context::default();
-    let id = photocraft_doc::LayerId(app.run("type.create", json!({"text": "Hello", "size": 12, "x": 4, "y": 24})).unwrap()["layer"].as_u64().unwrap());
+    let id = lienzo_doc::LayerId(app.run("type.create", json!({"text": "Hello", "size": 12, "x": 4, "y": 24})).unwrap()["layer"].as_u64().unwrap());
     crate::menus::invoke(&mut app, &ctx, "type.editText", json!({})).unwrap();
     if let Some(e) = app.ui.text_edit.as_mut() {
         (e.anchor, e.caret) = (5, 5);
     }
     let layers = app.session.active().unwrap().doc.layers.len();
-    let click = |app: &mut PhotocraftApp, id: &str| {
+    let click = |app: &mut LienzoApp, id: &str| {
         app.services.native_menu = Some(NativeMenu::new(Box::new(Fake { synced: synced.clone(), events: vec![Event::Click(id.into())] })));
         let mut raw = egui::RawInput::default();
         app.services.native_menu.as_mut().unwrap().raw_input(&mut raw);
@@ -533,8 +533,8 @@ fn copy_and_paste_type_from_native_menu() {
         out.textures_delta.clear();
         out
     };
-    let text = |app: &PhotocraftApp| match &app.session.active().unwrap().doc.layer(id).unwrap().content {
-        photocraft_doc::LayerContent::Text(t) => t.text.clone(),
+    let text = |app: &LienzoApp| match &app.session.active().unwrap().doc.layer(id).unwrap().content {
+        lienzo_doc::LayerContent::Text(t) => t.text.clone(),
         _ => panic!("type layer changed kind"),
     };
 
@@ -593,7 +593,7 @@ fn the_title_bar_hides_its_menus_with_the_mac_menu_bar() {
     use egui_kittest::{Harness, kittest::Queryable};
     let counts = |native: bool| -> Vec<usize> {
         let mut h = Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = app(true);
             if native {
                 app.services.native_menu = Some(NativeMenu::new(Box::new(Fake { synced: Default::default(), events: Vec::new() })));

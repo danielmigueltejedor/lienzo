@@ -3,8 +3,8 @@
 //! (verified by the corpus round-trip floors in `corpus.rs`; here the byte-equality of the
 //! codec layer itself is pinned).
 
-use photocraft_psd::compression::{Compression, PlaneLayout, decode_planes, encode_planes};
-use photocraft_psd::header::Version;
+use lienzo_psd::compression::{Compression, PlaneLayout, decode_planes, encode_planes};
+use lienzo_psd::header::Version;
 
 #[test]
 fn encode_decode_planes_round_trip_exactly() {

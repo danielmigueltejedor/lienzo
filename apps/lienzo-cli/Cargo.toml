@@ -1,0 +1,64 @@
+[package]
+name = "lienzo-cli"
+description = "Headless Lienzo: convert, inspect, run commands, batch, MCP server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[features]
+default = ["gpu"]
+# Open HEIC/HEIF photos (the optional lienzo-heif crate). Not default so distributors choose
+# it; official builds (CI, packaging/, release) build with `--features heif`.
+heif = ["lienzo-codecs/heif"]
+# Optional native GPU rendering backend, enabled by default in native CLI builds.
+gpu = ["lienzo-automation/gpu"]
+
+[lints]
+workspace = true
+
+[lib]
+name = "lienzo_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lienzo-cli"
+path = "src/main.rs"
+
+[[example]]
+name = "gpu_bench"
+required-features = ["gpu"]
+
+[dependencies]
+lienzo-automation = { path = "../../crates/automation" }
+lienzo-doc = { workspace = true }
+lienzo-engine = { workspace = true }
+lienzo-io = { workspace = true, features = ["pdf-editable"] }
+lienzo-raster = { workspace = true }
+lienzo-format = { path = "../../crates/format" }
+lienzo-codecs = { workspace = true }
+clap = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+serde = { workspace = true }
+tempfile = "3"
+# Reading back a saved PSD's merged-image flag (#8064).
+lienzo-psd = { workspace = true }
+# A real ICC profile for the --metadata test (#9466).
+lienzo-cms = { workspace = true }
+# Synthetic camera raws (#7789).
+lienzo-raw = { workspace = true, features = ["testgen"] }
+# Shell completions and man pages (examples/man-and-completions.rs, for the packages); not in
+# the binary.
+clap_complete = { workspace = true }
+clap_mangen = { workspace = true }
+# The PSD write recipe runner (tests/it/psd_write_oracle.rs).
+xtask = { path = "../../xtask" }
+
+[build-dependencies]
+# Icon + VERSIONINFO for lienzo-cli.exe; build.rs only uses it when targeting Windows.
+winresource = "0.1"
+

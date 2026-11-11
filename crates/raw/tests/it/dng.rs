@@ -1,8 +1,8 @@
 //! Synthetic DNG files: every storage layout decodes to the exact sensor
 //! samples, and development reproduces known colours.
 
-use photocraft_raw::testgen::{self, DngSpec, DngStorage, Val, baseline_jpeg, mosaic, scene};
-use photocraft_raw::*;
+use lienzo_raw::testgen::{self, DngSpec, DngStorage, Val, baseline_jpeg, mosaic, scene};
+use lienzo_raw::*;
 
 fn sensor(bytes: &[u8]) -> Sensor {
     decode(bytes, &Limits::default()).unwrap()
@@ -458,7 +458,7 @@ fn gain_map_opcode_is_applied() {
     spec.as_shot_neutral = Some([1.0; 3]);
     let lin = |v: u16| (f64::from(v) / 65535.0).powf(1.8);
     let base = develop(&spec.build(), &DevelopOptions::default()).unwrap().rgb[(6 * w + 8) * 3 + 1];
-    spec.opcode_list2 = Some(photocraft_raw::testgen::gain_map_opcode_list([0, 0, h as u32, w as u32], 1, [[2.0, 2.0], [2.0, 2.0]]));
+    spec.opcode_list2 = Some(lienzo_raw::testgen::gain_map_opcode_list([0, 0, h as u32, w as u32], 1, [[2.0, 2.0], [2.0, 2.0]]));
     let d = develop(&spec.build(), &DevelopOptions::default()).unwrap();
     assert!(!d.warnings.iter().any(|w| w.contains("Opcode")), "{:?}", d.warnings);
     let gained = d.rgb[(6 * w + 8) * 3 + 1];
@@ -822,7 +822,7 @@ fn floating_point_jpeg_xl_is_charged_four_bytes_a_sample() {
 /// When the largest JPEG XL preview doesn't decode, the next largest is used.
 #[test]
 fn a_jpeg_xl_preview_that_does_not_decode_gives_way_to_a_smaller_one() {
-    use photocraft_raw::testgen::TiffBuilder;
+    use lienzo_raw::testgen::TiffBuilder;
     let mut t = TiffBuilder::default();
     let preview = |t: &mut TiffBuilder, w: usize, h: usize, stream: Vec<u8>| {
         let len = stream.len() as u32;
@@ -854,7 +854,7 @@ fn a_jpeg_xl_preview_that_does_not_decode_gives_way_to_a_smaller_one() {
 /// three samples, JPEG XL) holds undeveloped sensor data, so the RGB one is used even when smaller.
 #[test]
 fn a_reduced_resolution_linear_raw_is_not_a_jpeg_xl_preview() {
-    use photocraft_raw::testgen::TiffBuilder;
+    use lienzo_raw::testgen::TiffBuilder;
     let mut t = TiffBuilder::default();
     let mut ifd = |w: usize, h: usize, photometric: u16, data: &[u16]| {
         let stream = jxl(data, w, h, 3, 8);

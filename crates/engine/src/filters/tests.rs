@@ -11,7 +11,7 @@ fn session() -> Session {
 fn active_pixels(s: &Session) -> Vec<f32> {
     let d = s.active().unwrap();
     let l = d.doc.layer(d.active_layer.unwrap()).unwrap();
-    l.surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 48, 32))
+    l.surface().unwrap().read_region(lienzo_geom::Rect::new(0, 0, 48, 32))
 }
 
 fn mask_session(reveal_selection: bool) -> Session {
@@ -83,10 +83,7 @@ const ALL: [&str; 24] = [
 fn enormous_global_filter_is_refused_before_allocating_and_preserves_document() {
     let mut s = Session::new();
     // A sparse document exercises admission without allocating a giant background first.
-    s.add_document(
-        photocraft_doc::Document::new("large", photocraft_doc::Size::new(300000, 300000), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8),
-        None,
-    );
+    s.add_document(lienzo_doc::Document::new("large", lienzo_doc::Size::new(300000, 300000), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8), None);
     s.execute("layer.new.layer", json!({})).unwrap();
     s.edit("one pixel", |doc, active| {
         doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().write_pixel(0, 0, &[0.2, 0.4, 0.6, 1.0]);
@@ -315,7 +312,7 @@ fn last_filter_applies_to_the_active_layer() {
     assert_ne!(active_pixels(&s), before, "the active layer is filtered");
     let d = s.active().unwrap();
     let l = d.doc.layer(first).unwrap();
-    assert_eq!(l.surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 48, 32)), first_once, "the first layer is left alone");
+    assert_eq!(l.surface().unwrap().read_region(lienzo_geom::Rect::new(0, 0, 48, 32)), first_once, "the first layer is left alone");
 }
 
 #[test]
@@ -342,7 +339,7 @@ fn minimum_maximum_preserve_roundness() {
         // A white dot on black.
         s.edit("dot", |doc, active| {
             let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
-            surf.fill_rect(photocraft_geom::Rect::new(0, 0, 48, 32), &[0.0, 0.0, 0.0, 1.0]);
+            surf.fill_rect(lienzo_geom::Rect::new(0, 0, 48, 32), &[0.0, 0.0, 0.0, 1.0]);
             surf.write_pixel(24, 16, &[1.0, 1.0, 1.0, 1.0]);
             Ok(())
         })
@@ -371,17 +368,17 @@ fn minimum_maximum_preserve_roundness() {
 
 #[test]
 fn smart_object_records_smart_filter() {
-    use photocraft_doc::{Layer, SmartObject, SmartSource};
+    use lienzo_doc::{Layer, SmartObject, SmartSource};
     let mut s = session();
     s.edit("smart", |doc, active| {
-        let mut cache = photocraft_raster::Surface::new(doc.pixel_format());
-        cache.fill_rect(photocraft_geom::Rect::new(0, 0, 10, 10), &[1.0, 0.0, 0.0, 1.0]);
+        let mut cache = lienzo_raster::Surface::new(doc.pixel_format());
+        cache.fill_rect(lienzo_geom::Rect::new(0, 0, 10, 10), &[1.0, 0.0, 0.0, 1.0]);
         let l = Layer::new(
             "so",
             LayerContent::Smart(SmartObject {
-                contents_id: photocraft_doc::SmartContentsId::fresh(),
+                contents_id: lienzo_doc::SmartContentsId::fresh(),
                 source: SmartSource::Linked { path: String::new() },
-                transform: photocraft_geom::Affine::IDENTITY,
+                transform: lienzo_geom::Affine::IDENTITY,
                 smart_filters: vec![],
                 cache: Some(cache),
                 psd_raw: None,
@@ -407,7 +404,7 @@ fn smart_object_records_smart_filter() {
 }
 
 /// The serial `keep_alpha` before #6205, kept as the oracle for the parallel one.
-fn keep_alpha_serial(old: &photocraft_raster::Surface, new: &mut photocraft_raster::Surface) {
+fn keep_alpha_serial(old: &lienzo_raster::Surface, new: &mut lienzo_raster::Surface) {
     if old.format() != new.format() || !new.format().alpha {
         return;
     }
@@ -430,10 +427,10 @@ fn keep_alpha_serial(old: &photocraft_raster::Surface, new: &mut photocraft_rast
 
 /// A layer before and after a filter: tiles the filter changed, one it left shared, one it
 /// emptied (only in `old`) and one it added (only in `new`).
-fn alpha_pair(sample: photocraft_color::SampleType) -> (photocraft_raster::Surface, photocraft_raster::Surface) {
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
-    let fmt = photocraft_color::PixelFormat { mode: photocraft_color::ColorMode::Rgb, sample, alpha: true };
+fn alpha_pair(sample: lienzo_color::SampleType) -> (lienzo_raster::Surface, lienzo_raster::Surface) {
+    use lienzo_geom::Rect;
+    use lienzo_raster::Surface;
+    let fmt = lienzo_color::PixelFormat { mode: lienzo_color::ColorMode::Rgb, sample, alpha: true };
     let pattern = |r: Rect, k: f32| -> Vec<f32> {
         (0..r.width() as usize * r.height() as usize * 4).map(|i| ((i as f32 * 0.37 + k).sin() * 0.5 + 0.5).clamp(0.0, 1.0)).collect()
     };
@@ -443,7 +440,7 @@ fn alpha_pair(sample: photocraft_color::SampleType) -> (photocraft_raster::Surfa
     let mut new = old.clone();
     let changed = Rect::new(-40, -20, 400, 300);
     new.write_region(changed, &pattern(changed, 1.3));
-    let emptied = photocraft_geom::TileCoord::containing(600, 100).rect();
+    let emptied = lienzo_geom::TileCoord::containing(600, 100).rect();
     drop(new.take_tiles(emptied));
     let added = Rect::new(800, 0, 900, 50);
     new.write_region(added, &pattern(added, 2.1));
@@ -452,7 +449,7 @@ fn alpha_pair(sample: photocraft_color::SampleType) -> (photocraft_raster::Surfa
 
 #[test]
 fn keep_alpha_matches_the_serial_pass_at_every_depth() {
-    use photocraft_color::SampleType;
+    use lienzo_color::SampleType;
     for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let (old, new) = alpha_pair(sample);
         let mut want = new.clone();
@@ -466,7 +463,7 @@ fn keep_alpha_matches_the_serial_pass_at_every_depth() {
 
 #[test]
 fn keep_alpha_stops_when_cancelled_and_keeps_the_tiles() {
-    let (old, new) = alpha_pair(photocraft_color::SampleType::U8);
+    let (old, new) = alpha_pair(lienzo_color::SampleType::U8);
     let mut got = new.clone();
     let calls = std::sync::atomic::AtomicUsize::new(0);
     let cancel = || calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) >= 2;
@@ -489,7 +486,7 @@ fn displace_on_a_smart_object_embeds_its_map() {
     s.edit("square", |doc, active| {
         let fmt = doc.pixel_format();
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
-        surf.fill_rect(photocraft_geom::Rect::new(10, 10, 20, 12), &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+        surf.fill_rect(lienzo_geom::Rect::new(10, 10, 20, 12), &lienzo_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
         Ok(())
     })
     .unwrap();
@@ -504,7 +501,7 @@ fn displace_on_a_smart_object_embeds_its_map() {
         let LayerContent::Smart(sm) = &d.doc.layer(d.active_layer.unwrap()).unwrap().content else { panic!("not a smart object") };
         (sm.smart_filters[0].params.clone(), sm.cache.as_ref().unwrap().read_region(d.doc.bounds()))
     };
-    let first_value = |params: &Value| photocraft_io::smart_map::displace_embedded_map(params).expect("an embedded map").data[0];
+    let first_value = |params: &Value| lienzo_io::smart_map::displace_embedded_map(params).expect("an embedded map").data[0];
 
     s.execute("filter.distort.displace", json!({"horizontal": 10, "vertical": 0, "mapDocument": 0})).unwrap();
     let (params, displaced) = smart(&s);
@@ -545,6 +542,6 @@ fn filter_without_output_is_cancelled_only_when_the_job_was() {
     let failure = filter_output(None, false).unwrap_err();
     assert!(!matches!(failure, EngineError::Cancelled), "{failure:?}");
     assert!(failure.to_string().contains("could not prepare"), "{failure}");
-    let surface = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let surface = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     assert!(filter_output(Some(surface), true).is_ok());
 }

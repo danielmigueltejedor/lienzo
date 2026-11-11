@@ -2,7 +2,7 @@
 
 Layer > Smart Objects > Edit Contents offers VectorCraft editing for embedded SVG,
 PDF-compatible AI, PDF and EPS, including payloads retained in PSD linked-layer tables.
-Choose VectorCraft or a local executable. PhotoCraft creates a private working copy in the original format;
+Choose VectorCraft or a local executable. Lienzo creates a private working copy in the original format;
 saving that file updates the original smart object when its parent is active and ready.
 Each accepted save is one undo step, including all shared instances. Placement, masks,
 filters and Undo/Redo remain in the existing smart-object transaction.
@@ -28,10 +28,10 @@ Native editing requires VectorCraft and its adjacent vectorcraft-cli for bounded
 even when another interactive editor is selected. The CLI runs headless in the background,
 restricted to a fresh private temporary read/write root per snapshot, separate from the
 interactive working directory. Open and export must both succeed, with cancellation and a
-60-second timeout. Each stable native save is validated before PhotoCraft accepts it.
+60-second timeout. Each stable native save is validated before Lienzo accepts it.
 
 Foreign AI files ordinarily require Save As in VectorCraft to protect the source. When VectorCraft
-is the editor, PhotoCraft regenerates only the private AI working copy with VectorCraft editing
+is the editor, Lienzo regenerates only the private AI working copy with VectorCraft editing
 data before launching it, so ordinary Save can be used without changing that general protection.
 Illustrator and other editors get the original AI bytes. Merely opening the
 editor never updates the embedded original. Ordinary EPS Save needs the companion VectorCraft
@@ -45,9 +45,9 @@ Desktop integration supports an explicitly selected executable. Linux discovery 
 standard native locations and a user Flatpak deployment. On Linux, choosing VectorCraft
 uses the desktop's Open With chooser to launch the regular application;
 select VectorCraft there. The writable document portal shares only the private working
-file. Working copies live in PhotoCraft's private cache because its isolated /tmp cannot
+file. Working copies live in Lienzo's private cache because its isolated /tmp cannot
 be exported. Ordinary VectorCraft launches retain preferences and existing-window
-handoff instead of running a second payload inside PhotoCraft's sandbox. Reusing tabs
+handoff instead of running a second payload inside Lienzo's sandbox. Reusing tabs
 requires the installed VectorCraft build's Linux single-instance support.
 
 Native AI/PDF/EPS previews still need vectorcraft-cli alongside the discovered
@@ -75,7 +75,7 @@ editors; browser internal editing remains available.
 This PR does not add clipboard discovery or Paste As. It stands alone on main, without
 requiring the clipboard or Shape Tools work in #3409/#3446. Its source-watching and
 bounded SVG rendering build on credited open-source work from #3409; the embedded
-AI/PDF/EPS extension was first submitted in Skyfuller1303/photocraft#1.
+AI/PDF/EPS extension was first submitted in Skyfuller1303/lienzo#1.
 
 ## Safety
 
@@ -121,24 +121,24 @@ append full artwork to the replay journal; document Undo/Redo remains available.
 ## Validation evidence
 
 Eight contributor-owned logo PSDs were tested through their visible nested AI vectors.
-A real VectorCraft edit/save reached PhotoCraft's native watcher and engine; child and
+A real VectorCraft edit/save reached Lienzo's native watcher and engine; child and
 parent Undo/Redo and PSD export/reopen preserved the changed vector. Original SHA256
 hashes were unchanged. This combines runtime editor/engine acceptance and separate UI
-wiring tests; it is not a claim of manual full PhotoCraft GUI acceptance. Private artwork,
+wiring tests; it is not a claim of manual full Lienzo GUI acceptance. Private artwork,
 and private screenshots are excluded from this repository. The opt-in acceptance harness
 accepts local paths through environment variables; it contains no private artwork.
 
 ![Embedded-vector editor chooser](images/embedded-vector-editor-en.png)
 
 Earlier SVG-only Linux Flatpak GUI acceptance verified an editor save through the writable document
-portal reached PhotoCraft's watcher, with an ordinary document opening as a second tab
+portal reached Lienzo's watcher, with an ordinary document opening as a second tab
 in the same VectorCraft window. Both launch orders were checked.
 
-![Regular and PhotoCraft vector documents in one VectorCraft window](images/embedded-vector-tabs-linux.png)
+![Regular and Lienzo vector documents in one VectorCraft window](images/embedded-vector-tabs-linux.png)
 
 Separate isolated VectorCraft GUI tests saved AI, PDF and EPS back to the same paths
 and opened a second document as another tab. The native-format watcher/engine test
-also passed inside PhotoCraft's Flatpak runtime. These tests do not establish lossless
+also passed inside Lienzo's Flatpak runtime. These tests do not establish lossless
 Adobe compatibility or Windows/macOS acceptance.
 
 D-Bus tests cover
