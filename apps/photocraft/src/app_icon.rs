@@ -15,7 +15,7 @@
 //! be stamped on the shortcut, or the taskbar would stop matching the two.
 
 /// Window, taskbar and (when running unbundled) Dock icon. macOS gets the padded 1024 px render
-/// on Apple's icon grid; elsewhere the 256 px hicolor render of the full tile.
+/// on Apple's icon grid; elsewhere the 256 px hicolor icon, on the Nodalix app grid.
 pub fn window_icon() -> egui::IconData {
     match eframe::icon_data::from_png_bytes(PNG) {
         Ok(icon) => icon,
@@ -110,12 +110,14 @@ mod tests {
 
     #[test]
     fn windows_and_linux_icons_keep_the_round_corners() {
-        // rx=112 of 512 leaves (10, 10) of a 256 px render transparent; the old crop filled it (#4478).
+        // The tile spans 16..240 of 256 with rounded corners; the old crop filled them (#4478).
         let png = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.photocraft.png");
         let icon = eframe::icon_data::from_png_bytes(png).unwrap();
+        let alpha = |x: usize, y: usize| icon.rgba[(y * 256 + x) * 4 + 3];
         assert_eq!(icon.width, 256);
-        assert_eq!(icon.rgba[(10 * 256 + 10) * 4 + 3], 0, "corner is transparent");
-        assert_eq!(icon.rgba[(128 * 256 + 2) * 4 + 3], 255, "the tile is full bleed");
+        assert_eq!(alpha(20, 20), 0, "corner is transparent");
+        assert_eq!(alpha(4, 128), 0, "the tile keeps the app grid's margin");
+        assert_eq!(alpha(24, 128), 255, "the tile fills the app grid inside its margin");
     }
 
     /// The `.ico` build.rs embeds: every size Windows asks for, each a valid PNG or BMP image.

@@ -9,6 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 APP_ID=ai.storyteller.photocraft
+ICON_NAME=dev.danielmiguelt.Lienzo
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -20,6 +21,8 @@ install -Dm755 "$HERE/AppRun" "$APPDIR/AppRun"
 install -Dm644 "$HERE/$APP_ID.desktop" "$APPDIR/usr/share/applications/$APP_ID.desktop"
 mkdir -p "$APPDIR/usr/share/icons"
 cp -R "$ROOT/assets/app-icon/hicolor" "$APPDIR/usr/share/icons/"
+# package.sh installs the icons under the .desktop's Nodalia name too.
+for f in "$APPDIR"/usr/share/icons/hicolor/*/apps/"$APP_ID".{png,svg}; do cp "$f" "${f%/*}/$ICON_NAME.${f##*.}"; done
 printf '#!/bin/sh\necho "stub: $*"\n' >"$APPDIR/usr/bin/photocraft"
 chmod +x "$APPDIR/usr/bin/photocraft"
 
@@ -47,7 +50,7 @@ DESKTOP="$XDG_DATA_HOME/applications/$APP_ID.desktop"
 expected_exec="Exec=\"$(readlink -f "$APPIMAGE")\" %F"
 grep -Fxq "$expected_exec" "$DESKTOP" || fail "Exec not rewritten: $(grep '^Exec=' "$DESKTOP")"
 grep -q '^TryExec=' "$DESKTOP" && fail "TryExec kept, the entry would be hidden"
-grep -Fxq "Icon=$APP_ID" "$DESKTOP" || fail "Icon line lost"
+grep -Fxq "Icon=$ICON_NAME" "$DESKTOP" || fail "Icon line lost"
 grep -Fxq "X-AppImage-Integrate=false" "$DESKTOP" || fail "X-AppImage-Integrate=false missing (#3623)"
 grep -Fxq 'Categories=Graphics;2DGraphics;RasterGraphics;Photography;' "$DESKTOP" || fail "metadata lines lost"
 if command -v desktop-file-validate >/dev/null; then
@@ -55,7 +58,7 @@ if command -v desktop-file-validate >/dev/null; then
 fi
 
 # 3. Icons landed under the name the .desktop entry references.
-for f in "16x16/apps/$APP_ID.png" "256x256/apps/$APP_ID.png" "scalable/apps/$APP_ID.svg"; do
+for f in "16x16/apps/$ICON_NAME.png" "256x256/apps/$ICON_NAME.png" "scalable/apps/$ICON_NAME.svg"; do
   [[ -f "$XDG_DATA_HOME/icons/hicolor/$f" ]] || fail "icon missing: $f"
 done
 

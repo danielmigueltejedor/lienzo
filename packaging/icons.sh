@@ -25,14 +25,14 @@ render() { resvg -w "$2" -h "$2" "$1" "$3" </dev/null; }
 
 render "$MAC" 1024 "$DIR/photocraft-1024.png"
 
-# Linux hicolor theme.
+# Linux hicolor theme: the scalable icon sits on the Nodalix/Colloid app grid (224/256 tile,
+# 16 px margin, 51.5 px radius, soft shadow). It is made by tools/nodalia-app-icon.py in
+# nodalix-icon-theme and committed; every hicolor size is rendered from it.
+LINUX="$DIR/hicolor/scalable/apps/ai.storyteller.photocraft.svg"
 for s in 16 24 32 48 64 128 256 512; do
   mkdir -p "$DIR/hicolor/${s}x${s}/apps"
-  render "$SVG" "$s" "$DIR/hicolor/${s}x${s}/apps/ai.storyteller.photocraft.png"
+  render "$LINUX" "$s" "$DIR/hicolor/${s}x${s}/apps/ai.storyteller.photocraft.png"
 done
-mkdir -p "$DIR/hicolor/scalable/apps"
-# The lighter trace (photocraft-small.svg) keeps the scalable theme icon cheap to render.
-cp "$DIR/photocraft-small.svg" "$DIR/hicolor/scalable/apps/ai.storyteller.photocraft.svg"
 
 # Windows .ico.
 ICO_PNGS=()

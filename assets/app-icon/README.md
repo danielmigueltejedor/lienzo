@@ -12,10 +12,18 @@ the Nodalia icon family (one historical figure per app, one colour per app).
 background, converted to black and white and placed over the app colour.
 Licence: see [LICENSE.txt](LICENSE.txt).
 
+**Linux:** the hicolor icons (`hicolor/scalable` and every PNG size) put the tile on the Nodalix
+app grid, like the Colloid icons around it: a 224 px tile inside a 256 px canvas (16 px margin),
+a 51.5 px corner radius and a soft shadow. The scalable SVG is made by `tools/nodalia-app-icon.py`
+in [nodalix-icon-theme](https://github.com/danielmigueltejedor/nodalix-icon-theme) and
+`packaging/icons.sh` renders the PNG sizes from it. macOS, the Windows `.ico` and the
+1024 px render keep the full-bleed tile. The window and taskbar icon on Windows is the 256 px
+hicolor PNG, so it has the Linux margin and shadow.
+
 ## Files
 
 - `photocraft.svg`: canonical master (traced at 2048 px).
-- `photocraft-small.svg`: lighter trace (traced at 1024 px); also the hicolor scalable icon.
+- `photocraft-small.svg`: lighter trace (traced at 1024 px).
 - `photocraft-1024.png`: 1024 px render on the macOS grid.
 - `photocraft.icns`: macOS bundle icon (`CFBundleIconFile`).
 - `photocraft.ico`: Windows icon, 16–256 px, embedded in the `.exe` by `apps/photocraft/build.rs`.
