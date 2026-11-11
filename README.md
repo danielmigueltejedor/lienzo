@@ -6,7 +6,7 @@
     </picture>
   </a>
   <br><br>
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/ai.storyteller.photocraft.png" width="160" alt="Lienzo">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/dev.danielmiguelt.Lienzo.png" width="160" alt="Lienzo">
   <h1>Lienzo</h1>
   <p><strong>The image editor of the Nodalia suite.</strong></p>
 
@@ -34,8 +34,19 @@
 **Lienzo** is the image editor of [Nodalia](https://getnodalia.com): a native app written in Rust
 for working in layers, with no account and no cloud. It runs on Linux, macOS and Windows.
 
+<p align="center">
+  <img src="docs/images/lienzo-demo.jpg" width="900" alt="Lienzo editing The Great Wave off Kanagawa, with adjustment layers in the Layers panel">
+</p>
+
+<p align="center">
+  <img src="docs/images/lienzo-adjustments.jpg" width="440" alt="A Curves adjustment layer in Lienzo">
+  <img src="docs/images/lienzo-light.jpg" width="440" alt="Lienzo in the light theme">
+</p>
+
 > [!IMPORTANT]
-> **Lienzo is at an early stage.** There are no published builds yet; the first will be 0.1.0.
+> **Lienzo is at an early stage.** The first release, 0.1.0, is for Linux:
+> [download it from the releases page](https://github.com/danielmigueltejedor/lienzo/releases/latest)
+> (AppImage, .deb, .rpm or .tar.gz).
 
 ## What it does
 
@@ -56,8 +67,6 @@ cd lienzo
 cargo run --release -p lienzo
 ```
 
-The crates and the binary still carry their original internal names; they will be renamed with
-the packages.
 
 ## Project status
 

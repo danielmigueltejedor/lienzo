@@ -134,6 +134,7 @@ Artwork shown in the screenshots (all public domain, via Wikimedia Commons; deta
 | `lienzo-transform.jpg` | *The Tetons and the Snake River*, Ansel Adams, 1942 (U.S. National Archives) | [Commons](https://commons.wikimedia.org/wiki/File:Adams_The_Tetons_and_the_Snake_River.jpg) |
 | `lienzo-type.jpg` | *Among the Sierra Nevada, California*, Albert Bierstadt, 1868 | [Commons](https://commons.wikimedia.org/wiki/File:Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg) |
 | `lienzo-export-light.jpg` | *The Kiss*, Gustav Klimt, 1907–1908 | [Commons](https://commons.wikimedia.org/wiki/File:Gustav_Klimt_016.jpg) |
+| `lienzo-light.jpg` | *Impression, Sunrise*, Claude Monet, 1872 | [Commons](https://commons.wikimedia.org/wiki/File:Monet_-_Impression,_Sunrise.jpg) |
 
 ## Test data (not committed, not shipped)
 
