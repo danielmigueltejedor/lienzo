@@ -1,9 +1,9 @@
 //! One background check at startup and a non-modal window for release information.
 
-use photocraft_engine::updates_cmds::Status;
+use lienzo_engine::updates_cmds::Status;
 use serde_json::Value;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 pub(crate) struct Runtime {
     startup_checked: bool,
@@ -25,7 +25,7 @@ impl Default for Runtime {
             startup_checked: false,
             notified_version: None,
             #[cfg(not(target_arch = "wasm32"))]
-            updater: craft_update::updater::Updater::new(&crate::UPDATE_APP, photocraft_engine::build_info::VERSION),
+            updater: craft_update::updater::Updater::new(&crate::UPDATE_APP, lienzo_engine::build_info::VERSION),
             #[cfg(not(target_arch = "wasm32"))]
             last_update: craft_update::updater::Status::Idle,
             #[cfg(not(target_arch = "wasm32"))]
@@ -36,17 +36,17 @@ impl Default for Runtime {
 
 /// The release the engine found, as `craft-update` knows it.
 #[cfg(not(target_arch = "wasm32"))]
-fn release_of(found: &photocraft_engine::updates_cmds::Release) -> craft_update::Release {
+fn release_of(found: &lienzo_engine::updates_cmds::Release) -> craft_update::Release {
     craft_update::Release {
         tag: format!("v{}", found.version),
         version: craft_update::parse_version(&found.version),
-        name: format!("PhotoCraft {}", found.version),
+        name: format!("Lienzo {}", found.version),
         html_url: found.url.clone(),
         ..Default::default()
     }
 }
 
-pub(crate) fn check(app: &mut PhotocraftApp, _ctx: &egui::Context, params: Value) -> Result<Value, String> {
+pub(crate) fn check(app: &mut LienzoApp, _ctx: &egui::Context, params: Value) -> Result<Value, String> {
     let before = app.session.updates.status.clone();
     let result = app.run("help.checkForUpdates", params);
     // A check that fails to start still shows its failure and Check Again; the command error
@@ -75,7 +75,7 @@ pub(crate) fn check(app: &mut PhotocraftApp, _ctx: &egui::Context, params: Value
     result
 }
 
-pub(crate) fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn tick(app: &mut LienzoApp, ctx: &egui::Context) {
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(read) = app.services.last_update.take() {
         use craft_update::updater::Status as Shown;
@@ -125,10 +125,10 @@ pub(crate) fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) fn show(_app: &mut PhotocraftApp, _ctx: &egui::Context) {}
+pub(crate) fn show(_app: &mut LienzoApp, _ctx: &egui::Context) {}
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let mut download: Option<String> = None;
     {
         let was_open = app.updates_rt.updater.prompt_open();
@@ -154,7 +154,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
         return;
     }
     let status = shown_status(app);
-    let dialog = craft_update::CheckResultDialog::new(&crate::UPDATE_APP, photocraft_engine::build_info::VERSION);
+    let dialog = craft_update::CheckResultDialog::new(&crate::UPDATE_APP, lienzo_engine::build_info::VERSION);
     match dialog.show(ctx, &status) {
         craft_update::CheckResultResponse::None => {}
         craft_update::CheckResultResponse::Close => {
@@ -173,7 +173,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// or ready, or a version the launcher keeps), else the last self-update's outcome, else the
 /// engine's check.
 #[cfg(not(target_arch = "wasm32"))]
-fn shown_status(app: &PhotocraftApp) -> craft_update::updater::Status {
+fn shown_status(app: &LienzoApp) -> craft_update::updater::Status {
     use craft_update::updater::Status as Shown;
     let updater = app.updates_rt.updater.status();
     if !app.ui.updates_open {
@@ -204,17 +204,17 @@ fn check_status(status: &Status) -> craft_update::updater::Status {
 mod tests {
     use super::*;
     use crate::{Services, menus};
-    use photocraft_engine::{Session, updates_cmds::Release};
+    use lienzo_engine::{Session, updates_cmds::Release};
     use std::sync::{Arc, Mutex, mpsc};
 
-    type Sender = Arc<Mutex<Option<mpsc::Sender<photocraft_engine::updates_cmds::CheckResult>>>>;
+    type Sender = Arc<Mutex<Option<mpsc::Sender<lienzo_engine::updates_cmds::CheckResult>>>>;
 
-    fn app() -> (PhotocraftApp, Arc<Mutex<u32>>, Sender) {
+    fn app() -> (LienzoApp, Arc<Mutex<u32>>, Sender) {
         let calls = Arc::new(Mutex::new(0));
         let count = calls.clone();
         let sender = Arc::new(Mutex::new(None));
         let tx = sender.clone();
-        let app = PhotocraftApp::new(
+        let app = LienzoApp::new(
             Session::new(),
             Services {
                 check_updates: Some(Box::new(move || {
@@ -229,7 +229,7 @@ mod tests {
         (app, calls, sender)
     }
 
-    fn at(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64) {
+    fn at(app: &mut LienzoApp, ctx: &egui::Context, time: f64) {
         let mut output = ctx.run_ui(egui::RawInput { time: Some(time), ..Default::default() }, |ui| tick(app, ui.ctx()));
         output.textures_delta.clear();
     }
@@ -287,7 +287,7 @@ mod tests {
         sender.lock().unwrap().as_ref().unwrap().send(Err("offline".into())).unwrap();
         at(&mut app, &ctx, 1.0);
         assert!(matches!(app.session.updates.status, Status::Failed { .. }));
-        let mut web = PhotocraftApp::new(Session::new(), Services::default());
+        let mut web = LienzoApp::new(Session::new(), Services::default());
         assert!(!menus::is_enabled(&web, "help.checkForUpdates"));
         at(&mut web, &ctx, 2.0);
         assert_eq!(web.session.updates.status, Status::Idle);
@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn press_escape(app: &mut PhotocraftApp, ctx: &egui::Context) {
+    fn press_escape(app: &mut LienzoApp, ctx: &egui::Context) {
         let escape = egui::Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE };
         let mut output = ctx.run_ui(egui::RawInput { events: vec![escape], ..Default::default() }, |ui| show(app, ui.ctx()));
         output.textures_delta.clear();
@@ -392,8 +392,7 @@ mod tests {
 
     #[test]
     fn a_manual_check_that_fails_to_start_opens_the_status_window() {
-        let mut app =
-            PhotocraftApp::new(Session::new(), Services { check_updates: Some(Box::new(|| Err("Could not start worker".into()))), ..Default::default() });
+        let mut app = LienzoApp::new(Session::new(), Services { check_updates: Some(Box::new(|| Err("Could not start worker".into()))), ..Default::default() });
         let ctx = egui::Context::default();
         let error = menus::invoke(&mut app, &ctx, "help.checkForUpdates", serde_json::json!({})).unwrap_err();
         assert!(error.contains("Could not start worker"), "{error}");
@@ -418,7 +417,7 @@ mod tests {
     fn update_window_is_drivable_and_bad_state_changes_are_atomic() {
         let (mut app, _, _) = app();
         let ctx = egui::Context::default();
-        let call = |app: &mut PhotocraftApp, method: &str, params: Value| {
+        let call = |app: &mut LienzoApp, method: &str, params: Value| {
             let (req, _) = crate::control::ControlRequest::new(method, params);
             match crate::control::handle(app, &ctx, &req) {
                 crate::control::Outcome::Done(value) => value,

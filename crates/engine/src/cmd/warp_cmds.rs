@@ -2,17 +2,17 @@
 //!
 //! A warp is a [`Warp`] (preset style + bend/distortions, or a custom bicubic Bezier mesh)
 //! defined over a source box in document space. Pixel layers are resampled once
-//! (`photocraft_algo::warp`); smart objects store the warp in their source space and re-render
+//! (`lienzo_algo::warp`); smart objects store the warp in their source space and re-render
 //! from the source, so editing a smart object's warp never degrades it.
 //!
 //! The split and grid commands edit a mesh: either one passed in (`"warp"`, returned edited —
 //! what the Free Transform warp UI uses) or the active smart object's stored warp (a history step).
 
-use photocraft_algo::transform::{Homography, Interp};
-use photocraft_algo::warp::{warp_mesh_gray, warp_mesh_surface_with};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, Locks, Rect};
-use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_algo::transform::{Homography, Interp};
+use lienzo_algo::warp::{warp_mesh_gray, warp_mesh_surface_with};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, Locks, Rect};
+use lienzo_geom::warp::{BezierMesh, Warp, WarpStyle};
+use lienzo_raster::{Interrupt, Surface};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -275,7 +275,7 @@ fn warp_layer(
                         let warped = warp_mesh_surface_with(surf, rect, &map, interp, ctl).ok_or(EngineError::Cancelled)?;
                         cancelled(ctl)?;
                         // Tiles are shared, so a surface that has alpha already costs nothing to copy.
-                        let mut rest = if fmt.alpha { surf.clone() } else { surf.convert(photocraft_color::PixelFormat::new(fmt.mode, fmt.sample, true)) };
+                        let mut rest = if fmt.alpha { surf.clone() } else { surf.convert(lienzo_color::PixelFormat::new(fmt.mode, fmt.sample, true)) };
                         crate::pixels::try_clear_surface(&mut rest, rect, None)?;
                         if rest.content_bounds().is_empty() {
                             // The box held all of the layer: the warp is the whole result.
@@ -408,14 +408,14 @@ fn target(s: &Session, cmd: &str, p: &Value) -> Result<(LayerId, Rect)> {
 
 /// The Warp Text settings a transform warp gives a type layer: a preset style (or none) keeps the
 /// type editable, as Photoshop's Edit › Transform › Warp on type does (#3004).
-fn type_warp(cmd: &str, w: &Warp) -> Result<Option<photocraft_doc::text::TextWarp>> {
+fn type_warp(cmd: &str, w: &Warp) -> Result<Option<lienzo_doc::text::TextWarp>> {
     let clamp = |v: f64| if v.is_finite() { v.clamp(-100.0, 100.0) as f32 } else { 0.0 };
     match w.style {
         WarpStyle::None => Ok(None),
         WarpStyle::Custom if w.is_identity() => Ok(None),
         WarpStyle::Custom => Err(bad(cmd, "type can only take a warp style (arc, flag, …); a custom mesh needs rasterized type")),
         WarpStyle::Cylinder => Err(bad(cmd, "type can only take a warp style (arc, flag, …); a cylinder needs rasterized type")),
-        s => Ok(Some(photocraft_doc::text::TextWarp {
+        s => Ok(Some(lienzo_doc::text::TextWarp {
             style: s.psd_name().into(),
             value: clamp(w.bend),
             horizontal_distortion: clamp(w.h_distort),

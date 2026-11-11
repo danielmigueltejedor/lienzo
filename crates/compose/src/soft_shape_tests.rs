@@ -2,10 +2,10 @@
 //! against Photoshop's measured pixels and against a fill layer with an equal vector mask.
 
 use super::*;
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath, VectorMask};
-use photocraft_doc::{Fill, Layer, LayerContent};
-use photocraft_geom::Size;
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath, VectorMask};
+use lienzo_doc::{Fill, Layer, LayerContent};
+use lienzo_geom::Size;
 
 /// Photoshop: new 200×200 white RGB document, a black 100×100 rectangle shape at 50..150 with a
 /// 10 px vector-mask feather, row y = 100 at x = 30, 33, …, 72 (8-bit grey levels).
@@ -23,7 +23,7 @@ fn doc(depth: SampleType) -> Document {
 fn shape_doc(depth: SampleType, density: f32, feather: f32, stroke: Option<ShapeStroke>) -> Document {
     let mut d = doc(depth);
     let mut sh = ShapeLayer { path: square(), fill: Some(Fill::Solid(Color::BLACK)), stroke, density, feather, ..ShapeLayer::default() };
-    sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+    sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
     d.layers.push(Layer::new("Rectangle 1", LayerContent::Shape(sh)));
     d
 }
@@ -166,7 +166,7 @@ fn soft_shape_bounds_cover_the_fill() {
 fn soft_shape_frame_skips_a_subtracted_margin() {
     let canvas = Rect::new(0, 0, 200, 200);
     let mut cut = Subpath::polygon(&[(40.0, 40.0), (160.0, 40.0), (160.0, 140.0), (40.0, 140.0)]);
-    cut.op = photocraft_doc::vector::PathOp::Subtract;
+    cut.op = lienzo_doc::vector::PathOp::Subtract;
     let path = Path::new(vec![Subpath::polygon(&[(50.0, 50.0), (150.0, 50.0), (150.0, 150.0), (50.0, 150.0)]), cut]);
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let sh = ShapeLayer { path: path.clone(), fill: Some(Fill::Solid(Color::BLACK)), density: 0.5, feather: 4.0, ..ShapeLayer::default() };

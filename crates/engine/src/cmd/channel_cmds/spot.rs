@@ -19,7 +19,7 @@ pub(super) fn merge_spot(s: &mut Session, p: &Value) -> Result<Value> {
     s.edit("Merge Spot Channel", |doc, active| {
         let area = doc.bounds();
         let fmt = doc.pixel_format();
-        let comp = photocraft_compose::render(doc, area);
+        let comp = lienzo_compose::render(doc, area);
         let k = read_plane(&doc.channels[i].surface, area);
         let ink = ink.to_rgb();
         // Ink over the image: opaque at 100% solidity, multiplied (transparent ink) at 0%.

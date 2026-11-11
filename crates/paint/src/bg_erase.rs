@@ -4,9 +4,9 @@
 //! Colours are compared in the surface's own colour channels (RGB, CMYK, Gray, Lab… at any depth),
 //! so nothing is converted through RGB; only alpha changes.
 
-use photocraft_color::{ColorMode, SampleType, read_sample, write_sample};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba};
+use lienzo_color::{ColorMode, SampleType, read_sample, write_sample};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba};
 use serde::{Deserialize, Serialize};
 
 use crate::Stroke;
@@ -310,7 +310,7 @@ mod decontamination_tests;
 mod tests {
     use super::*;
     use crate::{BrushSettings, StrokePoint};
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
 
     const GREEN: [f32; 4] = [0.2, 0.6, 0.2, 1.0];
     const BLUE: [f32; 4] = [0.1, 0.1, 0.5, 1.0];

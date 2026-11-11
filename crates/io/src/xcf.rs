@@ -10,7 +10,7 @@
 //! profile), the embedded ICC profile, resolution, guides, the comment, extra channels and the
 //! saved selection; indexed images open as RGB. Text, vector and link layers open as their pixels;
 //! non-destructive layer effects, paths and floating selections are reported, not applied.
-//! Write: not supported (GIMP's own format; `.pcraft` keeps everything PhotoCraft holds).
+//! Write: not supported (GIMP's own format; `.pcraft` keeps everything Lienzo holds).
 //!
 //! The reader is written from the specification and from files GIMP 3.2 writes; no GIMP code.
 
@@ -21,11 +21,11 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 
-use photocraft_codecs::f16;
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document, LabelColor, Layer, LayerContent, LayerMask};
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_codecs::f16;
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{AlphaChannel, Document, LabelColor, Layer, LayerContent, LayerMask};
+use lienzo_geom::{Rect, Size};
+use lienzo_raster::{Interrupt, Surface};
 
 use crate::ora::Warnings;
 use crate::{ImportResult, IoError};
@@ -813,13 +813,13 @@ pub(crate) fn import(name: &str, bytes: &[u8], ctl: &Interrupt<'_>) -> Result<Im
             if icc.is_some() {
                 image.warnings.note("the linear-light image's own profile was replaced by linear gray");
             }
-            Some(photocraft_cms::builtin::linear_gray().to_bytes())
+            Some(lienzo_cms::builtin::linear_gray().to_bytes())
         }
         (true, icc, _) => {
             if icc.is_some() {
                 image.warnings.note("the linear-light image's own profile was replaced by linear sRGB");
             }
-            Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes())
+            Some(lienzo_cms::Builtin::LinearSrgb.profile().to_bytes())
         }
         (false, Some(icc), _) => Some(Arc::new(icc)),
         (false, None, _) => None,
@@ -837,19 +837,19 @@ pub(crate) fn import(name: &str, bytes: &[u8], ctl: &Interrupt<'_>) -> Result<Im
 
 fn add_document_warnings(image: &mut Image<'_>, document: &Document, precision: Precision, linear_compositing: bool) {
     // GIMP clips a layer in any mode but Normal to the layers beneath it, so it shows nothing where
-    // they are transparent; PhotoCraft (like Photoshop) shows it there. Only tell when there is
+    // they are transparent; Lienzo (like Photoshop) shows it there. Only tell when there is
     // transparency to show through: a bottom layer that is not opaque.
     if image.clipped_to_backdrop > 0 && document.layers.first().is_some_and(|l| !l.locks.transparency || l.is_group()) {
         image.warnings.note(&format!(
-            "{} layer(s) use a mode GIMP clips to the layers beneath; where those are transparent GIMP shows nothing and PhotoCraft shows the layer",
+            "{} layer(s) use a mode GIMP clips to the layers beneath; where those are transparent GIMP shows nothing and Lienzo shows the layer",
             image.clipped_to_backdrop
         ));
     }
-    // GIMP blends and composites in linear light by default (since 2.10); PhotoCraft, like
+    // GIMP blends and composites in linear light by default (since 2.10); Lienzo, like
     // Photoshop, in the document's own encoding, so semi-transparent edges and most blend modes
     // render a little differently. Layers set to a perceptual space in GIMP match.
     if !precision.linear && linear_compositing {
-        image.warnings.note("GIMP composites this image in linear light; PhotoCraft composites in gamma-encoded RGB, so blends and soft edges differ slightly");
+        image.warnings.note("GIMP composites this image in linear light; Lienzo composites in gamma-encoded RGB, so blends and soft edges differ slightly");
     }
     if document.layers.is_empty() {
         image.warnings.note("the XCF file has no layers");
@@ -948,7 +948,7 @@ impl<'a> Image<'a> {
         let mut composite_mode = 0i32;
         let mut composite_space = 0i32;
         let mut blend_space = 0i32;
-        let mut locks = photocraft_doc::Locks::default();
+        let mut locks = lienzo_doc::Locks::default();
         let mut tag = LabelColor::None;
         for p in &lprops {
             let v = be_u32(p.data).unwrap_or(0);

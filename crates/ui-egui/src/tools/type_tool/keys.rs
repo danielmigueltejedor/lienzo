@@ -9,18 +9,18 @@ use super::ime::{
 use super::ime_edit::{ime_delete_bytes, ime_delete_chars, ime_update};
 use super::layout::layout;
 use super::pointer::word_boundary;
-use super::{LayerId, PhotocraftApp, byte_of, current_text, json, text_char_count, text_layer};
+use super::{LayerId, LienzoApp, byte_of, current_text, json, text_char_count, text_layer};
 
 /// Caret on the neighbouring line (±1; a column in vertical type), keeping the position
 /// along the line. Works in line space, so it serves both orientations.
-fn line_step(app: &mut PhotocraftApp, id: LayerId, caret: usize, dir: i32) -> usize {
+fn line_step(app: &mut LienzoApp, id: LayerId, caret: usize, dir: i32) -> usize {
     let Some((l, _, text)) = layout(app, id) else { return caret };
     let x = l.caret(byte_of(&text, caret)).0;
-    photocraft_text::line_step(&l, &text, caret, x, dir)
+    lienzo_text::line_step(&l, &text, caret, x, dir)
 }
 
-pub(super) fn is_vertical(app: &PhotocraftApp, id: LayerId) -> bool {
-    app.session.active().and_then(|s| text_layer(&s.doc, id)).is_some_and(|t| t.orientation == photocraft_doc::text::Orientation::Vertical)
+pub(super) fn is_vertical(app: &LienzoApp, id: LayerId) -> bool {
+    app.session.active().and_then(|s| text_layer(&s.doc, id)).is_some_and(|t| t.orientation == lienzo_doc::text::Orientation::Vertical)
 }
 
 /// Arrow keys follow the text flow: in vertical type ↑/↓ move along the column (previous/next
@@ -41,14 +41,14 @@ pub(crate) fn flow_key(key: egui::Key, vertical: bool) -> egui::Key {
 }
 
 /// Line start / end for the caret's line.
-fn line_edge(app: &mut PhotocraftApp, id: LayerId, caret: usize, end: bool) -> usize {
+fn line_edge(app: &mut LienzoApp, id: LayerId, caret: usize, end: bool) -> usize {
     let Some((l, _, text)) = layout(app, id) else { return caret };
-    photocraft_text::line_edge(&l, &text, caret, end)
+    lienzo_text::line_edge(&l, &text, caret, end)
 }
 
 /// Keyboard input while editing. Returns true when a type edit session is active (single-key
 /// tool shortcuts must then be skipped). Handled events are removed from the frame's input.
-pub fn handle_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn handle_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     bind_reset_context(app, ctx);
     // A receipt is only valid for the frame that produced it; never reuse last frame's.
     app.type_ime.frame = None;
@@ -231,7 +231,7 @@ struct EventFlow<'a> {
 }
 
 fn handle_pressed_key(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ctx: &egui::Context,
     raw_key: &egui::Key,
     modifiers: &egui::Modifiers,
@@ -302,7 +302,7 @@ fn handle_pressed_key(
     }
 }
 
-fn handle_style_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
+fn handle_style_key(app: &mut LienzoApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
     use egui::Key;
     match key {
         Key::K | Key::U | Key::B | Key::I | Key::Slash | Key::Questionmark if modifiers.command && modifiers.shift && !modifiers.alt => {
@@ -344,7 +344,7 @@ fn handle_style_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::M
     }
 }
 
-fn handle_delete_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
+fn handle_delete_key(app: &mut LienzoApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
     use egui::Key;
     if !matches!(key, Key::Backspace | Key::Delete) {
         return false;
@@ -371,7 +371,7 @@ fn handle_delete_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::
     true
 }
 
-fn handle_move_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
+fn handle_move_key(app: &mut LienzoApp, key: egui::Key, modifiers: &egui::Modifiers, edit: &KeyEditContext<'_>) -> bool {
     use egui::Key;
     let caret = edit.edit.caret;
     let (start, end) = edit.selection;
@@ -404,7 +404,7 @@ fn handle_move_key(app: &mut PhotocraftApp, key: egui::Key, modifiers: &egui::Mo
     }
 }
 
-fn set_caret(app: &mut PhotocraftApp, char_count: usize, caret: usize, extend: bool) {
+fn set_caret(app: &mut LienzoApp, char_count: usize, caret: usize, extend: bool) {
     if let Some(state) = app.ui.text_edit.as_mut() {
         if state.caret != caret.min(char_count) || (!extend && state.anchor != caret.min(char_count)) {
             app.ui.type_insertion_style = None;

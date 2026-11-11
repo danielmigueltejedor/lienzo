@@ -225,7 +225,7 @@ pub(crate) fn open_private(dir: &Path) -> std::io::Result<(File, PathBuf, bool)>
         .unwrap_or_default()
         .as_nanos()
         .saturating_add(COUNTER.fetch_add(1, Ordering::Relaxed) as u128);
-    let path = dir.join(format!("photocraft-{}-{n}.scratch", std::process::id()));
+    let path = dir.join(format!("lienzo-{}-{n}.scratch", std::process::id()));
     let mut options = std::fs::OpenOptions::new();
     options.read(true).write(true).create_new(true);
     #[cfg(unix)]
@@ -254,7 +254,7 @@ pub(crate) fn open_private(dir: &Path) -> std::io::Result<(File, PathBuf, bool)>
 /// Accept only the names we generate, never other temporary files or directories.
 #[cfg(any(unix, test))]
 fn scratch_pid(name: &str) -> Option<u32> {
-    let (pid, nonce) = name.strip_prefix("photocraft-")?.strip_suffix(".scratch")?.split_once('-')?;
+    let (pid, nonce) = name.strip_prefix("lienzo-")?.strip_suffix(".scratch")?.split_once('-')?;
     if pid.is_empty() || nonce.is_empty() || !pid.bytes().chain(nonce.bytes()).all(|b| b.is_ascii_digit()) {
         return None;
     }
@@ -370,14 +370,14 @@ mod tests {
 
     #[test]
     fn cleanup_names_are_strict() {
-        assert_eq!(scratch_pid("photocraft-123-987.scratch"), Some(123));
+        assert_eq!(scratch_pid("lienzo-123-987.scratch"), Some(123));
         for name in [
-            "photocraft-0-1.scratch",
-            "photocraft-1-.scratch",
-            "photocraft-1-../notes.scratch",
-            "photocraft-1-2.scratch.bak",
+            "lienzo-0-1.scratch",
+            "lienzo-1-.scratch",
+            "lienzo-1-../notes.scratch",
+            "lienzo-1-2.scratch.bak",
             "other-1-2.scratch",
-            "photocraft-4294967296-2.scratch",
+            "lienzo-4294967296-2.scratch",
         ] {
             assert_eq!(scratch_pid(name), None, "{name}");
         }
@@ -386,7 +386,7 @@ mod tests {
     #[cfg(any(unix, windows))]
     #[test]
     fn abrupt_exit_does_not_leave_permanent_scratch_files() {
-        const CHILD_DIR: &str = "PHOTOCRAFT_SCRATCH_EXIT_TEST_DIR";
+        const CHILD_DIR: &str = "LIENZO_SCRATCH_EXIT_TEST_DIR";
         if let Some(dir) = std::env::var_os(CHILD_DIR) {
             let file = ScratchFile::create(Path::new(&dir)).unwrap();
             file.write(b"unreleased pixels").unwrap();
@@ -422,10 +422,10 @@ mod tests {
         let own = ScratchFile::create(&dir).unwrap();
         let meta = own.main.metadata().unwrap();
         assert_eq!(meta.permissions().mode() & 0o777, 0o600);
-        let stale = dir.join("photocraft-123-1.scratch");
-        let live = dir.join("photocraft-124-1.scratch");
+        let stale = dir.join("lienzo-123-1.scratch");
+        let live = dir.join("lienzo-124-1.scratch");
         let unrelated = dir.join("notes.scratch");
-        let link = dir.join("photocraft-125-1.scratch");
+        let link = dir.join("lienzo-125-1.scratch");
         for p in [&stale, &live, &unrelated] {
             std::fs::write(p, b"test").unwrap();
         }
@@ -509,7 +509,7 @@ mod tests {
 
     #[test]
     fn file_roundtrip_and_crc() {
-        let dir = std::env::temp_dir().join("photocraft-scratch-test");
+        let dir = std::env::temp_dir().join("lienzo-scratch-test");
         let scratch = ScratchFile::create(&dir).unwrap();
         let a = scratch.write(b"hello tiles").unwrap();
         let b = scratch.write(&[7u8; 9000]).unwrap();

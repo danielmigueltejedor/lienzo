@@ -29,7 +29,7 @@ fn worst(a: &Surface, b: &Surface, r: Rect) -> f32 {
     a.read_region(r).iter().zip(b.read_region(r)).map(|(x, y)| (x - y).abs()).fold(0.0, f32::max)
 }
 
-fn smart(s: &Session) -> photocraft_doc::SmartObject {
+fn smart(s: &Session) -> lienzo_doc::SmartObject {
     let st = s.active().unwrap();
     match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
         LayerContent::Smart(sm) => sm.clone(),
@@ -113,7 +113,7 @@ fn puppet_identity_translation_and_undo() {
         let after = active_surface(&s);
         assert_eq!(after.content_bounds(), Rect::new(16, 14, 66, 44), "{depth}");
         assert!(
-            worst(&after.convert(before.format()), &photocraft_algo::resample::translate_surface(&before, 6, 4), Rect::new(16, 14, 66, 44)) <= 1.0 / 255.0,
+            worst(&after.convert(before.format()), &lienzo_algo::resample::translate_surface(&before, 6, 4), Rect::new(16, 14, 66, 44)) <= 1.0 / 255.0,
             "{depth}"
         );
         s.undo();
@@ -272,7 +272,7 @@ fn puppet_mesh_follows_the_outline_so_separate_shapes_move_separately() {
         let still = worst(&after, &before, lower);
         assert!(still <= 1.0 / 255.0, "{depth}: the unpinned bar stays ({still})");
         assert!(
-            worst(&after, &photocraft_algo::resample::translate_surface(&before, 0, -10), Rect::new(0, 0, 260, 60)) <= 1.0 / 255.0,
+            worst(&after, &lienzo_algo::resample::translate_surface(&before, 0, -10), Rect::new(0, 0, 260, 60)) <= 1.0 / 255.0,
             "{depth}: the pinned bar moves"
         );
     }
@@ -292,7 +292,7 @@ fn perspective_identity_known_homography_and_mask() {
         let after = active_surface(&s);
         assert_eq!(after.content_bounds(), Rect::new(15, 13, 65, 43));
         assert!(
-            worst(&after.convert(before.format()), &photocraft_algo::resample::translate_surface(&before, 5, 3), Rect::new(15, 13, 65, 43)) <= 1.0 / 255.0,
+            worst(&after.convert(before.format()), &lienzo_algo::resample::translate_surface(&before, 5, 3), Rect::new(15, 13, 65, 43)) <= 1.0 / 255.0,
             "{depth}"
         );
         s.undo();
@@ -485,7 +485,7 @@ fn a_stored_puppet_mesh_is_drawn_while_its_pins_hold() {
     let verts = [[8.0, 8.0], [62.0, 8.0], [62.0, 42.0], [8.0, 42.0]];
     let moved: Vec<[f64; 2]> = verts.iter().map(|v| [v[0] + 2.0, v[1] + 1.0]).collect();
     let mesh = json!({"pins": pins, "verts": verts, "deformed": moved, "tris": [[0, 1, 2], [0, 2, 3]]});
-    let shifted = |dx, dy| photocraft_algo::resample::translate_surface(&surf, dx, dy);
+    let shifted = |dx, dy| lienzo_algo::resample::translate_surface(&surf, dx, dy);
     let p = json!({"pins": pins, "interpolation": "bilinear", "mesh": mesh});
     let out = apply_to_surface(PUPPET_SMART, &p, &surf, canvas).unwrap();
     assert_eq!(out.content_bounds(), Rect::new(12, 11, 62, 41));
@@ -523,18 +523,18 @@ fn a_stored_puppet_mesh_is_drawn_only_on_the_placement_it_was_made_for() {
     let pins = json!([{"src": [30, 25], "dst": [36, 29]}]);
     let verts = [[8.0, 8.0], [62.0, 8.0], [62.0, 42.0], [8.0, 42.0]];
     let moved: Vec<[f64; 2]> = verts.iter().map(|v| [v[0] + 2.0, v[1] + 1.0]).collect();
-    let src = photocraft_doc::SmartSource::Linked { path: "x.png".into() };
-    let mut sm = photocraft_doc::SmartObject::new(src, photocraft_geom::Affine::IDENTITY, None);
+    let src = lienzo_doc::SmartSource::Linked { path: "x.png".into() };
+    let mut sm = lienzo_doc::SmartObject::new(src, lienzo_geom::Affine::IDENTITY, None);
     let mesh = json!({"pins": pins, "verts": verts, "deformed": moved, "tris": [[0, 1, 2], [0, 2, 3]], "placement": sm.placement_json()});
     let params = json!({"pins": pins, "interpolation": "bilinear", "mesh": mesh});
-    sm.smart_filters.push(SmartFilter { command: PUPPET_SMART.into(), params, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true });
-    let render = |sm: &photocraft_doc::SmartObject| crate::smart_cmds::apply_smart_filters(&surf, sm, canvas).unwrap().content_bounds();
+    sm.smart_filters.push(SmartFilter { command: PUPPET_SMART.into(), params, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true });
+    let render = |sm: &lienzo_doc::SmartObject| crate::smart_cmds::apply_smart_filters(&surf, sm, canvas).unwrap().content_bounds();
     assert_eq!(render(&sm), Rect::new(12, 11, 62, 41), "the stored mesh");
     let mut placed = sm.clone();
-    placed.transform = photocraft_geom::Affine { m: [1.0, 0.0, 0.0, 1.0, 4.0, 0.0] };
+    placed.transform = lienzo_geom::Affine { m: [1.0, 0.0, 0.0, 1.0, 4.0, 0.0] };
     assert_eq!(render(&placed), Rect::new(16, 14, 66, 44), "moved: solved");
     let mut warped = sm.clone();
-    warped.warp = Some(photocraft_geom::warp::Warp::preset(photocraft_geom::warp::WarpStyle::Arc, 10.0, [0.0, 0.0, 50.0, 30.0]));
+    warped.warp = Some(lienzo_geom::warp::Warp::preset(lienzo_geom::warp::WarpStyle::Arc, 10.0, [0.0, 0.0, 50.0, 30.0]));
     assert_eq!(render(&warped), Rect::new(16, 14, 66, 44), "warped: solved");
     // A mesh with no placement recorded is treated the same way.
     let mut bare = sm.clone();

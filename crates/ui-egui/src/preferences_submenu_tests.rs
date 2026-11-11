@@ -72,16 +72,16 @@ fn preferences_submenu_ids_are_unchanged() {
 fn engine_labels_match_the_catalogue_for_the_renamed_rows() {
     for id in ["edit.preferences.plugIns", "edit.preferences.rawDefaults"] {
         let catalogue = CATALOG.iter().find(|e| e.3 == id).unwrap_or_else(|| panic!("{id} missing from the catalogue")).1;
-        let engine = photocraft_engine::commands::find(id).unwrap_or_else(|| panic!("{id} missing from the engine")).label;
+        let engine = lienzo_engine::commands::find(id).unwrap_or_else(|| panic!("{id} missing from the engine")).label;
         assert_eq!(engine, catalogue, "{id}");
     }
-    assert_eq!(photocraft_engine::commands::find("edit.preferences.plugIns").unwrap().label, "Plugins…");
-    assert_eq!(photocraft_engine::commands::find("edit.preferences.rawDefaults").unwrap().label, "RAW Defaults…");
+    assert_eq!(lienzo_engine::commands::find("edit.preferences.plugIns").unwrap().label, "Plugins…");
+    assert_eq!(lienzo_engine::commands::find("edit.preferences.rawDefaults").unwrap().label, "RAW Defaults…");
 }
 
 #[test]
 fn preferences_dialog_page_names_follow_the_menu() {
-    let title = |key: &str| photocraft_engine::prefs::SECTIONS.iter().find(|(k, _)| *k == key).map(|(_, t)| *t);
+    let title = |key: &str| lienzo_engine::prefs::SECTIONS.iter().find(|(k, _)| *k == key).map(|(_, t)| *t);
     assert_eq!(title("plugIns"), Some("Plugins"));
     assert_eq!(title("rawDefaults"), Some("RAW Defaults"));
 }

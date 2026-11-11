@@ -3,7 +3,7 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Dialog, DialogKind};
 use crate::widgets::{ButtonRole, DialogButton, dialog_buttons};
 
@@ -20,7 +20,7 @@ pub(crate) fn is_folder_field(key: &str) -> bool {
 
 /// Browse… beside a path field of dialog `id`: a folder picker for folder fields
 /// ([`is_folder_field`]), a `.wasm` picker for Install Plug-in…'s `path`. The answer fills the field.
-fn browse_field(app: &mut PhotocraftApp, id: u64, fields: &serde_json::Map<String, Value>, key: &str) {
+fn browse_field(app: &mut LienzoApp, id: u64, fields: &serde_json::Map<String, Value>, key: &str) {
     let key = key.to_string();
     let r = if is_folder_field(&key) {
         app.ask_folder(move |app, path| fill_field(app, id, &key, path))
@@ -39,7 +39,7 @@ fn browse_field(app: &mut PhotocraftApp, id: u64, fields: &serde_json::Map<Strin
     }
 }
 
-fn fill_field(app: &mut PhotocraftApp, id: u64, key: &str, path: String) -> Result<Value, String> {
+fn fill_field(app: &mut LienzoApp, id: u64, key: &str, path: String) -> Result<Value, String> {
     let d = app.ui.dialog_mut(id).ok_or("the dialog was closed")?;
     d.fields.insert(key.into(), json!(path));
     Ok(Value::Null)
@@ -299,7 +299,7 @@ fn delete_prompt_body(ui: &mut egui::Ui, fields: &mut Fields) {
     }
 }
 
-fn command_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id, interactive: bool) -> Option<bool> {
+fn command_body(app: &mut LienzoApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id, interactive: bool) -> Option<bool> {
     let mut outcome: Option<bool> = None;
     match d.kind {
         _ if crate::open_prompt::owns_memory(fields) => crate::open_prompt::memory_body(ui, fields),
@@ -336,7 +336,7 @@ fn command_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: 
 }
 
 /// The rest of the command dialogs: files, colour, export, sizing, filters and forms.
-fn command_body_more(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id) -> Option<bool> {
+fn command_body_more(app: &mut LienzoApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id) -> Option<bool> {
     let mut outcome: Option<bool> = None;
     match d.kind {
         _ if crate::variables_ui::owns(fields) => crate::variables_ui::body(app, ui, fields),
@@ -373,7 +373,7 @@ fn command_body_more(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fie
     outcome
 }
 
-fn dialog_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id, interactive: bool) -> Option<bool> {
+fn dialog_body(app: &mut LienzoApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id, interactive: bool) -> Option<bool> {
     let mut outcome: Option<bool> = None;
     match d.kind {
         DialogKind::NewDocument => {
@@ -420,7 +420,7 @@ fn dialog_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &
 }
 
 /// A filter-style dialog: scrolling parameters with the in-dialog preview window under them.
-fn filter_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id) {
+fn filter_body(app: &mut LienzoApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut Fields, id: egui::Id) {
     // Color Settings: the monitor profile in use can change while it is open.
     if fields.get("__command").and_then(Value::as_str) == Some("edit.colorSettings") {
         fields.insert("__note".into(), Value::String(crate::monitor_status::note(app)));
@@ -453,7 +453,7 @@ fn filter_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, d: &Dialog, fields: &
 /// right-to-left layout. Returns what the buttons (or Enter) answered and whether Apply was hit.
 /// `popup_blocks_enter` is true when a web dialog has a popup open, which keeps Enter for the popup.
 fn button_row(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ui: &mut egui::Ui,
     d: &Dialog,
     fields: &mut Fields,
@@ -588,7 +588,7 @@ fn default_max_width(d: &Dialog, compact: bool, curves: bool, about_tabs: bool, 
     }
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     if crate::guide_edit::sync(app) {
         ctx.request_repaint();
     }
@@ -826,13 +826,13 @@ fn about_tab(fields: &serde_json::Map<String, Value>) -> &'static str {
 }
 
 /// One About tab's contents: the credits lists, or the product blurb and links.
-fn about_tab_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, tab: &str) {
+fn about_tab_body(app: &mut LienzoApp, ui: &mut egui::Ui, tab: &str) {
     match tab {
         "contributors" => crate::credits::contributors_ui(app, ui),
         "models" => crate::credits::models_ui(ui),
         _ => {
-            ui.label(tl!("PhotoCraft — an open-source, native image editor written in Rust."));
-            ui.label(crate::i18n::fmt(tl!("Version {version}"), &[("version", &photocraft_engine::build_info::long_version())]));
+            ui.label(tl!("Lienzo — an open-source, native image editor written in Rust."));
+            ui.label(crate::i18n::fmt(tl!("Version {version}"), &[("version", &lienzo_engine::build_info::long_version())]));
             ui.add_space(12.0);
             ui.vertical_centered(|ui| {
                 crate::links::discord_button(app, ui, 220.0);
@@ -840,7 +840,7 @@ fn about_tab_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, tab: &str) {
                 crate::links::link_row(app, ui);
             });
             ui.add_space(10.0);
-            ui.weak("egui · wgpu · photocraft-engine");
+            ui.weak("egui · wgpu · lienzo-engine");
         }
     }
 }
@@ -871,7 +871,7 @@ pub fn title(d: &Dialog) -> String {
     match d.kind {
         DialogKind::NewDocument => "New Document".into(),
         DialogKind::About if d.fields.get("systemInfo").and_then(Value::as_bool) == Some(true) => "System Info".into(),
-        DialogKind::About => "About PhotoCraft".into(),
+        DialogKind::About => "About Lienzo".into(),
         DialogKind::LayerStyle => "Layer Style".into(),
         DialogKind::Command => d.fields.get("__label").and_then(Value::as_str).unwrap_or("Command").trim_end_matches('…').to_string(),
         DialogKind::Error => "Error".into(),
@@ -955,7 +955,7 @@ fn file_command(fields: &Fields) -> Option<&'static str> {
 /// in their result's `errors`; the status bar and a notice say which files failed and why, so a run
 /// that fails on every file isn't silent (#10682). Each file is named by its whole path: files of
 /// the same name in different subfolders are told apart.
-fn report_file_errors(app: &mut PhotocraftApp, d: &Dialog, r: &Value) {
+fn report_file_errors(app: &mut LienzoApp, d: &Dialog, r: &Value) {
     let Some(errors) = r.get("errors").and_then(Value::as_array).filter(|e| !e.is_empty()) else { return };
     let lines: Vec<String> = errors
         .iter()
@@ -971,7 +971,7 @@ fn report_file_errors(app: &mut PhotocraftApp, d: &Dialog, r: &Value) {
 
 /// Confirm a command dialog no specific handler owns: run its `__command` with the dialog's
 /// parameters, then settle the filter preview and the playing action.
-fn confirm_generic_command(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, String> {
+fn confirm_generic_command(app: &mut LienzoApp, d: Dialog) -> Result<Value, String> {
     let Some(cmd) = d.fields.get("__command").and_then(Value::as_str).map(str::to_string) else {
         app.filter_preview = None;
         crate::actions::abandoned(app, &d.fields);
@@ -1050,7 +1050,7 @@ fn confirm_generic_command(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, 
 
 /// The checks before a dialog is confirmed: no open child picker, the automation gate for a handler
 /// that touches files itself, a valid guide layout, and Equalize's own document, layer and selection.
-pub(crate) fn confirm_preflight(app: &mut PhotocraftApp, id: u64) -> Result<(), String> {
+pub(crate) fn confirm_preflight(app: &mut LienzoApp, id: u64) -> Result<(), String> {
     if crate::layer_style::color_picker::has_child(app, id) {
         return Err("confirm or cancel the Layer Style color picker first".into());
     }
@@ -1085,7 +1085,7 @@ pub(crate) fn confirm_preflight(app: &mut PhotocraftApp, id: u64) -> Result<(), 
 /// Confirm a dialog: run its action and close it. Used by the OK button and by automation.
 /// Confirm a command dialog through the first handler whose marker its fields carry; the prompts
 /// and small editors are here, the rest in `confirm_command_more`.
-fn confirm_command(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, String> {
+fn confirm_command(app: &mut LienzoApp, d: Dialog) -> Result<Value, String> {
     if crate::actions::record_again::owns(&d.fields) || crate::actions::record_again::owns_dialog(app, d.id) {
         return crate::actions::record_again::confirm(app, d.id, &d.fields);
     }
@@ -1126,7 +1126,7 @@ fn confirm_command(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, String> 
 }
 
 /// The rest of the command dialogs: files, colour, preferences and export, then any other command.
-fn confirm_command_more(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, String> {
+fn confirm_command_more(app: &mut LienzoApp, d: Dialog) -> Result<Value, String> {
     match d.kind {
         _ if merge_channels_ui::owns(&d.fields) => merge_channels_ui::confirm(app, &d.fields),
         _ if crate::analysis_ui::owns_delete_note(&d.fields) => crate::analysis_ui::confirm_delete_note(app, &d.fields),
@@ -1145,7 +1145,7 @@ fn confirm_command_more(app: &mut PhotocraftApp, d: Dialog) -> Result<Value, Str
     }
 }
 
-pub fn confirm(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, id: u64) -> Result<Value, String> {
     confirm_preflight(app, id)?;
     let d = app.ui.close_dialog(id).ok_or_else(|| format!("no dialog {id}"))?;
     match d.kind {
@@ -1172,7 +1172,7 @@ pub fn confirm(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
 }
 
 /// Cancel a dialog and its dependent Layer Style picker, without applying edits.
-pub fn cancel(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
+pub fn cancel(app: &mut LienzoApp, id: u64) -> Result<Value, String> {
     let closed = app.ui.close_dialog(id).ok_or_else(|| format!("no dialog {id}"))?;
     dont_show_again::closed(app, &closed);
     crate::guide_edit::cancel(app, id);
@@ -1226,7 +1226,7 @@ pub fn cancel(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
 /// Open the parameter dialog of `command`: the Equalize choices when there is a selection, the
 /// adjustment editor for `image.adjustments.*`, the schema dialog for filters, the Color Range
 /// dialog for `select.colorRange`, otherwise a bare confirm dialog.
-pub fn open_command_dialog(app: &mut PhotocraftApp, command: &str, label: &str) -> u64 {
+pub fn open_command_dialog(app: &mut LienzoApp, command: &str, label: &str) -> u64 {
     if command == "view.newGuideLayout" {
         return crate::guide_layout_ui::open(app);
     }
@@ -1348,7 +1348,7 @@ mod preference_resize_tests {
     }
 
     /// Drags the dialog's resize grip (its frame's bottom-right corner) by `by`.
-    fn drag_corner(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, by: egui::Vec2) {
+    fn drag_corner(h: &mut egui_kittest::Harness<'_, LienzoApp>, by: egui::Vec2) {
         let corner = frame(h).max - egui::vec2(14.0, 14.0);
         h.event(egui::Event::PointerMoved(corner));
         h.step();
@@ -1360,14 +1360,14 @@ mod preference_resize_tests {
         h.run_steps(4);
     }
 
-    fn frame(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> egui::Rect {
+    fn frame(h: &egui_kittest::Harness<'_, LienzoApp>) -> egui::Rect {
         let rects: Vec<egui::Rect> = h.ctx.data(|m| m.get_temp(egui::Id::unique(RECTS))).unwrap();
         rects[0]
     }
 
     /// The button row sits in the frame's bottom-right corner (its order follows the platform):
     /// the contents fill the dialog, no empty space.
-    fn assert_buttons_in_corner(h: &egui_kittest::Harness<'_, PhotocraftApp>, when: &str) {
+    fn assert_buttons_in_corner(h: &egui_kittest::Harness<'_, LienzoApp>, when: &str) {
         use egui_kittest::kittest::Queryable;
         let f = frame(h);
         let row = ["OK", "Cancel", "Apply"].map(|l| h.get_by_label(l).rect()).into_iter().reduce(|a, b| a.union(b)).unwrap();
@@ -1380,7 +1380,7 @@ mod preference_resize_tests {
     fn preferences_contents_follow_the_dialog_when_it_is_resized() {
         // #7420: the dialog resized but its contents kept a size from the window, leaving the
         // buttons part-way up a dialog that opened, or was dragged, larger than them.
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         crate::prefs_ui::open_preferences(&mut app, "interface");
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).build_ui_state(
             |ui, app| {
@@ -1390,7 +1390,7 @@ mod preference_resize_tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, Default::default());
+        LienzoApp::setup_context(&h.ctx, Default::default());
         h.run_steps(5);
         assert_buttons_in_corner(&h, "on open");
         let opened = frame(&h);
@@ -1416,7 +1416,7 @@ mod preference_resize_tests {
                 s => out.push(s),
             }
         }
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         crate::prefs_ui::open_preferences(&mut app, "general");
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).build_ui_state(
             |ui, app| {
@@ -1426,7 +1426,7 @@ mod preference_resize_tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, Default::default());
+        LienzoApp::setup_context(&h.ctx, Default::default());
         h.run_steps(5);
         let mut shapes = Vec::new();
         h.output().shapes.iter().for_each(|s| find(&s.shape, &mut shapes));

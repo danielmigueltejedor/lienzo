@@ -4,11 +4,11 @@
 //! options as one history step; explicit params from Actions, CLI and MCP run the engine directly.
 
 use egui::{Align2, Sense, pos2, vec2};
-use photocraft_color::BlendMode;
-use photocraft_doc::LabelColor;
+use lienzo_color::BlendMode;
+use lienzo_doc::LabelColor;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 pub const NEW_GROUP: &str = "layer.new.group";
@@ -27,7 +27,7 @@ pub fn fronts(id: &str) -> bool {
 
 /// Photoshop's defaults: the next "Group N", no colour, Pass Through, 100 %. Unlike Stroke the
 /// choices are not remembered, as in Photoshop.
-pub fn fields(app: &PhotocraftApp, command: &str) -> Map<String, Value> {
+pub fn fields(app: &LienzoApp, command: &str) -> Map<String, Value> {
     let name = app.session.active().map(|st| st.doc.next_layer_name("Group")).unwrap_or_else(|| "Group 1".into());
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
@@ -41,7 +41,7 @@ pub fn fields(app: &PhotocraftApp, command: &str) -> Map<String, Value> {
     f
 }
 
-pub fn open(app: &mut PhotocraftApp, command: &str) -> u64 {
+pub fn open(app: &mut LienzoApp, command: &str) -> u64 {
     let f = fields(app, command);
     app.ui.open_dialog(crate::state::DialogKind::Command, f)
 }
@@ -51,7 +51,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
     Value::Object(KEYS.iter().filter_map(|k| f.get(*k).map(|v| (k.to_string(), v.clone()))).collect())
 }
 
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let command = f.get("__command").and_then(Value::as_str).filter(|c| fronts(c)).unwrap_or(NEW_GROUP).to_string();
     app.run(&command, params(f))
 }
@@ -108,7 +108,7 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     });
     ui.horizontal(|ui| {
         label(ui, tl!("Mode:"));
-        let mut mode = f.get("mode").and_then(Value::as_str).and_then(photocraft_engine::commands::blend_from_str).unwrap_or(BlendMode::PassThrough);
+        let mut mode = f.get("mode").and_then(Value::as_str).and_then(lienzo_engine::commands::blend_from_str).unwrap_or(BlendMode::PassThrough);
         let options = crate::panels::blend_options(true, mode);
         if crate::widgets::dropdown(ui, "new-group-mode", tl!("Mode"), &mut mode, &options, 130.0) {
             f.insert("mode".into(), json!(crate::dialog_blend_ui::mode_key(mode)));

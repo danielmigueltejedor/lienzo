@@ -1,8 +1,8 @@
 //! Per-document painting symmetry: straight presets or a sampled Bézier path.
 //! Path samples reflect across their nearest segment, including curved paths.
 
-use photocraft_doc::{LayerContent, vector::Path};
-use photocraft_paint::{
+use lienzo_doc::{LayerContent, vector::Path};
+use lienzo_paint::{
     StrokePoint,
     symmetry::{MAX_COORDINATE, PresetSymmetry, SymmetryMode},
 };
@@ -61,9 +61,9 @@ impl PaintingSymmetry {
     /// The symmetry after a canvas edit (crop, Canvas Size, Image Size, rotation) moved the pixels
     /// through `a`, so the axis stays on the same image content. `None` when it lands beyond the
     /// coordinate limits.
-    pub fn transform(&self, a: &photocraft_geom::Affine) -> Option<Self> {
+    pub fn transform(&self, a: &lienzo_geom::Affine) -> Option<Self> {
         let map = |[x, y]: [f64; 2]| {
-            let q = a.apply(photocraft_geom::Point::new(x, y));
+            let q = a.apply(lienzo_geom::Point::new(x, y));
             [q.x, q.y].into_iter().all(|v| v.is_finite() && v.abs() <= MAX_COORDINATE).then_some([q.x, q.y])
         };
         match self {
@@ -260,13 +260,13 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
 
     #[test]
     fn curved_axis_reflects_near_local_segment() {
         let mut subpath = Subpath::polyline(&[(10.0, 0.0), (10.0, 20.0)]);
-        subpath.knots[0].out_ctrl = photocraft_geom::Point::new(20.0, 0.0);
-        subpath.knots[1].in_ctrl = photocraft_geom::Point::new(20.0, 20.0);
+        subpath.knots[0].out_ctrl = lienzo_geom::Point::new(20.0, 0.0);
+        subpath.knots[1].in_ctrl = lienzo_geom::Point::new(20.0, 20.0);
         let axis = SymmetryAxis::from_path("work".into(), &Path::new(vec![subpath])).unwrap();
         assert!(axis.segments.len() > 1);
         let reflected = axis.reflect(StrokePoint::new(20.0, 10.0, 1.0));

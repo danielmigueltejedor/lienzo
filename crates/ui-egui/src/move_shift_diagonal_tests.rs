@@ -4,18 +4,18 @@
 //! Shift+drag +100,+30 moves +100,0 and Shift+drag +80,+80 moves +80,+80, each as one "Move"
 //! step. With Alt as well, the copy lands at the same offset.
 
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
 /// A 400x300 document with one painted layer covering (20, 20, 120, 80), selected. The drag
 /// starts inside it, so Auto-Select picks the same layer.
-fn app() -> (PhotocraftApp, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -33,11 +33,11 @@ fn app() -> (PhotocraftApp, LayerId) {
     (app, id)
 }
 
-fn bounds(app: &PhotocraftApp, id: LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: LayerId) -> Rect {
     app.session.active().unwrap().doc.layer(id).unwrap().surface().unwrap().content_bounds()
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     let mid = [from[0] + by[0] / 2.0, from[1] + by[1] / 2.0];
     crate::canvas::tool_event(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, mods);

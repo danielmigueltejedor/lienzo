@@ -6,11 +6,11 @@
 //!
 //! The prompt is an ordinary dialog in the UI state: `ui.dialog.confirm` replaces the file and
 //! `ui.dialog.cancel` keeps it. The file dialog stays open until it is answered
-//! ([`PhotocraftApp::file_dialog_open`]).
+//! ([`LienzoApp::file_dialog_open`]).
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::file_open::display_name;
 use crate::state::DialogKind;
 
@@ -22,7 +22,7 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 
 /// Opens the prompt about `path`, the file a save writes to for `answered`, the save dialog's
 /// answer.
-pub(crate) fn open(app: &mut PhotocraftApp, answered: &str, path: &str) {
+pub(crate) fn open(app: &mut LienzoApp, answered: &str, path: &str) {
     let message = crate::i18n::fmt(tl!("“{name}” already exists. Replace it?"), &[("name", display_name(path).as_str())]);
     let detail = crate::i18n::fmt(tl!("The name in the save dialog was “{name}”."), &[("name", display_name(answered).as_str())]);
     let fields = json!({MARK: true, "__label": "Save", "message": message, "detail": detail, "path": path});
@@ -36,11 +36,11 @@ pub fn body(ui: &mut egui::Ui, fields: &Map<String, Value>) {
 }
 
 /// Replace: the save the prompt held back.
-pub fn confirm(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp) -> Result<Value, String> {
     app.answer_replace(true)
 }
 
 /// Cancel: nothing is written.
-pub fn cancel(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn cancel(app: &mut LienzoApp) -> Result<Value, String> {
     app.answer_replace(false)
 }

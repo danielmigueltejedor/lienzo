@@ -1,7 +1,7 @@
 use super::*;
 
 /// The first raw waiting for the open-time dialog, taken off its filmstrip.
-fn take_queued(app: &mut PhotocraftApp) -> Option<RawOpen> {
+fn take_queued(app: &mut LienzoApp) -> Option<RawOpen> {
     (!app.raw_shelf.is_empty()).then(|| app.raw_shelf.remove(0).raw)
 }
 
@@ -21,21 +21,21 @@ fn hue_tracks_run_between_the_neighbouring_bands() {
 
 #[test]
 fn preview_texture_uses_linear_document_display_encoding() {
-    let mut doc = photocraft_doc::Document::new("test", photocraft_geom::Size::new(1, 1), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::F32);
-    doc.icc_profile = Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes());
-    let mut color = photocraft_engine::color_cmds::ColorState::default();
+    let mut doc = lienzo_doc::Document::new("test", lienzo_geom::Size::new(1, 1), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::F32);
+    doc.icc_profile = Some(lienzo_cms::Builtin::LinearSrgb.profile().to_bytes());
+    let mut color = lienzo_engine::color_cmds::ColorState::default();
     color.settings.monitor_profile = "srgb".into();
     let display = color.canvas_display(&doc).unwrap();
     let px = [[0.25, 0.25, 0.25, 1.0]];
     let preview = CameraRawDialog::image(&px, 1, 1, &display);
-    let expected = display.to_rgba8(&photocraft_compose::Buffer::filled(Rect::new(0, 0, 1, 1), px[0]));
+    let expected = display.to_rgba8(&lienzo_compose::Buffer::filled(Rect::new(0, 0, 1, 1), px[0]));
     assert_eq!(preview.pixels[0].to_array(), expected.pixels[..4]);
     assert_ne!(preview.pixels[0].r(), 64, "linear light must be encoded before display");
 }
 
 #[test]
 fn histogram_follows_preview_and_view_changes_do_not_render_or_edit() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -65,14 +65,14 @@ fn histogram_follows_preview_and_view_changes_do_not_render_or_edit() {
 /// it is drawn in; the overlay fallback (`embed_viewports`) keeps the dialog open.
 #[test]
 fn closing_the_camera_raw_window_cancels() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#808080"})).unwrap();
     let steps = app.session.active().unwrap().history.past_len();
-    let frame = |app: &mut PhotocraftApp, close: bool| {
+    let frame = |app: &mut LienzoApp, close: bool| {
         let mut input = egui::RawInput::default();
         if close {
             let info = input.viewports.entry(egui::ViewportId::ROOT).or_default();
@@ -92,8 +92,8 @@ fn closing_the_camera_raw_window_cancels() {
 }
 
 /// A layer with tonal variation, a selection over part of it and the dialog open on it.
-fn worker_app() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn worker_app() -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -170,8 +170,8 @@ fn a_stale_worker_never_replaces_a_newer_synchronous_render() {
 #[test]
 fn a_dialog_edit_develops_off_the_ui_thread() {
     let (mut app, ctx) = worker_app();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
-    let frame = |app: &mut PhotocraftApp| {
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
+    let frame = |app: &mut LienzoApp| {
         ctx.run_ui(egui::RawInput::default(), |ui| show(app, ui.ctx())).textures_delta.clear();
     };
     frame(&mut app);
@@ -194,18 +194,18 @@ fn a_dialog_edit_develops_off_the_ui_thread() {
 #[test]
 fn a_worker_failure_is_reported_until_the_next_frame() {
     let (mut app, ctx) = worker_app();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
-    let frame = |app: &mut PhotocraftApp| {
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
+    let frame = |app: &mut LienzoApp| {
         ctx.run_ui(egui::RawInput::default(), |ui| show(app, ui.ctx())).textures_delta.clear();
     };
-    let fail = |app: &mut PhotocraftApp| {
+    let fail = |app: &mut LienzoApp| {
         let (tx, rx) = std::sync::mpsc::channel();
         tx.send(Err("RAW Develop preview failed".to_string())).unwrap();
         let d = app.camera_raw.as_mut().unwrap();
         d.pending = Some(rx);
         d.dirty = false;
     };
-    let edit = |app: &mut PhotocraftApp, exposure: f32| {
+    let edit = |app: &mut LienzoApp, exposure: f32| {
         let d = app.camera_raw.as_mut().unwrap();
         d.params.exposure = exposure;
         d.dirty = true;
@@ -243,7 +243,7 @@ fn a_worker_failure_is_reported_until_the_next_frame() {
 
 #[test]
 fn smart_filter_double_click_edits_the_stored_camera_raw_filter_in_its_own_dialog() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -254,8 +254,8 @@ fn smart_filter_double_click_edits_the_stored_camera_raw_filter_in_its_own_dialo
     app.run("filter.cameraRaw", json!({"exposure": 1.0, "contrast": 20})).unwrap();
     app.run("layer.smartFilter.setParams", json!({"index": 0, "params": {"pointCurve": legacy}})).unwrap();
     let layer = app.session.active().unwrap().active_layer.unwrap();
-    let smart = |app: &PhotocraftApp| match &app.session.active().unwrap().doc.layer(layer).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.clone(),
+    let smart = |app: &LienzoApp| match &app.session.active().unwrap().doc.layer(layer).unwrap().content {
+        lienzo_doc::LayerContent::Smart(sm) => sm.clone(),
         _ => panic!("not a smart object"),
     };
     let steps = app.session.active().unwrap().history.past_len();
@@ -293,12 +293,12 @@ fn smart_filter_double_click_edits_the_stored_camera_raw_filter_in_its_own_dialo
 
 #[test]
 fn distant_sparse_pixels_cannot_trigger_an_unbounded_proxy_scan() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":64,"height":48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let layer = app.session.active().unwrap().active_layer.unwrap();
-    let mut source = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut source = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     source.write_region(Rect::new(30_000, 30_000, 30_001, 30_001), &[0.5, 0.5, 0.5, 1.0]);
     let result = open_pixels(&mut app, &ctx, layer, source, CameraRaw::default(), Coverage::None, Target::NewFilter);
     assert!(result.unwrap_err().contains("bounds are too large"));
@@ -307,7 +307,7 @@ fn distant_sparse_pixels_cannot_trigger_an_unbounded_proxy_scan() {
 
 #[test]
 fn dialog_drives_the_engine() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -330,25 +330,25 @@ fn dialog_drives_the_engine() {
 }
 
 /// An app whose importer is the real one, opening a synthetic DNG.
-fn raw_app() -> (PhotocraftApp, Vec<u8>) {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+fn raw_app() -> (LienzoApp, Vec<u8>) {
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let services = crate::Services {
-        import: Some(Box::new(|name: &str, b: &[u8], opts: &photocraft_io::ImportOptions| {
-            photocraft_io::import_with_options(name, b, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+        import: Some(Box::new(|name: &str, b: &[u8], opts: &lienzo_io::ImportOptions| {
+            lienzo_io::import_with_options(name, b, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
         })),
         ..Default::default()
     };
     let (w, h) = (48, 32);
     let mut spec = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 30000));
     spec.as_shot_neutral = Some([0.5, 1.0, 0.7]);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     // The pixel comparisons below read the developed ProPhoto values: no conversion on open
     // (Camera Raw Defaults › Color space is Adobe RGB otherwise).
     app.run("prefs.set", json!({"path": "rawDefaults.colorSpace", "value": "proPhoto"})).unwrap();
     (app, spec.build())
 }
 
-fn mean_red(app: &PhotocraftApp) -> f32 {
+fn mean_red(app: &LienzoApp) -> f32 {
     let st = app.session.active().unwrap();
     let s = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap();
     (0..8).map(|i| s.rgba(4 + i * 4, 16)[0]).sum::<f32>() / 8.0
@@ -359,7 +359,7 @@ fn raw_opens_in_camera_raw_and_open_redevelops() {
     let (mut app, dng) = raw_app();
     let ctx = egui::Context::default();
     let warnings = app.open_bytes("IMG_0001.dng", &dng).unwrap();
-    assert!(warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE)), "{warnings:?}");
+    assert!(warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE)), "{warnings:?}");
     // A raw has no embedded profile (ProPhoto RGB is the space it is developed into), so Ask
     // When Opening (on by default) has nothing to ask about.
     assert!(app.ui.dialogs.is_empty(), "no profile prompt for a raw");
@@ -377,11 +377,11 @@ fn raw_opens_in_camera_raw_and_open_redevelops() {
     assert_eq!(app.session.documents().len(), 1);
     let st = app.session.active().unwrap();
     assert_eq!(st.saved_revision, st.revision, "Open leaves the document unmodified");
-    assert_eq!(st.doc.depth, photocraft_color::SampleType::U16);
+    assert_eq!(st.doc.depth, lienzo_color::SampleType::U16);
     assert!(mean_red(&app) > before + 0.05, "{before} → {}", mean_red(&app));
 }
 
-fn pixels(app: &PhotocraftApp) -> Vec<f32> {
+fn pixels(app: &LienzoApp) -> Vec<f32> {
     let st = app.session.active().unwrap();
     let s = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap();
     (0..32).flat_map(|y| (0..48).map(move |x| (x, y))).flat_map(|(x, y)| s.rgba(x, y)).collect()
@@ -429,7 +429,7 @@ fn the_demosaic_method_is_chosen_at_open() {
     let document = app.session.active().unwrap().doc.id;
     queue_open_dialog(&mut app, document, "IMG_0004.dng", None, Some(&dng), &warnings).unwrap();
     let raw = take_queued(&mut app).unwrap();
-    use photocraft_io::raw::Demosaic;
+    use lienzo_io::raw::Demosaic;
     assert_eq!((raw.developed_with, raw.demosaic), (Demosaic::Bilinear, Demosaic::Bilinear));
 }
 
@@ -505,7 +505,7 @@ fn background_redevelop_keeps_the_tab_position_and_view() {
     assert_eq!(docs.len(), 3);
     assert_eq!((docs[0].doc.size.width, docs[2].doc.size.width), (10, 12), "the other tabs keep their places");
     assert_ne!(docs[1].doc.id, old_id, "re-developed");
-    assert_eq!(docs[1].doc.depth, photocraft_color::SampleType::U16);
+    assert_eq!(docs[1].doc.depth, lienzo_color::SampleType::U16);
     assert_eq!(docs[1].saved_revision, docs[1].revision, "Open leaves the document unmodified");
     assert_eq!(app.session.active_index(), Some(1));
     assert_eq!(app.ui.views[1].zoom, 3.0, "the view carries over to the re-developed document");
@@ -685,7 +685,7 @@ fn a_raw_whose_background_develop_fails_comes_back_to_the_filmstrip() {
 /// it the same settings either way: a fine pattern that a sparse sample misreads shows it.
 #[test]
 fn auto_tone_of_a_never_shown_raw_matches_the_dialogs() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("prefs.set", json!({"path": "rawDefaults.applyAutoTone", "value": true})).unwrap();
     app.run("file.new", json!({"width": 1800, "height": 1200})).unwrap();
@@ -694,17 +694,17 @@ fn auto_tone_of_a_never_shown_raw_matches_the_dialogs() {
     let id = st.doc.layers.iter().find(|l| l.surface().is_some()).unwrap().id;
     st.active_layer = Some(id);
     let document = st.doc.id;
-    let Some(photocraft_doc::LayerContent::Raster(s)) = std::sync::Arc::make_mut(&mut st.doc).layer_mut(id).map(|l| &mut l.content) else {
+    let Some(lienzo_doc::LayerContent::Raster(s)) = std::sync::Arc::make_mut(&mut st.doc).layer_mut(id).map(|l| &mut l.content) else {
         panic!("a pixel layer")
     };
     let format = s.format();
-    let (dark, light) = (photocraft_raster::from_rgba(&format, [0.1, 0.1, 0.1, 1.0]), photocraft_raster::from_rgba(&format, [0.9, 0.9, 0.9, 1.0]));
+    let (dark, light) = (lienzo_raster::from_rgba(&format, [0.1, 0.1, 0.1, 1.0]), lienzo_raster::from_rgba(&format, [0.9, 0.9, 0.9, 1.0]));
     for y in 0..1200 {
         for x in 0..1800 {
             s.write_pixel(x, y, if (x + y) % 2 == 0 { &dark } else { &light });
         }
     }
-    let method = photocraft_io::raw::Demosaic::Ahd;
+    let method = lienzo_io::raw::Demosaic::Ahd;
     let raw = RawOpen { document, name: "pattern.dng".into(), path: None, bytes: None, developed_with: method, demosaic: method, crop: None };
     let (unshown, _) = filmstrip::first_settings(&app, &raw);
     open_raw(&mut app, &ctx, raw).unwrap();
@@ -740,7 +740,7 @@ fn cancel_closes_the_raw_and_the_preference_skips_the_dialog() {
             &mut app,
             &ctx,
             RawOpen {
-                document: photocraft_doc::DocId(u64::MAX),
+                document: lienzo_doc::DocId(u64::MAX),
                 name: "x".into(),
                 path: None,
                 bytes: None,
@@ -770,10 +770,10 @@ fn calibration_changes_the_preview_and_round_trips_through_xmp() {
         d.processed.iter().zip(&before).any(|(a, b)| (a[0] - b[0]).abs() > 0.01 || (a[1] - b[1]).abs() > 0.01),
         "the Calibration panel changes the preview"
     );
-    let xmp = photocraft_io::camera_raw_xmp::save(&d.params);
+    let xmp = lienzo_io::camera_raw_xmp::save(&d.params);
     assert!(xmp.contains("crs:ShadowTint=\"+100\"") && xmp.contains("crs:RedHue=\"+100\"") && xmp.contains("crs:BlueSaturation=\"-100\""), "{xmp}");
     let mut back = CameraRaw::default();
-    photocraft_io::camera_raw_xmp::load(&mut back, xmp.as_bytes()).unwrap();
+    lienzo_io::camera_raw_xmp::load(&mut back, xmp.as_bytes()).unwrap();
     assert_eq!((back.shadow_tint, back.calibration_hue, back.calibration_sat), (100.0, [100.0, 0.0, 0.0], [0.0, 0.0, -100.0]));
     assert!(menu(&mut app, &ctx, "filter.cameraRaw", &json!({"ui": {"auto": "yes"}})).unwrap().is_err(), "auto must be a boolean");
 }
@@ -802,7 +802,7 @@ fn auto_sets_the_light_sliders_from_the_image() {
 fn a_sidecar_fills_the_dialog_and_open_writes_it_back() {
     use std::sync::{Arc, Mutex};
     let (mut app, dng) = raw_app();
-    let dir = std::env::temp_dir().join(format!("photocraft-sidecar-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-sidecar-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let raw_path = dir.join("IMG_0008.cr2").to_string_lossy().into_owned();
@@ -811,7 +811,7 @@ fn a_sidecar_fills_the_dialog_and_open_writes_it_back() {
     assert_eq!(sidecar_path("/a/b.c/noext"), "/a/b.c/noext.xmp");
     std::fs::write(
         sidecar_path(&raw_path),
-        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"PhotoCraft\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description xmlns:crs=\"http://ns.adobe.com/camera-raw-settings/1.0/\" crs:Exposure2012=\"+1.50\" crs:ShadowTint=\"20\" crs:Temperature=\"5500\"/></rdf:RDF></x:xmpmeta>",
+        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"Lienzo\"><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><rdf:Description xmlns:crs=\"http://ns.adobe.com/camera-raw-settings/1.0/\" crs:Exposure2012=\"+1.50\" crs:ShadowTint=\"20\" crs:Temperature=\"5500\"/></rdf:RDF></x:xmpmeta>",
     )
     .unwrap();
     type Written = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
@@ -876,12 +876,12 @@ fn camera_raw_defaults_apply_when_a_raw_opens() {
     app.open_bytes("IMG_0010.dng", &dng).unwrap();
     assert!(app.raw_shelf.is_empty());
     let st = app.session.active().unwrap();
-    assert_eq!(st.doc.depth, photocraft_color::SampleType::U8, "Bit depth 8");
+    assert_eq!(st.doc.depth, lienzo_color::SampleType::U8, "Bit depth 8");
     assert_eq!(st.doc.resolution_dpi, 240.0, "Resolution");
-    let profile = st.doc.icc_profile.as_deref().and_then(|p| photocraft_cms::Profile::parse(p).ok()).map(|p| p.description).unwrap_or_default();
+    let profile = st.doc.icc_profile.as_deref().and_then(|p| lienzo_cms::Profile::parse(p).ok()).map(|p| p.description).unwrap_or_default();
     assert!(profile.to_lowercase().contains("srgb"), "Color space: {profile}");
     let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
-    assert!(matches!(layer.content, photocraft_doc::LayerContent::Smart(_)), "Open as Smart Object");
+    assert!(matches!(layer.content, lienzo_doc::LayerContent::Smart(_)), "Open as Smart Object");
     assert_eq!(st.saved_revision, st.revision, "the defaults are part of opening: unmodified");
     // The dialog's Open applies them too, and reports what it applied.
     app.run("prefs.set", json!({"values": {"rawDefaults.openInCameraRaw": true, "rawDefaults.openAsSmartObject": false, "rawDefaults.bitDepth": "16"}}))
@@ -894,7 +894,7 @@ fn camera_raw_defaults_apply_when_a_raw_opens() {
     assert_eq!(r["defaults"], json!(["sharpenFor", "colorSpace"]), "{r}");
     assert!(r.get("filter").is_some(), "Sharpen For is a RAW Develop step: {r}");
     let st = app.session.active().unwrap();
-    assert_eq!(st.doc.depth, photocraft_color::SampleType::U16);
+    assert_eq!(st.doc.depth, lienzo_color::SampleType::U16);
     assert_eq!(st.saved_revision, st.revision);
 }
 
@@ -922,9 +922,9 @@ const LIGHTROOM_SIDECAR: &str = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="
 /// `raw_app` whose `write` service records what it is asked to write, and a raw file in a fresh
 /// folder with `sidecar` beside it when given. Returns the app, the raw's bytes, the folder,
 /// the raw's path and the recorded writes.
-fn raw_with_sidecar(tag: &str, sidecar: Option<&str>) -> (PhotocraftApp, Vec<u8>, std::path::PathBuf, String, Written) {
+fn raw_with_sidecar(tag: &str, sidecar: Option<&str>) -> (LienzoApp, Vec<u8>, std::path::PathBuf, String, Written) {
     let (mut app, dng) = raw_app();
-    let dir = std::env::temp_dir().join(format!("photocraft-sidecar-{tag}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-sidecar-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let raw_path = dir.join("IMG_0100.cr2").to_string_lossy().into_owned();
@@ -942,7 +942,7 @@ fn raw_with_sidecar(tag: &str, sidecar: Option<&str>) -> (PhotocraftApp, Vec<u8>
 }
 
 /// Opens the raw at `raw_path` in the open-time dialog, as File › Open does.
-fn open_dialog_at(app: &mut PhotocraftApp, ctx: &egui::Context, dng: &[u8], raw_path: &str) {
+fn open_dialog_at(app: &mut LienzoApp, ctx: &egui::Context, dng: &[u8], raw_path: &str) {
     app.open_bytes("IMG_0100.cr2", dng).unwrap();
     let mut raw = take_queued(app).unwrap();
     raw.path = Some(raw_path.to_string());
@@ -950,11 +950,11 @@ fn open_dialog_at(app: &mut PhotocraftApp, ctx: &egui::Context, dng: &[u8], raw_
 }
 
 /// The notices about the sidecar (the open's own import notes aside).
-fn notice_titles(app: &PhotocraftApp) -> Vec<String> {
+fn notice_titles(app: &LienzoApp) -> Vec<String> {
     app.ui.notices.iter().map(|n| n.title.clone()).filter(|t| t.contains(".xmp")).collect()
 }
 
-/// A Lightroom or Bridge sidecar holds settings PhotoCraft can't keep (crop, masks, rating,
+/// A Lightroom or Bridge sidecar holds settings Lienzo can't keep (crop, masks, rating,
 /// keywords): Open uses its develop settings but never writes over it, and says so.
 #[test]
 fn a_foreign_sidecar_is_never_overwritten() {
@@ -971,7 +971,7 @@ fn a_foreign_sidecar_is_never_overwritten() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Bridge writes a sidecar with only a rating (no Camera Raw settings): it is not PhotoCraft's
+/// Bridge writes a sidecar with only a rating (no Camera Raw settings): it is not Lienzo's
 /// to replace, with or without a change in the dialog.
 #[test]
 fn a_rating_only_sidecar_is_left_alone() {
@@ -991,13 +991,13 @@ fn a_rating_only_sidecar_is_left_alone() {
 
 /// #9985: the crop of a Lightroom sidecar crops the opened raw (with the dialog's Open and
 /// without the dialog), and neither its edges nor the raw's file name are named as unsupported.
-/// A straightened crop isn't applied and is named. PhotoCraft's own sidecar keeps the crop.
+/// A straightened crop isn't applied and is named. Lienzo's own sidecar keeps the crop.
 #[test]
 fn a_sidecar_crop_crops_the_opened_raw() {
     let lightroom = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/" crs:RawFileName="IMG_0100.cr2" crs:HasCrop="True" crs:CropTop="0.25" crs:CropLeft="0.125" crs:CropBottom="0.75" crs:CropRight="0.625" crs:CropAngle="0"/></rdf:RDF></x:xmpmeta>"#;
     let (mut app, dng, dir, raw_path, written) = raw_with_sidecar("crop", Some(lightroom));
     let ctx = egui::Context::default();
-    let size = |app: &PhotocraftApp| app.session.active().map(|st| (st.doc.size.width, st.doc.size.height));
+    let size = |app: &LienzoApp| app.session.active().map(|st| (st.doc.size.width, st.doc.size.height));
     open_dialog_at(&mut app, &ctx, &dng, &raw_path);
     assert!(app.ui.status.contains("IMG_0100.xmp") && !app.ui.status.contains("not supported"), "{}", app.ui.status);
     assert_eq!(size(&app), Some((48, 32)), "the dialog previews the whole frame");
@@ -1016,16 +1016,16 @@ fn a_sidecar_crop_crops_the_opened_raw() {
     assert!(app.ui.status.contains("CropAngle") && !app.ui.status.contains("RawFileName"), "{}", app.ui.status);
     menu(&mut app, &ctx, "filter.cameraRaw", &json!({"ui": {"commit": true}})).unwrap().unwrap();
     assert_eq!(size(&app), Some((48, 32)));
-    // PhotoCraft's own sidecar: a changed setting rewrites it, with the crop it was opened with.
-    let crop = photocraft_io::camera_raw_xmp::Crop { top: 0.25, left: 0.125, bottom: 0.75, right: 0.625 };
-    std::fs::write(sidecar_path(&raw_path), photocraft_io::camera_raw_xmp::save_with_crop(&CameraRaw::default(), Some(crop))).unwrap();
+    // Lienzo's own sidecar: a changed setting rewrites it, with the crop it was opened with.
+    let crop = lienzo_io::camera_raw_xmp::Crop { top: 0.25, left: 0.125, bottom: 0.75, right: 0.625 };
+    std::fs::write(sidecar_path(&raw_path), lienzo_io::camera_raw_xmp::save_with_crop(&CameraRaw::default(), Some(crop))).unwrap();
     open_dialog_at(&mut app, &ctx, &dng, &raw_path);
     menu(&mut app, &ctx, "filter.cameraRaw", &json!({"ui": {"set": {"contrast": 15}, "commit": true}})).unwrap().unwrap();
     assert_eq!(size(&app), Some((24, 16)));
     let w = written.lock().unwrap().clone();
     assert_eq!(w.len(), 1);
     let mut back = CameraRaw::default();
-    let r = photocraft_io::camera_raw_xmp::load(&mut back, &w[0].1).unwrap();
+    let r = lienzo_io::camera_raw_xmp::load(&mut back, &w[0].1).unwrap();
     assert_eq!((back.contrast, r.crop), (15.0, Some(crop)));
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -1076,7 +1076,7 @@ fn opening_without_the_dialog_does_not_rewrite_the_sidecar() {
 /// develops the raw but writes no sidecar. The same Open from the dialog does.
 #[test]
 fn a_control_request_never_writes_the_sidecar() {
-    fn allow(_: &str, _: &Value) -> photocraft_engine::Result<()> {
+    fn allow(_: &str, _: &Value) -> lienzo_engine::Result<()> {
         Ok(())
     }
     let (mut app, dng, dir, raw_path, written) = raw_with_sidecar("control", None);
@@ -1109,16 +1109,16 @@ fn a_sidecar_write_error_stays_reported() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-fn open_with_settings(app: &mut PhotocraftApp, ctx: &egui::Context, dng: &[u8], name: &str) {
+fn open_with_settings(app: &mut LienzoApp, ctx: &egui::Context, dng: &[u8], name: &str) {
     app.open_bytes(name, dng).unwrap();
     let raw = take_queued(app).unwrap();
     open_raw(app, ctx, raw).unwrap();
     menu(app, ctx, "filter.cameraRaw", &json!({"ui": {"set": {"exposure": 0.5, "contrast": 60, "saturation": 40, "vibrance": 30}}})).unwrap().unwrap();
 }
 
-fn profile_name(app: &PhotocraftApp) -> String {
+fn profile_name(app: &LienzoApp) -> String {
     let st = app.session.active().unwrap();
-    st.doc.icc_profile.as_deref().and_then(|p| photocraft_cms::Profile::parse(p).ok()).map(|p| p.description).unwrap_or_default()
+    st.doc.icc_profile.as_deref().and_then(|p| lienzo_cms::Profile::parse(p).ok()).map(|p| p.description).unwrap_or_default()
 }
 
 /// Camera Raw renders in its own space and converts to the workflow space last, so Open gives
@@ -1197,10 +1197,10 @@ fn two_raws_opened_back_to_back_both_finish_their_open() {
 /// one byte larger, is not read (a pipe or device named like one would never end).
 #[test]
 fn sidecars_are_read_from_small_regular_files_only() {
-    let dir = std::env::temp_dir().join(format!("photocraft-sidecar-bounded-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-sidecar-bounded-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("folder.xmp")).unwrap();
-    let cap = photocraft_io::camera_raw_xmp::MAX_XMP_BYTES;
+    let cap = lienzo_io::camera_raw_xmp::MAX_XMP_BYTES;
     let (fits, larger) = (dir.join("fits.xmp"), dir.join("larger.xmp"));
     std::fs::write(&fits, vec![b' '; cap]).unwrap();
     std::fs::write(&larger, vec![b' '; cap + 1]).unwrap();
@@ -1239,9 +1239,9 @@ fn save_and_load_settings_round_trip_through_xmp_files() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let ctx = egui::Context::default();
-    let frame = |app: &mut PhotocraftApp| app.poll_file_dialog(&egui::Context::default(), None);
+    let frame = |app: &mut LienzoApp| app.poll_file_dialog(&egui::Context::default(), None);
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#808080"})).unwrap();
@@ -1297,7 +1297,7 @@ fn done_saves_the_sidecar_and_opens_nothing() {
     let w = written.lock().unwrap().clone();
     assert_eq!(w.len(), 1);
     let mut back = CameraRaw::default();
-    photocraft_io::camera_raw_xmp::load(&mut back, &w[0].1).unwrap();
+    lienzo_io::camera_raw_xmp::load(&mut back, &w[0].1).unwrap();
     assert_eq!((back.contrast, back.clarity), (20.0, 15.0));
     // Done is only for raws being opened, and checked before anything else in the request
     // changes the dialog.

@@ -6,7 +6,7 @@
 use egui::{Color32, Stroke, vec2};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 use crate::theme::Tokens;
@@ -25,7 +25,7 @@ pub(crate) fn alt_flipped(tool: Tool, alt: bool) -> Tool {
 /// Clone Stamp / Healing Brush params for the options bar and the clone source (without
 /// `points` and `target`): shared by the live preview and the commit. `None` when no source
 /// point is set yet.
-pub(crate) fn clone_params(app: &PhotocraftApp) -> Option<Value> {
+pub(crate) fn clone_params(app: &LienzoApp) -> Option<Value> {
     let o = &app.ui.tool_options;
     // The options bar's Mode is the tool's own brush's.
     let mode = crate::blend_keys::brush_tool_mode(app.ui.tool, app.session.tools.brush.mode);
@@ -50,13 +50,13 @@ pub(crate) fn clone_params(app: &PhotocraftApp) -> Option<Value> {
 /// History Brush params for the live preview and the commit (without `points` and `target`): the
 /// options bar's Mode and the tool's own brush. For an Eraser with Erase to History they also
 /// carry `eraseToHistory` and the Eraser's Pencil or Block tip.
-pub(crate) fn history_brush_params(app: &PhotocraftApp) -> Value {
+pub(crate) fn history_brush_params(app: &LienzoApp) -> Value {
     history_brush_params_with(app, app.ui.tool_options.erase_to_history)
 }
 
 /// [`history_brush_params`], with Erase to History on whatever the option says: ⌥ reverses the
 /// option for one stroke.
-fn history_brush_params_with(app: &PhotocraftApp, erase_to_history: bool) -> Value {
+fn history_brush_params_with(app: &LienzoApp, erase_to_history: bool) -> Value {
     // The tool's tip goes in the params: the session's brush changes with the tool, if a tool key
     // is pressed mid-stroke.
     let brush = &app.session.tools.brush;
@@ -73,7 +73,7 @@ fn history_brush_params_with(app: &PhotocraftApp, erase_to_history: bool) -> Val
     // (`remembered_settings`, as each tool's remembered brush); only with a sampled tip or pattern
     // too big for that, not yet in the preset store, does the brush go in full. `square` is
     // written out even when off.
-    let mut whole = photocraft_engine::brush_cmds::remembered_settings(brush).or_else(|| serde_json::to_value(brush).ok()).unwrap_or(Value::Null);
+    let mut whole = lienzo_engine::brush_cmds::remembered_settings(brush).or_else(|| serde_json::to_value(brush).ok()).unwrap_or(Value::Null);
     if let Some(o) = whole.as_object_mut() {
         o.insert("square".into(), json!(brush.square));
         p["brush"] = whole;
@@ -95,13 +95,13 @@ fn history_brush_params_with(app: &PhotocraftApp, erase_to_history: bool) -> Val
 }
 
 /// The options a stroke of `tool` keeps from its press (`canvas::Drag::history_params`).
-pub(crate) fn history_params_at_press(app: &PhotocraftApp, tool: Tool, alt: bool) -> Option<Value> {
+pub(crate) fn history_params_at_press(app: &LienzoApp, tool: Tool, alt: bool) -> Option<Value> {
     (tool == Tool::HistoryBrush).then(|| history_brush_params_with(app, alt != app.ui.tool_options.erase_to_history))
 }
 
 /// The command and options-bar params (without `points` and `target`) of a sequential-dab tool:
 /// Blur, Sharpen, Smudge, Dodge, Burn, Sponge. Shared by the live preview and the commit.
-pub(crate) fn dab_params(app: &PhotocraftApp, tool: Tool) -> Option<(&'static str, Value)> {
+pub(crate) fn dab_params(app: &LienzoApp, tool: Tool) -> Option<(&'static str, Value)> {
     let o = &app.ui.tool_options;
     Some(match tool {
         Tool::Blur => ("paint.blur", json!({"strength": o.strength, "sampleAllLayers": o.sample_all.blur})),
@@ -119,7 +119,7 @@ pub(crate) fn dab_params(app: &PhotocraftApp, tool: Tool) -> Option<(&'static st
 /// `paint.colorReplacement` params from the options bar (without `points`): shared by the live
 /// preview and the commit. The replacement `color` is the foreground, recorded so a replayed
 /// stroke paints the same colour; Background Swatch sampling matches the background colour.
-pub(crate) fn color_replacement_params(app: &PhotocraftApp) -> Value {
+pub(crate) fn color_replacement_params(app: &LienzoApp) -> Value {
     let o = &app.ui.tool_options;
     json!({
         "color": app.session.tools.foreground,
@@ -138,7 +138,7 @@ pub(crate) fn color_replacement_params(app: &PhotocraftApp) -> Value {
 /// `paint.patternStamp` params from the options bar and the Patterns panel (without `points` and
 /// `target`): shared by the live preview and the commit. The jitter `seed` comes from the stroke's
 /// first point, so the live stroke (which starts with only that point) and the commit agree.
-pub(crate) fn pattern_stamp_params(app: &PhotocraftApp, points: &[[f64; 3]]) -> Value {
+pub(crate) fn pattern_stamp_params(app: &LienzoApp, points: &[[f64; 3]]) -> Value {
     let o = &app.ui.tool_options;
     let mut p = json!({
         "aligned": o.pattern_stamp_aligned,
@@ -154,7 +154,7 @@ pub(crate) fn pattern_stamp_params(app: &PhotocraftApp, points: &[[f64; 3]]) -> 
     {
         p["phase"] = json!(ph);
     }
-    if let Some(id) = photocraft_engine::presets::patterns::current(&app.session).or(app.session.patterns.items.first()).map(|x| x.id.clone()) {
+    if let Some(id) = lienzo_engine::presets::patterns::current(&app.session).or(app.session.patterns.items.first()).map(|x| x.id.clone()) {
         p["pattern"] = json!(id);
     }
     p
@@ -166,16 +166,16 @@ pub(crate) fn pattern_stamp_params(app: &PhotocraftApp, points: &[[f64; 3]]) -> 
 pub(crate) fn stroke_seed(points: &[[f64; 3]]) -> u64 {
     // Position only: a pen tap raises the first point's pressure on release (#1798).
     let first = points.first().map(|p| json!([p[0], p[1]]).to_string()).unwrap_or_default();
-    photocraft_engine::paint::rng::seed_from_bytes(first.as_bytes())
+    lienzo_engine::paint::rng::seed_from_bytes(first.as_bytes())
 }
 
 /// Finish a stroke with a retouching tool. Returns false if `tool` isn't one.
-pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers, line: bool) -> bool {
+pub fn finish_stroke(app: &mut LienzoApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers, line: bool) -> bool {
     finish_stroke_with(app, tool, points, mods, line, None)
 }
 
 /// [`finish_stroke`], with a History Brush stroke's options as they were at the press.
-pub(crate) fn finish_stroke_with(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers, line: bool, history: Option<Value>) -> bool {
+pub(crate) fn finish_stroke_with(app: &mut LienzoApp, tool: Tool, points: &[[f64; 3]], mods: egui::Modifiers, line: bool, history: Option<Value>) -> bool {
     let o = app.ui.tool_options.clone();
     let pts = json!(points);
     let (cmd, mut p): (&str, Value) = match tool {
@@ -261,20 +261,20 @@ fn remove_params(o: &crate::state::ToolOptions, composite: bool) -> Value {
 /// redirect the queued strokes to a different layer or colour component.
 #[derive(Clone, PartialEq)]
 pub(crate) struct RemoveTarget {
-    doc: photocraft_doc::DocId,
-    layer: Option<photocraft_doc::LayerId>,
-    channel: photocraft_engine::channel_cmds::ChannelTarget,
+    doc: lienzo_doc::DocId,
+    layer: Option<lienzo_doc::LayerId>,
+    channel: lienzo_engine::channel_cmds::ChannelTarget,
     paint: Value,
 }
 
-fn remove_target(app: &PhotocraftApp) -> Option<RemoveTarget> {
+fn remove_target(app: &LienzoApp) -> Option<RemoveTarget> {
     let st = app.session.active()?;
     Some(RemoveTarget { doc: st.doc.id, layer: st.active_layer, channel: st.channel_view.target, paint: crate::canvas::paint_target(app) })
 }
 
 /// Remove after each stroke off: a finished stroke waits with the others, tinted on the canvas,
 /// until ↩ or the options bar's ✓ applies them all as one removal (Esc or ⊘ drops them).
-pub fn remove_pending_add(app: &mut PhotocraftApp, points: &[[f64; 3]]) {
+pub fn remove_pending_add(app: &mut LienzoApp, points: &[[f64; 3]]) {
     let Some(target) = remove_target(app) else { return };
     let Some(st) = app.session.active() else { return };
     let size = [st.doc.size.width, st.doc.size.height];
@@ -287,7 +287,7 @@ pub fn remove_pending_add(app: &mut PhotocraftApp, points: &[[f64; 3]]) {
     // the brush changes before ↩.
     let b = &app.session.tools.brush;
     let entry = json!({"points": points, "size": b.size, "hardness": b.hardness * 100.0, "spacing": b.spacing * 100.0});
-    let brush = || photocraft_engine::retouch_cmds::stroke_brush(&app.session.tools.brush, &entry);
+    let brush = || lienzo_engine::retouch_cmds::stroke_brush(&app.session.tools.brush, &entry);
     app.remove_trail.get_or_insert_with(|| crate::stroke_trail::Trail::new(size)).feed_stroke_reach(points, brush);
     app.remove_pending.push(entry);
     app.ui.status = crate::i18n::fmt(tl!("Strokes to remove: {n} (Enter applies, Esc cancels)"), &[("n", &app.remove_pending.len().to_string())]);
@@ -295,7 +295,7 @@ pub fn remove_pending_add(app: &mut PhotocraftApp, points: &[[f64; 3]]) {
 }
 
 /// Apply the waiting strokes as one removal (one job, one undo step). False when none wait.
-pub fn remove_pending_commit(app: &mut PhotocraftApp) -> bool {
+pub fn remove_pending_commit(app: &mut LienzoApp) -> bool {
     // Enter can arrive before the next canvas frame checks pending-stroke lifetime.
     if !remove_pending_live(app) {
         return false;
@@ -315,7 +315,7 @@ pub fn remove_pending_commit(app: &mut PhotocraftApp) -> bool {
 }
 
 /// Drop the waiting strokes. False when none wait.
-pub fn remove_pending_cancel(app: &mut PhotocraftApp) -> bool {
+pub fn remove_pending_cancel(app: &mut LienzoApp) -> bool {
     if app.remove_pending.is_empty() {
         return false;
     }
@@ -329,7 +329,7 @@ pub fn remove_pending_cancel(app: &mut PhotocraftApp) -> bool {
 
 /// Whether Remove strokes are still waiting: they are dropped when the tool or the document
 /// changed under them (checked every frame).
-pub fn remove_pending_live(app: &mut PhotocraftApp) -> bool {
+pub fn remove_pending_live(app: &mut LienzoApp) -> bool {
     if app.remove_pending.is_empty() {
         return false;
     }
@@ -341,7 +341,7 @@ pub fn remove_pending_live(app: &mut PhotocraftApp) -> bool {
 }
 
 /// The tint of the waiting Remove strokes, drawn every frame.
-pub fn draw_remove_pending(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_remove_pending(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     if !remove_pending_live(app) {
         return;
     }
@@ -355,7 +355,7 @@ pub fn draw_remove_pending(app: &mut PhotocraftApp, painter: &egui::Painter, xf:
 
 /// Patch Tool and Content-Aware Move Tool: a drag that starts inside the selection (without ⇧ or
 /// ⌥) drags the selection; any other drag draws a lasso selection.
-pub fn patch_drags_selection(app: &PhotocraftApp, at: [f64; 2], mods: egui::Modifiers) -> bool {
+pub fn patch_drags_selection(app: &LienzoApp, at: [f64; 2], mods: egui::Modifiers) -> bool {
     if mods.shift || mods.alt {
         return false;
     }
@@ -368,7 +368,7 @@ pub fn patch_drags_selection(app: &PhotocraftApp, at: [f64; 2], mods: egui::Modi
 /// until the release (#11024). Adding, subtracting and intersecting keep it visible. A drag pressed
 /// on another document hides nothing, even before `cancel_stale` drops it (the active document can
 /// change between `sync_views` and the canvas paint).
-pub fn patch_replaces_selection(app: &PhotocraftApp) -> bool {
+pub fn patch_replaces_selection(app: &LienzoApp) -> bool {
     app.drag.as_ref().is_some_and(|d| {
         matches!(d.tool, Tool::Patch | Tool::ContentAwareMove)
             && d.document.as_ref().is_none_or(|doc| doc.is_active(app))
@@ -381,7 +381,7 @@ pub fn patch_replaces_selection(app: &PhotocraftApp) -> bool {
 /// is active it is dropped, so it neither hides that document's selection nor lassos or patches it
 /// on release, and its own document shows its selection again (#11024). A document reopened with
 /// the same ID is another one too.
-pub fn cancel_stale(app: &mut PhotocraftApp) {
+pub fn cancel_stale(app: &mut LienzoApp) {
     if app.drag.as_ref().is_some_and(|d| matches!(d.tool, Tool::Patch | Tool::ContentAwareMove) && d.document.as_ref().is_some_and(|doc| !doc.is_active(app))) {
         app.drag = None;
     }
@@ -400,7 +400,7 @@ pub fn patch_end(d: &crate::canvas::Drag, end: [f64; 2]) -> [f64; 2] {
 
 /// Whole-pixel offset for a drag from `start` to `end`, limited so the dragged outline stays on the
 /// canvas (the engine rejects a patch or move that leaves it).
-pub fn patch_offset(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) -> [i32; 2] {
+pub fn patch_offset(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2]) -> [i32; 2] {
     let (dx, dy) = ((end[0] - start[0]).round(), (end[1] - start[1]).round());
     let (dx, dy) = if dx.is_finite() && dy.is_finite() { (dx.clamp(-1e7, 1e7) as i32, dy.clamp(-1e7, 1e7) as i32) } else { (0, 0) };
     let Some((canvas, sel)) = app.session.active().and_then(|st| Some((st.doc.bounds(), st.doc.selection.clone()?))) else { return [dx, dy] };
@@ -416,13 +416,13 @@ pub fn patch_offset(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) -> 
 /// Status-bar hint for the Patch and Content-Aware Move tools: the selection is the patch and it
 /// has to be dragged somewhere. Without it a lasso, or a click inside the selection, changes
 /// nothing on the canvas and the tool looks dead (#1715).
-pub fn patch_hint(app: &mut PhotocraftApp) {
+pub fn patch_hint(app: &mut LienzoApp) {
     app.ui.status = tl!("Now drag the selection onto another area").into();
     app.ui.status_error = false;
 }
 
 /// Patch Tool: the patch was dragged from `start` to `end`.
-pub fn finish_patch(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) {
+pub fn finish_patch(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2]) {
     let off = patch_offset(app, start, end);
     if off == [0, 0] {
         patch_hint(app);
@@ -459,7 +459,7 @@ pub fn finish_patch(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) {
 /// Content-Aware Move Tool: the selection was dragged from `start` to `end`. The engine runs it as
 /// a background job (progress dialog, Esc cancels); the selection follows the content. With
 /// Transform On Drop a transform box comes up on the dropped patch first ([`crate::cam_transform`]).
-pub fn finish_content_aware_move(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) {
+pub fn finish_content_aware_move(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2]) {
     let off = patch_offset(app, start, end);
     if off == [0, 0] {
         patch_hint(app);
@@ -482,7 +482,7 @@ const CAM_NO_PIXELS_PREF: &str = "contentAwareMove.noPixelsSelected";
 /// a straight line) selects nothing and adds no History state, and says so in the alert "No pixels
 /// are selected." with "Don't show again" (#12192). Returns whether this drag was such a one. With
 /// a selection, or a lasso that selects pixels, it is the tool's lasso as before.
-pub fn content_aware_move_no_pixels(app: &mut PhotocraftApp, points: &[[f64; 2]]) -> bool {
+pub fn content_aware_move_no_pixels(app: &mut LienzoApp, points: &[[f64; 2]]) -> bool {
     let Some(canvas) = app.session.active().filter(|s| s.doc.selection.is_none()).map(|s| s.doc.bounds()) else { return false };
     if lasso_selects_pixels(points, canvas, app.ui.tool_options.anti_alias) {
         return false;
@@ -498,7 +498,7 @@ pub fn content_aware_move_no_pixels(app: &mut PhotocraftApp, points: &[[f64; 2]]
 /// selects is answered after the first, and double up to about 4 MP (16 MB), so a lasso that
 /// selects nothing (a long line) is rasterized and scanned in parallel: a corner-to-corner line
 /// on 7360 x 4912 takes 25-32 ms, about what the `select.lasso` it replaces took (23-27 ms).
-fn lasso_selects_pixels(points: &[[f64; 2]], canvas: photocraft_geom::Rect, anti_alias: bool) -> bool {
+fn lasso_selects_pixels(points: &[[f64; 2]], canvas: lienzo_geom::Rect, anti_alias: bool) -> bool {
     const FIRST_STRIP: u32 = 64;
     const MAX_STRIP_PIXELS: u32 = 1 << 22;
     // `coverage8` of the selection combine: the 8-bit value a pixel's coverage is stored as. It
@@ -526,13 +526,13 @@ fn lasso_selects_pixels(points: &[[f64; 2]], canvas: photocraft_geom::Rect, anti
     }
     // Saturating float-to-int casts; the canvas clips them.
     let bounds =
-        photocraft_geom::Rect::new(lo.0.floor() as i32, lo.1.floor() as i32, (hi.0.ceil() as i32).saturating_add(1), (hi.1.ceil() as i32).saturating_add(1));
+        lienzo_geom::Rect::new(lo.0.floor() as i32, lo.1.floor() as i32, (hi.0.ceil() as i32).saturating_add(1), (hi.1.ceil() as i32).saturating_add(1));
     let window = bounds.intersect(&canvas);
     let max_rows = (MAX_STRIP_PIXELS / window.width().max(1)).max(FIRST_STRIP);
     let (mut y, mut rows) = (window.y0, FIRST_STRIP);
     while y < window.y1 {
-        let strip = photocraft_geom::Rect::new(window.x0, y, window.x1, y.saturating_add_unsigned(rows).min(window.y1));
-        if any_at_least(&photocraft_algo::selection::polygon_window(&pts, canvas, strip, anti_alias), least) {
+        let strip = lienzo_geom::Rect::new(window.x0, y, window.x1, y.saturating_add_unsigned(rows).min(window.y1));
+        if any_at_least(&lienzo_algo::selection::polygon_window(&pts, canvas, strip, anti_alias), least) {
             return true;
         }
         y = strip.y1;
@@ -555,7 +555,7 @@ fn any_at_least(mask: &[f32], least: f32) -> bool {
 }
 
 /// `paint.contentAwareMove`'s params for a drag by `offset`, from the options bar.
-pub fn content_aware_move_params(app: &PhotocraftApp, offset: [i64; 2]) -> Value {
+pub fn content_aware_move_params(app: &LienzoApp, offset: [i64; 2]) -> Value {
     let o = &app.ui.tool_options;
     json!({
         "offset": offset,
@@ -573,7 +573,7 @@ pub fn content_aware_move_params(app: &PhotocraftApp, offset: [i64; 2]) -> Value
 /// falls back to a Quick Selection dab at
 /// the brush size instead of looking dead (⌥ subtracts, otherwise it adds). Larger drags
 /// run the rectangle GrabCut (⌥ subtracts, ⇧ adds, otherwise replaces).
-pub fn finish_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
+pub fn finish_object_selection(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
     let (x, y) = (start[0].min(end[0]), start[1].min(end[1]));
     let (w, h) = ((end[0] - start[0]).abs(), (end[1] - start[1]).abs());
     let sample_all = app.ui.tool_options.sample_all.object_selection;
@@ -609,10 +609,10 @@ pub fn finish_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end: [f
 }
 
 /// Reports a smart-selection command result in the status bar. Engine errors are already
-/// reported by [`PhotocraftApp::run`], but an empty result (`changed: false`) is a silent
+/// reported by [`LienzoApp::run`], but an empty result (`changed: false`) is a silent
 /// success that looks like a dead button (Select Subject finding nothing on a busy photo,
 /// Object Selection missing its rectangle). `empty_msg` says what to try next.
-pub fn report_smart_result(app: &mut PhotocraftApp, res: Result<Value, String>, empty_msg: &str) {
+pub fn report_smart_result(app: &mut LienzoApp, res: Result<Value, String>, empty_msg: &str) {
     if matches!(res, Ok(ref v) if v.get("changed").and_then(Value::as_bool) == Some(false)) {
         app.ui.status = empty_msg.into();
         app.ui.status_error = false;
@@ -620,7 +620,7 @@ pub fn report_smart_result(app: &mut PhotocraftApp, res: Result<Value, String>, 
 }
 
 /// ⌥-click with Clone Stamp / Healing Brush sets the source.
-pub fn set_source(app: &mut PhotocraftApp, x: f64, y: f64) {
+pub fn set_source(app: &mut LienzoApp, x: f64, y: f64) {
     app.ui.clone_source = Some([x.round(), y.round()]);
     app.ui.clone_offset = None;
     let _ = app.run("cloneSource.set", json!({"source": [x.round(), y.round()]}));
@@ -631,7 +631,7 @@ pub fn set_source(app: &mut PhotocraftApp, x: f64, y: f64) {
 
 /// Where the clone source is sampled from, shown only while a Clone Stamp or Healing Brush stroke
 /// is painted, as in Photoshop: setting the source (⌥-click) leaves nothing on the canvas (#668).
-pub fn source_marker_point(app: &PhotocraftApp) -> Option<[f64; 2]> {
+pub fn source_marker_point(app: &LienzoApp) -> Option<[f64; 2]> {
     if !matches!(app.active_tool(), Tool::CloneStamp | Tool::Healing) {
         return None;
     }
@@ -644,7 +644,7 @@ pub fn source_marker_point(app: &PhotocraftApp) -> Option<[f64; 2]> {
 }
 
 /// Crosshair at [`source_marker_point`].
-pub fn draw_source_marker(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_source_marker(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let Some(s) = source_marker_point(app) else { return };
     let c = xf.to_screen(s[0] as f32, s[1] as f32);
     for (w, col) in [(3.0, Color32::from_black_alpha(160)), (1.0, Color32::WHITE)] {
@@ -725,7 +725,7 @@ fn cam_amount_slider(ui: &mut egui::Ui, name: &str, value: &mut f32, lo: f32, hi
     });
 }
 
-fn open_cam_range_alert(app: &mut PhotocraftApp, message: &str) {
+fn open_cam_range_alert(app: &mut LienzoApp, message: &str) {
     let message = tl!(message).to_owned();
     let shown =
         app.ui.dialogs.iter().any(|d| d.kind == crate::state::DialogKind::Error && d.fields.get("message").and_then(|m| m.as_str()) == Some(message.as_str()));
@@ -736,7 +736,7 @@ fn open_cam_range_alert(app: &mut PhotocraftApp, message: &str) {
 
 /// Content-Aware Move's options (#12193). While the Transform On Drop box is up, the controls are
 /// greyed and Cancel then Commit sit at the right end.
-fn content_aware_move_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn content_aware_move_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let live = crate::cam_transform::active(app);
     ui.add_enabled_ui(!live, |ui| {
         crate::panels::selection_mode_buttons(&mut app.ui.selection_mode, ui);
@@ -812,7 +812,7 @@ fn protect_tones_checkbox(ui: &mut egui::Ui, on: &mut bool) -> (egui::Response, 
 }
 
 /// Options bar for the retouching and smart-selection tools. Returns false for other tools.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     if !tool.is_brushlike() && !matches!(tool, Tool::QuickSelection | Tool::ObjectSelection | Tool::Patch | Tool::ContentAwareMove | Tool::RedEye)
         || matches!(tool, Tool::Brush | Tool::Pencil | Tool::MixerBrush | Tool::Eraser)
     {
@@ -1020,12 +1020,12 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             }
         }
         Tool::HistoryBrush => {
-            let label = app.session.active().and_then(|st| match photocraft_engine::history_source_cmds::source(st)? {
-                photocraft_engine::history_source_cmds::HistorySource::Snapshot(id) => {
+            let label = app.session.active().and_then(|st| match lienzo_engine::history_source_cmds::source(st)? {
+                lienzo_engine::history_source_cmds::HistorySource::Snapshot(id) => {
                     let s = st.snapshots.iter().find(|s| s.id == id)?;
                     Some(crate::i18n::fmt(tl!("Source: {name}"), &[("name", &s.name)]))
                 }
-                photocraft_engine::history_source_cmds::HistorySource::State(idx) => {
+                lienzo_engine::history_source_cmds::HistorySource::State(idx) => {
                     let entries = st.history.entries();
                     let name =
                         if idx < entries.len() { entries.get(idx).cloned() } else { st.history.redo_labels().nth(idx - entries.len()).map(str::to_string) }?;
@@ -1094,9 +1094,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
     true
 }
 
-fn pattern_stamp_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn pattern_stamp_options(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let opts: Vec<(String, String)> = app.session.patterns.items.iter().map(|p| (p.id.clone(), p.display_name().to_string())).collect();
-    let mut pat = photocraft_engine::presets::patterns::current(&app.session).or(app.session.patterns.items.first()).map(|p| p.id.clone()).unwrap_or_default();
+    let mut pat = lienzo_engine::presets::patterns::current(&app.session).or(app.session.patterns.items.first()).map(|p| p.id.clone()).unwrap_or_default();
     let o = &mut app.ui.tool_options;
     crate::widgets::checkbox(ui, &mut o.pattern_stamp_aligned, tl!("Aligned"));
     crate::widgets::checkbox(ui, &mut o.pattern_stamp_impressionist, tl!("Impressionist"));

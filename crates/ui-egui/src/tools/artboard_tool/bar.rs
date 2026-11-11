@@ -4,12 +4,12 @@
 //! the gear menu. The options live in [`ArtboardToolUi`](super::ArtboardToolUi).
 
 use egui::Color32;
-use photocraft_doc::{ArtboardBackground, Layer, LayerId};
-use photocraft_engine::artboard_cmds::PRESETS;
+use lienzo_doc::{ArtboardBackground, Layer, LayerId};
+use lienzo_engine::artboard_cmds::PRESETS;
 use serde_json::{Value, json};
 
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, icons};
+use crate::{LienzoApp, icons};
 
 /// The size preset a fresh bar (and Reset Tool) shows, with its width and height.
 pub const DEFAULT_SIZE: (&str, u32, u32) = ("iPhone 8/7/6", 750, 1334);
@@ -70,7 +70,7 @@ impl Gear {
 }
 
 /// "The bar's size": the selected board's size, else the tool option's. `[width, height]` in pixels.
-pub fn bar_size(app: &PhotocraftApp) -> [i64; 2] {
+pub fn bar_size(app: &LienzoApp) -> [i64; 2] {
     match super::active_board(app) {
         Some((_, r)) => [r[2].saturating_sub(r[0]), r[3].saturating_sub(r[1])],
         None => [i64::from(app.ui.artboard_tool.width), i64::from(app.ui.artboard_tool.height)],
@@ -78,7 +78,7 @@ pub fn bar_size(app: &PhotocraftApp) -> [i64; 2] {
 }
 
 /// `params` for `layer.new.artboard` plus the bar's background: `background`, and `color` for Other….
-pub fn with_background(app: &PhotocraftApp, mut params: Value) -> Value {
+pub fn with_background(app: &LienzoApp, mut params: Value) -> Value {
     let o = &app.ui.artboard_tool;
     params["background"] = json!(o.background);
     if o.background == "custom" {
@@ -89,7 +89,7 @@ pub fn with_background(app: &PhotocraftApp, mut params: Value) -> Value {
 
 /// Choose size preset `name` as the tool option: its size, no board involved. Unknown names and
 /// Custom (empty) change nothing.
-pub fn set_preset(app: &mut PhotocraftApp, name: &str) {
+pub fn set_preset(app: &mut LienzoApp, name: &str) {
     if let Some((n, w, h)) = PRESETS.iter().find(|(n, _, _)| *n == name) {
         let o = &mut app.ui.artboard_tool;
         (o.preset, o.width, o.height) = (n.to_string(), *w, *h);
@@ -98,7 +98,7 @@ pub fn set_preset(app: &mut PhotocraftApp, name: &str) {
 
 /// Set the tool option size to `w` x `h` (clamped to 1..=300000); the preset becomes Custom, or
 /// stays when the size is still the preset's.
-pub fn set_size(app: &mut PhotocraftApp, w: f32, h: f32) {
+pub fn set_size(app: &mut LienzoApp, w: f32, h: f32) {
     let clamp = |v: f32| if v.is_finite() { v.round().clamp(1.0, MAX_SIDE) as u32 } else { 1 };
     let (w, h) = (clamp(w), clamp(h));
     let o = &mut app.ui.artboard_tool;
@@ -109,12 +109,12 @@ pub fn set_size(app: &mut PhotocraftApp, w: f32, h: f32) {
 }
 
 /// The size preset the bar shows for board `id`: the name stored on the board ("" = Custom).
-pub fn board_preset(app: &PhotocraftApp, id: LayerId) -> String {
+pub fn board_preset(app: &LienzoApp, id: LayerId) -> String {
     app.session.active().and_then(|st| st.doc.layer(id)).and_then(Layer::artboard).map(|a| a.preset.clone()).unwrap_or_default()
 }
 
 /// The selected boards: each selected layer's artboard, once, in document order.
-fn selected_boards(app: &PhotocraftApp) -> Vec<LayerId> {
+fn selected_boards(app: &LienzoApp) -> Vec<LayerId> {
     let Some(st) = app.session.active() else { return Vec::new() };
     let mut ids: Vec<LayerId> = Vec::new();
     for l in st.selected_layers() {
@@ -129,7 +129,7 @@ fn selected_boards(app: &PhotocraftApp) -> Vec<LayerId> {
 
 /// The background the bar shows as `(name, #rrggbb)`: the first selected board's, else the tool
 /// option's. The colour is the custom one (or the option's remembered one for the named ones).
-pub fn shown_background(app: &PhotocraftApp) -> (String, String) {
+pub fn shown_background(app: &LienzoApp) -> (String, String) {
     let o = &app.ui.artboard_tool;
     let first = selected_boards(app).first().and_then(|id| app.session.active()?.doc.layer(*id)?.artboard().map(|a| a.background));
     match first {
@@ -145,7 +145,7 @@ pub fn shown_background(app: &PhotocraftApp) -> (String, String) {
 /// Choose background `name` (`white`, `black`, `transparent` or `custom` with `color`, `#rrggbb`).
 /// It is the tool option for the next drawn board, and with boards selected also the background of
 /// every selected board in one `layer.artboard.set` step ("Edit Artboard" / "Edit Artboards").
-pub fn set_background(app: &mut PhotocraftApp, name: &str, color: &str) -> Result<Value, String> {
+pub fn set_background(app: &mut LienzoApp, name: &str, color: &str) -> Result<Value, String> {
     let custom = name == "custom";
     if custom {
         crate::color_picker_ui::parse_hex(color).ok_or("not a colour")?;
@@ -182,7 +182,7 @@ pub fn set_background(app: &mut PhotocraftApp, name: &str, color: &str) -> Resul
 
 /// OK in the Color Picker opened by Other…: the custom background is `color` (`#rrggbb`), for the
 /// selected boards (if any) and the next drawn one.
-pub fn set_custom_background(app: &mut PhotocraftApp, color: &str) -> Result<Value, String> {
+pub fn set_custom_background(app: &mut LienzoApp, color: &str) -> Result<Value, String> {
     set_background(app, "custom", color)?;
     Ok(json!({"color": color}))
 }
@@ -191,7 +191,7 @@ pub fn set_custom_background(app: &mut PhotocraftApp, color: &str) -> Result<Val
 /// opened with, after any Only Web Colors snap) leaves every selected board alone, with no command
 /// and no history step: only the tool option for the next board follows. Otherwise boards that
 /// already have the picked RGB are skipped one by one ([`set_background`]).
-pub fn set_custom_background_from_picker(app: &mut PhotocraftApp, color: &str, unchanged: bool) -> Result<Value, String> {
+pub fn set_custom_background_from_picker(app: &mut LienzoApp, color: &str, unchanged: bool) -> Result<Value, String> {
     if !unchanged {
         return set_custom_background(app, color);
     }
@@ -204,7 +204,7 @@ pub fn set_custom_background_from_picker(app: &mut PhotocraftApp, color: &str, u
 
 /// Run Align panel entry `index` of group `group` on the selected boards. None for an entry that
 /// has no command yet.
-pub fn run_align(app: &mut PhotocraftApp, group: usize, index: usize) -> Option<Result<Value, String>> {
+pub fn run_align(app: &mut LienzoApp, group: usize, index: usize) -> Option<Result<Value, String>> {
     let cmd = ALIGN_PANEL.get(group)?.get(index)?.1?;
     Some(app.run(cmd, json!({})))
 }
@@ -225,7 +225,7 @@ fn rgb32(c: [f32; 3]) -> Color32 {
 }
 
 /// Opens the Color Picker for the custom background.
-fn pick_background(app: &mut PhotocraftApp) {
+fn pick_background(app: &mut LienzoApp) {
     let rgb = crate::color_picker_ui::parse_hex(&shown_background(app).1).unwrap_or([1.0; 3]);
     let title = crate::color_picker_ui::title_for(tl!("Color"));
     crate::color_picker_ui::open_for_target(app, "artboardBackground", &title, rgb);
@@ -234,7 +234,7 @@ fn pick_background(app: &mut PhotocraftApp) {
 /// Size, W, H, Make Portrait and Make Landscape. With a board selected they show and edit the
 /// board (the returned `layer.artboard.set` params); with none, Size, W and H edit the tool's own
 /// options and nothing is returned.
-pub fn size_group(app: &mut PhotocraftApp, ui: &mut egui::Ui, board: Option<(LayerId, [i64; 4])>) -> Option<Value> {
+pub fn size_group(app: &mut LienzoApp, ui: &mut egui::Ui, board: Option<(LayerId, [i64; 4])>) -> Option<Value> {
     let t = Tokens::get(ui.ctx());
     let mut edit: Option<Value> = None;
     let (mut preset, mut w, mut h) = match board {
@@ -279,7 +279,7 @@ pub fn size_group(app: &mut PhotocraftApp, ui: &mut egui::Ui, board: Option<(Lay
 /// one history step (`layer.artboard.set`; "Edit Artboard" for one, "Edit Artboards" for several);
 /// either way it is also the tool option, the background of the next drawn board. With no board
 /// selected it edits the tool option only.
-pub fn background(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn background(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let (name, hex) = shown_background(app);
     if crate::widgets::color_swatch_button(ui, background_color(&name, &hex), tl!("Artboard Background Color")).clicked() {
         pick_background(app);
@@ -302,7 +302,7 @@ pub fn background(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// The Align button with its panel, and the gear button with its menu.
-pub fn align_and_gear(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn align_and_gear(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     crate::widgets::vline(ui, 22.0);
     let align = icons::button_with_icon_size(ui, "align-edge-left", 28.0, 20.0, false, tl!("Align"));

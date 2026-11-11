@@ -103,7 +103,7 @@ pub(crate) fn active_attempt_remaining() -> Option<u64> {
 /// If the current thread already holds admission (a nested/reentrant decode), it is admitted
 /// immediately without reacquiring the mutex or waiting on the condvar. Otherwise, it polls
 /// `ctl.check()` every 50 ms while waiting so cancellation halts the wait immediately.
-pub(crate) fn acquire_decode_admission(ctl: &photocraft_raster::Interrupt) -> Result<AdmissionGuard, IoError> {
+pub(crate) fn acquire_decode_admission(ctl: &lienzo_raster::Interrupt) -> Result<AdmissionGuard, IoError> {
     let current_thread = std::thread::current().id();
     let (mutex, _cvar) = get_gate();
     let mut state = mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn reentrant_admission_does_not_deadlock() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let guard1 = acquire_decode_admission(&ctl).unwrap();
         assert!(is_holding_admission());
 
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn unknown_allowance_during_reentrant_gate_fails_closed() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let _guard = acquire_decode_admission(&ctl).unwrap();
         // Allowance is None (unknown)
         let res = consume_attempt_allowance(100);
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn nested_allowance_consumption_deducts_and_caps() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let _guard = acquire_decode_admission(&ctl).unwrap();
         set_active_attempt_budget(5000);
 
@@ -188,7 +188,7 @@ mod tests {
     /// saturated value: it is refused and spends nothing.
     #[test]
     fn a_saturated_nested_charge_is_refused_and_spends_nothing() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let _guard = acquire_decode_admission(&ctl).unwrap();
         set_active_attempt_budget(u64::MAX);
 
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn gate_serializes_concurrent_threads() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let guard = acquire_decode_admission(&ctl).unwrap();
 
         let thread_started = Arc::new(AtomicBool::new(false));
@@ -212,7 +212,7 @@ mod tests {
         let t_started = Arc::clone(&thread_started);
         let t_acquired = Arc::clone(&thread_acquired);
         let handle = std::thread::spawn(move || {
-            let ctl = photocraft_raster::Interrupt::NONE;
+            let ctl = lienzo_raster::Interrupt::NONE;
             t_started.store(true, Ordering::SeqCst);
             let g = acquire_decode_admission(&ctl).unwrap();
             t_acquired.store(true, Ordering::SeqCst);
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn blocked_wait_aborts_on_cancellation() {
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
         let guard = acquire_decode_admission(&ctl).unwrap();
 
         let cancelled = Arc::new(AtomicBool::new(false));
@@ -243,7 +243,7 @@ mod tests {
         let handle = std::thread::spawn(move || {
             let cancelled = || flag_for_thread.load(Ordering::SeqCst);
             let progress = |_: f32| {};
-            let interrupt = photocraft_raster::Interrupt::new(&cancelled, &progress);
+            let interrupt = lienzo_raster::Interrupt::new(&cancelled, &progress);
             acquire_decode_admission(&interrupt).map(drop)
         });
 

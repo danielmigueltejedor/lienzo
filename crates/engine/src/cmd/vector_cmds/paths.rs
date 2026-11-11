@@ -197,8 +197,8 @@ fn coords(p: &Value, key: &str, n: usize) -> Result<Option<Vec<f64>>> {
 enum PathMap {
     Affine(Affine),
     /// Distort / Perspective: the box's corners go to a quad.
-    Projective(photocraft_algo::transform::Homography),
-    Warp(Box<photocraft_geom::warp::Warp>),
+    Projective(lienzo_algo::transform::Homography),
+    Warp(Box<lienzo_geom::warp::Warp>),
 }
 
 pub(super) fn path_transform(s: &mut Session, p: &Value) -> Result<Value> {
@@ -247,7 +247,7 @@ pub(super) fn path_transform(s: &mut Session, p: &Value) -> Result<Value> {
     } else if let Some(q) = coords(p, "quad", 8)? {
         // Distort and Perspective (#3027): where the frame's corners go, clockwise from top-left.
         let quad = [[q[0], q[1]], [q[2], q[3]], [q[4], q[5]], [q[6], q[7]]];
-        let h = photocraft_algo::transform::Homography::rect_to_quad(frame(s)?, quad)
+        let h = lienzo_algo::transform::Homography::rect_to_quad(frame(s)?, quad)
             .filter(|h| h.0.iter().all(|v| v.is_finite()) && h.inverse().is_some())
             .ok_or_else(|| bad(CMD, "degenerate quad"))?;
         let [a, b, c, d, e, f, g, hh, i] = h.0;
@@ -464,7 +464,7 @@ pub(super) fn path_fill(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// Composites `src` × coverage onto a surface over `area` (any pixel format).
-fn paint_coverage(surf: &mut photocraft_raster::Surface, area: Rect, cov: &[f32], src: [f32; 4], opacity: f32, mode: BlendMode, lock_alpha: bool) {
+fn paint_coverage(surf: &mut lienzo_raster::Surface, area: Rect, cov: &[f32], src: [f32; 4], opacity: f32, mode: BlendMode, lock_alpha: bool) {
     let fmt = surf.format();
     let ch = fmt.channels();
     let mut vals = surf.read_region(area);
@@ -472,12 +472,12 @@ fn paint_coverage(surf: &mut photocraft_raster::Surface, area: Rect, cov: &[f32]
         if *c <= 0.0 {
             continue;
         }
-        let dst = photocraft_raster::to_rgba(&fmt, px);
-        let mut out = photocraft_compose::psblend::composite(mode, dst, [src[0], src[1], src[2], src[3] * c], opacity);
+        let dst = lienzo_raster::to_rgba(&fmt, px);
+        let mut out = lienzo_compose::psblend::composite(mode, dst, [src[0], src[1], src[2], src[3] * c], opacity);
         if lock_alpha {
             out[3] = dst[3];
         }
-        photocraft_raster::from_rgba_into(&fmt, out, px);
+        lienzo_raster::from_rgba_into(&fmt, out, px);
     }
     surf.write_region(area, &vals);
     surf.prune();
@@ -509,8 +509,8 @@ const MAX_PRESSURE_POINTS: f64 = 200_000.0;
 /// Pressure) the subpath is resampled about every pixel and the pressure rises from 0 at its start
 /// to full at the middle and falls back to 0 at its end, so a brush whose size or opacity follows
 /// pen pressure tapers at both ends, as in Photoshop. Otherwise every point has full pressure.
-fn stroke_points(pts: &[(f64, f64)], closed: bool, simulate: bool) -> Vec<photocraft_paint::StrokePoint> {
-    use photocraft_paint::StrokePoint;
+fn stroke_points(pts: &[(f64, f64)], closed: bool, simulate: bool) -> Vec<lienzo_paint::StrokePoint> {
+    use lienzo_paint::StrokePoint;
     let mut line = pts.to_vec();
     if closed && let Some(&first) = pts.first() {
         line.push(first);
@@ -586,7 +586,7 @@ pub(super) fn path_stroke(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let base = s.tools.brush.clone();
     let fg = s.tools.foreground;
-    let mut brush = photocraft_paint::BrushSettings {
+    let mut brush = lienzo_paint::BrushSettings {
         size: f64p(p, "size").map_or(base.size, |v| v as f32),
         hardness: f64p(p, "hardness").map_or(base.hardness, |v| v as f32),
         opacity: f64p(p, "opacity").map_or(base.opacity, |v| (v / 100.0) as f32),
@@ -634,7 +634,7 @@ pub(super) fn path_stroke(s: &mut Session, p: &Value) -> Result<Value> {
             if pts.is_empty() {
                 continue;
             }
-            let r = photocraft_paint::apply_stroke(surf, &photocraft_paint::Stroke { brush: brush.clone(), points: pts }, sel.as_ref(), lock);
+            let r = lienzo_paint::apply_stroke(surf, &lienzo_paint::Stroke { brush: brush.clone(), points: pts }, sel.as_ref(), lock);
             dmg = if dmg.is_empty() { r } else { dmg.union(&r) };
         }
         Ok(dmg)

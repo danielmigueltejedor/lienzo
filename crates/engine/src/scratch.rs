@@ -46,7 +46,7 @@ mod native {
             let thread = std::thread::Builder::new()
                 .name("pc-memory-residency".into())
                 .spawn(move || {
-                    let _maintenance = photocraft_raster::spill::background_maintenance();
+                    let _maintenance = lienzo_raster::spill::background_maintenance();
                     let mut measured = Instant::now();
                     loop {
                         let (lock, wake) = &*flag;
@@ -57,10 +57,10 @@ mod native {
                         }
                         drop(stopped);
                         if measured.elapsed() >= Duration::from_secs(2) {
-                            photocraft_raster::memory::refresh();
+                            lienzo_raster::memory::refresh();
                             measured = Instant::now();
                         }
-                        photocraft_raster::spill::maintain_budget();
+                        lienzo_raster::spill::maintain_budget();
                     }
                 })
                 .ok();
@@ -116,7 +116,7 @@ mod native {
 }
 
 pub(crate) fn configure(prefs: &Preferences) {
-    let budget = photocraft_raster::memory::configure(photocraft_raster::memory::Policy {
+    let budget = lienzo_raster::memory::configure(lienzo_raster::memory::Policy {
         percent: prefs.performance.memory_usage_percent,
         // The web build's cap applies here too (effective_memory_usage_mb).
         absolute_bytes: u64::from(prefs.performance.effective_memory_usage_mb()).saturating_mul(1 << 20),
@@ -132,14 +132,14 @@ pub(crate) fn configure(prefs: &Preferences) {
         // An unusable or full directory pauses eviction without dropping resident pixels and
         // is retried with backoff; History's byte limit applies meanwhile (sync_scratch_state).
         // The reason is exposed in ui.inspect and the application's status bar.
-        let tiles = if std::env::var_os("PHOTOCRAFT_TILE_BUDGET_MB").is_some() {
+        let tiles = if std::env::var_os("LIENZO_TILE_BUDGET_MB").is_some() {
             prefs.performance.tile_budget_bytes()
         } else {
             usize::try_from(budget.tile_bytes).unwrap_or(usize::MAX)
         };
         let limit = prefs.scratch_disks.size_limit_mb;
-        photocraft_raster::spill::set_size_cap((limit > 0).then(|| u64::from(limit).saturating_mul(1 << 20)));
-        let _ = photocraft_raster::spill::configure(dir.as_deref(), tiles);
+        lienzo_raster::spill::set_size_cap((limit > 0).then(|| u64::from(limit).saturating_mul(1 << 20)));
+        let _ = lienzo_raster::spill::configure(dir.as_deref(), tiles);
     }
     #[cfg(target_arch = "wasm32")]
     let _ = (prefs, budget);

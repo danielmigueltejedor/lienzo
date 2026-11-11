@@ -6,7 +6,7 @@ use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
@@ -14,9 +14,9 @@ const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -26,7 +26,7 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -36,7 +36,7 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     let xf = ViewXform {
@@ -50,19 +50,19 @@ fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
     xf.to_screen(x, y)
 }
 
-fn mods(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers) {
+fn mods(h: &mut Harness<'static, LienzoApp>, m: Modifiers) {
     h.event(egui::Event::ModifiersChanged(m));
     h.run_steps(1);
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, b: PointerButton, p: Pos2, down: bool, m: Modifiers) {
+fn button(h: &mut Harness<'static, LienzoApp>, b: PointerButton, p: Pos2, down: bool, m: Modifiers) {
     h.event(egui::Event::PointerButton { pos: p, button: b, pressed: down, modifiers: m });
     h.run_steps(1);
 }
 
 /// Press `b` at document point `from` with `m` held from before the press, and move to `to`;
 /// the button stays down.
-fn press_and_move(h: &mut Harness<'static, PhotocraftApp>, b: PointerButton, from: [f32; 2], to: [f32; 2], m: Modifiers) {
+fn press_and_move(h: &mut Harness<'static, LienzoApp>, b: PointerButton, from: [f32; 2], to: [f32; 2], m: Modifiers) {
     let p = screen(h, from[0], from[1]);
     mods(h, m);
     h.event(egui::Event::PointerMoved(p));
@@ -79,7 +79,7 @@ fn press_and_move(h: &mut Harness<'static, PhotocraftApp>, b: PointerButton, fro
 }
 
 /// Release `b` at document point `at`, then let go of the modifiers.
-fn release(h: &mut Harness<'static, PhotocraftApp>, b: PointerButton, at: [f32; 2], m: Modifiers) {
+fn release(h: &mut Harness<'static, LienzoApp>, b: PointerButton, at: [f32; 2], m: Modifiers) {
     button(h, b, screen(h, at[0], at[1]), false, m);
     h.run_steps(2);
     mods(h, Modifiers::NONE);
@@ -87,15 +87,15 @@ fn release(h: &mut Harness<'static, PhotocraftApp>, b: PointerButton, at: [f32; 
 
 /// A drag between document points with `m` held from before the press until after the
 /// release; `from == to` is a click.
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: [f32; 2], to: [f32; 2], m: Modifiers) {
+fn drag(h: &mut Harness<'static, LienzoApp>, from: [f32; 2], to: [f32; 2], m: Modifiers) {
     press_and_move(h, PointerButton::Primary, from, to, m);
     release(h, PointerButton::Primary, to, m);
 }
 
 /// Red on the left, green on the right of an unlocked layer, Background Eraser active, blue
 /// foreground and white background colour.
-fn background_eraser() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn background_eraser() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 100, "height": 100})).unwrap();
@@ -112,12 +112,12 @@ fn background_eraser() -> Harness<'static, PhotocraftApp> {
 }
 
 /// The document and the number of history states, to show nothing changed.
-fn snapshot(h: &Harness<'static, PhotocraftApp>) -> (std::sync::Arc<photocraft_doc::Document>, usize) {
+fn snapshot(h: &Harness<'static, LienzoApp>) -> (std::sync::Arc<lienzo_doc::Document>, usize) {
     let st = h.state().session.active().unwrap();
     (st.doc.clone(), st.history.past_len())
 }
 
-fn unchanged(h: &Harness<'static, PhotocraftApp>, before: &(std::sync::Arc<photocraft_doc::Document>, usize), what: &str) {
+fn unchanged(h: &Harness<'static, LienzoApp>, before: &(std::sync::Arc<lienzo_doc::Document>, usize), what: &str) {
     let (doc, steps) = snapshot(h);
     assert!(std::sync::Arc::ptr_eq(&doc, &before.0), "{what}: no pixel changed");
     assert_eq!(steps, before.1, "{what}: no history state");
@@ -164,7 +164,7 @@ fn a_click_without_alt_still_erases() {
 fn alt_shows_the_eyedropper_cursor() {
     let mut h = background_eraser();
     let p = screen(&h, 150.0, 50.0);
-    let pipette = |h: &mut Harness<'static, PhotocraftApp>, m: Modifiers| {
+    let pipette = |h: &mut Harness<'static, LienzoApp>, m: Modifiers| {
         mods(h, m);
         h.hover_at(p);
         h.run_steps(2);

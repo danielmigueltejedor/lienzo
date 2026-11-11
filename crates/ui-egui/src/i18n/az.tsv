@@ -1,5 +1,5 @@
 # Azerbaijani (Latin script) (az) UI catalog. UTF-8, context<TAB>source<TAB>translation.
-# Format: ja.tsv. Original translations of PhotoCraft English source labels; no proprietary
+# Format: ja.tsv. Original translations of Lienzo English source labels; no proprietary
 # localization resources were used. Machine-assisted drafts (Google Translate), with core
 # menu/tool terminology, contexts and plural messages edited by OpenAI Codex. Native-speaker
 # review is pending. Keep command IDs, placeholders, product names and trailing ellipses.
@@ -498,9 +498,9 @@
 	3D	3D
 	Toolbars	Alət panelləri
 	Hide All	Hamısını gizlət
-	About PhotoCraft	PhotoCraft haqqında
-	PhotoCraft Website	PhotoCraft Veb saytı
-	PhotoCraft on GitHub	GitHub-da PhotoCraft
+	About Lienzo	Lienzo haqqında
+	Lienzo Website	Lienzo Veb saytı
+	Lienzo on GitHub	GitHub-da Lienzo
 	Report an Issue…	Problemi bildirin…
 	ArtCraft Website	ArtCraft Veb saytı
 	Join the ArtCraft Discord…	ArtCraft Discord-a qoşulun…
@@ -577,11 +577,11 @@
 	Import Shortcuts…	İdxal Qısayolları…
 	Load a keyboard shortcut set saved as .kys	.kys kimi saxlanmış klaviatura qısayol dəstini yükləyin
 	Imported {n} shortcuts from {file}. Click OK to keep them.	{file} -dən idxal edilmiş {n} qısa yolları. Onları saxlamaq üçün OK düyməsini klikləyin.
-	{n} commands are not in PhotoCraft.	{n} əmrləri PhotoCraft -də deyil.
+	{n} commands are not in Lienzo.	{n} əmrləri Lienzo -də deyil.
 	Keyboard shortcuts imported	Klaviatura qısa yolları idxal edildi
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	Sizin klaviatura qısayol dəstiniz {set} burada istifadə olunur: {n} qısayolları defoltlardan fərqlidir. Redaktə › Klaviatura Qısayolları onları göstərir; Hamısını Defoltlara Sıfırla bunu ləğv edir.
 	Import keyboard shortcuts?	Klaviatura qısa yolları idxal edilsin?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft bu kompüterdəki başqa şəkil redaktorundan {set} klaviatura qısayol dəstinizi tapdı: {n} onun qısa yolları PhotoCraft -dən fərqlidir. Import edilsin?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo bu kompüterdəki başqa şəkil redaktorundan {set} klaviatura qısayol dəstinizi tapdı: {n} onun qısa yolları Lienzo -dən fərqlidir. Import edilsin?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	Redaktə et › Klaviatura Qısayolları › Hamısını Defoltlara Sıfırla idxalı ləğv edir.
 	Don't Import	İdxal etməyin
 	The keyboard shortcut set was not imported: {error}	Klaviatura qısa yol dəsti idxal edilmədi: {error}
@@ -871,7 +871,7 @@
 	Embed Color Profile	Rəng Profilini Yerləşdirin
 	Assign Profile…	Profil təyin et…
 	Convert to Profile…	Profilə çevir…
-	PhotoCraft Manages Colors	PhotoCraft Rəngləri idarə edir
+	Lienzo Manages Colors	Lienzo Rəngləri idarə edir
 	Printer Manages Colors	Printer Rəngləri İdarə edir
 	(print to the printer)	(printerdə çap edin)
 	Absolute Colorimetric	Mütləq Kolorimetrik
@@ -1436,15 +1436,15 @@
 	Use File › Open, or paste a copied image with {paste}.	Fayldan istifadə edin › Açın və ya kopyalanmış şəkli {paste} ilə yapışdırın.
 	Native file drag-and-drop is unavailable	Doğma faylı sürükləmə və buraxma funksiyası mövcud deyil
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Doğma faylı sürükləyib buraxma hələ Wayland-da dəstəklənmir. Fayldan istifadə edin › Açın və ya şəkli fayl menecerinizdə kopyalayın və {paste} ilə yapışdırın.
-	To drop files, start PhotoCraft under XWayland: `{command}`	Faylları atmaq üçün XWayland altında PhotoCraft işə salın: ` {command} `
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	Və ya Üstünlüklər › Performans › Linux displey serverini X11: PhotoCraft olaraq təyin edin, sonra həmişə XWayland altında başlayır.
+	To drop files, start Lienzo under XWayland: `{command}`	Faylları atmaq üçün XWayland altında Lienzo işə salın: ` {command} `
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	Və ya Üstünlüklər › Performans › Linux displey serverini X11: Lienzo olaraq təyin edin, sonra həmişə XWayland altında başlayır.
 	Edit › Paste	Redaktə et › Yapışdır
 	Photo	Şəkil
 	Print	Çap et
 	Art & Illustration	İncəsənət və İllüstrasiya
 	Mobile	Mobil
 	Film & Video	Film və Video
-	Default PhotoCraft Size	Defolt PhotoCraft Ölçüsü
+	Default Lienzo Size	Defolt Lienzo Ölçüsü
 	Clipboard	Mübadilə buferi
 	Photo (2 × 3 in)	Foto (2 × 3 düym)
 	Photo (4 × 6 in)	Foto (4 × 6 düym)
@@ -1594,7 +1594,7 @@
 	Reverse	tərs
 	Align with layer	Qatla hizalayın
 	Join us on Discord	Discord-da bizə qoşulun
-	PhotoCraft website	PhotoCraft veb saytı
+	Lienzo website	Lienzo veb saytı
 	ArtCraft	ArtCraft
 	GitHub	GitHub
 	No character style	Xarakter tərzi yoxdur
@@ -1620,9 +1620,9 @@
 	Don't Save	Saxlamayın
 	No	Xeyr
 	Yes	Bəli
-	These settings aren't available in PhotoCraft yet.	Bu parametrlər hələ PhotoCraft -də mövcud deyil.
+	These settings aren't available in Lienzo yet.	Bu parametrlər hələ Lienzo -də mövcud deyil.
 	Shortcut removed.	Qısayol silindi.
-	All shortcuts reset to PhotoCraft defaults.	Bütün qısa yollar PhotoCraft defoltlarına sıfırlanır.
+	All shortcuts reset to Lienzo defaults.	Bütün qısa yollar Lienzo defoltlarına sıfırlanır.
 	Add Shortcut	Qısayol əlavə edin
 	Delete Shortcut	Qısayolu silin
 	Press keys…	düymələri basın…
@@ -2089,8 +2089,8 @@
 	Output:	Çıxış:
 	Paint Overlay	Rəngli örtük
 	Pattern Size	Naxış Ölçüsü
-	PhotoCraft	PhotoCraft
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — Rust dilində yazılmış açıq mənbəli, yerli şəkil redaktoru.
+	Lienzo	Lienzo
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — Rust dilində yazılmış açıq mənbəli, yerli şəkil redaktoru.
 	Position and Size	Mövqe və Ölçü
 	Preserve Details	Təfərrüatları qoruyun
 	Preserve Luminosity	Parlaqlığı qoruyun
@@ -2417,7 +2417,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	Avtomatik mövcud olduqda GPU sürətləndirməsindən istifadə edir və səhvlər zamanı CPU renderinə qayıdır.
 	Switched to CPU rendering	CPU renderinə keçdi
 	GPU acceleration could not continue. Your documents are unchanged.	GPU sürətləndirilməsi davam edə bilmədi. Sənədləriniz dəyişməzdir.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft CPU şəkil tərtibatçısından istifadə edir. Pəncərə hələ də qrafik adapterinizdən istifadə edə bilər.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo CPU şəkil tərtibatçısından istifadə edir. Pəncərə hələ də qrafik adapterinizdən istifadə edə bilər.
 	Retry GPU requires a restart. Save your work first.	Yenidən cəhd edin GPU yenidən başladılmağı tələb edir. Əvvəlcə işinizi qeyd edin.
 	Retry GPU tries the graphics processor again now.	Yenidən cəhd edin GPU indi qrafik prosessorunu yenidən sınayır.
 	GPU acceleration resumed.	GPU sürətləndirilməsi bərpa edildi.
@@ -2645,7 +2645,7 @@ fontWeight	Italic	Kursiv
 	Color to Alpha…	Rəngdən Alfaya…
 	Transparency Threshold	Şəffaflıq həddi
 	Opacity Threshold	Qeyri-şəffaflıq həddi
-	PhotoCraft — Screen Color Picker	PhotoCraft — Ekran Rəngi Seçici
+	Lienzo — Screen Color Picker	Lienzo — Ekran Rəngi Seçici
 	Rasterize svg groups deeper than	svg qruplarını daha dərindən rasterləşdirin
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 bu həddi söndürür; 100 səviyyədən daha dərin yerləşdirilmiş SVG qrupları həmişə rasterləşdirilir.
 	Rule of Thirds	Üçüncülərin qaydası
@@ -3006,7 +3006,7 @@ curves	Smooth	Hamarlama
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ( {note} )
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	{file} faylından {n} əməliyyat yükləndi|{file} faylından {n} əməliyyat yükləndi
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} addımın hələ PhotoCraft qarşılığı yoxdur|{n} addımın hələ PhotoCraft qarşılığı yoxdur
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} addımın hələ Lienzo qarşılığı yoxdur|{n} addımın hələ Lienzo qarşılığı yoxdur
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	{file} faylına {n} əməliyyat saxlanıldı|{file} faylına {n} əməliyyat saxlanıldı
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	Photoshop qarşılığı olmayan {n} addım buraxıldı|Photoshop qarşılığı olmayan {n} addım buraxıldı
 	File Naming	Faylın Adlandırılması
@@ -3114,12 +3114,12 @@ curves	Smooth	Hamarlama
 	Bicubic Smoother	Daha hamar bikubik
 	Bicubic Sharper	Daha kəskin bikubik
 	Pasting from other apps is unavailable	Digər proqramlardan yapışdırmaq mümkün deyil
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft bu sessiyada sistem buferinə daxil ola bilmir. Wayland-da Flatpak qum qutusu digər proqramlardakı şəkillərin oxunduğu protokolu gizlədir.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	Digər proqramlardan yapışdırmaq üçün XWayland altında PhotoCraft işə salın: ` {command} `
-	Nothing to paste: PhotoCraft can't read the system clipboard here	Yapışdırmaq üçün heç nə yoxdur: PhotoCraft burada sistem buferini oxuya bilmir
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo bu sessiyada sistem buferinə daxil ola bilmir. Wayland-da Flatpak qum qutusu digər proqramlardakı şəkillərin oxunduğu protokolu gizlədir.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	Digər proqramlardan yapışdırmaq üçün XWayland altında Lienzo işə salın: ` {command} `
+	Nothing to paste: Lienzo can't read the system clipboard here	Yapışdırmaq üçün heç nə yoxdur: Lienzo burada sistem buferini oxuya bilmir
 	Delete this set	Bu dəsti silin
 	New Set…	Yeni Dəst…
-	PhotoCraft Defaults	PhotoCraft Defoltlar
+	Lienzo Defaults	Lienzo Defoltlar
 	Save a list of these shortcuts as a web page	Bu qısayolların siyahısını veb səhifə kimi yadda saxlayın
 	Save the changes to this set	Dəyişiklikləri bu dəstdə yadda saxlayın
 	Save these shortcuts as a .kys file	Bu qısa yolları .kys faylı kimi yadda saxlayın
@@ -3863,7 +3863,7 @@ curves	Smooth	Hamarlama
 	Multiple Flames Path Directions	Çoxlu Alov Yol İstiqamətləri
 	Multiple Flames Various Length	Çoxlu Alov Müxtəlif Uzunluqda
 	My Brushes	Fırçalarım
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Doğma faylı sürükləyib buraxma hələ Wayland-da dəstəklənmir. Fayldan istifadə edin › Açın və ya PhotoCraft -ni XWayland altında `WAYLAND_DISPLAY= photocraft` ilə işlədin.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Doğma faylı sürükləyib buraxma hələ Wayland-da dəstəklənmir. Fayldan istifadə edin › Açın və ya Lienzo -ni XWayland altında `WAYLAND_DISPLAY= lienzo` ilə işlədin.
 	Nearest	Ən yaxın
 	Neon Glow	Neon parıltısı
 	Neutralize	Zərərsizləşdirin
@@ -3950,7 +3950,7 @@ curves	Smooth	Hamarlama
 	Pentagon	Pentaqon
 	Percentage	Faiz
 	Permission denied	İcazə rədd edildi
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft yenidən cəhd etməyə davam edir; saxlama müvəffəqiyyətli olana qədər, bağlandıqda üstünlük dəyişiklikləri itirilir.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo yenidən cəhd etməyə davam edir; saxlama müvəffəqiyyətli olana qədər, bağlandıqda üstünlük dəyişiklikləri itirilir.
 	Photomerge	Foto birləşdirin
 	Pick Color From Image	Şəkildən Rəng Seçin
 	Picture Frame	Şəkil çərçivəsi
@@ -4007,7 +4007,7 @@ curves	Smooth	Hamarlama
 	Pyramids	Piramidalar
 	Quick Actions	Sürətli hərəkətlər
 	Quit	Çıxın
-	Quit PhotoCraft	PhotoCraft -dən çıxın
+	Quit Lienzo	Lienzo -dən çıxın
 	Quit {app}	{app} -dən çıxın
 	R G B	RGB
 	R g b	R g b
@@ -4083,7 +4083,7 @@ curves	Smooth	Hamarlama
 	Save a Copy	Surəti saxla
 	Save before closing?	Bağlamadan əvvəl yadda saxla?
 	Save for Web (Legacy)	Veb üçün Saxla (Legacy)
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	GPU sürətləndirilməsini yenidən sınamaq üçün işinizi yadda saxlayın və PhotoCraft -i yenidən başladın. CPU göstərilməsi bu sessiya üçün aktiv olaraq qalır.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	GPU sürətləndirilməsini yenidən sınamaq üçün işinizi yadda saxlayın və Lienzo -i yenidən başladın. CPU göstərilməsi bu sessiya üçün aktiv olaraq qalır.
 	Saved a copy as {path}	Bir nüsxə {path} olaraq yadda saxlanıldı
 	Saved {path}; image assets: {n} in {dir}	Saxlanmış {path} ; şəkil aktivləri: {dir} -də {n}
 	Saving…	Yadda saxlanılır…
@@ -4559,9 +4559,9 @@ smartSvg	AI/PDF/EPS contents will be edited as SVG. Saving replaces the embedded
 smartSvg	Edit SVG Smart Object	SVG Ağıllı Obyektini redaktə edin
 smartSvg	Choose the application used to edit this SVG:	Bu SVG-ni redaktə etmək üçün istifadə olunan proqramı seçin:
 smartSvg	Other application	Digər proqram
-smartSvg	PhotoCraft (internal editor)	PhotoCraft (daxili redaktor)
+smartSvg	Lienzo (internal editor)	Lienzo (daxili redaktor)
 smartSvg	Choose executable…	İcra olunanı seçin…
-smartSvg	Save to the opened SVG file. Each saved change becomes one undo step in PhotoCraft.	Açılmış SVG faylında yadda saxlayın. Saxlanmış hər bir dəyişiklik PhotoCraft-də bir geri qaytarma addımına çevrilir.
+smartSvg	Save to the opened SVG file. Each saved change becomes one undo step in Lienzo.	Açılmış SVG faylında yadda saxlayın. Saxlanmış hər bir dəyişiklik Lienzo-də bir geri qaytarma addımına çevrilir.
 smartSvg	Updates wait while another document or an editing dialog is active.	Yeniləmələr başqa sənəd və ya redaktə dialoqu aktiv olduqda gözləyir.
 smartSvg	Stop syncing this Smart Object	Bu Ağıllı Obyektin sinxronizasiyasını dayandırın
 smartSvg	SVG editor opened. Save the SVG to update this Smart Object.	SVG redaktoru açıldı. Bu Ağıllı Obyekti yeniləmək üçün SVG-ni yadda saxlayın.

@@ -1,6 +1,6 @@
-use photocraft_compose::Buffer;
-use photocraft_geom::Rect;
-use photocraft_raster::scratch;
+use lienzo_compose::Buffer;
+use lienzo_geom::Rect;
+use lienzo_raster::scratch;
 
 /// Restores idle release even when an assertion fails.
 struct IdleReleaseOff;

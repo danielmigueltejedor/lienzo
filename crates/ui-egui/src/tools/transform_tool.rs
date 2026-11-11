@@ -12,13 +12,13 @@
 use std::sync::Arc;
 
 use egui::{Color32, CursorIcon, Pos2, Stroke, pos2, vec2};
-use photocraft_algo::transform::Homography;
-use photocraft_doc::{DocId, Document, LayerContent, LayerId};
-use photocraft_engine::jobs::{JobEvent, JobId, JobOutcome};
-use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
+use lienzo_algo::transform::Homography;
+use lienzo_doc::{DocId, Document, LayerContent, LayerId};
+use lienzo_engine::jobs::{JobEvent, JobId, JobOutcome};
+use lienzo_geom::warp::{BezierMesh, Warp, WarpStyle};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::{MadeLayer, Tool, TransformMode, TransformSession};
 
@@ -113,7 +113,7 @@ enum WarpDrag {
 }
 
 /// Opens a prepared box once its job has landed (see [`Preparing`]).
-type FinishPrepared = Box<dyn FnOnce(&mut PhotocraftApp, begin::Prepared) -> Result<(), String>>;
+type FinishPrepared = Box<dyn FnOnce(&mut LienzoApp, begin::Prepared) -> Result<(), String>>;
 
 /// A large layer's box being prepared as a job (`begin::on_prepared` opens it when it lands).
 pub(crate) struct Preparing {
@@ -142,19 +142,13 @@ pub(crate) struct OpenArea {
     pub key: u64,
     /// The document revision the preview was built from.
     pub revision: u64,
-    pub area: photocraft_geom::Rect,
+    pub area: lienzo_geom::Rect,
 }
 
 /// The canvas damage between the document and an open box's preview of it, either way, at the
 /// revision the box opened on; on a commit (one revision later) also what the commit changed.
 /// `None` (redraw everything) for anything else, e.g. a box that followed an edit while open.
-pub(crate) fn damage(
-    app: &PhotocraftApp,
-    doc: DocId,
-    seen: (u64, u64),
-    now: (u64, u64),
-    last_damage: Option<photocraft_geom::Rect>,
-) -> Option<photocraft_geom::Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, seen: (u64, u64), now: (u64, u64), last_damage: Option<lienzo_geom::Rect>) -> Option<lienzo_geom::Rect> {
     let o = app.transform_area.filter(|o| o.doc == doc)?;
     let opening = seen.1 == 0 && now.1 == o.key && seen.0 == o.revision && now.0 == o.revision;
     let canceled = seen.1 == o.key && now.1 == 0 && seen.0 == o.revision && now.0 == o.revision;
@@ -195,7 +189,7 @@ pub struct TransformPreview {
     /// The tool the session began with: picking another one applies the transform.
     tool: Tool,
     /// Free Transform Path: the path as it was, drawn through the box instead of pixels.
-    path: Option<photocraft_doc::vector::Path>,
+    path: Option<lienzo_doc::vector::Path>,
     /// A layer's session keeps `doc` and `opacity` up to date with edits made while the box is
     /// open ([`follow_edits`]); `None` for a lone mask or channel and Transform Selection.
     follow: Option<Follow>,
@@ -224,20 +218,20 @@ struct Several {
     /// The pixels a selection lifted out of moving pixel layers, as the box opened. Every other
     /// moving layer (groups, type, shapes, smart objects, pixel layers without a selection) moves
     /// whole, so the live document holds what it moves, children and their looks included.
-    lifted: Vec<(LayerId, photocraft_raster::Surface)>,
+    lifted: Vec<(LayerId, lienzo_raster::Surface)>,
     /// The document showing only the moving layers, as last composited.
     moving: Document,
     /// The box's frame.
-    frame: photocraft_geom::Rect,
+    frame: lienzo_geom::Rect,
     /// The document area the texture covers: the frame grown by the reach of the moving layers'
     /// styles, so a shadow, glow or outside stroke past their content moves with the box.
-    rect: photocraft_geom::Rect,
+    rect: lienzo_geom::Rect,
 }
 
 impl Several {
     /// `live` showing only the layers `ids`, with the `lifted` pixels in place of their layers'.
     /// Unclipped: a clipping base that isn't moving would clip them away (#5239).
-    fn shown(live: &Document, ids: &[LayerId], lifted: &[(LayerId, photocraft_raster::Surface)]) -> Document {
+    fn shown(live: &Document, ids: &[LayerId], lifted: &[(LayerId, lienzo_raster::Surface)]) -> Document {
         let mut d = live.clone();
         show_only(&mut d.layers, ids);
         for id in ids {
@@ -272,13 +266,12 @@ impl Several {
 /// own, the layers' inside them and the groups' around them, since a group's style draws around
 /// its children's composite and so adds to theirs.
 fn style_reach(doc: &Document, ids: &[LayerId]) -> i32 {
-    let reach_of =
-        |l: &photocraft_doc::Layer| if l.visible && photocraft_compose::effects::has_effects(l) { photocraft_compose::effects::margin(l).max(0) } else { 0 };
+    let reach_of = |l: &lienzo_doc::Layer| if l.visible && lienzo_compose::effects::has_effects(l) { lienzo_compose::effects::margin(l).max(0) } else { 0 };
     // The groups around each layer: everything on its path but itself.
     let around =
         |id: LayerId| doc.path_of(id).map_or(0, |p| (1..p.len()).filter_map(|n| doc.layer_at(p.get(..n)?)).fold(0i32, |r, g| r.saturating_add(reach_of(g))));
     // An explicit stack rather than recursion: documents can nest deeply.
-    let mut stack: Vec<(&photocraft_doc::Layer, i32)> = ids.iter().filter_map(|id| Some((doc.layer(*id)?, around(*id)))).collect();
+    let mut stack: Vec<(&lienzo_doc::Layer, i32)> = ids.iter().filter_map(|id| Some((doc.layer(*id)?, around(*id)))).collect();
     let mut reach = 0;
     while let Some((l, outer)) = stack.pop() {
         let here = outer.saturating_add(reach_of(l));
@@ -333,13 +326,13 @@ pub const CAS_ONLY_SCALES: &str = "Content-Aware Scale only scales: commit or ca
 pub const HANDLE_PX: f64 = 12.0;
 
 /// [`HANDLE_PX`] in document pixels at the current zoom.
-pub fn handle_tolerance(app: &PhotocraftApp) -> f64 {
+pub fn handle_tolerance(app: &LienzoApp) -> f64 {
     HANDLE_PX / app.point_zoom().max(0.01) as f64
 }
 
 /// End a handle drag whose release a modal sampler consumed, preserving the transform. Its snapping
 /// ends too, so the canvas stops drawing the drag's alignment lines.
-pub(crate) fn release_handle_drag(app: &mut PhotocraftApp) {
+pub(crate) fn release_handle_drag(app: &mut LienzoApp) {
     if let Some(preview) = app.transform_preview.as_mut() {
         preview.gesture = None;
     }
@@ -417,8 +410,8 @@ pub(crate) fn corners(r: [f64; 4]) -> [[f64; 2]; 4] {
 }
 
 /// The transform choices supported by the options bar, using its remembered choice or the general default.
-pub(crate) fn default_interpolation(app: &PhotocraftApp) -> &'static str {
-    use photocraft_engine::prefs::Interpolation;
+pub(crate) fn default_interpolation(app: &LienzoApp) -> &'static str {
+    use lienzo_engine::prefs::Interpolation;
     match app.ui.tool_options.transform_interpolation.unwrap_or(app.session.prefs().general.image_interpolation) {
         Interpolation::Nearest => "nearest",
         Interpolation::Bilinear => "bilinear",

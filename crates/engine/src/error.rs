@@ -28,7 +28,7 @@ pub enum EngineError {
     #[error(
         "cannot open “{name}”: its estimated memory requirement of {required_text} ({required} bytes) cannot be admitted within the {limit_text} ({limit} byte) hard limit{scope}{scratch}{advice}",
         required_text = bytes_text(.required), limit_text = bytes_text(.limit), scope = build_limit_scope(build_memory_limit()),
-        scratch = unmeasured_scratch_hint(scratch_room_unmeasured()), advice = photocraft_io::memory::low_memory_advice(.free_memory)
+        scratch = unmeasured_scratch_hint(scratch_room_unmeasured()), advice = lienzo_io::memory::low_memory_advice(.free_memory)
     )]
     PsdHardBudget { name: String, required: u64, limit: u64, free_memory: Option<u64> },
     /// The file behind an opened handle is not the one whose memory estimate was approved.
@@ -76,15 +76,15 @@ fn build_limit_scope(limit: BuildMemoryLimit) -> String {
     match limit {
         BuildMemoryLimit::Measured => " on this machine".to_owned(),
         BuildMemoryLimit::Desktop32Bit => format!(
-            " on this machine. This 32-bit build of PhotoCraft can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
+            " on this machine. This 32-bit build of Lienzo can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
         ),
-        BuildMemoryLimit::FixedWeb => format!(" of the browser version of PhotoCraft. To open it, download the desktop app from {releases}"),
+        BuildMemoryLimit::FixedWeb => format!(" of the browser version of Lienzo. To open it, download the desktop app from {releases}"),
     }
 }
 
 /// The current scratch configuration, not the admission-time cause of a refusal.
 fn scratch_room_unmeasured() -> bool {
-    let stats = photocraft_raster::spill::stats();
+    let stats = lienzo_raster::spill::stats();
     stats.free_space_unmeasured && stats.size_cap_bytes.is_none()
 }
 
@@ -120,7 +120,7 @@ impl EngineError {
     /// capacity that could not be measured.
     pub fn uncertain_capacity_warning(&self) -> bool {
         match self {
-            Self::PsdApprovalRequired { required, available_ram, .. } => photocraft_io::memory::uncertain_capacity_warning(*required, *available_ram),
+            Self::PsdApprovalRequired { required, available_ram, .. } => lienzo_io::memory::uncertain_capacity_warning(*required, *available_ram),
             _ => false,
         }
     }
@@ -128,8 +128,8 @@ impl EngineError {
 
 /// Maps an io open/import failure to the engine's typed errors, preserving the memory fields the
 /// UI, control channel and agents need to answer or explain it.
-pub(crate) fn io_open_error(name: &str, error: photocraft_io::IoError) -> EngineError {
-    use photocraft_io::IoError;
+pub(crate) fn io_open_error(name: &str, error: lienzo_io::IoError) -> EngineError {
+    use lienzo_io::IoError;
     match error {
         IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram } => {
             EngineError::PsdApprovalRequired { name: name.to_string(), required, soft_limit, hard_limit, available_ram }
@@ -140,8 +140,8 @@ pub(crate) fn io_open_error(name: &str, error: photocraft_io::IoError) -> Engine
     }
 }
 
-impl From<photocraft_raster::AllocationError> for EngineError {
-    fn from(error: photocraft_raster::AllocationError) -> Self {
+impl From<lienzo_raster::AllocationError> for EngineError {
+    fn from(error: lienzo_raster::AllocationError) -> Self {
         Self::Other(format!("not enough memory for this operation ({error}); the document was not changed"))
     }
 }
@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn io_open_error_carries_the_free_memory_through() {
         for free_memory in [None, Some(0), Some(3 << 30)] {
-            let error = photocraft_io::IoError::PsdImportBudget { required: 9000, limit: 4000, free_memory };
+            let error = lienzo_io::IoError::PsdImportBudget { required: 9000, limit: 4000, free_memory };
             match io_open_error("big.psd", error) {
                 EngineError::PsdHardBudget { required: 9000, limit: 4000, free_memory: carried, .. } => assert_eq!(carried, free_memory),
                 other => panic!("expected the typed hard refusal, got {other:?}"),
@@ -186,12 +186,12 @@ mod tests {
         assert_eq!(
             build_limit_scope(BuildMemoryLimit::Desktop32Bit),
             format!(
-                " on this machine. This 32-bit build of PhotoCraft can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
+                " on this machine. This 32-bit build of Lienzo can use at most 2 GiB of memory for a file, or less if the computer has less memory free. The 64-bit build may be able to open it: download it from {releases}"
             )
         );
         assert_eq!(
             build_limit_scope(BuildMemoryLimit::FixedWeb),
-            format!(" of the browser version of PhotoCraft. To open it, download the desktop app from {releases}")
+            format!(" of the browser version of Lienzo. To open it, download the desktop app from {releases}")
         );
     }
 
@@ -241,6 +241,6 @@ mod tests {
 
     #[test]
     fn two_gib_in_the_text_matches_the_cap() {
-        assert_eq!(photocraft_io::memory::NATIVE_32BIT_PEAK_CAP, 2 << 30);
+        assert_eq!(lienzo_io::memory::NATIVE_32BIT_PEAK_CAP, 2 << 30);
     }
 }

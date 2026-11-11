@@ -1,9 +1,9 @@
 //! Mask feathering: the Gaussian blur Properties › Feather applies to a mask (pixel masks, vector
 //! masks and a shape layer's own path, so equal feathers match exactly). Pure `f32` planes; the
-//! compositor (`photocraft-compose::masks`) and the shape renderer share it.
+//! compositor (`lienzo-compose::masks`) and the shape renderer share it.
 
-use photocraft_doc::Path;
-use photocraft_geom::Rect;
+use lienzo_doc::Path;
+use lienzo_geom::Rect;
 
 /// Gaussian sigma of a mask feather of `px` pixels (Properties › Feather): the feather itself.
 /// Blurred with exactly that variance, psd-tools mask-parameters-no-real-channel.psd (6 px vector

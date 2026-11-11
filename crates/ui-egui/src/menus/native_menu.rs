@@ -3,19 +3,19 @@
 //!
 //! Pure and platform-free, so it is tested everywhere and builds for the web; only the backend
 //! touches AppKit. What the layout does ([`mac_layout`]):
-//! - an **app menu** named PhotoCraft: About (from Help), Settings (Edit › Preferences), Language,
+//! - an **app menu** named Lienzo: About (from Help), Settings (Edit › Preferences), Language,
 //!   Appearance (Window › Theme), Services, Hide, Hide Others, Show All and Quit (File › Exit,
 //!   still the app's own `file.exit` so the unsaved-changes prompt runs). The other Craft apps
 //!   use the same app menu;
 //! - **Window** gets Minimize, Zoom and Bring All to Front, with the open documents after it
 //!   (where a Mac app lists its windows), and **Help** the system search field;
-//! - **clashes** with the system's keys (⌘H, ⌘M, ⌘W, ⌘,) are resolved in PhotoCraft's favour, and
+//! - **clashes** with the system's keys (⌘H, ⌘M, ⌘W, ⌘,) are resolved in Lienzo's favour, and
 //!   reported; Hide and Minimize move to ⌃⌘H and ⌃⌘M, as Photoshop does. [`app_layout`] reads
 //!   who owns a key from dispatch, so a saved key on a command with no menu item, or an
 //!   alternate key, takes it from the system item too.
 //!
 //! **Keys stay with egui.** AppKit runs a menu's key equivalents before the window sees the key,
-//! which would skip PhotoCraft's key rules (text fields keep ⌘C/⌘V/⌘Z, dialogs and Camera Raw are
+//! which would skip Lienzo's key rules (text fields keep ⌘C/⌘V/⌘Z, dialogs and Camera Raw are
 //! modal, Liquify has its own ⌘Z). So the backend reports a key equivalent as [`Event::Key`], and
 //! [`NativeMenu::raw_input`] feeds it to egui as the key press it was: the shortcut runs through
 //! [`crate::shortcuts::handle`] exactly as without a native menu. A click is [`Event::Click`] and
@@ -26,11 +26,11 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 use egui::{Key, Modifiers};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::i18n::{Lang, tr, tr_id};
 use crate::menus::MenuItem;
 
-pub const APP_NAME: &str = "PhotoCraft";
+pub const APP_NAME: &str = "Lienzo";
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MenuBar {
@@ -105,7 +105,7 @@ pub enum Standard {
     CloseWindow,
 }
 
-/// Hide PhotoCraft: a custom item (the predefined one always takes ⌘H, which is View › Extras).
+/// Hide Lienzo: a custom item (the predefined one always takes ⌘H, which is View › Extras).
 pub const HIDE: &str = "app.hide";
 /// Minimize: a custom item (the predefined one always takes ⌘M, which is Curves).
 pub const MINIMIZE: &str = "window.minimize";
@@ -291,7 +291,7 @@ fn hash_nodes(nodes: &[Node], h: &mut DefaultHasher) {
 
 // ----------------------------------------------------------------------------- shortcuts
 
-/// A shortcut as PhotoCraft writes it (`Cmd+Shift+Z`). `Cmd` is ⌘ and `Ctrl` the Control key,
+/// A shortcut as Lienzo writes it (`Cmd+Shift+Z`). `Cmd` is ⌘ and `Ctrl` the Control key,
 /// never folded together: ⌃⌘M and ⌘M are different shortcuts.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Chord {
@@ -367,13 +367,13 @@ impl Chord {
 
 // ----------------------------------------------------------------------------- macOS layout
 
-/// A system key equivalent PhotoCraft already uses for something else.
+/// A system key equivalent Lienzo already uses for something else.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Clash {
     pub shortcut: &'static str,
     /// What macOS uses it for.
     pub system: &'static str,
-    /// The PhotoCraft command bound to it.
+    /// The Lienzo command bound to it.
     pub command: String,
     /// What the layout did about it.
     pub resolution: &'static str,
@@ -384,7 +384,7 @@ pub struct Layout {
     pub clashes: Vec<Clash>,
 }
 
-/// Turn PhotoCraft's menus (tagged with roles) into a Mac menu bar. See the module docs.
+/// Turn Lienzo's menus (tagged with roles) into a Mac menu bar. See the module docs.
 pub fn mac_layout(bar: &MenuBar, lang: Lang) -> Layout {
     let mut bar = bar.clone();
     let mut clashes = Vec::new();
@@ -500,7 +500,7 @@ pub fn mac_layout(bar: &MenuBar, lang: Lang) -> Layout {
 }
 
 /// Settings in the app menu: Edit › Preferences, a submenu of settings pages, becomes "Settings"
-/// with ⌘, on its first page unless PhotoCraft binds ⌘, elsewhere.
+/// with ⌘, on its first page unless Lienzo binds ⌘, elsewhere.
 fn settings_node(node: Node, comma_taken: Option<String>, lang: Lang, clashes: &mut Vec<Clash>) -> Node {
     if let Some(command) = &comma_taken {
         clashes.push(Clash { shortcut: "Cmd+,", system: "Settings", command: command.clone(), resolution: "Settings has no shortcut" });
@@ -612,9 +612,9 @@ fn translate(bar: &mut MenuBar, lang: Lang) {
     }
 }
 
-/// PhotoCraft's menus as a Mac menu bar, in the UI language; `language` is the
+/// Lienzo's menus as a Mac menu bar, in the UI language; `language` is the
 /// `interface.language` preference (`auto` or a code), checked in the app menu's Language.
-pub fn photocraft_layout(items: &[MenuItem], lang: Lang, language: &str) -> Layout {
+pub fn lienzo_layout(items: &[MenuItem], lang: Lang, language: &str) -> Layout {
     let mut bar = from_items(&crate::menus::TOP_MENUS, items);
     bar.tag_item("help.about", ItemRole::About);
     bar.tag_item("file.exit", ItemRole::Quit);
@@ -640,7 +640,7 @@ pub fn photocraft_layout(items: &[MenuItem], lang: Lang, language: &str) -> Layo
 
 /// Build native menus against effective dispatch ownership, including alternate shortcuts
 /// and commands without menu items. AppKit must not consume a saved creative shortcut.
-pub fn app_layout(app: &PhotocraftApp, items: &[MenuItem], lang: Lang, language: &str) -> Layout {
+pub fn app_layout(app: &LienzoApp, items: &[MenuItem], lang: Lang, language: &str) -> Layout {
     fn clear(nodes: &mut [Node], key: &str, owner: &str, lang: Lang) {
         let parsed = crate::shortcuts::parse(key);
         for node in nodes {
@@ -656,7 +656,7 @@ pub fn app_layout(app: &PhotocraftApp, items: &[MenuItem], lang: Lang, language:
             }
         }
     }
-    let mut layout = photocraft_layout(items, lang, language);
+    let mut layout = lienzo_layout(items, lang, language);
     let bindings = crate::shortcut_dispatch::bindings(app);
     for (key, system) in [("Cmd+,", "Settings"), ("Cmd+H", "Hide"), ("Cmd+M", "Minimize"), ("Ctrl+Cmd+H", "Hide"), ("Ctrl+Cmd+M", "Minimize")] {
         let parsed = crate::shortcuts::parse(key);
@@ -695,7 +695,7 @@ pub trait Backend {
     fn drain(&mut self) -> Vec<Event>;
 }
 
-/// The native menu bar, while PhotoCraft uses one (the in-window menus are hidden then).
+/// The native menu bar, while Lienzo uses one (the in-window menus are hidden then).
 pub struct NativeMenu {
     backend: Box<dyn Backend>,
     /// Hash of the state the menus were last built from.
@@ -739,7 +739,7 @@ impl NativeMenu {
 }
 
 /// Run the native menu clicks that arrived since the last frame, like in-window menu clicks.
-pub fn run(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn run(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(menu) = app.services.native_menu.as_mut() else { return };
     let clicks = std::mem::take(&mut menu.clicks);
     for id in clicks {
@@ -761,7 +761,7 @@ pub fn run(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// Bring the native menu up to date when anything it shows may have changed: a command ran, the
 /// document or selection changed, or the user clicked or pressed a key. Building the rows walks
 /// every command's enabled state, so it doesn't run on frames that only animate or scroll.
-pub fn sync(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn sync(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(menu) = app.services.native_menu.as_ref() else { return };
     let state = state_hash(app, had_input(ctx).then_some(app.frame));
     if menu.state == Some(state) && !menu.dirty {
@@ -776,7 +776,7 @@ pub fn sync(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let Some(menu) = app.services.native_menu.as_mut() else { return };
     if !menu.logged {
         for c in &layout.clashes {
-            log::info!("menu: {} is {} on macOS and {} in PhotoCraft; {}", c.shortcut, c.system, c.command, c.resolution);
+            log::info!("menu: {} is {} on macOS and {} in Lienzo; {}", c.shortcut, c.system, c.command, c.resolution);
         }
         menu.logged = true;
     }
@@ -794,7 +794,7 @@ pub(crate) fn had_input(ctx: &egui::Context) -> bool {
 /// order, for the Window menu) and the active one's revision,
 /// selection, recent files, panels and view state, the language. `input` forces a change on
 /// frames with a click or key press, which covers state the hash doesn't list.
-pub(crate) fn state_hash(app: &PhotocraftApp, input: Option<u64>) -> u64 {
+pub(crate) fn state_hash(app: &LienzoApp, input: Option<u64>) -> u64 {
     let mut h = DefaultHasher::new();
     input.hash(&mut h);
     let s = &app.session;

@@ -25,7 +25,7 @@ inputs flat into the output folder in input order. A later same-name result repl
 one, as measured in Photoshop 2026. **Stop On Error** leaves later inputs unprocessed;
 **Error Log** writes a UTF-16 LE file with a BOM and CRLF line endings even when no file fails.
 It starts with `Batch Start`, records a `File` / `Error` pair per failure, and ends with
-`Batch End`. The wording is English because PhotoCraft does not have Photoshop's numeric error
+`Batch End`. The wording is English because Lienzo does not have Photoshop's numeric error
 codes or German message catalog. Folder batches report progress per file and
 can be cancelled after the current file. A cancelled batch returns `cancelled: true`, its
 completed `files`, and `skipped` inputs. Background job status is `cancelled` and retains
@@ -64,7 +64,7 @@ The [Photoshop 2026 Batch measurements](https://github.com/davidmann4/photocraft
 record flat subfolder output, last-result-wins collisions, and extension components that add a
 dot only at the end. `batch_include_all_subfolders`,
 `batch_naming_later_result_replaces_the_earlier_one`, and
-`extension_component_only_adds_a_dot_at_the_end` check those cases. PhotoCraft deliberately
+`extension_component_only_adds_a_dot_at_the_end` check those cases. Lienzo deliberately
 rejects a plan that would replace another input file before it is read, to prevent data loss.
 The desktop Batch follows the measured flow: it shows no progress in the status bar, previews each
 input read-only on the canvas, and Esc asks whether to continue or stop. Headless control clients

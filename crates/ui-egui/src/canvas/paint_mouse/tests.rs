@@ -7,8 +7,8 @@ use crate::canvas::{ToolEvent, tool_event};
 
 mod right_click;
 
-fn harness(prefs: Option<&str>) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(prefs: Option<&str>) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("tools.setColors", json!({"foreground": "#0000ff"})).unwrap();
@@ -19,7 +19,7 @@ fn harness(prefs: Option<&str>) -> Harness<'static, PhotocraftApp> {
     app.ui.tool = Tool::Brush;
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -28,18 +28,18 @@ fn harness(prefs: Option<&str>) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn press(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2, button: PointerButton, pressed: bool) {
+fn press(h: &mut Harness<'static, LienzoApp>, pos: Pos2, button: PointerButton, pressed: bool) {
     h.event(egui::Event::PointerButton { pos, button, pressed, modifiers: Modifiers::NONE });
     h.run_steps(2);
 }
 
 /// Drag across the canvas centre with `button`; returns the document points it covered.
-fn drag(h: &mut Harness<'static, PhotocraftApp>, button: PointerButton) -> (Pos2, Pos2) {
+fn drag(h: &mut Harness<'static, LienzoApp>, button: PointerButton) -> (Pos2, Pos2) {
     let c = h.state().last_canvas_rect.center();
     let (a, b) = (c - vec2(80.0, 0.0), c + vec2(80.0, 0.0));
     h.event(egui::Event::PointerMoved(a));
@@ -53,7 +53,7 @@ fn drag(h: &mut Harness<'static, PhotocraftApp>, button: PointerButton) -> (Pos2
     (a, b)
 }
 
-fn alpha_at(h: &Harness<'static, PhotocraftApp>, screen: Pos2) -> f32 {
+fn alpha_at(h: &Harness<'static, LienzoApp>, screen: Pos2) -> f32 {
     let app = h.state();
     let v = app.ui.views[0].clone();
     let r = app.last_canvas_rect;
@@ -63,11 +63,11 @@ fn alpha_at(h: &Harness<'static, PhotocraftApp>, screen: Pos2) -> f32 {
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(x, y)[3]
 }
 
-fn strokes(h: &Harness<'static, PhotocraftApp>) -> Vec<serde_json::Value> {
+fn strokes(h: &Harness<'static, LienzoApp>) -> Vec<serde_json::Value> {
     h.state().session.journal.iter().filter(|(id, _)| id == "paint.stroke").map(|(_, p)| p.clone()).collect()
 }
 
-fn mode_right_click(h: &mut Harness<'static, PhotocraftApp>, mods: Modifiers) {
+fn mode_right_click(h: &mut Harness<'static, LienzoApp>, mods: Modifiers) {
     let p = h.state().last_canvas_rect.center();
     h.event(egui::Event::ModifiersChanged(mods));
     h.event(egui::Event::PointerMoved(p));
@@ -93,7 +93,7 @@ fn shift_right_mode_picker_selects_journals_and_clear_erases() {
     h.get_by_label("Multiply").click();
     h.run_steps(2);
     assert!(h.state().ui.brush_mode_menu.is_none());
-    assert_eq!(h.state().session.tools.brush.mode, photocraft_doc::BlendMode::Multiply);
+    assert_eq!(h.state().session.tools.brush.mode, lienzo_doc::BlendMode::Multiply);
     assert_eq!(h.state().session.journal.last().unwrap(), &("tools.setBrush".into(), json!({"brush": {"mode": "Multiply", "behind": false}})));
     let (a, b) = drag(&mut h, PointerButton::Primary);
     let mid = a + (b - a) * 0.5;
@@ -102,7 +102,7 @@ fn shift_right_mode_picker_selects_journals_and_clear_erases() {
     h.get_by_label("Clear").click();
     h.run_steps(2);
     assert!(h.state().ui.tool_options.brush_clear);
-    assert_eq!(h.state().session.tools.brush.mode, photocraft_doc::BlendMode::Multiply, "Clear keeps the underlying mode, as the options bar does");
+    assert_eq!(h.state().session.tools.brush.mode, lienzo_doc::BlendMode::Multiply, "Clear keeps the underlying mode, as the options bar does");
     drag(&mut h, PointerButton::Primary);
     assert_eq!(alpha_at(&h, mid), 0.0);
     assert!(strokes(&h).last().unwrap()["erase"].as_bool().unwrap());
@@ -150,7 +150,7 @@ fn mode_control_can_pick_a_row_with_ui_click() {
     }
     h.run_steps(2);
     assert!(h.state().ui.brush_mode_menu.is_none());
-    assert_eq!(h.state().session.tools.brush.mode, photocraft_doc::BlendMode::Darken);
+    assert_eq!(h.state().session.tools.brush.mode, lienzo_doc::BlendMode::Darken);
     assert_eq!(h.state().session.journal.last().unwrap(), &("tools.setBrush".into(), json!({"brush": {"mode": "Darken", "behind": false}})));
 }
 
@@ -350,7 +350,7 @@ fn picker_click_picks_a_preset_and_double_click_closes_it() {
     press(&mut h, c, PointerButton::Secondary, false);
     h.run_steps(2);
     let names: Vec<String> = h.state().session.tools.presets.iter().skip(1).take(2).map(|p| p.name.clone()).collect();
-    let picks = |h: &Harness<'static, PhotocraftApp>, name: &str| {
+    let picks = |h: &Harness<'static, LienzoApp>, name: &str| {
         h.state().session.journal.iter().filter(|(id, p)| id == "tools.setBrush" && *p == json!({ "preset": name })).count()
     };
     h.get_by_label(&names[0]).click();
@@ -391,7 +391,7 @@ fn picker_shows_hardness_only_for_round_tips() {
     h.state_mut().ui.brush_picker = Some([c.x, c.y]);
     h.run_steps(2);
     assert!(h.query_all_by_label("Hardness").next().is_some());
-    let sampled = h.state().session.tools.presets.iter().find(|p| p.brush.tip != photocraft_engine::paint::TipShape::Round).map(|p| p.name.clone());
+    let sampled = h.state().session.tools.presets.iter().find(|p| p.brush.tip != lienzo_engine::paint::TipShape::Round).map(|p| p.name.clone());
     h.state_mut().run("tools.setBrush", json!({ "preset": sampled.expect("a sampled preset") })).unwrap();
     h.run_steps(2);
     assert!(h.query_all_by_label("Hardness").next().is_none());
@@ -473,7 +473,7 @@ fn right_drag_erases_with_the_erase_preference() {
 
 #[test]
 fn right_stroke_erases_with_pen_pressure_through_the_control_channel_path() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
     app.ui.tool = Tool::Brush;
@@ -499,7 +499,7 @@ fn right_stroke_erases_with_pen_pressure_through_the_control_channel_path() {
 fn shift_alt_right_through_the_control_channel_respects_the_erase_preference() {
     // As on the canvas, with the right-erase preference the erase stroke wins over the HUD
     // for Brush/Eraser; without it, Shift+Alt+right opens the HUD (#6098).
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     app.ui.tool = Tool::Brush;
     let shift_alt = egui::Modifiers { shift: true, alt: true, ..Default::default() };
@@ -519,7 +519,7 @@ fn a_control_channel_up_closes_the_hud_without_repeating_its_modifiers() {
     // Each control-channel request carries its own modifiers, so an Up sent after the keys
     // are released arrives without Shift+Alt: it must still close the HUD it opened, or the
     // HUD stays up and keeps picking from the hover (#6098 review).
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     app.ui.tool = Tool::Brush;
     let shift_alt = egui::Modifiers { shift: true, alt: true, ..Default::default() };
@@ -535,9 +535,9 @@ fn a_control_channel_up_closes_the_hud_without_repeating_its_modifiers() {
 
 #[test]
 fn the_brush_is_a_per_tool_option_that_presets_keep() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
-    let amount = |app: &PhotocraftApp| app.session.tools.brush.smoothing.amount;
+    let amount = |app: &LienzoApp| app.session.tools.brush.smoothing.amount;
     app.ui.tool = Tool::Brush;
     sync_tool_brush(&mut app);
     assert_eq!(amount(&app), 0.1, "Photoshop's default");
@@ -573,7 +573,7 @@ fn the_brush_is_a_per_tool_option_that_presets_keep() {
 /// keeps the rest of the brush the old tool left (other tools still take its opacity).
 #[test]
 fn art_history_brush_starts_at_full_opacity() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.ui.tool = Tool::Brush;
     sync_tool_brush(&mut app);
@@ -596,9 +596,9 @@ fn art_history_brush_starts_at_full_opacity() {
 /// dynamics of one tool never leak into another's, and each tool gets its own back.
 #[test]
 fn each_tool_keeps_its_own_brush() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
-    let brush = |app: &PhotocraftApp| app.session.tools.brush.clone();
+    let brush = |app: &LienzoApp| app.session.tools.brush.clone();
     let size = |b: &BrushSettings| b.size;
     let hardness = |b: &BrushSettings| b.hardness;
     let opacity = |b: &BrushSettings| b.opacity;
@@ -629,14 +629,14 @@ fn each_tool_keeps_its_own_brush() {
     // Mode, opacity, flow and the dynamics sections are per tool too.
     app.ui.tool = Tool::CloneStamp;
     sync_tool_brush(&mut app);
-    assert_eq!(mode(&brush(&app)), photocraft_color::BlendMode::Normal, "a new tool starts in Normal, not the Brush's Multiply");
+    assert_eq!(mode(&brush(&app)), lienzo_color::BlendMode::Normal, "a new tool starts in Normal, not the Brush's Multiply");
     app.run("tools.setBrush", json!({"brush": {"mode": "Screen", "opacity": 0.3}})).unwrap();
     app.ui.tool = Tool::Brush;
     sync_tool_brush(&mut app);
-    assert_eq!((mode(&brush(&app)), opacity(&brush(&app))), (photocraft_color::BlendMode::Multiply, 0.7), "the Brush's own mode and opacity");
+    assert_eq!((mode(&brush(&app)), opacity(&brush(&app))), (lienzo_color::BlendMode::Multiply, 0.7), "the Brush's own mode and opacity");
     app.ui.tool = Tool::CloneStamp;
     sync_tool_brush(&mut app);
-    assert_eq!((mode(&brush(&app)), opacity(&brush(&app))), (photocraft_color::BlendMode::Screen, 0.3), "the Clone Stamp keeps its own");
+    assert_eq!((mode(&brush(&app)), opacity(&brush(&app))), (lienzo_color::BlendMode::Screen, 0.3), "the Clone Stamp keeps its own");
 
     // The colours, the erase flag and the seed belong to the session, so a swap keeps what is
     // live now instead of restoring another tool's copy (a picked colour reaches every tool).
@@ -660,7 +660,7 @@ fn each_tool_keeps_its_own_brush() {
 #[test]
 fn eraser_tool_on_the_background_paints_the_background_colour() {
     // #76: the Eraser on the Background (locked transparency) paints the background colour.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     app.run("tools.setColors", json!({"background": "#ff0000"})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 12, "hardness": 1.0}})).unwrap();
@@ -677,7 +677,7 @@ fn eraser_tool_on_the_background_paints_the_background_colour() {
 }
 
 /// Assert the one committed stroke contains a point at each queued screen position.
-fn assert_committed_points(h: &Harness<'static, PhotocraftApp>, queued: &[Pos2]) {
+fn assert_committed_points(h: &Harness<'static, LienzoApp>, queued: &[Pos2]) {
     let s = strokes(h);
     assert_eq!(s.len(), 1);
     let points = s[0]["points"].as_array().unwrap();
@@ -724,14 +724,14 @@ fn one_frame_feeds_every_pointer_move_not_just_the_latest() {
 }
 
 /// Shift+right-click with `tool` and the labels of the menu it opened (empty: none opened).
-fn open_tool_menu(h: &mut Harness<'static, PhotocraftApp>, tool: Tool) -> Vec<&'static str> {
+fn open_tool_menu(h: &mut Harness<'static, LienzoApp>, tool: Tool) -> Vec<&'static str> {
     h.state_mut().ui.tool = tool;
     h.run_steps(1);
     mode_right_click(h, Modifiers::SHIFT);
     if h.state().ui.brush_mode_menu.is_none() { Vec::new() } else { crate::brush_mode_menu::labels(tool) }
 }
 
-fn choose_row(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn choose_row(h: &mut Harness<'static, LienzoApp>, label: &str) {
     use egui_kittest::kittest::Queryable;
     h.get_by_label(label).click();
     h.run_steps(2);
@@ -742,7 +742,7 @@ fn choose_row(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
 fn shift_right_menu_lists_each_tools_own_rows_in_order() {
     use crate::brush_mode_menu::{Item, items};
     use egui_kittest::kittest::Queryable;
-    let blend: Vec<&'static str> = photocraft_doc::BlendMode::LAYER_MODES.iter().map(|m| m.label()).collect();
+    let blend: Vec<&'static str> = lienzo_doc::BlendMode::LAYER_MODES.iter().map(|m| m.label()).collect();
     let with = |extra: &[&'static str]| {
         let mut v = blend.clone();
         for (i, l) in extra.iter().enumerate() {
@@ -778,7 +778,7 @@ fn shift_right_menu_lists_each_tools_own_rows_in_order() {
             assert_eq!(rows.get(1), Some(&Item::Separator), "{tool:?}");
         }
         if want.contains(&"Darken") && want.contains(&"Dissolve") {
-            let at = rows.iter().position(|i| *i == Item::Blend(photocraft_doc::BlendMode::Darken)).unwrap();
+            let at = rows.iter().position(|i| *i == Item::Blend(lienzo_doc::BlendMode::Darken)).unwrap();
             assert_eq!(rows[at - 1], Item::Separator, "{tool:?}");
         }
         // The rows the menu shows first are drawn, top to bottom, in that order.
@@ -789,7 +789,7 @@ fn shift_right_menu_lists_each_tools_own_rows_in_order() {
 
 #[test]
 fn shift_right_menu_rows_set_what_the_options_bar_sets() {
-    use photocraft_doc::BlendMode;
+    use lienzo_doc::BlendMode;
     let mut h = harness(None);
     // Pencil: Clear is the Pencil's own flag, Behind its brush's, both through tools.setBrush.
     open_tool_menu(&mut h, Tool::Pencil);
@@ -866,7 +866,7 @@ fn behind_and_clear_are_greyed_on_the_background_layer() {
         open_tool_menu(&mut h, tool);
         assert!(!enabled(h.state(), Item::Clear), "{tool:?}");
         assert!(find(h.state(), "Clear").is_err(), "{tool:?}");
-        assert!(enabled(h.state(), Item::Blend(photocraft_doc::BlendMode::Multiply)));
+        assert!(enabled(h.state(), Item::Blend(lienzo_doc::BlendMode::Multiply)));
         let journal = h.state().session.journal.len();
         h.get_by_label("Clear").click();
         h.run_steps(2);
@@ -884,7 +884,7 @@ fn behind_and_clear_are_greyed_on_the_background_layer() {
 
 /// A right press at the canvas centre, a move of `by` and the release there, with `mods` held
 /// throughout; returns where the button went down.
-fn right_drag_by(h: &mut Harness<'static, PhotocraftApp>, by: egui::Vec2, mods: Modifiers) -> Pos2 {
+fn right_drag_by(h: &mut Harness<'static, LienzoApp>, by: egui::Vec2, mods: Modifiers) -> Pos2 {
     let c = h.state().last_canvas_rect.center();
     h.event(egui::Event::ModifiersChanged(mods));
     h.event(egui::Event::PointerMoved(c));
@@ -969,7 +969,7 @@ fn a_right_drag_with_the_hand_opens_its_menu_without_panning() {
 /// frame): egui reports neither a click nor a drag stop, and the menu still opens (#10183).
 /// `split` puts the press in an earlier frame; otherwise press, move and release share one.
 /// The events go straight into the frame's input: `Harness::event` runs a frame per event.
-fn right_click_in_one_frame(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2, split: bool) {
+fn right_click_in_one_frame(h: &mut Harness<'static, LienzoApp>, from: Pos2, to: Pos2, split: bool) {
     h.event(egui::Event::PointerMoved(from));
     h.run_steps(1);
     let press = egui::Event::PointerButton { pos: from, button: PointerButton::Secondary, pressed: true, modifiers: Modifiers::NONE };

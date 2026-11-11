@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use photocraft_doc::{ColorMode, Document};
+use lienzo_doc::{ColorMode, Document};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// The field that marks a prompt as this module's.
 const FIELD: &str = "__heldOpen";
@@ -37,14 +37,14 @@ pub struct Held {
     /// ([`crate::jobs_ui::OpenOrder`]): kept while this file waits, so its tab still lands in the
     /// set's order.
     pub order: Option<crate::jobs_ui::OpenOrder>,
-    /// The profile question ([`photocraft_engine::color_cmds::ColorState::open_question`]), or
+    /// The profile question ([`lienzo_engine::color_cmds::ColorState::open_question`]), or
     /// `None` to open without asking.
     pub question: Option<Value>,
     /// The Color Settings policy was already applied (a background open added it before it had
     /// to wait); otherwise opening applies it.
     pub policy_applied: bool,
     /// Held by Open as Smart Object: the document holds the smart object layer already, and is
-    /// admitted by [`photocraft_engine::file_cmds::admit_as_smart_object`].
+    /// admitted by [`lienzo_engine::file_cmds::admit_as_smart_object`].
     pub smart_object: bool,
 }
 
@@ -77,24 +77,24 @@ pub struct MemoryPrompt {
 }
 
 /// Whether a file that just finished reading has to wait: one earlier in the queue does.
-pub fn waiting(app: &PhotocraftApp) -> bool {
+pub fn waiting(app: &LienzoApp) -> bool {
     !app.held_opens.is_empty() || !app.held_memory_prompts.is_empty()
 }
 
 /// Opens `held` now, or queues it behind the file whose prompt is up.
-pub fn arrive(app: &mut PhotocraftApp, held: Held) {
+pub fn arrive(app: &mut LienzoApp, held: Held) {
     app.held_opens.push_back(held);
     app.prompt_order.push_back(PromptKind::Open);
     advance(app);
 }
 
 /// Whether any open prompt (damage, profile or high-memory) is currently on screen.
-pub fn has_open_dialog(app: &PhotocraftApp) -> bool {
+pub fn has_open_dialog(app: &LienzoApp) -> bool {
     app.ui.dialogs.iter().any(|d| owns(&d.fields) || owns_damage(&d.fields) || owns_memory(&d.fields))
 }
 
 /// Opens queued files in order until one needs its prompt, which is shown if it isn't yet.
-pub fn advance(app: &mut PhotocraftApp) {
+pub fn advance(app: &mut LienzoApp) {
     // Reconcile legacy callers that populated held queues directly.
     if app.prompt_order.is_empty() {
         app.prompt_order.extend(std::iter::repeat_n(PromptKind::Open, app.held_opens.len()));
@@ -142,7 +142,7 @@ pub fn advance(app: &mut PhotocraftApp) {
 }
 
 /// Shows the Embedded Profile Mismatch (or missing profile) prompt for the first queued file.
-fn show(app: &mut PhotocraftApp) {
+fn show(app: &mut LienzoApp) {
     let Some(front) = app.held_opens.front() else { return };
     let Some(q) = &front.question else { return };
     // The mode reads as the catalogs name it (French "RVB"); the file name goes in last, so
@@ -176,10 +176,10 @@ fn show(app: &mut PhotocraftApp) {
 
 /// The Color Settings policy that answers this mode's files when Ask On Mismatch is off.
 fn policy_key(mode: ColorMode) -> Option<&'static str> {
-    match photocraft_engine::color_cmds::mode_space(mode) {
-        photocraft_cms::ColorSpace::Rgb => Some("policyRgb"),
-        photocraft_cms::ColorSpace::Cmyk => Some("policyCmyk"),
-        photocraft_cms::ColorSpace::Gray => Some("policyGray"),
+    match lienzo_engine::color_cmds::mode_space(mode) {
+        lienzo_cms::ColorSpace::Rgb => Some("policyRgb"),
+        lienzo_cms::ColorSpace::Cmyk => Some("policyCmyk"),
+        lienzo_cms::ColorSpace::Gray => Some("policyGray"),
         _ => None,
     }
 }
@@ -191,7 +191,7 @@ pub fn owns(fields: &serde_json::Map<String, Value>) -> bool {
 
 /// The prompt's answer: `Some(action)` (OK) opens the first queued file with it and moves on to
 /// the next; `None` (Cancel) drops every queued file and stops the reads still running.
-pub fn answer(app: &mut PhotocraftApp, action: Option<&str>) -> Result<Value, String> {
+pub fn answer(app: &mut LienzoApp, action: Option<&str>) -> Result<Value, String> {
     if app.held_opens.front().is_some_and(|h| h.damage_pending) {
         return Err("answer the damaged PSD confirmation first".into());
     }
@@ -228,7 +228,7 @@ pub fn answer(app: &mut PhotocraftApp, action: Option<&str>) -> Result<Value, St
 /// mode and Ask On Mismatch turns off, so files read from now on open without asking. Files
 /// already waiting with a mismatch in the same mode were asked before that and get the same
 /// answer; any other question still asks.
-pub fn answer_remembering(app: &mut PhotocraftApp, action: &str) -> Result<Value, String> {
+pub fn answer_remembering(app: &mut LienzoApp, action: &str) -> Result<Value, String> {
     if app.held_opens.front().is_some_and(|h| h.damage_pending) {
         return Err("answer the damaged PSD confirmation first".into());
     }
@@ -266,7 +266,7 @@ pub(crate) fn owns_damage(fields: &serde_json::Map<String, Value>) -> bool {
 
 /// Shows the standard agent-visible confirmation for the first damaged PSD
 /// waiting in the open queue, including its decoding warnings.
-fn show_damage(app: &mut PhotocraftApp) {
+fn show_damage(app: &mut LienzoApp) {
     let Some(front) = app.held_opens.front().filter(|h| h.damage_pending) else { return };
     let message = format!(
         "{}\n\n{}\n\n{}",
@@ -300,7 +300,7 @@ pub(crate) fn damage_body(ui: &mut egui::Ui, fields: &serde_json::Map<String, Va
 
 /// Continue or discard this file only, then move the queue forward. Accepting does not
 /// mark the document read-only: Save, Export, scripts and web downloads work normally.
-pub(crate) fn answer_damage(app: &mut PhotocraftApp, accept: bool) -> Result<Value, String> {
+pub(crate) fn answer_damage(app: &mut LienzoApp, accept: bool) -> Result<Value, String> {
     let Some(front) = app.held_opens.front_mut().filter(|h| h.damage_pending) else {
         return Err("no damaged PSD is waiting for confirmation".into());
     };
@@ -322,7 +322,7 @@ pub(crate) fn answer_damage(app: &mut PhotocraftApp, accept: bool) -> Result<Val
 
 /// Opens a queued file, applying `action` (the prompt's answer) or else the Color Settings
 /// policy, then does what any open does afterwards.
-fn open(app: &mut PhotocraftApp, held: Held, action: Option<&str>) -> Result<Value, String> {
+fn open(app: &mut LienzoApp, held: Held, action: Option<&str>) -> Result<Value, String> {
     if held.damage_pending {
         return Err("damaged PSD cannot be opened before confirmation".into());
     }
@@ -334,13 +334,13 @@ fn open(app: &mut PhotocraftApp, held: Held, action: Option<&str>) -> Result<Val
             app.open_failed(&name, &e.to_string());
             return Err(e.to_string());
         }
-        if smart_object { photocraft_engine::file_cmds::admit_as_smart_object(&mut app.session, doc) } else { app.session.add_document(doc, None) }
+        if smart_object { lienzo_engine::file_cmds::admit_as_smart_object(&mut app.session, doc) } else { app.session.add_document(doc, None) }
     } else if smart_object {
         // A damage-only hold has no colour question: apply the policy as the engine's open does,
         // then admit it as the smart object document it is (name, history label, snapshot).
         let ignore_exif = app.session.prefs().file_handling.ignore_exif_profile_tag;
         app.session.color.open_policy(&mut doc, ignore_exif);
-        photocraft_engine::file_cmds::admit_as_smart_object(&mut app.session, doc)
+        lienzo_engine::file_cmds::admit_as_smart_object(&mut app.session, doc)
     } else {
         app.session.open_document(doc, None).0
     };
@@ -366,7 +366,7 @@ fn open(app: &mut PhotocraftApp, held: Held, action: Option<&str>) -> Result<Val
 /// Queues a high-memory prompt in arrival order and shows it when it reaches the front.
 #[allow(clippy::too_many_arguments)]
 pub fn arrive_memory(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     id: u64,
     name: String,
     path: Option<String>,
@@ -394,12 +394,12 @@ pub(crate) fn memory_body(ui: &mut egui::Ui, fields: &serde_json::Map<String, Va
 
 /// Advances the shared open-prompt queue; memory prompts take their turn with damage and profile
 /// prompts in arrival order.
-pub fn advance_memory(app: &mut PhotocraftApp) {
+pub fn advance_memory(app: &mut LienzoApp) {
     advance(app);
 }
 
 /// Builds and opens the confirmation dialog for a queued high-memory preflight.
-fn show_memory(app: &mut PhotocraftApp, prompt: &MemoryPrompt) {
+fn show_memory(app: &mut LienzoApp, prompt: &MemoryPrompt) {
     let est_gb = prompt.estimated as f64 / (1u64 << 30) as f64;
     // An unmeasured capacity is never printed as a number, even if a stale measurement is
     // attached: the engine's `capacityUnknown` wins.
@@ -416,9 +416,9 @@ fn show_memory(app: &mut PhotocraftApp, prompt: &MemoryPrompt) {
     };
     message.push_str("\n\n");
     message.push_str(tl!("Opening this document uses more memory and may slow down your computer or other running applications."));
-    if available.is_some_and(|a| a.saturating_sub(prompt.estimated) < photocraft_io::memory::LOW_MEMORY_WARNING_MARGIN) {
+    if available.is_some_and(|a| a.saturating_sub(prompt.estimated) < lienzo_io::memory::LOW_MEMORY_WARNING_MARGIN) {
         message.push_str("\n\n");
-        message.push_str(tl!("Little memory would be left after opening this file. Close other apps first, or PhotoCraft may run out of memory."));
+        message.push_str(tl!("Little memory would be left after opening this file. Close other apps first, or Lienzo may run out of memory."));
     }
     if prompt.uncertain_capacity_warning {
         message.push_str("\n\n");
@@ -446,7 +446,7 @@ fn show_memory(app: &mut PhotocraftApp, prompt: &MemoryPrompt) {
 
 /// Answers the front high-memory prompt: accepts and starts the approved open, or declines and
 /// advances the queue. The engine command revalidates the source identity and the hard limit.
-pub(crate) fn answer_memory(app: &mut PhotocraftApp, accept: bool) -> Result<Value, String> {
+pub(crate) fn answer_memory(app: &mut LienzoApp, accept: bool) -> Result<Value, String> {
     let Some(front) = app.held_memory_prompts.pop_front() else {
         advance(app);
         return Err("no high-memory PSD is waiting for confirmation".into());
@@ -466,13 +466,13 @@ pub(crate) fn answer_memory(app: &mut PhotocraftApp, accept: bool) -> Result<Val
         Ok(r) => {
             if accept {
                 if let Some(job) = r.get("job").and_then(Value::as_u64) {
-                    app.jobs.opens.push(crate::jobs_ui::OpenTab { job: photocraft_engine::jobs::JobId(job), name: name.clone(), path, slot, order });
-                    app.jobs.focus = Some(photocraft_engine::jobs::JobId(job));
+                    app.jobs.opens.push(crate::jobs_ui::OpenTab { job: lienzo_engine::jobs::JobId(job), name: name.clone(), path, slot, order });
+                    app.jobs.focus = Some(lienzo_engine::jobs::JobId(job));
                     app.ui.chrome.home = None;
                     app.ui.status = crate::i18n::fmt(tl!("Opening {name}…"), &[("name", &name)]);
                     app.ui.status_error = false;
                 } else if let Some(result) = r.get("result") {
-                    let tab = crate::jobs_ui::OpenTab { job: photocraft_engine::jobs::JobId(0), name: name.clone(), path: path.clone(), slot, order };
+                    let tab = crate::jobs_ui::OpenTab { job: lienzo_engine::jobs::JobId(0), name: name.clone(), path: path.clone(), slot, order };
                     if let Err(e) = crate::jobs_ui::finish_open_tab(app, &tab, result) {
                         app.ui.status = e;
                         app.ui.status_error = true;

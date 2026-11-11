@@ -4,12 +4,12 @@
 //! test the decisions the canvas draws from (`current_guides`, `crop_shield::current`,
 //! `frame_look`), driven by real Crop gestures through the control channel.
 
-use photocraft_ui_egui::control::{ControlRequest, handle};
-use photocraft_ui_egui::crop_overlay::{FrameLook, OverlayShow, current_guides, frame_look};
-use photocraft_ui_egui::{PhotocraftApp, Tool};
+use lienzo_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::crop_overlay::{FrameLook, OverlayShow, current_guides, frame_look};
+use lienzo_ui_egui::{LienzoApp, Tool};
 use serde_json::{Value, json};
 
-fn control(app: &mut PhotocraftApp, method: &str, params: Value) {
+fn control(app: &mut LienzoApp, method: &str, params: Value) {
     let ctx = egui::Context::default();
     let (req, _rx) = ControlRequest::new(method, params);
     handle(app, &ctx, &req);
@@ -17,31 +17,31 @@ fn control(app: &mut PhotocraftApp, method: &str, params: Value) {
 }
 
 /// A document with the Crop tool showing its untouched default frame, overlay mode `show`.
-fn crop_app(show: OverlayShow) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn crop_app(show: OverlayShow) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Crop;
     app.ui.tool_options.crop_overlay_show = show;
-    photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+    lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
     assert!(app.ui.crop_rect.is_some(), "the Crop tool shows a frame");
     app
 }
 
 /// What the canvas would draw now: (guides shown, shield shown, outline look).
-fn drawn(app: &PhotocraftApp) -> (bool, bool, FrameLook) {
+fn drawn(app: &LienzoApp) -> (bool, bool, FrameLook) {
     let ctx = egui::Context::default();
     let guides = !current_guides(app, 300.0, 200.0).is_empty();
-    let shield = photocraft_ui_egui::crop_shield::current(app, &ctx).is_some();
+    let shield = lienzo_ui_egui::crop_shield::current(app, &ctx).is_some();
     (guides, shield, frame_look(app))
 }
 
 /// Press inside the untouched frame and drag: that draws a new frame, the first change.
-fn press_and_drag(app: &mut PhotocraftApp) {
+fn press_and_drag(app: &mut LienzoApp) {
     control(app, "ui.pointer", json!({"tool": "Crop", "events": [{"kind": "down", "x": 50, "y": 40}, {"kind": "move", "x": 150, "y": 90}]}));
 }
 
-fn release(app: &mut PhotocraftApp) {
+fn release(app: &mut LienzoApp) {
     control(app, "ui.pointer", json!({"tool": "Crop", "events": [{"kind": "up", "x": 150, "y": 90}]}));
 }
 
@@ -74,16 +74,16 @@ fn committing_or_cancelling_brings_back_the_untouched_look() {
         let mut app = crop_app(show);
         press_and_drag(&mut app);
         release(&mut app);
-        photocraft_ui_egui::canvas::commit_crop(&mut app);
-        photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+        lienzo_ui_egui::canvas::commit_crop(&mut app);
+        lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
         // A commit hides the frame until the next press, so there is nothing to draw.
         assert!(app.ui.crop_rect.is_none(), "{show:?}: the commit hides the frame");
 
         press_and_drag(&mut app);
         release(&mut app);
         assert!(drawn(&app).1, "{show:?}: a second crop starts again");
-        photocraft_ui_egui::crop_ui::cancel(&mut app);
-        photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+        lienzo_ui_egui::crop_ui::cancel(&mut app);
+        lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
         assert_eq!(drawn(&app), (false, false, FrameLook::Untouched), "{show:?} after cancel: a new untouched frame");
     }
 }
@@ -161,7 +161,7 @@ fn show_cropped_area_off_still_hides_what_is_outside_an_untouched_frame() {
     let mut app = crop_app(OverlayShow::Always);
     app.ui.tool_options.crop_shield.show_cropped_area = false;
     let ctx = egui::Context::default();
-    assert!(photocraft_ui_egui::crop_shield::current(&app, &ctx).is_some(), "the opaque outside fill stays");
+    assert!(lienzo_ui_egui::crop_shield::current(&app, &ctx).is_some(), "the opaque outside fill stays");
     assert!(current_guides(&app, 300.0, 200.0).is_empty(), "but no overlay before the first change");
 }
 

@@ -1,17 +1,17 @@
 //! A standing warning while the web build's memory is nearly full (#10024).
 //!
 //! On the web a failed allocation aborts the module and the page freezes without a message. The
-//! big operations refuse up front when they won't fit (`photocraft_engine::memory_gate`); this
+//! big operations refuse up front when they won't fit (`lienzo_engine::memory_gate`); this
 //! tells the user earlier, while there is still room to save: when the module's memory is within
 //! [`WARN_BELOW`] of the wasm32 ceiling, a notice that stays until dismissed asks them to save and
-//! free memory. The answer comes from [`photocraft_raster::headroom::below`], which reads the
+//! free memory. The answer comes from [`lienzo_raster::headroom::below`], which reads the
 //! size of linear memory and allocates nothing. Linear memory never shrinks, so on the web the
 //! warning doesn't re-arm once shown (only `?free-mb` or a test can make memory recover). It is always "plenty" on
 //! the desktop, so the warning never shows there.
 
-use photocraft_raster::headroom;
+use lienzo_raster::headroom;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Warn when less than this can be allocated.
 pub const WARN_BELOW: u64 = 512 << 20;
@@ -79,7 +79,7 @@ impl Watch {
 
 /// Run once per frame: at most every two seconds, and only while a document is open, posts the
 /// warning when memory is nearly full, and takes it down again once memory has recovered.
-pub fn tick(app: &mut PhotocraftApp, now: f64) {
+pub fn tick(app: &mut LienzoApp, now: f64) {
     if app.session.active().is_none() || !app.low_memory.due(now) {
         return;
     }
@@ -92,7 +92,7 @@ pub fn tick(app: &mut PhotocraftApp, now: f64) {
     }
 }
 
-fn post(app: &mut PhotocraftApp) {
+fn post(app: &mut LienzoApp) {
     if app.ui.notices.iter().any(|n| n.title == TITLE) {
         return;
     }

@@ -1,6 +1,6 @@
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
 use serde_json::{Value, json};
 
 fn class(name: &str) -> Class {
@@ -197,7 +197,7 @@ fn indexed_moves_follow_the_measured_boundary_table() {
         };
         let doc = &s.active().unwrap().doc;
         assert_eq!(doc.layers.iter().map(|l| l.name.as_str()).collect::<Vec<_>>(), expected, "target {target}");
-        let children = doc.layer(photocraft_doc::LayerId(layer(&s, "G"))).unwrap().children().unwrap();
+        let children = doc.layer(lienzo_doc::LayerId(layer(&s, "G"))).unwrap().children().unwrap();
         assert_eq!(
             children.iter().map(|l| l.name.as_str()).collect::<Vec<_>>(),
             match target {
@@ -253,12 +253,12 @@ fn nested_empty_group_boundaries_reparent_at_the_correct_level() {
         s.execute("layer.new.group", json!({"name":"Inner"})).unwrap();
         s.execute("layer.groupLayers", json!({"name":"Outer"})).unwrap();
         s.execute("layer.new.layer", json!({"name":"Top"})).unwrap();
-        let outer = photocraft_doc::LayerId(layer(&s, "Outer"));
-        let inner = photocraft_doc::LayerId(layer(&s, "Inner"));
+        let outer = lienzo_doc::LayerId(layer(&s, "Outer"));
+        let inner = lienzo_doc::LayerId(layer(&s, "Inner"));
         let action = moved(index("Lyr ", 5), index("Lyr ", target));
         replay(&mut s, &action);
         let doc = &s.active().unwrap().doc;
-        let parent = doc.path_of(photocraft_doc::LayerId(layer(&s, "Top"))).unwrap();
+        let parent = doc.path_of(lienzo_doc::LayerId(layer(&s, "Top"))).unwrap();
         assert_eq!(
             parent.len(),
             match target {
@@ -504,7 +504,7 @@ fn forward_ordinal_precondition_checks_the_resolved_layer() {
     s.execute("layer.renameLayer", json!({"name":"C"})).unwrap();
     s.execute("layer.select", json!({"layer":layer(&s,"A")})).unwrap();
     s.execute("channel.target", json!({"colors":[0]})).unwrap();
-    let b = photocraft_doc::LayerId(layer(&s, "B"));
+    let b = lienzo_doc::LayerId(layer(&s, "B"));
     let before = s.active().unwrap().doc.layer(b).cloned();
     s.execute("edit.clear", json!({"layer":{"ordinal":"Frwr"}})).unwrap();
     assert_ne!(s.active().unwrap().doc.layer(b).cloned(), before);

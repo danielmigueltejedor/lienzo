@@ -2,17 +2,17 @@
 //! paths Direct Selection edits, one history step per click.
 
 use egui::Modifiers;
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
+use lienzo_doc::vector::Path;
+use lienzo_geom::Point;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::direct_select::PathRef;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -20,7 +20,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// A square work path; knot 1 at (120, 40) is smooth, so the top edge (0 → 1) is a curve.
-fn with_path(app: &mut PhotocraftApp) {
+fn with_path(app: &mut LienzoApp) {
     let path = json!({"subpaths": [{"closed": true, "knots": [
         [40, 40],
         {"anchor": [120, 40], "in": [100, 20], "out": [140, 60], "smooth": true},
@@ -30,15 +30,15 @@ fn with_path(app: &mut PhotocraftApp) {
     app.run("path.set", json!({"name": "work", "path": path})).unwrap();
 }
 
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &LienzoApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().unwrap()
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-fn click(app: &mut PhotocraftApp, at: [f64; 2], mods: Modifiers) {
+fn click(app: &mut LienzoApp, at: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: at[0], y: at[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: at[0], y: at[1] }, mods);
 }
@@ -73,7 +73,7 @@ fn add_on_a_curve_splits_it_where_clicked() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let seg = work(&app).subpaths[0].segments()[0];
-    let on = photocraft_vector::edit::eval(&seg, 0.5);
+    let on = lienzo_vector::edit::eval(&seg, 0.5);
     click(&mut app, [on.x, on.y], Modifiers::NONE);
     let p = work(&app);
     let k = p.subpaths[0].knots[1];
@@ -81,10 +81,10 @@ fn add_on_a_curve_splits_it_where_clicked() {
     // The two halves still pass through the old curve's quarter points.
     let halves = &p.subpaths[0].segments()[..2];
     for t in [0.25, 0.75] {
-        let old = photocraft_vector::edit::eval(&seg, t);
+        let old = lienzo_vector::edit::eval(&seg, t);
         let near = halves
             .iter()
-            .flat_map(|s| (0..=400).map(move |i| photocraft_vector::edit::eval(s, f64::from(i) / 400.0)))
+            .flat_map(|s| (0..=400).map(move |i| lienzo_vector::edit::eval(s, f64::from(i) / 400.0)))
             .fold(f64::MAX, |d, q| d.min((q.x - old.x).hypot(q.y - old.y)));
         assert!(near < 0.1, "t={t}: {near}");
     }
@@ -232,7 +232,7 @@ fn add_and_delete_anchor_tools_edit_the_selected_saved_path() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let before_work = work(&app);
-    let path = photocraft_engine::vector_cmds::path_json(&before_work);
+    let path = lienzo_engine::vector_cmds::path_json(&before_work);
     app.run("path.set", json!({"name":"Saved", "path":path})).unwrap();
     app.ui.selected_path = Some("Saved".into());
     let n = steps(&app);
@@ -253,7 +253,7 @@ fn add_and_delete_anchor_tools_edit_the_selected_saved_path() {
     assert_eq!(app.session.active().unwrap().doc.paths.iter().find(|path| path.name == "Saved").unwrap().path, added);
 }
 
-fn pen_anchors(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn pen_anchors(app: &LienzoApp) -> Vec<[f64; 2]> {
     app.ui.pen.as_ref().map(|p| p.knots.iter().map(|k| k[0]).collect()).unwrap_or_default()
 }
 

@@ -3,20 +3,20 @@
 //! entry when another document that was already open becomes active, and keeps Content-Aware
 //! Fill otherwise.
 
-use photocraft_ui_egui::control::{ControlRequest, handle};
-use photocraft_ui_egui::crop_overlay::{CropOverlay, OverlayShow};
-use photocraft_ui_egui::{PhotocraftApp, Tool};
+use lienzo_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::crop_overlay::{CropOverlay, OverlayShow};
+use lienzo_ui_egui::{LienzoApp, Tool};
 use serde_json::{Value, json};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.sync_views();
     app
 }
 
 /// A control request as the control channel sends it, then the frame's sync.
-fn control(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
+fn control(app: &mut LienzoApp, method: &str, params: Value) -> Value {
     let ctx = egui::Context::default();
     let (req, rx) = ControlRequest::new(method, params);
     handle(app, &ctx, &req);
@@ -25,12 +25,12 @@ fn control(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
 }
 
 /// Pick a document by its Window menu row, as the tab bar does.
-fn activate(app: &mut PhotocraftApp, index: usize) {
+fn activate(app: &mut LienzoApp, index: usize) {
     control(app, "ui.menu.invoke", json!({"id": format!("window.document.{index}")}));
     assert_eq!(app.session.active_index(), Some(index), "document {index} is active");
 }
 
-fn content_aware(app: &PhotocraftApp) -> bool {
+fn content_aware(app: &LienzoApp) -> bool {
     app.ui.tool_options.crop_content_aware
 }
 
@@ -55,7 +55,7 @@ fn the_overlay_shows_always_by_default_and_reset_tool_brings_it_back() {
 #[test]
 fn a_show_mode_already_saved_keeps_its_value() {
     for (saved, want) in [("auto", OverlayShow::Auto), ("never", OverlayShow::Never), ("always", OverlayShow::Always)] {
-        let o: photocraft_ui_egui::state::ToolOptions = serde_json::from_value(json!({"crop_overlay_show": saved})).unwrap();
+        let o: lienzo_ui_egui::state::ToolOptions = serde_json::from_value(json!({"crop_overlay_show": saved})).unwrap();
         assert_eq!(o.crop_overlay_show, want, "a saved `{saved}` loads as it was saved");
     }
 }
@@ -83,17 +83,17 @@ fn fill_is_kept_when_a_crop_is_committed_or_cancelled() {
     app.ui.tool = Tool::Crop;
     app.ui.tool_options.crop_content_aware = true;
 
-    photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+    lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
     app.ui.crop_rect = Some([8.0, 8.0, 40.0, 32.0]);
-    photocraft_ui_egui::canvas::commit_crop(&mut app);
+    lienzo_ui_egui::canvas::commit_crop(&mut app);
     app.sync_views();
     let size = app.session.active().unwrap().doc.size;
     assert_eq!((size.width, size.height), (32, 24), "the crop was committed");
     assert!(content_aware(&app), "commit a crop: kept");
 
-    photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+    lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
     app.ui.crop_rect = Some([4.0, 4.0, 20.0, 16.0]);
-    photocraft_ui_egui::crop_ui::cancel(&mut app);
+    lienzo_ui_egui::crop_ui::cancel(&mut app);
     app.sync_views();
     assert_eq!(app.session.active().unwrap().doc.size.width, 32, "the cancelled crop changed nothing");
     assert!(content_aware(&app), "cancel a crop: kept");

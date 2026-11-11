@@ -1,7 +1,7 @@
 use super::*;
-use photocraft_psd::descriptor::UnicodeString;
-use photocraft_psd::resources::VersionInfo;
-use photocraft_psd::{Compression, ImageData, ImageResource, PsdError, Version, testgen};
+use lienzo_psd::descriptor::UnicodeString;
+use lienzo_psd::resources::VersionInfo;
+use lienzo_psd::{Compression, ImageData, ImageResource, PsdError, Version, testgen};
 
 /// #5200: the Multichannel fallback checks its RGBA output against the budget before
 /// allocating it (here a 2x2 image, 16 bytes, against caps of 15 and 16 bytes).
@@ -26,7 +26,7 @@ fn flat_fallback_does_not_retry_an_over_budget_composite() {
     file.header.width = 60_000;
     file.header.height = 60_000;
     let merged = Ok(vec![0u8; 16]);
-    let cap = photocraft_psd::compression::MAX_DECODED_BYTES;
+    let cap = lienzo_psd::compression::MAX_DECODED_BYTES;
     assert!(matches!(flat_composite(&file, Some(&merged), cap), Err(PsdError::LimitExceeded(_))));
 }
 
@@ -48,7 +48,7 @@ fn unreadable_layer_channel_marks_conversion_damaged() {
     channel.data.clear();
     assert!(file.layers()[0].decode_channel(0, file.header.depth, file.header.version).is_err());
 
-    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(damaged);
     assert!(warnings.iter().any(|w| w.contains("could not be decoded")));
 }
@@ -60,7 +60,7 @@ fn unreadable_mask_channel_marks_conversion_damaged() {
     let channel = file.layers_mut()[0].channels.iter_mut().find(|c| c.id == CHANNEL_USER_MASK).unwrap();
     channel.data.clear();
 
-    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(damaged);
     assert!(warnings.iter().any(|w| w.contains("could not be decoded")));
 }
@@ -72,7 +72,7 @@ fn layer_bounds_without_channel_data_mark_conversion_damaged() {
     let mut file = testgen::small(Version::Psd, Compression::Raw);
     file.layers_mut()[0].channels.retain(|c| c.id == CHANNEL_USER_MASK);
 
-    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(damaged);
     assert!(warnings.iter().any(|w| w.contains("no channel data")));
 }
@@ -86,7 +86,7 @@ fn empty_layer_without_channel_data_is_not_damaged() {
     file.layers_mut()[0].channels.retain(|c| c.id == CHANNEL_USER_MASK);
     file.layers_mut()[0].rect = Default::default();
 
-    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(!damaged, "an empty layer marked the PSD damaged: {warnings:?}");
 }
 
@@ -94,7 +94,7 @@ fn empty_layer_without_channel_data_is_not_damaged() {
 #[test]
 fn valid_layer_channels_keep_conversion_editable() {
     let file = testgen::small(Version::Psd, Compression::Raw);
-    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (_, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(!damaged, "unexpectedly marked good PSD damaged: {warnings:?}");
 }
 
@@ -111,30 +111,30 @@ fn version_info(writer: UnicodeString, reader: UnicodeString, has_real_merged_da
     VersionInfo { version: 1, has_real_merged_data, writer, reader, file_version: 1 }.to_bytes()
 }
 
-/// The 1057 PhotoCraft 0.1.0 to 0.7.0 wrote: Photoshop CS6's names, NUL-terminated.
+/// The 1057 Lienzo 0.1.0 to 0.7.0 wrote: Photoshop CS6's names, NUL-terminated.
 fn version_info_cs6(has_real_merged_data: bool) -> Vec<u8> {
     version_info(UnicodeString::new_nul("Adobe Photoshop"), UnicodeString::new_nul("Adobe Photoshop CS6"), has_real_merged_data)
 }
 
-/// The 1057 PhotoCraft writes since 0.8.2: Photoshop 2026's bytes, no NUL.
+/// The 1057 Lienzo writes since 0.8.2: Photoshop 2026's bytes, no NUL.
 fn version_info_2026(has_real_merged_data: bool) -> Vec<u8> {
-    photocraft_psd::resources::version_info_resource(has_real_merged_data).data
+    lienzo_psd::resources::version_info_resource(has_real_merged_data).data
 }
 
 /// An opaque 4 × 1 RGB document with the Photoshop spot oracles' channels in their order:
 /// "Spot A", "Alpha 1" and "Spot B", each holding 100, 25, 75 and 0 % in four columns.
 fn channels_document(depth: SampleType) -> Document {
-    let mut doc = Document::with_background("old", Size::new(4, 1), ColorMode::Rgb, depth, photocraft_color::Color::rgb(1.0, 1.0, 1.0));
+    let mut doc = Document::with_background("old", Size::new(4, 1), ColorMode::Rgb, depth, lienzo_color::Color::rgb(1.0, 1.0, 1.0));
     let gray = PixelFormat::new(ColorMode::Grayscale, depth, false);
     let canvas = doc.bounds();
-    let channel = |name: &str, spot: Option<(photocraft_color::Color, f32)>| {
+    let channel = |name: &str, spot: Option<(lienzo_color::Color, f32)>| {
         let mut s = Surface::new(gray);
         s.write_region(canvas, &[1.0, 0.25, 0.75, 0.0]);
         AlphaChannel { spot, ..AlphaChannel::new(name, s) }
     };
-    doc.channels.push(channel("Spot A", Some((photocraft_color::Color::rgb(0.0, 0.627, 1.0), 0.0))));
+    doc.channels.push(channel("Spot A", Some((lienzo_color::Color::rgb(0.0, 0.627, 1.0), 0.0))));
     doc.channels.push(channel("Alpha 1", None));
-    doc.channels.push(channel("Spot B", Some((photocraft_color::Color::rgb(1.0, 0.0, 0.627), 0.5))));
+    doc.channels.push(channel("Spot B", Some((lienzo_color::Color::rgb(1.0, 0.0, 0.627), 0.5))));
     doc
 }
 
@@ -147,10 +147,10 @@ fn spots(doc: &Document) -> Vec<bool> {
     doc.channels.iter().map(|c| c.spot.is_some()).collect()
 }
 
-/// `doc` (opaque, 8 or 16-bit) saved the way PhotoCraft 0.1.0 to 0.16.0 saved it: spot planes
+/// `doc` (opaque, 8 or 16-bit) saved the way Lienzo 0.1.0 to 0.16.0 saved it: spot planes
 /// straight (the maximum = solid ink), no 1053, and `version_info` as resource 1057. `padded`
 /// lays DisplayInfo out in the 14-byte records of 0.1.0 to 0.7.0.
-fn as_earlier_photocraft_saved(doc: &Document, version_info: Vec<u8>, padded: bool) -> Vec<u8> {
+fn as_earlier_lienzo_saved(doc: &Document, version_info: Vec<u8>, padded: bool) -> Vec<u8> {
     let mut file = crate::psd_export::document_to_psd(doc);
     assert!(!file.merged_has_alpha());
     file.resources.retain(|r| r.id != crate::channel_map::ALPHA_IDENTIFIERS);
@@ -176,13 +176,13 @@ fn as_earlier_photocraft_saved(doc: &Document, version_info: Vec<u8>, padded: bo
     file.to_bytes().unwrap()
 }
 
-/// PSDs that PhotoCraft 0.1.0 to 0.16.0 saved with spot channels store them straight. They
+/// PSDs that Lienzo 0.1.0 to 0.16.0 saved with spot channels store them straight. They
 /// open with the ink they had in those versions (which read every plane straight), whichever
 /// 1057 they carry. Saved again, they get Photoshop's polarity and a 1053, and reopen with the
 /// same ink. (A 0.1.0 to 0.7.0 file's padded records misread every channel's options after
 /// the first, here Spot B's kind, as those versions' successors always have; its ink is kept.)
 #[test]
-fn spot_planes_from_earlier_photocraft_keep_their_ink() {
+fn spot_planes_from_earlier_lienzo_keep_their_ink() {
     for depth in [SampleType::U8, SampleType::U16] {
         let doc = channels_document(depth);
         let cases = [
@@ -192,8 +192,8 @@ fn spot_planes_from_earlier_photocraft_keep_their_ink() {
             ("0.1.0 to 0.7.0, 13-byte records", version_info_cs6(true), false),
         ];
         for (what, version_info, padded) in cases {
-            let bytes = as_earlier_photocraft_saved(&doc, version_info, padded);
-            assert!(earlier_photocraft_spot_planes(&PsdFile::from_bytes(&bytes).unwrap()), "{what}");
+            let bytes = as_earlier_lienzo_saved(&doc, version_info, padded);
+            assert!(earlier_lienzo_spot_planes(&PsdFile::from_bytes(&bytes).unwrap()), "{what}");
             let opened = crate::import("old.psd", &bytes).unwrap().document;
             assert_eq!(ink(&opened), ink(&doc), "{depth:?} {what}: the ink earlier versions opened");
             assert!(spots(&opened)[0], "{depth:?} {what}");
@@ -202,7 +202,7 @@ fn spot_planes_from_earlier_photocraft_keep_their_ink() {
             }
             let saved = crate::export(&opened, "old.psd", &crate::ExportOptions::default()).unwrap();
             let file = PsdFile::from_bytes(&saved.bytes).unwrap();
-            assert!(file.resource(crate::channel_map::ALPHA_IDENTIFIERS).is_some() && !earlier_photocraft_spot_planes(&file), "{what}");
+            assert!(file.resource(crate::channel_map::ALPHA_IDENTIFIERS).is_some() && !earlier_lienzo_spot_planes(&file), "{what}");
             let again = crate::import("again.psd", &saved.bytes).unwrap().document;
             assert_eq!(ink(&again), ink(&doc), "{depth:?} {what}: saved again");
             assert_eq!(spots(&again), spots(&opened), "{depth:?} {what}: saved again");
@@ -223,15 +223,15 @@ fn an_early_file_with_an_alpha_channel_first_keeps_its_ink() {
     for solidity in [0.0, 0.02] {
         let mut doc = channels_document(SampleType::U8);
         doc.channels.swap(0, 1);
-        doc.channels[1].spot = Some((photocraft_color::Color::rgb(0.0, 0.627, 1.0), solidity));
+        doc.channels[1].spot = Some((lienzo_color::Color::rgb(0.0, 0.627, 1.0), solidity));
         let names: Vec<&str> = doc.channels.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, ["Alpha 1", "Spot A", "Spot B"]);
-        let bytes = as_earlier_photocraft_saved(&doc, version_info_cs6(true), true);
+        let bytes = as_earlier_lienzo_saved(&doc, version_info_cs6(true), true);
         let file = PsdFile::from_bytes(&bytes).unwrap();
         let info = &file.resource(crate::channel_map::DISPLAY_INFO).unwrap().data;
         let misread = solidity > 0.0;
         assert_eq!(crate::channel_map::spot_flags(info, true, 0), [false, misread, false], "{solidity}: 13-byte records");
-        assert!(earlier_photocraft_spot_planes(&file), "{solidity}: found in the 14-byte records");
+        assert!(earlier_lienzo_spot_planes(&file), "{solidity}: found in the 14-byte records");
         let opened = crate::import("old.psd", &bytes).unwrap().document;
         assert_eq!(ink(&opened), ink(&doc), "{solidity}: the ink 0.7.0 opened");
         assert_eq!(spots(&opened), [false, misread, false], "{solidity}: kinds as main reads them");
@@ -242,10 +242,10 @@ fn an_early_file_with_an_alpha_channel_first_keeps_its_ink() {
     }
 }
 
-/// A file with spots and no 1053 that no earlier PhotoCraft wrote is read in Photoshop's
+/// A file with spots and no 1053 that no earlier Lienzo wrote is read in Photoshop's
 /// polarity (0 = solid ink). psd-tools' `cmyk-spot.psd` is one: its 1057 names psd-tools as
 /// writer and reader. So is a file with no 1057, with Photoshop CS6's names without the NUL,
-/// or with bytes after PhotoCraft's.
+/// or with bytes after Lienzo's.
 #[test]
 fn other_files_without_alpha_identifiers_use_photoshop_polarity() {
     let doc = channels_document(SampleType::U8);
@@ -255,7 +255,7 @@ fn other_files_without_alpha_identifiers_use_photoshop_polarity() {
         ("psd-tools", Some(version_info(UnicodeString::new("psd-tools 1.10.0"), UnicodeString::new("psd-tools 1.10.0"), true))),
         ("no 1057", None),
         ("CS6 without a NUL", Some(version_info(UnicodeString::new("Adobe Photoshop"), UnicodeString::new("Adobe Photoshop CS6"), true))),
-        ("bytes after PhotoCraft's 1057", Some(trailing)),
+        ("bytes after Lienzo's 1057", Some(trailing)),
     ];
     for (what, info) in cases {
         // Photoshop's polarity, as this version writes it, without 1053.
@@ -263,35 +263,35 @@ fn other_files_without_alpha_identifiers_use_photoshop_polarity() {
         file.resources.retain(|r| r.id != crate::channel_map::ALPHA_IDENTIFIERS && r.id != ids::VERSION_INFO);
         file.resources.extend(info.map(|d| ImageResource::new(ids::VERSION_INFO, d)));
         let bytes = file.to_bytes().unwrap();
-        assert!(!earlier_photocraft_spot_planes(&PsdFile::from_bytes(&bytes).unwrap()), "{what}");
+        assert!(!earlier_lienzo_spot_planes(&PsdFile::from_bytes(&bytes).unwrap()), "{what}");
         let opened = crate::import("x.psd", &bytes).unwrap().document;
         assert_eq!(ink(&opened), ink(&doc), "{what}");
         assert_eq!(spots(&opened), spots(&doc), "{what}");
     }
 }
 
-/// The rule needs a spot in DisplayInfo and no 1053, besides PhotoCraft's 1057.
+/// The rule needs a spot in DisplayInfo and no 1053, besides Lienzo's 1057.
 #[test]
-fn the_earlier_photocraft_rule_needs_a_spot_and_no_alpha_identifiers() {
+fn the_earlier_lienzo_rule_needs_a_spot_and_no_alpha_identifiers() {
     let mut doc = channels_document(SampleType::U8);
-    let old = PsdFile::from_bytes(&as_earlier_photocraft_saved(&doc, version_info_2026(true), false)).unwrap();
-    assert!(earlier_photocraft_spot_planes(&old));
+    let old = PsdFile::from_bytes(&as_earlier_lienzo_saved(&doc, version_info_2026(true), false)).unwrap();
+    assert!(earlier_lienzo_spot_planes(&old));
     let mut with_ids = old.clone();
     with_ids.resources.push(ImageResource::new(crate::channel_map::ALPHA_IDENTIFIERS, crate::channel_map::alpha_identifiers(false, 3)));
-    assert!(!earlier_photocraft_spot_planes(&with_ids), "a 1053");
+    assert!(!earlier_lienzo_spot_planes(&with_ids), "a 1053");
     let mut no_info = old.clone();
     no_info.resources.retain(|r| r.id != crate::channel_map::DISPLAY_INFO);
-    assert!(!earlier_photocraft_spot_planes(&no_info), "no DisplayInfo");
+    assert!(!earlier_lienzo_spot_planes(&no_info), "no DisplayInfo");
     doc.channels.retain(|c| c.spot.is_none());
-    let alpha_only = PsdFile::from_bytes(&as_earlier_photocraft_saved(&doc, version_info_2026(true), false)).unwrap();
-    assert!(!earlier_photocraft_spot_planes(&alpha_only), "alpha channels only");
+    let alpha_only = PsdFile::from_bytes(&as_earlier_lienzo_saved(&doc, version_info_2026(true), false)).unwrap();
+    assert!(!earlier_lienzo_spot_planes(&alpha_only), "alpha channels only");
 }
 
-/// `doc` as an earlier PhotoCraft saved a Photoshop file it had opened with the first `kept`
+/// `doc` as an earlier Lienzo saved a Photoshop file it had opened with the first `kept`
 /// of `doc`'s channels: it wrote back the Photoshop file's 1053, `stale_ids`, unchanged and
 /// those channels' planes as Photoshop stored them (it had read and written them straight),
 /// and stored the channels added after them straight.
-fn as_earlier_photocraft_resaved(doc: &Document, stale_ids: &[u32], kept: usize) -> Vec<u8> {
+fn as_earlier_lienzo_resaved(doc: &Document, stale_ids: &[u32], kept: usize) -> Vec<u8> {
     let mut file = crate::psd_export::document_to_psd(doc);
     file.resources.retain(|r| r.id != crate::channel_map::ALPHA_IDENTIFIERS && r.id != ids::VERSION_INFO);
     file.resources.push(ImageResource::new(crate::channel_map::ALPHA_IDENTIFIERS, stale_ids.iter().flat_map(|id| id.to_be_bytes()).collect()));
@@ -308,7 +308,7 @@ fn as_earlier_photocraft_resaved(doc: &Document, stale_ids: &[u32], kept: usize)
     file.to_bytes().unwrap()
 }
 
-/// An earlier PhotoCraft kept the 1053 of a Photoshop file it opened and wrote it back
+/// An earlier Lienzo kept the 1053 of a Photoshop file it opened and wrote it back
 /// unchanged, so a spot channel added there sits behind a 1053 that doesn't list it: a
 /// transparent Photoshop document's `[0]` (the white plate of a DTF print, added before
 /// saving), the `[0, 3]` of one with a spot channel already, or a `[0]` kept through a
@@ -331,10 +331,10 @@ fn a_spot_added_behind_a_kept_alpha_identifiers_resource_keeps_its_ink() {
         ("flattened, one spot added", flattened, vec![0], 0),
     ];
     for (what, doc, stale_ids, kept) in cases {
-        let bytes = as_earlier_photocraft_resaved(&doc, &stale_ids, kept);
+        let bytes = as_earlier_lienzo_resaved(&doc, &stale_ids, kept);
         let file = PsdFile::from_bytes(&bytes).unwrap();
         assert_eq!(file.merged_has_alpha(), what.starts_with("transparent"), "{what}");
-        assert!(earlier_photocraft_spot_planes(&file), "{what}");
+        assert!(earlier_lienzo_spot_planes(&file), "{what}");
         let opened = crate::import("old.psd", &bytes).unwrap().document;
         assert_eq!(ink(&opened), ink(&doc), "{what}: the ink earlier versions opened");
         assert_eq!(spots(&opened), spots(&doc), "{what}");
@@ -345,27 +345,27 @@ fn a_spot_added_behind_a_kept_alpha_identifiers_resource_keeps_its_ink() {
 }
 
 /// A 1053 that lists every extra channel, as Photoshop and this version write it, keeps the
-/// file in Photoshop's polarity, with PhotoCraft's (Photoshop 2026's) 1057 too: a transparent
+/// file in Photoshop's polarity, with Lienzo's (Photoshop 2026's) 1057 too: a transparent
 /// file with a spot, and Photoshop's own `[0]` in a file without a transparency plane.
 #[test]
 fn a_complete_alpha_identifiers_resource_keeps_photoshop_polarity() {
     let mut doc = channels_document(SampleType::U8);
     doc.layers = vec![Layer::raster("Layer 1", doc.pixel_format())];
-    let bytes = as_earlier_photocraft_resaved(&doc, &[0, 3, 4, 5], 3);
+    let bytes = as_earlier_lienzo_resaved(&doc, &[0, 3, 4, 5], 3);
     let file = PsdFile::from_bytes(&bytes).unwrap();
     assert!(file.merged_has_alpha());
-    assert!(!earlier_photocraft_spot_planes(&file));
+    assert!(!earlier_lienzo_spot_planes(&file));
     assert_eq!(ink(&crate::import("ps.psd", &bytes).unwrap().document), ink(&doc));
     let mut opaque = channels_document(SampleType::U8);
     opaque.channels.clear();
-    let mut file = PsdFile::from_bytes(&as_earlier_photocraft_resaved(&opaque, &[0], 0)).unwrap();
+    let mut file = PsdFile::from_bytes(&as_earlier_lienzo_resaved(&opaque, &[0], 0)).unwrap();
     file.resources.retain(|r| r.id != crate::channel_map::DISPLAY_INFO);
     file.resources.push(ImageResource::new(
         crate::channel_map::DISPLAY_INFO,
         crate::channel_map::display_info(&channels_document(SampleType::U8).channels.iter().collect::<Vec<_>>(), false),
     ));
     assert_eq!(photoshop_identified_channels(&file), 0, "0 is the transparency's");
-    assert!(!earlier_photocraft_spot_planes(&file), "no channel left unlisted");
+    assert!(!earlier_lienzo_spot_planes(&file), "no channel left unlisted");
 }
 
 #[test]
@@ -390,11 +390,11 @@ fn layer_bands_end_on_tile_rows_and_cover_the_layer() {
 }
 
 // Tall, narrow masks cross tile bands while keeping these cases only a few KiB.
-fn banded_mask_file(depth: u16, compression: Compression, version: Version, real: bool) -> (PsdFile, Vec<u8>, photocraft_psd::Rect) {
-    use photocraft_psd::{ChannelData, LayerMask as PsdMask, MaskData, MaskParameters, RealMask};
+fn banded_mask_file(depth: u16, compression: Compression, version: Version, real: bool) -> (PsdFile, Vec<u8>, lienzo_psd::Rect) {
+    use lienzo_psd::{ChannelData, LayerMask as PsdMask, MaskData, MaskParameters, RealMask};
     let mut file = testgen::layered(version, PsdMode::Rgb, depth, compression);
     file.layer_info.as_mut().unwrap().layers.truncate(1);
-    let rect = photocraft_psd::Rect::from_xywh(-3, -17, 5, 600);
+    let rect = lienzo_psd::Rect::from_xywh(-3, -17, 5, 600);
     let mut plane = Vec::new();
     for i in 0..3000 {
         match depth {
@@ -411,7 +411,7 @@ fn banded_mask_file(depth: u16, compression: Compression, version: Version, real
     record.channels.retain(|c| c.id != CHANNEL_USER_MASK && c.id != CHANNEL_REAL_USER_MASK);
     let id = if real {
         // Different synthetic bounds/defaults ensure -3's own metadata is selected.
-        mask.rect = photocraft_psd::Rect::from_xywh(1, 1, 1, 1);
+        mask.rect = lienzo_psd::Rect::from_xywh(1, 1, 1, 1);
         mask.real = Some(RealMask { flags: 3, background: 255, rect });
         record.channels.push(ChannelData::encode(CHANNEL_USER_MASK, compression, &vec![0; usize::from(depth / 8)], 1, 1, depth, version).unwrap());
         CHANNEL_REAL_USER_MASK
@@ -423,8 +423,8 @@ fn banded_mask_file(depth: u16, compression: Compression, version: Version, real
     (file, plane, rect)
 }
 
-fn assert_banded_mask(file: &PsdFile, plane: &[u8], rect: photocraft_psd::Rect, real: bool) {
-    let (doc, warnings, damaged) = psd_to_document_decoded_integrity(file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+fn assert_banded_mask(file: &PsdFile, plane: &[u8], rect: lienzo_psd::Rect, real: bool) {
+    let (doc, warnings, damaged) = psd_to_document_decoded_integrity(file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(!damaged, "{warnings:?}");
     let mask = doc.layers[0].mask.as_ref().unwrap();
     let sample = sample_for_depth(file.header.depth);
@@ -447,7 +447,7 @@ fn mask_bands_preserve_samples_bounds_defaults_and_parameters() {
                     assert_banded_mask(&file, &plane, rect, real);
                     let bytes = file.to_bytes().unwrap();
                     let eager = PsdFile::from_bytes(&bytes).unwrap();
-                    let lazy = PsdFile::from_source(photocraft_psd::Source::new(bytes)).unwrap();
+                    let lazy = PsdFile::from_source(lienzo_psd::Source::new(bytes)).unwrap();
                     assert_banded_mask(&eager, &plane, rect, real);
                     assert_banded_mask(&lazy, &plane, rect, real);
                 }
@@ -458,7 +458,7 @@ fn mask_bands_preserve_samples_bounds_defaults_and_parameters() {
 
 #[test]
 fn raw_and_rle_mask_sources_are_read_in_bands() {
-    use photocraft_psd::{ReadAt, Source, Stored};
+    use lienzo_psd::{ReadAt, Source, Stored};
     use std::sync::{Arc, Mutex};
     struct Reads {
         bytes: Vec<u8>,
@@ -468,7 +468,7 @@ fn raw_and_rle_mask_sources_are_read_in_bands() {
         fn len(&self) -> u64 {
             self.bytes.len() as u64
         }
-        fn read_at(&self, offset: u64, buf: &mut [u8]) -> photocraft_psd::Result<()> {
+        fn read_at(&self, offset: u64, buf: &mut [u8]) -> lienzo_psd::Result<()> {
             self.sizes.lock().unwrap().push(buf.len());
             self.bytes.read_at(offset, buf)
         }
@@ -511,7 +511,7 @@ fn a_damaged_later_mask_band_discards_earlier_bands() {
         channel.data.extend(if y == 400 { [1, 9] } else { [0xFC, 7] });
     }
     assert!(channel.row_decoder(5, 600, 8, Version::Psd).unwrap().rows(0, 17).is_ok());
-    let (doc, warnings, damaged) = psd_to_document_decoded_integrity(&file, &photocraft_raster::Interrupt::NONE, None).unwrap();
+    let (doc, warnings, damaged) = psd_to_document_decoded_integrity(&file, &lienzo_raster::Interrupt::NONE, None).unwrap();
     assert!(damaged);
     assert!(warnings.iter().any(|w| w.contains("channel -2 could not be decoded")));
     let mask = doc.layers[0].mask.as_ref().unwrap();
@@ -524,7 +524,7 @@ fn a_damaged_later_mask_band_discards_earlier_bands() {
 /// channel, asked for after the import was already reported as failing.
 #[test]
 fn a_fatal_layer_error_skips_the_extra_channel_conversion() {
-    use photocraft_psd::ReadAt;
+    use lienzo_psd::ReadAt;
     struct Failing {
         bytes: Vec<u8>,
         data: Vec<(u64, u64)>,
@@ -534,7 +534,7 @@ fn a_fatal_layer_error_skips_the_extra_channel_conversion() {
         fn len(&self) -> u64 {
             self.bytes.len() as u64
         }
-        fn read_at(&self, offset: u64, buf: &mut [u8]) -> photocraft_psd::Result<()> {
+        fn read_at(&self, offset: u64, buf: &mut [u8]) -> lienzo_psd::Result<()> {
             let end = offset + buf.len() as u64;
             if self.armed.load(std::sync::atomic::Ordering::SeqCst) && self.data.iter().any(|&(a, b)| offset < b && end > a) {
                 return Err(PsdError::Read("the drive went away".into()));
@@ -545,18 +545,18 @@ fn a_fatal_layer_error_skips_the_extra_channel_conversion() {
     let bytes = crate::psd_export::document_to_psd(&channels_document(SampleType::U8)).to_bytes().unwrap();
     let whole = PsdFile::from_bytes(&bytes).unwrap();
     assert!(merged_needed(&whole), "the extra channels come from the merged image");
-    let converted = psd_to_document_global(&whole, &photocraft_raster::Interrupt::NONE, None, Vec::new(), false).unwrap();
+    let converted = psd_to_document_global(&whole, &lienzo_raster::Interrupt::NONE, None, Vec::new(), false).unwrap();
     assert!(converted.3.is_none() && converted.0.channels.len() == 3, "the control file converts its channels");
 
-    let lazy = PsdFile::from_source(photocraft_psd::Source::new(bytes.clone())).unwrap();
+    let lazy = PsdFile::from_source(lienzo_psd::Source::new(bytes.clone())).unwrap();
     let data: Vec<(u64, u64)> =
         lazy.layers().iter().flat_map(|l| &l.channels).filter_map(|c| c.stored.as_ref()).filter(|s| s.len > 0).map(|s| (s.offset, s.offset + s.len)).collect();
     assert!(!data.is_empty());
     // Reads fail only once the file is parsed: the layers decode lazily from the source.
     let armed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let file = PsdFile::from_source(photocraft_psd::Source::new(Failing { bytes, data, armed: armed.clone() })).unwrap();
+    let file = PsdFile::from_source(lienzo_psd::Source::new(Failing { bytes, data, armed: armed.clone() })).unwrap();
     armed.store(true, std::sync::atomic::Ordering::SeqCst);
-    let (doc, _, _, fatal) = psd_to_document_global(&file, &photocraft_raster::Interrupt::NONE, None, Vec::new(), false).unwrap();
+    let (doc, _, _, fatal) = psd_to_document_global(&file, &lienzo_raster::Interrupt::NONE, None, Vec::new(), false).unwrap();
     assert!(matches!(fatal, Some(crate::IoError::Read(_))), "{fatal:?}");
     assert!(doc.channels.is_empty(), "no extra channel was converted after the failure");
 }
@@ -587,7 +587,7 @@ fn only_allocation_failures_are_fatal_to_a_layer_channel() {
         smart_contents: Default::default(),
         plld_sizes: Default::default(),
         vector_previews: Default::default(),
-        ctl: photocraft_raster::Interrupt::NONE,
+        ctl: lienzo_raster::Interrupt::NONE,
         done: 0,
         uniform: Default::default(),
         total: 0,
@@ -608,9 +608,9 @@ fn only_allocation_failures_are_fatal_to_a_layer_channel() {
 fn legacy_conversion_refuses_before_waiting_for_the_decode_gate() {
     let mut file = testgen::small(Version::Psd, Compression::Zip);
     // 30,000² tiles are several GiB: far past the hard budget of the 4 GiB machine below.
-    file.layers_mut()[0].rect = photocraft_psd::Rect::from_xywh(0, 0, 30_000, 30_000);
+    file.layers_mut()[0].rect = lienzo_psd::Rect::from_xywh(0, 0, 30_000, 30_000);
     let snapshot = crate::memory::MemorySnapshot { available_ram: Some(4 << 30), swap_free: None, commit_headroom: None };
-    let ctl = photocraft_raster::Interrupt::NONE;
+    let ctl = lienzo_raster::Interrupt::NONE;
     let _guard = crate::psd_gate::acquire_decode_admission(&ctl).expect("active decode");
 
     let (tx, rx) = std::sync::mpsc::channel();

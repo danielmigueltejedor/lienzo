@@ -12,7 +12,7 @@ fn check_runs(p: &Plan<'_>) -> Vec<usize> {
             for j in i + 1..i + k {
                 assert_eq!(p.passes[j].kernel, Kernel::LayerBlend);
                 assert_eq!(p.passes[j].a, Some(p.passes[j - 1].dst), "run at {i}: pass {j} doesn't read the one before");
-                assert!(p.passes[j].mask.is_none() && p.passes[j].mode != photocraft_color::BlendMode::Dissolve, "run at {i}: pass {j}");
+                assert!(p.passes[j].mask.is_none() && p.passes[j].mode != lienzo_color::BlendMode::Dissolve, "run at {i}: pass {j}");
             }
         }
     }
@@ -21,9 +21,9 @@ fn check_runs(p: &Plan<'_>) -> Vec<usize> {
 
 #[test]
 fn plain_layers_batch_and_runs_stop_where_a_pass_must_stand_alone() {
-    use photocraft_color::{BlendMode, Color, ColorMode, SampleType};
-    use photocraft_doc::{Document, Layer, LayerMask};
-    let mut d = Document::with_background("t", photocraft_geom::Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
+    use lienzo_color::{BlendMode, Color, ColorMode, SampleType};
+    use lienzo_doc::{Document, Layer, LayerMask};
+    let mut d = Document::with_background("t", lienzo_geom::Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     for i in 0..12 {
         let mut l = Layer::raster(format!("l{i}"), d.pixel_format());
         l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 8, 8), &[0.2, 0.4, 0.6, 0.5]);
@@ -81,7 +81,7 @@ fn batch_records_hold_three_extra_layers_in_the_spare_words() {
 
 #[test]
 fn runs_of_normal_layers_draw_with_normal_code_alone() {
-    use photocraft_color::BlendMode;
+    use lienzo_color::BlendMode;
     let pass = |mode: BlendMode, flags: u32| {
         let mut p = plan::Pass::new(Kernel::LayerBlend, 0);
         p.mode = mode;
@@ -344,7 +344,7 @@ fn sixteen_and_thirty_two_bit_fast_paths_match_the_general_one() {
         let fast = rgb_gray16_to_f16(&fmt, &t.bytes()).or_else(|| rgb_gray32_to_f16(&fmt, &t.bytes())).expect("fast path");
         let raw = s.read_region(r);
         let general: Vec<u8> =
-            raw.chunks_exact(fmt.channels()).flat_map(|px| photocraft_raster::to_rgba(&fmt, px).map(|x| f32_to_f16(x).to_le_bytes())).flatten().collect();
+            raw.chunks_exact(fmt.channels()).flat_map(|px| lienzo_raster::to_rgba(&fmt, px).map(|x| f32_to_f16(x).to_le_bytes())).flatten().collect();
         assert_eq!(fast, general, "{fmt:?}");
         assert_eq!(convert_tile(&s, Some(&t), TexKind::Rgba16F, TileCoord::new(0, 0)), general, "{fmt:?}");
     }
@@ -359,9 +359,9 @@ fn sixteen_and_thirty_two_bit_fast_paths_match_the_general_one() {
 /// the built-in CMYK profile and with a document's own (which the worker threads enter).
 #[test]
 fn colour_managed_tiles_match_the_per_pixel_conversion() {
-    use photocraft_cms::synth::{CmykParams, cmyk_profile};
-    use photocraft_color::ColorMode;
-    use photocraft_color::convert::{CmykSpace, with_cmyk_space};
+    use lienzo_cms::synth::{CmykParams, cmyk_profile};
+    use lienzo_color::ColorMode;
+    use lienzo_color::convert::{CmykSpace, with_cmyk_space};
     let icc = Arc::new(
         cmyk_profile(&CmykParams { description: "GPU test CMYK".into(), tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() })
             .to_bytes(),
@@ -405,7 +405,7 @@ fn colour_managed_tiles_match_the_per_pixel_conversion() {
                         .read_region(c.rect())
                         .chunks_exact(ch)
                         .flat_map(|px| {
-                            let v = photocraft_raster::to_rgba(&fmt, px);
+                            let v = lienzo_raster::to_rgba(&fmt, px);
                             match kind {
                                 TexKind::Rgba16F => v.iter().flat_map(|x| f32_to_f16(*x).to_le_bytes()).collect::<Vec<u8>>(),
                                 _ => v.map(|x| (x.clamp(0.0, 1.0) * 255.0 + 0.5) as u8).to_vec(),

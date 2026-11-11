@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
+use lienzo_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
 use serde_json::json;
 
 /// A wire key has one mapper; distinct wire aliases may still name the same command.
@@ -77,7 +77,7 @@ fn item(event: &str, label: &str, d: Option<Descriptor>) -> AtnItem {
 }
 
 fn b64(bytes: &[u8]) -> String {
-    photocraft_paint::tile::b64_encode(bytes)
+    lienzo_paint::tile::b64_encode(bytes)
 }
 
 fn color_lookup_case() -> Value {
@@ -141,7 +141,7 @@ fn batch_save_and_close_case() -> Value {
 fn batch_save_and_close_round_trips_without_folder_defaults() {
     let p = batch_save_and_close_case();
     let d = super::steps_batch::batch_to("file.automate.batch", &p).unwrap();
-    let bytes = photocraft_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
     let imported = import(&bytes).unwrap();
     assert!(imported.unsupported.is_empty());
     assert_eq!(imported.actions[0].steps[0].1, p);
@@ -153,7 +153,7 @@ fn batch_save_and_close_round_trips_without_folder_defaults() {
         bad.items.retain(|(key, _)| !key.is("Ovrd"));
         bad.with("Ovrd", D::Boolean(true))
     }] {
-        let bytes = photocraft_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(bad.clone()))])])).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(bad.clone()))])])).unwrap();
         let imported = import(&bytes).unwrap();
         assert_eq!(imported.actions[0].steps[0].0, PHOTOSHOP_STEP);
         let (out, _) = export("S", &[&imported.actions[0]], &[], false).unwrap();
@@ -166,7 +166,7 @@ fn batch_save_and_close_round_trips_without_folder_defaults() {
 fn batch_all_documented_components_and_compatibility_flags_round_trip() {
     for &(wire, native) in crate::file_cmds::BATCH_NAMING_COMPONENTS {
         let d = batch_descriptor(wire);
-        let bytes = photocraft_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
         let imported = import(&bytes).unwrap();
         assert!(imported.unsupported.is_empty(), "{wire}");
         let p = &imported.actions[0].steps[0].1;
@@ -202,7 +202,7 @@ fn batch_override_open_and_unrepresented_open_settings_round_trip() {
         assert_eq!(atn::parse(&again).unwrap().actions[0].items[0].descriptor, atn::parse(&bytes).unwrap().actions[0].items[0].descriptor);
     }
     let rich = desc("null").with("null", path_value("/recorded.png")).with("unrepresentedOpenSetting", D::Boolean(true));
-    let bytes = photocraft_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Opn ", "Open", Some(rich.clone()))])])).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Opn ", "Open", Some(rich.clone()))])])).unwrap();
     let loaded = import(&bytes).unwrap();
     assert_eq!(loaded.actions[0].steps[0].0, PHOTOSHOP_STEP);
     let (again, _) = export("S", &[&loaded.actions[0]], &[], false).unwrap();
@@ -221,7 +221,7 @@ fn batch_unknown_components_wrong_start_placement_and_unsupported_modes_stay_who
     odd.items.push((Id::new("Fldr"), D::Boolean(true))); // Duplicate keys cannot disappear on save.
     cases.push(odd);
     for d in cases {
-        let bytes = photocraft_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(&set_of("S", vec![("Driver", vec![item("Btch", "Batch", Some(d.clone()))])])).unwrap();
         let imported = import(&bytes).unwrap();
         assert_eq!(imported.actions[0].steps[0].0, PHOTOSHOP_STEP);
         let (out, _) = export("S", &[&imported.actions[0]], &[], false).unwrap();
@@ -243,7 +243,7 @@ fn batch_unknown_components_wrong_start_placement_and_unsupported_modes_stay_who
 }
 
 /// A set with a mapped filter, an adjustment layer, selection steps, a layer by name, a Stop,
-/// a Play, a tool selection (no document effect) and an event PhotoCraft has no command for.
+/// a Play, a tool selection (no document effect) and an event Lienzo has no command for.
 fn sample() -> AtnFile {
     let levels = desc("Lvls").with(
         "Adjs",
@@ -338,7 +338,7 @@ fn layer_comp_apply_round_trips_by_name() {
         assert_eq!(loaded["unsupported"], json!([]), "{loaded}");
         let saved = s.execute("actions.save", json!({"set": "Comps"})).unwrap();
         assert_eq!(saved["skipped"], json!([]));
-        let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
         let file = atn::parse(&bytes).unwrap();
         assert_eq!(file.actions[0].items[0].event, AtnEvent::Name("applyComp".into()));
         assert_eq!(file.actions[0].items[0].descriptor, Some(descriptor));
@@ -383,7 +383,7 @@ fn layer_comp_apply_unknown_references_are_kept_and_stop_playback() {
     assert!(played["failed"]["error"].as_str().unwrap().contains("Apply Layer Comp"), "{played}");
     assert_eq!(*s.active().unwrap().doc, *before);
     let saved = s.execute("actions.save", json!({"set": "Comps"})).unwrap();
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&bytes).unwrap();
     assert_eq!(file.actions[0].items.len(), items.len());
     for (saved, original) in file.actions[0].items.iter().zip(&items) {
@@ -529,7 +529,7 @@ fn save_round_trips_through_photoshop_events() {
     let r = s.execute("actions.save", json!({"set": "Test Set"})).unwrap();
     assert_eq!(r["actions"], json!(["Soften", "Finish"]));
     assert_eq!(r["skipped"], json!([]));
-    let saved = photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
+    let saved = lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&saved).unwrap();
     assert_eq!(file.name.to_string_lossy(), "Test Set");
     assert_eq!(file.actions[0].function_key, 3);
@@ -567,7 +567,7 @@ fn a_selective_color_step_in_the_scalar_form_keeps_its_values() {
         s.actions.list.push(Action::new("A", vec![("image.adjustments.selectiveColor".into(), params)]));
         let r = s.execute("actions.save", json!({"action": "A"})).unwrap();
         assert_eq!(r["skipped"], json!([]));
-        let imported = import(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
+        let imported = import(&lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
         imported.actions[0].steps[0].1.clone()
     };
 
@@ -1471,7 +1471,7 @@ fn save_preserves_the_kind_of_unsupported_atn_events() {
     let mut session = Session::new();
     session.execute("actions.load", json!({"data": b64(&atn::write(&source).unwrap())})).unwrap();
     let saved = session.execute("actions.save", json!({"set": "S"})).unwrap();
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     let round_trip = atn::parse(&bytes).unwrap();
 
     assert_eq!(
@@ -1575,7 +1575,7 @@ fn retouching_set_events_map_to_their_commands() {
     // event stay unsupported rather than play with other values.
     let unsupported: Vec<(&str, usize)> = imp.unsupported.iter().map(|u| (u.event.as_str(), u.step)).collect();
     assert_eq!(unsupported, [("colorRange", 4), ("colorRange", 5), ("set", 8), ("someFutureEvent", 12)]);
-    // A legacy PhotoCraft export's `Yllw` yellows still read.
+    // A legacy Lienzo export's `Yllw` yellows still read.
     let legacy = desc("null").with("ClrC", D::List(vec![D::Descriptor(desc("ClrC").with("Clrs", enm("Clrs", "Yllw")).with("Cyn ", pct(5.0)))]));
     assert_eq!(selective_from(&legacy), Some(json!({"yellows": [5.0, 0.0, 0.0, 0.0]})));
     // The mask of a named layer is not the target layer's mask: it stays unsupported.
@@ -2049,7 +2049,7 @@ fn select_document_by_offset_imports_plays_and_saves_back() {
     let first = s.actions.list.clone();
     let r = s.execute("actions.save", json!({"set": "Template"})).unwrap();
     assert_eq!(r["skipped"], json!([]));
-    let saved = photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
+    let saved = lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&saved).unwrap();
     let offsets: Vec<i32> = file.actions[0]
         .items
@@ -2172,7 +2172,7 @@ fn distressing_and_remove_white_shapes_import_and_play() {
     let r = s.execute("actions.play", json!({"action": "Remove White"})).unwrap();
     assert!(r.get("failed").is_none(), "{r}");
     let d = &s.active().unwrap().doc;
-    assert_eq!(d.mode, photocraft_color::ColorMode::Grayscale);
+    assert_eq!(d.mode, lienzo_color::ColorMode::Grayscale);
     let l = d.layers.last().unwrap();
     assert!(!d.is_background(l.id), "Layer From Background");
     let surf = l.surface().unwrap();
@@ -2237,7 +2237,7 @@ fn remove_white_clears_the_targeted_layer_not_the_converted_background() {
     assert!(r.get("failed").is_none(), "{r}");
     let st = s.active().unwrap();
     assert_eq!(st.active_layer.map(|l| l.0), Some(art), "the art layer stays targeted");
-    let art = st.doc.layer(photocraft_doc::LayerId(art)).unwrap().surface().unwrap();
+    let art = st.doc.layer(lienzo_doc::LayerId(art)).unwrap().surface().unwrap();
     assert!(art.sample_channel(2, 2, 1) < 0.01, "the art's white is cleared");
     assert!(art.sample_channel(20, 15, 1) > 0.99, "the black stays");
     let bottom = st.doc.layers.first().unwrap();
@@ -2282,7 +2282,7 @@ fn events_photoshop_only_runs_by_name_export_by_name_and_old_codes_still_import(
         }
     }
 
-    // A whole set of Photoshop-shaped steps (names, FltI) and old PhotoCraft-shaped ones
+    // A whole set of Photoshop-shaped steps (names, FltI) and old Lienzo-shaped ones
     // (legacy codes) loads to the same commands.
     let blur = |event: &str| item(event, "Box Blur", Some(desc("null").with("Rds ", px(3.0))));
     let surface = |event: &str| item(event, "Surface Blur", Some(desc("null").with("Rds ", px(5.0)).with("Thsh", long(15.0))));
@@ -2298,7 +2298,7 @@ fn events_photoshop_only_runs_by_name_export_by_name_and_old_codes_still_import(
     assert_eq!(s.actions.list[1].steps[1].1, json!({"radius": 5, "threshold": 15}));
     // Saving them writes the ids Photoshop runs, never the old codes.
     let saved = s.execute("actions.save", json!({"set": "S"})).unwrap();
-    let file = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let file = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let events: Vec<String> = file.actions.iter().flat_map(|a| a.items.iter().map(|i| i.event.id())).collect();
     assert_eq!(events, ["boxblur", "surfaceBlur", "FltI", "FltI", "boxblur", "surfaceBlur", "FltI"]);
 
@@ -2332,7 +2332,7 @@ fn photo_filter_saves_under_the_name_photoshop_runs() {
     s.execute("actions.stop", json!({})).unwrap();
     let saved = s.execute("actions.save", json!({"action": "Filter"})).unwrap();
     assert_eq!(saved["skipped"], json!([]), "{saved}");
-    let file = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let file = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let step = &file.actions[0].items[0];
     assert_eq!(step.event, AtnEvent::Name("photoFilter".into()), "never the code PhtF");
     assert_eq!(step.dictionary, "Photo Filter".as_bytes());
@@ -2341,7 +2341,7 @@ fn photo_filter_saves_under_the_name_photoshop_runs() {
         assert!(d.get(key).is_some(), "the descriptor keeps {key}: {d:?}");
     }
 
-    // A Photoshop-authored step (by name) and an old PhotoCraft one (`PhtF`) both load to the
+    // A Photoshop-authored step (by name) and an old Lienzo one (`PhtF`) both load to the
     // command, and saving them again writes the name.
     let data =
         set_of("S", vec![("Photoshop", vec![item("photoFilter", "Photo Filter", Some(d.clone()))]), ("Legacy", vec![item("PhtF", "Photo Filter", Some(d))])]);
@@ -2357,7 +2357,7 @@ fn photo_filter_saves_under_the_name_photoshop_runs() {
     }
     let resaved = t.execute("actions.save", json!({"set": "S"})).unwrap();
     assert_eq!(resaved["skipped"], json!([]), "{resaved}");
-    let file = atn::parse(&photocraft_paint::tile::b64_decode(resaved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let file = atn::parse(&lienzo_paint::tile::b64_decode(resaved["data"].as_str().unwrap()).unwrap()).unwrap();
     let events: Vec<String> = file.actions.iter().flat_map(|a| a.items.iter().map(|i| i.event.id())).collect();
     assert_eq!(events, ["photoFilter", "photoFilter"]);
 
@@ -2386,7 +2386,7 @@ fn photo_filter_saves_under_the_name_photoshop_runs() {
 
 /// A Black & White adjustment layer saves with Photoshop's `BanW` class (#8481): measured in
 /// Photoshop, a Make whose type is `BlnW` is refused. Photoshop's own `BanW` Make loads, and so
-/// does the `BlnW` one PhotoCraft wrote before.
+/// does the `BlnW` one Lienzo wrote before.
 #[test]
 fn black_white_adjustment_layer_saves_as_photoshops_class_and_old_class_still_imports() {
     let id = "layer.newAdjustmentLayer.blackWhite";
@@ -2395,7 +2395,7 @@ fn black_white_adjustment_layer_saves_as_photoshops_class_and_old_class_still_im
     s.actions.list.push(Action::new("BW", vec![(id.into(), params.clone())]));
     let r = s.execute("actions.save", json!({"action": "BW"})).unwrap();
     assert_eq!(r["skipped"], json!([]));
-    let saved = photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
+    let saved = lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&saved).unwrap();
     let make = file.actions[0].items[0].descriptor.as_ref().unwrap();
     let kind = get_obj(make, "Usng").and_then(|u| get_obj(u, "Type")).unwrap();
@@ -2405,7 +2405,7 @@ fn black_white_adjustment_layer_saves_as_photoshops_class_and_old_class_still_im
     assert_eq!(r["unsupported"], json!([]), "{r}");
     assert_eq!(t.actions.list[0].steps, vec![(id.to_string(), params)]);
 
-    // Photoshop's minimal Make (no settings) and an old PhotoCraft Make with a setting both load,
+    // Photoshop's minimal Make (no settings) and an old Lienzo Make with a setting both load,
     // the setting kept; near misses stay Photoshop steps.
     let make = |class: &str| {
         let kind = if class == "BlnW" { desc(class).with("Rd  ", long(17.0)) } else { desc(class) };
@@ -2443,7 +2443,7 @@ fn smart_blur_quality_uses_photoshop_codes() {
     }
 
     // Photoshop-shaped steps (each quality and mode, as Photoshop stores them) and the codes
-    // PhotoCraft wrote before this fix read as the right quality.
+    // Lienzo wrote before this fix read as the right quality.
     let cases = [
         ("SBQH", "SBMN", "high", "normal"),
         ("SBQM", "SBMO", "medium", "overlayEdge"),
@@ -2472,7 +2472,7 @@ fn smart_blur_quality_uses_photoshop_codes() {
         desc("null"),
     ];
     let items: Vec<AtnItem> = odd.iter().map(|d| item("SmrB", "Smart Blur", Some(d.clone()))).collect();
-    let imported = import(&photocraft_paint::tile::b64_decode(&set_of("Odd", vec![("Odd", items)])).unwrap()).unwrap();
+    let imported = import(&lienzo_paint::tile::b64_decode(&set_of("Odd", vec![("Odd", items)])).unwrap()).unwrap();
     let steps = &imported.actions[0].steps;
     assert_eq!(steps.len(), odd.len());
     assert_eq!(steps[0].0, PHOTOSHOP_STEP, "an unknown quality is kept verbatim");
@@ -2855,7 +2855,7 @@ fn numeric_layer_references_refuse_silent_fallback_to_current_selection() {
     s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
 
     let parse_first_desc = |v: &Value| -> Descriptor {
-        let bytes = photocraft_paint::tile::b64_decode(v["data"].as_str().unwrap()).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(v["data"].as_str().unwrap()).unwrap();
         let file = atn::parse(&bytes).unwrap();
         file.actions[0].items[0].descriptor.clone().unwrap()
     };
@@ -2979,7 +2979,7 @@ fn emboss_saves_as_photoshops_event_and_loads_back() {
     s.actions.list.push(Action::new("Pore", vec![("filter.stylize.emboss".into(), params.clone())]));
     let r = s.execute("actions.save", json!({"action": "Pore"})).unwrap();
     assert_eq!(r["skipped"], json!([]));
-    let saved = photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
+    let saved = lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&saved).unwrap();
     let step = &file.actions[0].items[0];
     assert_eq!(step.event.id(), "Embs");
@@ -2993,7 +2993,7 @@ fn emboss_saves_as_photoshops_event_and_loads_back() {
 }
 
 /// A filter recorded against a layer mask must not export as a plain filter that edits the
-/// layer's pixels on replay: Photoshop's descriptor has no field for PhotoCraft's `target`.
+/// layer's pixels on replay: Photoshop's descriptor has no field for Lienzo's `target`.
 #[test]
 fn add_noise_with_mask_target_is_not_exported_as_pixel_filter() {
     let masked = Action {
@@ -3064,7 +3064,7 @@ fn function_keys_keep_shift_and_command() {
     assert_eq!(shortcuts.get("actions.play:Soften").map(String::as_str), Some("Shift+F3"));
     assert_eq!(shortcuts.get("actions.play:Finish").map(String::as_str), Some("Cmd+Shift+F5"));
     let r = s.execute("actions.save", json!({"set": "Test Set"})).unwrap();
-    let saved = atn::parse(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
+    let saved = atn::parse(&lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
     let keys: Vec<_> = saved.actions.iter().map(|a| (a.function_key, a.shift, a.command)).collect();
     assert_eq!(keys, [(3, true, false), (5, true, true)]);
 
@@ -3145,7 +3145,7 @@ fn apply_image_numeric_source_selectors_are_refused() {
     assert!(export("S", &[&a], &[], false).is_err());
 }
 
-/// A param a PhotoCraft step leaves out exports as PhotoCraft's default wherever Photoshop plays
+/// A param a Lienzo step leaves out exports as Lienzo's default wherever Photoshop plays
 /// the missing key differently (checked against Photoshop): Canvas Size anchors top left,
 /// Apply Image blends Normal, Color Balance turns preserve luminosity off, and a Paint Bucket
 /// step without a tolerance doesn't play at all.
@@ -3190,8 +3190,8 @@ fn levels_and_curves_name_the_composite_channel_as_photoshop_records_it() {
 }
 
 /// A Lab document's Lightness channel is `Chnl.Lght` (#9384): Photoshop plays a Levels or Apply
-/// Image step naming it and rejects `Chnl.Lmnc` ("luminance"), which PhotoCraft wrote before.
-/// Steps PhotoCraft saved with `Lmnc` still load.
+/// Image step naming it and rejects `Chnl.Lmnc` ("luminance"), which Lienzo wrote before.
+/// Steps Lienzo saved with `Lmnc` still load.
 #[test]
 fn lab_lightness_channel_is_written_and_read_as_photoshop_names_it() {
     let exported = |id: &str, p: Value| export_item(id, &p, "S").and_then(|i| i.descriptor).unwrap_or_else(|| panic!("{id} does not export"));
@@ -3216,7 +3216,7 @@ fn lab_lightness_channel_is_written_and_read_as_photoshop_names_it() {
     let source = get_ref(get_obj(&apply, "With").unwrap(), "T   ").unwrap();
     assert!(matches!(&source[0], ReferenceItem::Enumerated { value, .. } if trimmed(value) == "Lght"), "{source:?}");
 
-    // What Photoshop records, and what PhotoCraft wrote before, both read as Lightness.
+    // What Photoshop records, and what Lienzo wrote before, both read as Lightness.
     let chnl = |c: &str| D::Reference(vec![ReferenceItem::Enumerated { class: class("Chnl"), type_id: code("Chnl"), value: code(c) }]);
     for c in ["Lght", "Lmnc"] {
         let lvls = desc("Lvls").with("Adjs", D::List(vec![D::Descriptor(desc("LvlA").with("Chnl", chnl(c)).with("Gmm ", D::Double(1.5)))]));
@@ -3284,7 +3284,7 @@ fn adjustment_layer_set_accepts_the_vibrance_string_class() {
 }
 
 /// A Vibrance Set and Make as Photoshop records them (class `vibrance`) save back with that
-/// class, not the `Vbrn` code Photoshop refuses (#8383); old PhotoCraft files with `Vbrn` still
+/// class, not the `Vbrn` code Photoshop refuses (#8383); old Lienzo files with `Vbrn` still
 /// load and now save with `vibrance` too.
 #[test]
 fn vibrance_adjustment_layer_steps_save_with_the_string_class() {
@@ -3316,7 +3316,7 @@ fn vibrance_adjustment_layer_steps_save_with_the_string_class() {
     assert_eq!((&steps[0], &steps[1]), (&steps[2], &steps[3]), "the old `Vbrn` class imports the same");
     let saved = s.execute("actions.save", json!({"set": "Vibrance"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&bytes).unwrap();
     let items = &file.actions[0].items;
     assert_eq!(items.len(), 4);
@@ -3344,7 +3344,7 @@ fn vibrance_steps_with_temperature_or_tint_save_back_unchanged() {
     s.execute("actions.load", json!({"data": data})).unwrap();
     assert!(s.actions.list[0].steps.iter().all(|(id, _)| id == "actions.photoshopStep"), "{:?}", s.actions.list[0].steps);
     let saved = s.execute("actions.save", json!({"set": "Vibrance"})).unwrap();
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     let file = atn::parse(&bytes).unwrap();
     assert_eq!(file.actions[0].items[0].descriptor, Some(set));
     assert_eq!(file.actions[0].items[1].descriptor, Some(make));
@@ -3530,7 +3530,7 @@ fn select_rect_modes_export_without_becoming_replace() {
         s.actions.list.push(Action::new(mode, vec![("select.rect".into(), json!({"x":4,"y":4,"width":2,"height":2,"mode":mode}))]));
         let before = s.actions.list.clone();
         let saved = s.execute("actions.save", json!({"action":mode})).unwrap();
-        let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
         assert_eq!(atn::parse(&bytes).unwrap().actions[0].items[0].event.id(), event);
         assert_eq!(import(&bytes).unwrap().actions[0].steps[0].1["mode"], mode);
         assert_eq!(s.actions.list, before);
@@ -3652,7 +3652,7 @@ fn image_size_resample_none_keeps_ignoring_its_size_through_atn_export() {
 
 /// #8302, #8308: Hue/Saturation's hue is `H   ` in Photoshop's `Hst2`, both ways. It was written
 /// and read as `Hue `: exported actions failed in Photoshop, and Photoshop-recorded ones lost
-/// their hue on import with no warning. PhotoCraft's own older files (`Hue `) still read.
+/// their hue on import with no warning. Lienzo's own older files (`Hue `) still read.
 #[test]
 fn hue_saturation_uses_photoshops_hue_key() {
     let params = json!({"colorize": false, "hue": 30, "saturation": 20, "lightness": -7, "greens": {"hue": -12, "saturation": 0, "lightness": 0, "range": [75, 105, 135, 165]}});
@@ -3668,7 +3668,7 @@ fn hue_saturation_uses_photoshops_hue_key() {
     assert_eq!(get_num(&entries[1], "H   "), Some(-12.0), "a range's hue under H");
     assert!(entries.iter().all(|e| get_num(e, "Hue ").is_none()), "no Hue key");
 
-    // A Photoshop-recorded step (H) and an older PhotoCraft one (Hue ) both import with the hue.
+    // A Photoshop-recorded step (H) and an older Lienzo one (Hue ) both import with the hue.
     let step = |key: &str| {
         desc("null")
             .with("presetKind", enm("presetKindType", "presetKindCustom"))
@@ -3815,7 +3815,7 @@ fn camera_raw_filter_steps_import_as_filter_camera_raw() {
 }
 
 /// Review of #8714: a Camera Raw Filter step that was loaded saves back as the recorded step,
-/// byte for byte, as it did while it was a kept Photoshop step; once edited (or when PhotoCraft
+/// byte for byte, as it did while it was a kept Photoshop step; once edited (or when Lienzo
 /// recorded it) Save Actions refuses it as before. The loaded step plays.
 #[test]
 fn loaded_camera_raw_filter_steps_save_back_unchanged() {
@@ -3833,7 +3833,7 @@ fn loaded_camera_raw_filter_steps_save_back_unchanged() {
     assert_eq!(loaded["unsupported"], json!([]), "{loaded}");
     assert_eq!(s.actions.list[0].steps[0].0, "filter.cameraRaw");
     let saved_step = |r: &Value| {
-        let saved = atn::parse(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
+        let saved = atn::parse(&lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
         saved.actions[0].items.first().map(|i| (i.event.clone(), i.dictionary.clone(), i.descriptor.clone()))
     };
     // Strict save, and the Actions panel's save (which skips what can't be written). The step's
@@ -3857,7 +3857,7 @@ fn loaded_camera_raw_filter_steps_save_back_unchanged() {
     s.actions.list[0].steps[0].1["exposure"] = json!(1.5);
     let e = s.execute("actions.save", json!({"action": "A"})).unwrap_err().to_string();
     assert!(e.contains("filter.cameraRaw"), "{e}");
-    // Recorded by PhotoCraft: no descriptor to write back.
+    // Recorded by Lienzo: no descriptor to write back.
     s.actions.list[0].steps[0].1 = original;
     s.actions.list[0].steps[0].1.as_object_mut().unwrap().remove("__atnDescriptor");
     let r = s.execute("actions.save", json!({"action": "A", "skipUnsupported": true})).unwrap();
@@ -3886,7 +3886,7 @@ fn camera_raw_filter_steps_with_unknown_keys_stay_photoshop_steps() {
     assert_eq!(ids, [PHOTOSHOP_STEP, PHOTOSHOP_STEP, PHOTOSHOP_STEP, "filter.cameraRaw"]);
     // Kept, it still saves back as recorded.
     let r = s.execute("actions.save", json!({"action": "A"})).unwrap();
-    let saved = atn::parse(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
+    let saved = atn::parse(&lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
     assert_eq!(saved.actions[0].items[0].descriptor, Some(upright));
 }
 
@@ -3935,7 +3935,7 @@ fn save_as_that_cannot_be_mapped_stops_playback_instead_of_saving_over_the_file(
     // action was played on.
     let file = one_action(vec![
         item("save", "Save", Some(save_as("PNGF", "/out/folder"))),
-        // Save a Copy into a folder under the document's own name has no PhotoCraft step.
+        // Save a Copy into a folder under the document's own name has no Lienzo step.
         item("save", "Save", Some(save_as("PNGF", "/out").with("DIDr", D::Boolean(true)).with("Cpy ", D::Boolean(true)))),
         item("save", "Save", Some(save_as("Not a format", "/out").with("DIDr", D::Boolean(true)))),
         item("save", "Save", Some(save_as("PNGF", "/out/result.webp"))),
@@ -4015,7 +4015,7 @@ fn saves_round_trip_through_photoshop_events() {
     assert_eq!(get_obj(items[1].descriptor.as_ref().unwrap(), "As  ").map(|f| trimmed(&f.class_id)).as_deref(), Some("WebPFormat"));
     assert_eq!(import(&bytes).unwrap().actions[0].steps, steps);
 
-    // A Save As PhotoCraft can't express in Photoshop's terms is skipped, never exported as a
+    // A Save As Lienzo can't express in Photoshop's terms is skipped, never exported as a
     // plain Save.
     let odd = Action::new("B", vec![("file.saveAs".to_string(), json!({"path": "/out/result.xcf"}))]);
     assert!(export("Saves", &[&odd], &[], false).is_err());
@@ -4156,7 +4156,7 @@ fn gallery_neon_glow_without_a_colour_saves_the_colour_it_plays_with() {
     let d = item.descriptor.unwrap();
     let c = get_obj(&d, "Clr ").expect("no colour");
     assert_eq!(trimmed(&c.class_id), "RGBC");
-    let neon = photocraft_algo::GalleryEffect::new(photocraft_algo::GalleryFilter::NeonGlow).color;
+    let neon = lienzo_algo::GalleryEffect::new(lienzo_algo::GalleryFilter::NeonGlow).color;
     for (key, v) in [("Rd  ", neon[0]), ("Grn ", neon[1]), ("Bl  ", neon[2])] {
         assert_eq!(get_num(c, key), Some(f64::from(v) * 255.0), "{key}");
     }
@@ -4184,7 +4184,7 @@ fn gallery_effect_enumerations_save_with_photoshops_type_ids() {
 }
 
 /// Neon Glow recorded without `Clr ` glows in Photoshop's default colour, blue (0, 0, 255) per
-/// the event reference, not PhotoCraft's own default: the step loads with that colour and saves
+/// the event reference, not Lienzo's own default: the step loads with that colour and saves
 /// it back, loading again as the same step (#10592).
 #[test]
 fn gallery_neon_glow_without_a_colour_loads_photoshops_blue() {
@@ -4241,18 +4241,18 @@ fn gallery_effect_steps_save_back_as_the_event_they_were_recorded_as() {
     assert_eq!(gallery.len(), 3, "{:?}", s.journal);
     assert!(gallery.iter().all(|p| p.get("_atnEvent").is_none()), "{gallery:?}");
     let d = s.active().unwrap();
-    let photocraft_doc::LayerContent::Smart(sm) = &d.doc.layer(d.active_layer.unwrap()).unwrap().content else { panic!("not smart") };
+    let lienzo_doc::LayerContent::Smart(sm) = &d.doc.layer(d.active_layer.unwrap()).unwrap().content else { panic!("not smart") };
     assert_eq!(sm.smart_filters.len(), 3);
     assert!(sm.smart_filters.iter().all(|f| f.params.get("_atnEvent").is_none()), "{:?}", sm.smart_filters);
 
     let saved = s.execute("actions.save", json!({"set": "S"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    let file = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let file = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let got: Vec<_> = file.actions[0].items.iter().map(|i| (i.event.clone(), i.dictionary.clone(), i.descriptor.clone())).collect();
     let want: Vec<_> = source.iter().map(|i| (i.event.clone(), i.dictionary.clone(), i.descriptor.clone())).collect();
     assert_eq!(got, want);
 
-    // A step made in PhotoCraft keeps saving as `GEfc`, and so does a forged event param.
+    // A step made in Lienzo keeps saving as `GEfc`, and so does a forged event param.
     assert_eq!(export_item("filter.gallery.cutout", &json!({}), "S").unwrap().event, AtnEvent::Code(*b"GEfc"));
     let forged = json!({"_atnEvent": {"event": "GsnB", "eventKind": "code", "name": "Gaussian Blur"}});
     assert_eq!(export_item("filter.gallery.cutout", &forged, "S").unwrap().event, AtnEvent::Code(*b"GEfc"));
@@ -4312,7 +4312,7 @@ fn channel_and_color_steps_load_and_save_back() {
         ]
     );
     let saved = s.execute("actions.save", json!({"action": "Inks"})).unwrap();
-    let back = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let back = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let back = &back.actions[0].items;
     let events: Vec<String> = back.iter().map(|i| i.event.id()).collect();
     assert_eq!(events, ["SplC", "MSpt", "Trap", "matchColor"]);
@@ -4378,7 +4378,7 @@ fn trap_wider_than_photoshop_takes_is_refused() {
     assert_eq!(d.items, desc("null").with("Wdth", px(32767.0)).items);
 }
 
-/// The channel or colour step `d` of the Photoshop event `name`, as PhotoCraft loads it.
+/// The channel or colour step `d` of the Photoshop event `name`, as Lienzo loads it.
 fn channel_step(name: &str, d: Descriptor) -> Mapped {
     let event = if name.len() == 4 { AtnEvent::Code(name.as_bytes().try_into().unwrap()) } else { AtnEvent::name(name) };
     (events::event_for(&event).unwrap_or_else(|| panic!("{name} is unknown")).from)(&d)
@@ -4445,7 +4445,7 @@ fn match_color_setting_that_cannot_be_saved_back_is_kept() {
 }
 
 /// Photoshop's narrowest Trap width wasn't measured, so a recorded width below the command's
-/// 1 px isn't clamped up to it: the step stays a Photoshop step, and a PhotoCraft step that
+/// 1 px isn't clamped up to it: the step stays a Photoshop step, and a Lienzo step that
 /// narrow is refused on export instead of written as a width the command doesn't trap (#10609).
 #[test]
 fn trap_width_below_one_pixel_is_kept() {
@@ -4461,7 +4461,7 @@ fn trap_width_below_one_pixel_is_kept() {
 
 /// Match Color's Luminance and Color Intensity take 1..200 and Fade 0..100, and Photoshop's
 /// handling of a recorded value outside them wasn't measured: such a step stays a Photoshop
-/// step rather than being clamped, and a PhotoCraft step outside them is refused on export
+/// step rather than being clamped, and a Lienzo step outside them is refused on export
 /// instead of written as a value the command plays clamped (#10609).
 #[test]
 fn match_color_setting_outside_its_range_is_kept() {
@@ -4547,7 +4547,7 @@ fn select_color_components_import_play_and_round_trip() {
                 assert!(played.get("failed").is_none(), "{played}");
                 assert_eq!(s.execute("channel.list", json!({})).unwrap(), expected, "{mode}/{depth}/{channel}");
                 let saved = s.execute("actions.save", json!({"set": "Components"})).unwrap();
-                let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+                let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
                 assert_eq!(import(&bytes).unwrap().actions[0].steps, s.actions.list[0].steps);
             }
         }
@@ -4582,7 +4582,7 @@ fn select_color_components_preserve_unsupported_selection_shapes() {
         assert_eq!(played["failed"]["id"], PHOTOSHOP_STEP);
         assert_eq!(s.execute("channel.list", json!({})).unwrap(), target);
         let saved = s.execute("actions.save", json!({"set": "Unknown"})).unwrap();
-        let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
         assert_eq!(atn::parse(&bytes).unwrap().actions[0].items[0].descriptor.as_ref(), Some(&selection));
     }
     for params in [
@@ -4597,14 +4597,14 @@ fn select_color_components_preserve_unsupported_selection_shapes() {
     }
     assert!(super::steps_layer::select_to("channel.target", &json!({"channel": {"color": "CYAN"}, "extend": false})).is_some());
     let gray = set_of("Gray", vec![("Pick", vec![item("select", "Select", Some(desc("null").with("null", channel_ord("Gry"))))])]);
-    let bytes = photocraft_paint::tile::b64_decode(&gray).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(&gray).unwrap();
     assert_eq!(import(&bytes).unwrap().actions[0].steps[0], ("channel.target".into(), json!({"channel": "composite"})));
     // A plain click (`Extd` false) is still an ordinary single-channel select.
     let plain = set_of(
         "Plain",
         vec![("Pick", vec![item("select", "Select", Some(desc("null").with("null", channel_ref(Some("cyan"))).with("Extd", D::Boolean(false))))])],
     );
-    let bytes = photocraft_paint::tile::b64_decode(&plain).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(&plain).unwrap();
     assert_eq!(import(&bytes).unwrap().actions[0].steps[0], ("channel.target".into(), json!({"channel": {"color": "cyan"}})));
 }
 
@@ -4638,7 +4638,7 @@ fn select_channel_export_rejects_nested_color_selections() {
         assert!(s.execute("actions.save", json!({"action":"Nested"})).is_err(), "{params} must not become a single Cyan selection");
         let skipped = s.execute("actions.save", json!({"action":"Nested","skipUnsupported":true})).unwrap();
         assert_eq!(skipped["skipped"], json!([{"action":"Nested","step":0,"id":"channel.target"}]));
-        let bytes = photocraft_paint::tile::b64_decode(skipped["data"].as_str().unwrap()).unwrap();
+        let bytes = lienzo_paint::tile::b64_decode(skipped["data"].as_str().unwrap()).unwrap();
         assert!(atn::parse(&bytes).unwrap().actions[0].items.is_empty());
         assert_eq!(s.actions.list[0].steps[0].1, params);
     }
@@ -4646,7 +4646,7 @@ fn select_channel_export_rejects_nested_color_selections() {
     s.actions.list.push(Action::new("Cyan", vec![("channel.target".into(), json!({"channel":{"color":"CYAN"},"extend":false}))]));
     let saved = s.execute("actions.save", json!({"action":"Cyan"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     assert_eq!(import(&bytes).unwrap().actions[0].steps, vec![("channel.target".into(), json!({"channel":{"color":"cyan"}}))]);
 }
 
@@ -4663,7 +4663,7 @@ fn select_channel_export_rejects_mode_specific_gray_objects() {
             assert!(s.execute("actions.save", json!({"action":"Gray object"})).is_err(), "{mode}/{color} must not become composite");
             let skipped = s.execute("actions.save", json!({"action":"Gray object","skipUnsupported":true})).unwrap();
             assert_eq!(skipped["skipped"], json!([{"action":"Gray object","step":0,"id":"channel.target"}]));
-            let bytes = photocraft_paint::tile::b64_decode(skipped["data"].as_str().unwrap()).unwrap();
+            let bytes = lienzo_paint::tile::b64_decode(skipped["data"].as_str().unwrap()).unwrap();
             assert!(atn::parse(&bytes).unwrap().actions[0].items.is_empty());
             assert_eq!(s.actions.list[0].steps[0].1, params);
         }
@@ -4672,7 +4672,7 @@ fn select_channel_export_rejects_mode_specific_gray_objects() {
     s.actions.list.push(Action::new("Portable", vec![("channel.target".into(), json!({"channel":"composite"}))]));
     let saved = s.execute("actions.save", json!({"action":"Portable"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    let bytes = photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
+    let bytes = lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap();
     assert_eq!(import(&bytes).unwrap().actions[0].steps, s.actions.list[0].steps);
     let gray = set_of("Gray", vec![("Pick", vec![item("select", "Select", Some(desc("null").with("null", channel_ord("Gry"))))])]);
     let mut rgb = Session::new();
@@ -4769,7 +4769,7 @@ fn mapped_transform_reference_points_round_trip() {
                 s.execute("select.rect", json!({"x":60,"y":60,"width":100,"height":100})).unwrap();
                 let (id, p) = &loaded.actions[0].steps[0];
                 s.execute(id, p.clone()).unwrap();
-                assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), photocraft_geom::Rect::new(60, 60, 110, 110));
+                assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), lienzo_geom::Rect::new(60, 60, 110, 110));
             }
         }
     }
@@ -4882,7 +4882,7 @@ fn mapped_copy_cut_layer_options_survive_export() {
         let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
         assert_eq!(layer.name, "Extracted");
         assert_eq!(layer.opacity, 0.375);
-        assert_eq!(layer.blend, photocraft_color::BlendMode::Multiply);
+        assert_eq!(layer.blend, lienzo_color::BlendMode::Multiply);
         assert_eq!(layer.label.id(), "blue");
     }
 }
@@ -4905,7 +4905,7 @@ fn mapped_named_layer_transparency_survives_export() {
     s.execute("layer.new.layer", json!({"name":"Empty"})).unwrap();
     let (id, p) = &loaded.actions[0].steps[0];
     s.execute(id, p.clone()).unwrap();
-    assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), photocraft_geom::Rect::new(0, 0, 4, 4));
+    assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), lienzo_geom::Rect::new(0, 0, 4, 4));
 }
 
 /// A localized Background and an ordinary layer named Background are distinct targets.
@@ -4931,7 +4931,7 @@ fn mapped_background_property_survives_export_and_playback() {
     s.execute("layer.setLabelColor", json!({"layer":{"background":true},"color":"red"})).unwrap();
     assert_eq!(s.active().unwrap().doc.layers[0].label.id(), "red");
     s.execute("select.loadSelection", json!({"channel":"transparency","layer":{"background":true}})).unwrap();
-    assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), photocraft_geom::Rect::new(0, 0, 4, 4));
+    assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().content_bounds(), lienzo_geom::Rect::new(0, 0, 4, 4));
     let selected = mapped_recording("slct", desc("null").with("null", D::Reference(vec![ReferenceItem::Property { class: class("Lyr "), key: code("Bckg") }])));
     let (bytes, _) = export("Select Background", &[&selected.actions[0]], &[], false).unwrap();
     assert_eq!(import(&bytes).unwrap().actions[0].steps, selected.actions[0].steps);
@@ -5352,7 +5352,7 @@ fn newer_feature_selection_steps_play() {
                 }
             }
         }
-        bg.write_region(photocraft_geom::Rect::new(0, 0, w as i32, h as i32), &data);
+        bg.write_region(lienzo_geom::Rect::new(0, 0, w as i32, h as i32), &data);
         Ok(())
     })
     .unwrap();
@@ -5440,7 +5440,7 @@ fn oil_paint_outside_the_commands_ranges_is_clamped_on_import_and_refused_on_exp
     }
 }
 
-/// The step `d` of the Photoshop event `code` (a four-character code), as PhotoCraft loads it.
+/// The step `d` of the Photoshop event `code` (a four-character code), as Lienzo loads it.
 fn other_step(code: &str, d: Descriptor) -> Mapped {
     let event = AtnEvent::Code(code.as_bytes().try_into().unwrap());
     (events::event_for(&event).unwrap_or_else(|| panic!("{code} is unknown")).from)(&d)
@@ -5662,7 +5662,7 @@ fn displace_descriptor(path: D) -> Descriptor {
 fn recorded_displace_round_trips_text_event_and_typed_path() {
     let descriptor = displace_descriptor(D::Path(LOCAL_MAP_WIRE.to_vec()));
     let data = set_of("Maps", vec![("A", vec![item("displace", "Displace", Some(descriptor.clone()))])]);
-    let imported = import(&photocraft_paint::tile::b64_decode(&data).unwrap()).unwrap();
+    let imported = import(&lienzo_paint::tile::b64_decode(&data).unwrap()).unwrap();
     assert!(imported.unsupported.is_empty());
     let (id, params) = &imported.actions[0].steps[0];
     assert_eq!(id, "filter.distort.displace");
@@ -5690,7 +5690,7 @@ fn displace_map_paths_a_document_may_not_name_stay_kept_steps() {
     let refused = [r"\\server\share\map.psd", "//server/share/map.psd", r"\\?\UNC\server\share\map.psd", r"\\.\COM1", "file://server/share/map.psd", "map.psd"];
     let cases: Vec<_> = refused.iter().map(|path| item("displace", "Displace", Some(displace_descriptor(path_value(path))))).collect();
     let data = set_of("Maps", vec![("A", cases.clone())]);
-    let imported = import(&photocraft_paint::tile::b64_decode(&data).unwrap()).unwrap();
+    let imported = import(&lienzo_paint::tile::b64_decode(&data).unwrap()).unwrap();
     assert_eq!(imported.unsupported.len(), cases.len());
     for ((id, params), expected) in imported.actions[0].steps.iter().zip(cases) {
         assert_eq!(id, PHOTOSHOP_STEP, "{params}");
@@ -5736,7 +5736,7 @@ fn unmeasured_displace_stays_opaque_and_lossy_export_is_refused() {
         item("Dspl", "Displace", Some(descriptor)),
     ];
     let data = set_of("Maps", vec![("A", cases.to_vec())]);
-    let imported = import(&photocraft_paint::tile::b64_decode(&data).unwrap()).unwrap();
+    let imported = import(&lienzo_paint::tile::b64_decode(&data).unwrap()).unwrap();
     assert_eq!(imported.unsupported.len(), cases.len());
     assert_eq!(imported.actions[0].steps.len(), cases.len());
     for ((id, params), expected) in imported.actions[0].steps.iter().zip(cases) {
@@ -5771,7 +5771,7 @@ fn unmeasured_displace_stays_opaque_and_lossy_export_is_refused() {
 /// Loading needs no map; playback reads it only after authorization and stretches it.
 #[test]
 fn recorded_displace_loads_without_map_and_plays_through_the_step_gate() {
-    use photocraft_geom::Rect;
+    use lienzo_geom::Rect;
 
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("synthetic-map.psd");
@@ -5805,7 +5805,7 @@ fn recorded_displace_loads_without_map_and_plays_through_the_step_gate() {
         .unwrap();
     let snapshot = |s: &Session| {
         let active = s.active().unwrap();
-        (active.revision, active.history.past_len(), photocraft_compose::render(&active.doc, active.doc.bounds()).into_px())
+        (active.revision, active.history.past_len(), lienzo_compose::render(&active.doc, active.doc.bounds()).into_px())
     };
     let before = snapshot(&source);
     let missing = source.execute("actions.play", json!({"action":"A"})).unwrap();
@@ -5830,7 +5830,7 @@ fn recorded_displace_loads_without_map_and_plays_through_the_step_gate() {
     source.authorize = None;
     let mut map = Session::new();
     paint_split(&mut map, 16, 8, [1.0, 1.0, 1.0, 1.0]);
-    let encoded = photocraft_io::export(&map.active().unwrap().doc, "psd", &Default::default()).unwrap();
+    let encoded = lienzo_io::export(&map.active().unwrap().doc, "psd", &Default::default()).unwrap();
     std::fs::write(&path, encoded.bytes).unwrap();
     let played = source.execute("actions.play", json!({"action":"A"})).unwrap();
     assert_eq!(played["ran"], 1, "{played}");
@@ -5846,7 +5846,7 @@ fn recorded_displace_loads_without_map_and_plays_through_the_step_gate() {
     assert_eq!(pixels[60 * 64 + 38], [0.0, 1.0, 0.0, 1.0]);
 }
 
-/// The step `d` of Photoshop event `code`, as PhotoCraft loads it.
+/// The step `d` of Photoshop event `code`, as Lienzo loads it.
 fn distort(code: &str, d: Descriptor) -> Mapped {
     let event = AtnEvent::Code(code.as_bytes().try_into().unwrap());
     (events::event_for(&event).unwrap_or_else(|| panic!("{code} is unknown")).from)(&d)
@@ -5918,12 +5918,12 @@ fn distort_filter_steps_load_clamp_play_and_save_back() {
     assert_eq!(one_step(distort("Wave", desc("null").with("NmbG", D::Integer(0)))).1["generators"], 1);
 }
 
-/// PhotoCraft's renderer draws at most `MAX_WAVE_GENERATORS` (64) generators, so a Wave step
+/// Lienzo's renderer draws at most `MAX_WAVE_GENERATORS` (64) generators, so a Wave step
 /// recorded with more keeps the Photoshop step on import and is refused on export, as the PSD
 /// smart-filter mapper does, rather than mapping a step that plays differently (#10605).
 #[test]
-fn wave_generators_past_what_photocraft_draws_keep_the_step() {
-    assert_eq!(photocraft_algo::MAX_WAVE_GENERATORS, 64);
+fn wave_generators_past_what_lienzo_draws_keep_the_step() {
+    assert_eq!(lienzo_algo::MAX_WAVE_GENERATORS, 64);
     let p = one_step(distort("Wave", desc("null").with("NmbG", D::Integer(64)))).1;
     assert_eq!(p["generators"], 64, "{p}");
     for n in [65, 999, 1_000_000] {
@@ -6296,7 +6296,7 @@ fn an_empty_new_set_saves_and_loads_back() {
 }
 
 /// A set from Chinese Photoshop: UTF-16 set and action names, a step name in GBK (可选颜色,
-/// the bytes from #6743) on an event PhotoCraft has no command for, with no descriptor.
+/// the bytes from #6743) on an event Lienzo has no command for, with no descriptor.
 fn gbk_set() -> Vec<u8> {
     let step = AtnItem { dictionary: b"\xbf\xc9\xd1\xa1\xd1\xd5\xc9\xab".to_vec(), ..item("syntheticFill", "", None) };
     let file = AtnFile {
@@ -6337,7 +6337,7 @@ fn load_keeps_windows_1252_symbols() {
     assert_eq!(r["unsupported"][0]["name"], "50 °", "{r}");
     assert_eq!(r["unsupported"][1]["name"], "Größe »", "{r}");
     let saved = s.execute("actions.save", json!({"set": "Größe ändern"})).unwrap();
-    let saved = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let saved = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let names: Vec<String> = saved.actions[0].items.iter().map(|i| saved.item_label(i)).collect();
     assert_eq!(names, ["50 °", "Größe »"]);
 }
@@ -6481,7 +6481,7 @@ fn gallery_effect_steps_keep_a_legacy_panel_name_byte_for_byte() {
     let loaded = s.execute("actions.load", json!({"data": set_of("S", vec![("A", vec![source])])})).unwrap();
     assert_eq!(loaded["unsupported"], json!([]), "{loaded}");
     let saved = s.execute("actions.save", json!({"set": "S"})).unwrap();
-    let file = atn::parse(&photocraft_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
+    let file = atn::parse(&lienzo_paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()).unwrap();
     let back = &file.actions[0].items[0];
     assert_eq!((back.event.clone(), back.dictionary.clone()), (AtnEvent::Code(*b"AccE"), gbk));
 }
@@ -6565,7 +6565,7 @@ fn gradient_make(t: Descriptor) -> AtnItem {
 fn saved_first(s: &mut Session) -> (AtnEvent, Option<Descriptor>) {
     let r = s.execute("actions.save", json!({"action": "A"})).unwrap();
     assert_eq!(r["skipped"], json!([]), "{r}");
-    let saved = atn::parse(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
+    let saved = atn::parse(&lienzo_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap();
     let i = &saved.actions[0].items[0];
     (i.event.clone(), i.descriptor.clone())
 }
@@ -6577,10 +6577,10 @@ fn without_hidden(p: &Value) -> Value {
     p
 }
 
-fn active_fill(s: &Session) -> photocraft_doc::Fill {
+fn active_fill(s: &Session) -> lienzo_doc::Fill {
     let st = s.active().unwrap();
     match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
-        photocraft_doc::LayerContent::Fill(f) => f.clone(),
+        lienzo_doc::LayerContent::Fill(f) => f.clone(),
         c => panic!("not a fill layer: {}", c.kind_name()),
     }
 }
@@ -6612,7 +6612,7 @@ fn gradient_fill_set_imports_midpoints_plays_and_saves_back_unchanged() {
     s.execute("layer.newFillLayer.gradient", json!({"from": "#000000", "to": "#ffffff"})).unwrap();
     let played = s.execute("actions.play", json!({"action": "A"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
-    let photocraft_doc::Fill::Gradient { stops, midpoints, opacity_stops, .. } = active_fill(&s) else { panic!("not a gradient") };
+    let lienzo_doc::Fill::Gradient { stops, midpoints, opacity_stops, .. } = active_fill(&s) else { panic!("not a gradient") };
     assert_eq!(stops.len(), 3);
     assert_eq!(midpoints, vec![0.25, 0.7]);
     assert_eq!(opacity_stops.len(), 2);
@@ -6622,7 +6622,7 @@ fn gradient_fill_set_imports_midpoints_plays_and_saves_back_unchanged() {
     assert_eq!(s2.actions.list[0].steps[0].1["midpoints"], json!([]));
     s.actions = s2.actions;
     s.execute("actions.play", json!({"action": "A"})).unwrap();
-    let photocraft_doc::Fill::Gradient { midpoints, .. } = active_fill(&s) else { panic!("not a gradient") };
+    let lienzo_doc::Fill::Gradient { midpoints, .. } = active_fill(&s) else { panic!("not a gradient") };
     assert!(midpoints.is_empty() || midpoints.iter().all(|m| *m == 0.5), "{midpoints:?}");
 }
 
@@ -6661,15 +6661,15 @@ fn gradient_fill_make_imports_plays_and_saves_back_unchanged() {
         s.execute("file.new", json!({"width": 16, "height": 12, "depth": depth})).unwrap();
         let played = s.execute("actions.play", json!({"action": "A"})).unwrap();
         assert!(played.get("failed").is_none(), "{played}");
-        let photocraft_doc::Fill::Gradient { stops, midpoints, opacity_stops, .. } = active_fill(&s) else { panic!("not a gradient") };
+        let lienzo_doc::Fill::Gradient { stops, midpoints, opacity_stops, .. } = active_fill(&s) else { panic!("not a gradient") };
         assert_eq!((stops.len(), midpoints, opacity_stops.len()), (3, vec![0.25, 0.7], 2));
         // One undo step.
         s.execute("edit.undo", json!({})).unwrap();
-        assert!(!matches!(s.active().unwrap().doc.layers.last().unwrap().content, photocraft_doc::LayerContent::Fill(_)));
+        assert!(!matches!(s.active().unwrap().doc.layers.last().unwrap().content, lienzo_doc::LayerContent::Fill(_)));
     }
 }
 
-/// #10771: PhotoCraft's own Gradient Fill steps export and load back as the same fill.
+/// #10771: Lienzo's own Gradient Fill steps export and load back as the same fill.
 #[test]
 fn gradient_fill_steps_export_and_import_back() {
     let set = json!({"style": "linear", "angle": 45, "stops": [[0, "#ff0000"], [0.25, "#00ff00"], [1, "#0000ff"]], "transparency": [[0, 100], [1, 50]], "midpoints": [0.3, 0.6]});

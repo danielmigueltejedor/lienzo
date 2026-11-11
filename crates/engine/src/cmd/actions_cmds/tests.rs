@@ -108,10 +108,10 @@ fn recorded_eye_visibility_replays_on_another_document_and_duplicate_names() {
     s.execute("select.deselectLayers", json!({})).unwrap();
     let result = s.execute("actions.play", json!({"action": "Hide"})).unwrap();
     assert!(result.get("failed").is_none(), "{result}");
-    assert!(s.active().unwrap().doc.layer(photocraft_doc::LayerId(keep)).unwrap().visible);
-    assert!(!s.active().unwrap().doc.layer(photocraft_doc::LayerId(target)).unwrap().visible);
+    assert!(s.active().unwrap().doc.layer(lienzo_doc::LayerId(keep)).unwrap().visible);
+    assert!(!s.active().unwrap().doc.layer(lienzo_doc::LayerId(target)).unwrap().visible);
     s.execute("edit.undo", json!({})).unwrap();
-    assert!(s.active().unwrap().doc.layer(photocraft_doc::LayerId(target)).unwrap().visible);
+    assert!(s.active().unwrap().doc.layer(lienzo_doc::LayerId(target)).unwrap().visible);
 }
 
 /// ⌘-clicking a layer's thumbnail that is not the selected layer records the layer by name (the
@@ -119,12 +119,12 @@ fn recorded_eye_visibility_replays_on_another_document_and_duplicate_names() {
 /// same-named layer of another document.
 #[test]
 fn recorded_thumbnail_click_on_another_layer_saves_and_replays_by_name() {
-    use photocraft_geom::Rect;
+    use lienzo_geom::Rect;
     let fixture = |s: &mut Session| {
         s.execute("file.new", json!({"width": 4, "height": 1})).unwrap();
         let source = s.execute("layer.new.layer", json!({"name": "Source"})).unwrap()["layer"].as_u64().unwrap();
         s.edit("Pixels", |doc, _| {
-            doc.layer_mut(photocraft_doc::LayerId(source)).unwrap().surface_mut().unwrap().fill_rect(Rect::new(0, 0, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(lienzo_doc::LayerId(source)).unwrap().surface_mut().unwrap().fill_rect(Rect::new(0, 0, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -243,7 +243,7 @@ fn record_red(s: &mut Session, depth: u32) {
 fn translated_square(s: &mut Session, depth: u32) {
     s.execute("file.new", json!({"width": 20, "height": 8, "depth": depth, "background": "transparent"})).unwrap();
     s.edit("red square", |doc, _| {
-        doc.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layers[0].surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -306,7 +306,7 @@ fn record_transform_again_on_a_copy_replays_in_a_session_without_a_transform() {
         fresh.execute("file.new", json!({"width": 20, "height": 8, "depth": depth, "background": "transparent"})).unwrap();
         fresh
             .edit("red square", |doc, _| {
-                doc.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(4, 2, 6, 4), &[1.0, 0.0, 0.0, 1.0]);
+                doc.layers[0].surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(4, 2, 6, 4), &[1.0, 0.0, 0.0, 1.0]);
                 Ok(())
             })
             .unwrap();
@@ -459,7 +459,7 @@ fn recorded_single_layer_transform_replays_after_layer_ids_shift() {
     s.execute("file.new", json!({"width": 20, "height": 8, "background": "transparent"})).unwrap();
     let source = s.execute("layer.new.layer", json!({"name": "Target"})).unwrap()["layer"].as_u64().unwrap();
     s.edit("source pixel", |doc, _| {
-        doc.layer_mut(photocraft_doc::LayerId(source)).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layer_mut(lienzo_doc::LayerId(source)).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -477,7 +477,7 @@ fn recorded_single_layer_transform_replays_after_layer_ids_shift() {
     let target = s.execute("layer.new.layer", json!({"name": "Target"})).unwrap()["layer"].as_u64().unwrap();
     assert_ne!(source, target);
     s.edit("target pixel", |doc, _| {
-        doc.layer_mut(photocraft_doc::LayerId(target)).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layer_mut(lienzo_doc::LayerId(target)).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 2, 2, 4), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -494,7 +494,7 @@ fn recorded_single_layer_transform_replays_after_layer_ids_shift() {
 fn ruled_background(s: &mut Session, depth: u32) {
     s.execute("file.new", json!({"width": 80, "height": 60, "depth": depth})).unwrap();
     s.edit("red bar", |doc, _| {
-        doc.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(10, 20, 60, 8), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layers[0].surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(10, 20, 60, 8), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -533,8 +533,8 @@ fn record_command_that_runs_commands_replays_it_once() {
         assert_eq!(s.active().unwrap().history.past_len(), before + 1, "depth {depth}: one Straighten step (the ruler is no step)");
         let replayed = s.active().unwrap().doc.clone();
         assert_eq!(replayed.size, direct.size, "depth {depth}: rotated and cropped once");
-        let r = photocraft_geom::Rect::new(0, 0, direct.size.width as i32, direct.size.height as i32);
-        let px = |d: &photocraft_doc::Document| d.layers[0].surface().unwrap().read_region(r);
+        let r = lienzo_geom::Rect::new(0, 0, direct.size.width as i32, direct.size.height as i32);
+        let px = |d: &lienzo_doc::Document| d.layers[0].surface().unwrap().read_region(r);
         assert_eq!(px(&replayed), px(&direct), "depth {depth}: same pixels as the direct run");
     }
 }
@@ -659,7 +659,7 @@ fn recorded_mask_drop_onto_a_duplicate_name_replays_on_the_same_layer() {
         let upper = s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap();
         (photo, lower, upper)
     };
-    let mask_on = |s: &Session, id: u64| s.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().mask.is_some();
+    let mask_on = |s: &Session, id: u64| s.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().mask.is_some();
     let mut s = Session::new();
     let (photo, lower, upper) = build(&mut s, false);
     s.execute("actions.record", json!({"name": "Copy mask"})).unwrap();
@@ -783,16 +783,16 @@ fn recorded_layer_drag_replays_on_another_document() {
     // Several moved layers named like the target are left out too, so the name is unambiguous.
     let mut m = Session::new();
     m.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
-    let a = photocraft_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
-    let b = photocraft_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
-    let target = photocraft_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
+    let a = lienzo_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
+    let b = lienzo_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
+    let target = lienzo_doc::LayerId(m.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
     m.execute("layer.moveTo", json!({"layers": [a.0, b.0], "target": "Twin", "position": "above"})).unwrap();
     assert_eq!(m.active().unwrap().doc.layers.last().map(|l| l.id), Some(b), "both moved above the third Twin");
     assert_eq!(m.active().unwrap().doc.layers.iter().rev().nth(2).map(|l| l.id), Some(target));
     // An ⌥-drag copy of the selected layer beside itself replays by name too.
     let mut c = Session::new();
     c.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
-    let src = photocraft_doc::LayerId(c.execute("layer.new.layer", json!({"name": "Solo"})).unwrap()["layer"].as_u64().unwrap());
+    let src = lienzo_doc::LayerId(c.execute("layer.new.layer", json!({"name": "Solo"})).unwrap()["layer"].as_u64().unwrap());
     c.execute("actions.record", json!({"name": "Copy"})).unwrap();
     c.execute("layer.moveTo", json!({"layer": src.0, "target": src.0, "position": "above", "copy": true})).unwrap();
     c.execute("actions.stop", json!({})).unwrap();
@@ -813,8 +813,8 @@ fn recorded_layer_drag_replays_on_another_document() {
         s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap();
         s.execute("layer.groupLayers", json!({})).unwrap();
         let group = s.active().unwrap().active_layer.unwrap();
-        let a = photocraft_doc::LayerId(s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
-        let b = photocraft_doc::LayerId(s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
+        let a = lienzo_doc::LayerId(s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
+        let b = lienzo_doc::LayerId(s.execute("layer.new.layer", json!({"name": "Twin"})).unwrap()["layer"].as_u64().unwrap());
         s.execute("layer.select", json!({"layer": group.0, "mode": "replace"})).unwrap();
         (group, a, b)
     };
@@ -898,9 +898,9 @@ fn named_selection_preserves_modes_and_duplicate_occurrences() {
     // A duplicate nested in a group must be found even when that group is collapsed.
     let second = s
         .edit("child", |doc, active| {
-            let child = photocraft_doc::Layer::raster("Photo", doc.pixel_format());
+            let child = lienzo_doc::Layer::raster("Photo", doc.pixel_format());
             let id = child.id;
-            if let photocraft_doc::LayerContent::Group(group) = &mut doc.layer_mut(active.unwrap()).unwrap().content {
+            if let lienzo_doc::LayerContent::Group(group) = &mut doc.layer_mut(active.unwrap()).unwrap().content {
                 group.children.push(child);
                 group.expanded = false;
             }
@@ -1296,7 +1296,7 @@ fn a_recorded_edit_run_replays_on_a_second_document() {
     assert_eq!(pixel(&s, 0, 2, 2), vec![0.0, 0.0, 0.0, 1.0], "outside the selection stays black");
     let last = d.layers.last().unwrap();
     match &last.content {
-        photocraft_doc::LayerContent::Text(t) => {
+        lienzo_doc::LayerContent::Text(t) => {
             assert_eq!(t.text, "Hi", "the styled text replayed");
             assert!(t.char_runs().iter().any(|r| r.style.faux_bold), "the bold run replayed");
         }
@@ -1590,7 +1590,7 @@ fn rename_follows_named_batch_steps_in_their_set() {
 /// stops at that step instead of going on as if the Batch had finished.
 #[test]
 fn playback_stops_when_a_nested_batch_cannot_write_its_error_log() {
-    let dir = std::env::temp_dir().join(format!("photocraft-actions-batch-log-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-actions-batch-log-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let dir = dir.to_string_lossy().into_owned();

@@ -1,6 +1,6 @@
 # Scratch disks and memory residency
 
-Native PhotoCraft keeps pixel tiles in RAM and spills cold tiles to a configured scratch
+Native Lienzo keeps pixel tiles in RAM and spills cold tiles to a configured scratch
 directory. A read or write guard keeps a tile resident while a consumer uses its bytes. Undo
 snapshots keep their copy-on-write tiles, including disk-backed tiles, until History States
 retires them. Web builds retain their explicit memory limit (capped like Memory Usage) and do not use a
@@ -16,14 +16,14 @@ not a measurement of committed memory or a substitute for scratch storage.
 Enable a directory in Preferences → Scratch Disks. `(system temp)` selects the operating
 system's temporary directory. Only the first enabled, nonempty directory is used. Changing
 directories creates a new scratch file; old disk-backed tiles keep their old file alive.
-The development override `PHOTOCRAFT_TILE_BUDGET_MB` fixes the tile allowance for stress tests.
+The development override `LIENZO_TILE_BUDGET_MB` fixes the tile allowance for stress tests.
 
 Scratch extents are LZ4 compressed, CRC-checked and reused after a tile is released. Closing
 the last tile truncates its file. No scratch file outlives the process, including a crash or
 an exit without Rust destructors: Windows opens it with delete-on-close, and Unix creates it
 with mode `0600` and unlinks it immediately after opening, reading and writing through the
 one open handle with positioned I/O (`pread`/`pwrite`). The space is returned when the last
-handle closes. Configuring a directory also sweeps `photocraft-<pid>-<nonce>.scratch` files of
+handle closes. Configuring a directory also sweeps `lienzo-<pid>-<nonce>.scratch` files of
 dead processes (older builds, or a crash between creating and unlinking). It preserves
 live-process files, other users' files, symlinks and unrelated names; unavailable process
 enumeration leaves files untouched. PID reuse conservatively retains a stale file, and a
@@ -31,7 +31,7 @@ unique launch nonce avoids a collision. A filesystem that refuses the unlink kee
 until the file is dropped or the next sweep.
 
 The engine owns a shared, stoppable residency supervisor and joins it when its last session
-is dropped. `photocraft-raster` only exposes synchronous measurement and bounded eviction
+is dropped. `lienzo-raster` only exposes synchronous measurement and bounded eviction
 operations; standalone callers work without a background thread. `sysinfo` is native-only
 with its default features disabled and only the `system` (RAM) feature enabled, plus `disk` on
 macOS only, for purgeable space.
@@ -83,10 +83,10 @@ Scratch storage alone does not make every format, filter or renderer streamable.
 [EXR streaming](streaming-io.md) for the block-by-block EXR import. Viewport rendering is a
 separate change built on these guards and memory reservations.
 
-Available RAM is measured in one place, `photocraft_raster::memory::system` (cgroup v1/v2
+Available RAM is measured in one place, `lienzo_raster::memory::system` (cgroup v1/v2
 limits on Linux, reclaimable pages on macOS, the commit limit on Windows; swap never counts as
 RAM, and an unreadable container limit fails closed). The residency budget and the PSD/PSB and
-layered-TIFF import admission (`photocraft_io::memory`) both read it. While spilling is on and
+layered-TIFF import admission (`lienzo_io::memory`) both read it. While spilling is on and
 not paused, import admission counts the tile pixels of a file against RAM plus the scratch room
 (`spill::scratch_capacity`: the free space above the reserve, within the Scratch Size Limit);
 decode buffers, conversion copies and merged planes still need RAM. With spilling off or

@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::TextLayer;
-use photocraft_doc::text::{AntiAlias, CharStyle, TextRun};
-use photocraft_geom::Affine;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::TextLayer;
+use lienzo_doc::text::{AntiAlias, CharStyle, TextRun};
+use lienzo_geom::Affine;
 use skrifa::{FontRef, MetadataProvider};
 
 use crate::render::{ink_rect, rasterize};

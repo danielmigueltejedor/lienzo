@@ -1,0 +1,187 @@
+//! The app icon, everywhere Windows, macOS and Linux show one (#248).
+//!
+//! - **Executable:** `build.rs` embeds `assets/app-icon/lienzo.ico` (16–256 px) as icon
+//!   resource 1, which Explorer, Alt+Tab and an unpinned taskbar button fall back to.
+//! - **Window:** [`window_icon`] sets the title-bar and taskbar icon at runtime (`WM_SETICON` on
+//!   Windows, `_NET_WM_ICON` on X11, the Dock when running unbundled on macOS).
+//! - **Start Menu shortcut (MSI):** the taskbar matches a running window to the shortcut that
+//!   launches its executable and shows that shortcut's icon. Windows Installer caches an advertised
+//!   shortcut's icon under its `<Icon Id>`, so that id must carry the target's `.exe` extension
+//!   (ICE50); an extensionless id showed a blank page on the taskbar. The tests below check it.
+//!
+//! The process keeps Windows' implicit AppUserModelID (derived from the executable path), which
+//! is what makes that matching work for both the MSI shortcut and the portable exe. An explicit
+//! ID would need a Win32 call (`unsafe`, which the workspace forbids) and would then also have to
+//! be stamped on the shortcut, or the taskbar would stop matching the two.
+
+/// Window, taskbar and (when running unbundled) Dock icon. macOS gets the padded 1024 px render
+/// on Apple's icon grid; elsewhere the 256 px hicolor render of the full tile.
+pub fn window_icon() -> egui::IconData {
+    match eframe::icon_data::from_png_bytes(PNG) {
+        Ok(icon) => icon,
+        Err(e) => {
+            log::warn!("app icon: {e}");
+            egui::IconData::default()
+        }
+    }
+}
+
+/// Whether the window gets [`window_icon`] at runtime: everywhere except inside a macOS app
+/// bundle. There the Dock shows the bundle's `Lienzo.icns` (`CFBundleIconFile`), which macOS
+/// renders in its own style (Liquid Glass and its tinted and dark variants); a runtime PNG
+/// replaced it with a flat picture (#5849). `exe` is the running executable.
+pub fn sets_runtime_icon(exe: Option<&std::path::Path>) -> bool {
+    !(cfg!(target_os = "macos") && exe.is_some_and(in_app_bundle))
+}
+
+/// Value for [`egui::ViewportBuilder::with_icon`]: [`window_icon`] when [`sets_runtime_icon`]
+/// is true; otherwise [`egui::IconData::default`] so eframe does not substitute its own icon
+/// on the Dock after the window opens (#7253).
+pub fn viewport_icon(exe: Option<&std::path::Path>) -> egui::IconData {
+    if sets_runtime_icon(exe) { window_icon() } else { egui::IconData::default() }
+}
+
+/// Whether `exe` is an app bundle's executable: `…/Name.app/Contents/MacOS/binary`.
+fn in_app_bundle(exe: &std::path::Path) -> bool {
+    let name = |p: Option<&std::path::Path>| p.and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned());
+    let macos = exe.parent();
+    let contents = macos.and_then(std::path::Path::parent);
+    let bundle = contents.and_then(std::path::Path::parent);
+    name(macos).as_deref() == Some("MacOS")
+        && name(contents).as_deref() == Some("Contents")
+        && name(bundle).is_some_and(|n| n.len() > 4 && n.to_ascii_lowercase().ends_with(".app"))
+}
+
+#[cfg(target_os = "macos")]
+const PNG: &[u8] = include_bytes!("../../../assets/app-icon/lienzo-1024.png");
+#[cfg(not(target_os = "macos"))]
+const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/dev.danielmiguelt.Lienzo.png");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ICO: &[u8] = include_bytes!("../../../assets/app-icon/lienzo.ico");
+    const WXS: &str = include_str!("../../../packaging/windows/lienzo.wxs");
+
+    fn u16_at(b: &[u8], i: usize) -> usize {
+        u16::from_le_bytes([b[i], b[i + 1]]) as usize
+    }
+    fn u32_at(b: &[u8], i: usize) -> usize {
+        u32::from_le_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]) as usize
+    }
+
+    /// #5849: a macOS app bundle keeps its .icns in the Dock; unbundled runs (cargo run, the
+    /// Linux and Windows builds) still set the runtime icon.
+    #[test]
+    fn only_a_macos_app_bundle_skips_the_runtime_icon() {
+        use std::path::Path;
+        assert!(in_app_bundle(Path::new("/Applications/Lienzo.app/Contents/MacOS/lienzo")));
+        assert!(in_app_bundle(Path::new("/Users/a/Downloads/Lienzo Beta.APP/Contents/MacOS/lienzo")));
+        assert!(!in_app_bundle(Path::new("/Users/a/src/lienzo/target/release/lienzo")));
+        assert!(!in_app_bundle(Path::new("/opt/Contents/MacOS/lienzo")), "not inside a .app");
+        assert!(!in_app_bundle(Path::new("/.app/Contents/MacOS/lienzo")), "a bare `.app` is no bundle name");
+        assert!(!in_app_bundle(Path::new("lienzo")));
+        assert!(sets_runtime_icon(None));
+        assert!(sets_runtime_icon(Some(Path::new("/usr/bin/lienzo"))));
+        assert_eq!(sets_runtime_icon(Some(Path::new("/Applications/Lienzo.app/Contents/MacOS/lienzo"))), !cfg!(target_os = "macos"));
+    }
+
+    /// #7253: omitting `with_icon` made eframe paint its default glyph on the Dock once the window loaded.
+    #[test]
+    fn viewport_icon_blocks_eframe_default_when_runtime_icon_is_skipped() {
+        use std::path::Path;
+        let bundled = Some(Path::new("/Applications/Lienzo.app/Contents/MacOS/lienzo"));
+        if sets_runtime_icon(bundled) {
+            let icon = viewport_icon(bundled);
+            assert!(icon.width >= 256 && icon.width == icon.height);
+        } else {
+            assert_eq!(viewport_icon(bundled), egui::IconData::default());
+        }
+    }
+
+    #[test]
+    fn window_icon_decodes() {
+        let icon = window_icon();
+        assert!(icon.width >= 256 && icon.width == icon.height, "{}x{}", icon.width, icon.height);
+        assert_eq!(icon.rgba.len(), icon.width as usize * icon.height as usize * 4);
+        assert!(icon.rgba.chunks(4).any(|p| p[3] > 0), "the icon isn't blank");
+    }
+
+    #[test]
+    fn windows_and_linux_icons_keep_the_round_corners() {
+        // rx=112 of 512 leaves (10, 10) of a 256 px render transparent; the old crop filled it (#4478).
+        let png = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/dev.danielmiguelt.Lienzo.png");
+        let icon = eframe::icon_data::from_png_bytes(png).unwrap();
+        assert_eq!(icon.width, 256);
+        assert_eq!(icon.rgba[(10 * 256 + 10) * 4 + 3], 0, "corner is transparent");
+        assert_eq!(icon.rgba[(128 * 256 + 2) * 4 + 3], 255, "the tile is full bleed");
+    }
+
+    /// The `.ico` build.rs embeds: every size Windows asks for, each a valid PNG or BMP image.
+    #[test]
+    fn exe_icon_has_every_shell_size() {
+        assert_eq!((u16_at(ICO, 0), u16_at(ICO, 2)), (0, 1), "ICONDIR header, type 1 (icon)");
+        let n = u16_at(ICO, 4);
+        let mut sizes = Vec::new();
+        for i in 0..n {
+            let e = 6 + i * 16;
+            let w = if ICO[e] == 0 { 256 } else { ICO[e] as usize };
+            let h = if ICO[e + 1] == 0 { 256 } else { ICO[e + 1] as usize };
+            assert_eq!(w, h);
+            let (len, off) = (u32_at(ICO, e + 8), u32_at(ICO, e + 12));
+            let data = ICO.get(off..off + len).expect("image data inside the file");
+            let png = data.starts_with(b"\x89PNG\r\n\x1a\n");
+            let bmp = data.len() >= 40 && u32_at(data, 0) == 40;
+            assert!(png || bmp, "{w}px entry is neither PNG nor BMP");
+            if png {
+                // IHDR width/height match the directory entry.
+                let pw = u32::from_be_bytes([data[16], data[17], data[18], data[19]]) as usize;
+                assert_eq!(pw, w, "{w}px entry holds a {pw}px PNG");
+            }
+            sizes.push(w);
+        }
+        for want in [16, 24, 32, 48, 64, 256] {
+            assert!(sizes.contains(&want), "lienzo.ico lacks {want}px (has {sizes:?})");
+        }
+    }
+
+    /// The value of `attr="…"` inside `element`.
+    fn attr<'a>(element: &'a str, attr: &str) -> Option<&'a str> {
+        let key = format!(" {attr}=\"");
+        let start = element.find(&key)? + key.len();
+        element[start..].split('"').next()
+    }
+
+    /// Each `<tag …>` element's text up to its closing `>`.
+    fn elements<'a>(xml: &'a str, tag: &str) -> Vec<&'a str> {
+        let open = format!("<{tag} ");
+        xml.match_indices(&open).map(|(i, _)| &xml[i..i + xml[i..].find('>').unwrap()]).collect()
+    }
+
+    /// ICE50 (#248): advertised shortcut icons are cached under their `<Icon Id>`; without the
+    /// target's extension the shell shows a blank page on the Start Menu and the taskbar.
+    #[test]
+    fn msi_shortcut_icons_keep_the_exe_extension() {
+        let icons: Vec<&str> = elements(WXS, "Icon").iter().filter_map(|e| attr(e, "Id")).collect();
+        assert!(!icons.is_empty());
+        for id in &icons {
+            assert!(id.ends_with(".exe") || id.ends_with(".ico"), "<Icon Id=\"{id}\"> needs an .exe or .ico extension");
+        }
+        let shortcuts = elements(WXS, "Shortcut");
+        assert!(!shortcuts.is_empty());
+        for s in shortcuts {
+            let icon = attr(s, "Icon").expect("shortcuts name their icon");
+            assert!(icons.contains(&icon), "shortcut icon {icon} isn't an <Icon>");
+            if attr(s, "Advertise") == Some("yes") {
+                // Every shortcut in the MSI targets lienzo.exe.
+                assert!(icon.ends_with(".exe"), "advertised shortcut icon {icon} must end in .exe like its target (ICE50)");
+            }
+        }
+        let arp = WXS.split("Id=\"ARPPRODUCTICON\" Value=\"").nth(1).and_then(|r| r.split('"').next()).expect("ARPPRODUCTICON");
+        assert!(icons.contains(&arp), "ARPPRODUCTICON {arp} isn't an <Icon>");
+        // The Start Menu shortcut must not set its own AppUserModelID: the process keeps the
+        // implicit one, and a mismatch would split the taskbar button from the shortcut.
+        assert!(!WXS.contains("System.AppUserModel.ID"));
+    }
+}

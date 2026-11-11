@@ -4,15 +4,15 @@
 
 use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform, constrained_polygon_point, tool_event};
 use crate::state::Tool;
 
-fn app_with(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -20,29 +20,29 @@ fn app_with(tool: Tool) -> PhotocraftApp {
     app
 }
 
-fn ev(app: &mut PhotocraftApp, e: ToolEvent, m: Modifiers) {
+fn ev(app: &mut LienzoApp, e: ToolEvent, m: Modifiers) {
     tool_event(app, e, m);
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64, m: Modifiers) {
+fn click(app: &mut LienzoApp, x: f64, y: f64, m: Modifiers) {
     ev(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
     ev(app, ToolEvent::Up { x, y }, m);
 }
 
-fn last_step(app: &PhotocraftApp) -> Option<String> {
+fn last_step(app: &LienzoApp) -> Option<String> {
     app.session.active().unwrap().history.entries().last().cloned()
 }
 
-fn bounds(app: &PhotocraftApp) -> Option<Rect> {
+fn bounds(app: &LienzoApp) -> Option<Rect> {
     app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds())
 }
 
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     let mut app = app_with(Tool::PolygonLasso);
     app.ui.extras.rulers = false;
     // 60 fps, so a double-click's two clicks fall inside egui's 0.3 s window.
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -53,7 +53,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     // 100 %: one document pixel per point, the area around (200, 200) in view.
     let v = &mut h.state_mut().ui.views[0];
@@ -64,7 +64,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     let xf = ViewXform {
@@ -78,7 +78,7 @@ fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
     xf.to_screen(x, y)
 }
 
-fn screen_click(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32) {
+fn screen_click(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -89,7 +89,7 @@ fn screen_click(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32) {
 }
 
 /// Three corners, well apart in time so they aren't a double-click.
-fn three_corners(h: &mut Harness<'static, PhotocraftApp>) {
+fn three_corners(h: &mut Harness<'static, LienzoApp>) {
     for (x, y) in [(100.0, 100.0), (300.0, 100.0), (300.0, 300.0)] {
         screen_click(h, x, y);
         h.run_steps(30);

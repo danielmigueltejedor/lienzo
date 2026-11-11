@@ -196,7 +196,7 @@ impl Plugin {
         if !bytes.starts_with(b"\0asm") {
             let msg = "not a WebAssembly binary (missing \\0asm header)";
             return Err(Error::Module(match format_hint(bytes) {
-                Some(hint) => format!("{msg}; this file looks like {hint} - PhotoCraft plug-ins are WebAssembly modules (.wasm)"),
+                Some(hint) => format!("{msg}; this file looks like {hint} - Lienzo plug-ins are WebAssembly modules (.wasm)"),
                 None => msg.to_string(),
             }));
         }

@@ -3,13 +3,13 @@
 //! `x:xmpmeta/rdf:RDF/rdf:Description`, as attributes or as child elements.
 //!
 //! Loading applies only the settings the file holds, over the current ones, as Camera Raw's
-//! Load Settings does; settings PhotoCraft has no control for (lens corrections, geometry,
+//! Load Settings does; settings Lienzo has no control for (lens corrections, geometry,
 //! defringe, …) are ignored and named in the report. The same reader fills the dialog from a
 //! raw file's sidecar (`IMG_0001.xmp` beside `IMG_0001.CR2`), and the writer keeps it. Saving writes every supported
 //! control, so loading the file in Photoshop reproduces the dialog.
 //!
 //! White balance: a Camera Raw Filter on a rendered image uses the relative
-//! `IncrementalTemperature` / `IncrementalTint` (−100..=100), which are PhotoCraft's Temperature
+//! `IncrementalTemperature` / `IncrementalTint` (−100..=100), which are Lienzo's Temperature
 //! and Tint. The absolute `Temperature` (kelvin) / `Tint` of raw-file settings have no
 //! counterpart and are ignored.
 //!
@@ -20,7 +20,7 @@
 //! Filter has none). Without `HasCrop`, or with `HasCrop="False"`, the crop keys are stale and
 //! mean nothing. A straightened crop (`CropAngle` other than 0) isn't applied.
 
-use photocraft_algo::camera_raw::{CameraRaw, validate_curve};
+use lienzo_algo::camera_raw::{CameraRaw, validate_curve};
 
 /// The Camera Raw settings namespace.
 pub const CRS_NS: &str = "http://ns.adobe.com/camera-raw-settings/1.0/";
@@ -30,7 +30,7 @@ pub const MAX_XMP_BYTES: usize = 4 * 1024 * 1024;
 
 type Field = fn(&mut CameraRaw) -> &mut f32;
 
-/// `crs:` scalar name, PhotoCraft field, and the slider range values are clamped to.
+/// `crs:` scalar name, Lienzo field, and the slider range values are clamped to.
 const SCALARS: &[(&str, Field, f32, f32)] = &[
     ("IncrementalTemperature", |p| &mut p.temperature, -100.0, 100.0),
     ("IncrementalTint", |p| &mut p.tint, -100.0, 100.0),
@@ -210,7 +210,7 @@ impl Crop {
 pub struct LoadReport {
     /// How many settings were applied (a crop counts as one).
     pub applied: usize,
-    /// `crs:` settings without a PhotoCraft control (set to something other than their neutral
+    /// `crs:` settings without a Lienzo control (set to something other than their neutral
     /// value), or with an unusable value, in file order; then the keys of a crop that isn't
     /// applied (straightened, unreadable or empty).
     pub ignored: Vec<String>,
@@ -279,7 +279,7 @@ fn curve(node: roxmltree::Node<'_, '_>) -> Option<Vec<[f32; 2]>> {
         points.push([number(x)?, number(y)?]);
     }
     validate_curve(&points).ok()?;
-    // Camera Raw's linear curve is the identity's two end points; PhotoCraft's is empty.
+    // Camera Raw's linear curve is the identity's two end points; Lienzo's is empty.
     if points == [[0.0, 0.0], [255.0, 255.0]] {
         points.clear();
     }
@@ -387,13 +387,13 @@ fn escape(s: &str) -> String {
 }
 
 /// The XMP toolkit [`save`] names on `x:xmpmeta`.
-const TOOLKIT: &str = "PhotoCraft";
+const TOOLKIT: &str = "Lienzo";
 const META_NS: &str = "adobe:ns:meta/";
 
-/// Did [`save`] write this file? True when its `x:xmpmeta` names PhotoCraft as the toolkit
+/// Did [`save`] write this file? True when its `x:xmpmeta` names Lienzo as the toolkit
 /// (`x:xmptk`). Lightroom, Bridge and Camera Raw put their own toolkit there when they write a
 /// file, so a sidecar another application touched since reads false. Never panics.
-pub fn is_photocraft_xmp(bytes: &[u8]) -> bool {
+pub fn is_lienzo_xmp(bytes: &[u8]) -> bool {
     if bytes.len() > MAX_XMP_BYTES {
         return false;
     }
@@ -415,7 +415,7 @@ pub fn save_with_crop(params: &CameraRaw, crop: Option<Crop>) -> String {
     let mut p = params.clone();
     let wb = if p.temperature != 0.0 || p.tint != 0.0 { "Custom" } else { "As Shot" };
     let mut out = String::from(
-        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"PhotoCraft\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n    xmlns:crs=\"http://ns.adobe.com/camera-raw-settings/1.0/\"\n",
+        "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"Lienzo\">\n <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n  <rdf:Description rdf:about=\"\"\n    xmlns:crs=\"http://ns.adobe.com/camera-raw-settings/1.0/\"\n",
     );
     out.push_str("   crs:Version=\"18.4\"\n   crs:ProcessVersion=\"15.4\"\n");
     out.push_str(&format!("   crs:WhiteBalance=\"{wb}\"\n"));
@@ -503,7 +503,7 @@ mod tests {
         assert_eq!((p.hsl_hue[3], p.hsl_sat[3]), (25.0, 20.0));
         assert_eq!((p.sharpen_amount, p.noise_luminance, p.grain_amount), (15.0, 5.0, 10.0));
         assert_eq!(p.grade_blending, 50.0);
-        // The linear tone curve is PhotoCraft's empty one; an element-form setting is read too.
+        // The linear tone curve is Lienzo's empty one; an element-form setting is read too.
         assert!(p.point_curve.is_empty());
         assert_eq!(p.point_curve_red, vec![[0.0, 0.0], [128.0, 140.0], [255.0, 255.0]]);
         assert_eq!(p.dehaze, 12.0);
@@ -584,22 +584,22 @@ mod tests {
     }
 
     #[test]
-    fn is_photocraft_xmp_reads_the_toolkit_marker() {
+    fn is_lienzo_xmp_reads_the_toolkit_marker() {
         let own = save(&CameraRaw { contrast: 15.0, ..CameraRaw::default() });
-        assert!(is_photocraft_xmp(own.as_bytes()));
+        assert!(is_lienzo_xmp(own.as_bytes()));
         let wrapped = format!("\u{feff}<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n{own}<?xpacket end=\"w\"?>");
-        assert!(is_photocraft_xmp(wrapped.as_bytes()), "an xpacket wrapper and a byte order mark");
-        assert!(!is_photocraft_xmp(FIXTURE), "Camera Raw's own toolkit");
+        assert!(is_lienzo_xmp(wrapped.as_bytes()), "an xpacket wrapper and a byte order mark");
+        assert!(!is_lienzo_xmp(FIXTURE), "Camera Raw's own toolkit");
         for other in [
             &b""[..],
             b"<x:xmpmeta",
             b"<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"/>",
-            b"<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" xmptk=\"PhotoCraft\"/>",
-            b"<x:xmpmeta xmlns:x=\"other:ns/\" x:xmptk=\"PhotoCraft\"/>",
-            b"<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"PhotoCraft 2\"/>",
+            b"<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" xmptk=\"Lienzo\"/>",
+            b"<x:xmpmeta xmlns:x=\"other:ns/\" x:xmptk=\"Lienzo\"/>",
+            b"<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"Lienzo 2\"/>",
             b"\xff\xfe",
         ] {
-            assert!(!is_photocraft_xmp(other), "{}", String::from_utf8_lossy(other));
+            assert!(!is_lienzo_xmp(other), "{}", String::from_utf8_lossy(other));
         }
     }
 
@@ -671,7 +671,7 @@ mod tests {
         assert_eq!(r.ignored, vec!["CropAngle".to_string()], "only the keys the file has");
     }
 
-    /// Corners map as `photocraft-raw`'s orientation maps pixels (`develop::source_xy`).
+    /// Corners map as `lienzo-raw`'s orientation maps pixels (`develop::source_xy`).
     #[test]
     fn crops_follow_the_orientation() {
         let c = Crop { top: 0.1, left: 0.2, bottom: 0.6, right: 0.5 };
@@ -702,7 +702,7 @@ mod tests {
         let p = CameraRaw { contrast: 20.0, ..CameraRaw::default() };
         let crop = Crop { top: 0.125, left: 0.25, bottom: 0.875, right: 0.5 };
         let text = save_with_crop(&p, Some(crop));
-        assert!(is_photocraft_xmp(text.as_bytes()));
+        assert!(is_lienzo_xmp(text.as_bytes()));
         let mut back = CameraRaw::default();
         let r = load(&mut back, text.as_bytes()).unwrap();
         assert_eq!((back, r.crop), (p.clone(), Some(crop)));

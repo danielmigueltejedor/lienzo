@@ -101,12 +101,12 @@ pub(super) fn reverse(s: &mut Session) -> Result<Value> {
     Ok(Value::Null)
 }
 
-/// Refuses an edit that left `doc` nested deeper than [`photocraft_doc::MAX_GROUP_DEPTH`]
+/// Refuses an edit that left `doc` nested deeper than [`lienzo_doc::MAX_GROUP_DEPTH`]
 /// groups. Called at the end of a `Session::edit` closure, so an `Err` leaves the document and
 /// history untouched.
 pub(crate) fn check_group_depth(doc: &Document, what: &str) -> Result<()> {
-    if doc.max_group_depth() > photocraft_doc::MAX_GROUP_DEPTH {
-        return Err(EngineError::Other(format!("{what} would nest layers deeper than {} groups", photocraft_doc::MAX_GROUP_DEPTH)));
+    if doc.max_group_depth() > lienzo_doc::MAX_GROUP_DEPTH {
+        return Err(EngineError::Other(format!("{what} would nest layers deeper than {} groups", lienzo_doc::MAX_GROUP_DEPTH)));
     }
     Ok(())
 }

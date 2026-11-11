@@ -170,11 +170,11 @@ pub(crate) fn translate_layer(doc: &Document, l: &mut Layer, dx: i32, dy: i32) {
     match &mut l.content {
         LayerContent::Raster(s) => *s = translate_surface(s, dx, dy),
         LayerContent::Text(t) => {
-            t.transform = photocraft_geom::Affine::translate(dx as f64, dy as f64).mul(&t.transform);
+            t.transform = lienzo_geom::Affine::translate(dx as f64, dy as f64).mul(&t.transform);
             // A whole-pixel move shifts the rendered text and its PSD position as they are.
             // Re-rendering would replace Photoshop's rendering of imported type, and drop the
             // text when its font is missing (artboard export, moving type with the Move tool).
-            let raw = t.psd_raw.as_deref().map(|r| photocraft_text::psd::translate_tysh(r, f64::from(dx), f64::from(dy)));
+            let raw = t.psd_raw.as_deref().map(|r| lienzo_text::psd::translate_tysh(r, f64::from(dx), f64::from(dy)));
             match (&mut t.cache, raw) {
                 (Some(c), Some(Some(r))) => {
                     *c = translate_surface(c, dx, dy);
@@ -226,17 +226,17 @@ pub(super) fn merge_group(s: &mut Session, id: LayerId) -> Result<Value> {
             return Err(EngineError::Other("the group is hidden".into()));
         }
         let fmt = doc.pixel_format();
-        let fmt = photocraft_color::PixelFormat::new(fmt.mode, fmt.sample, true);
+        let fmt = lienzo_color::PixelFormat::new(fmt.mode, fmt.sample, true);
         let mut solo = group.clone();
         solo.opacity = 1.0;
-        solo.blend = photocraft_doc::BlendMode::Normal;
+        solo.blend = lienzo_doc::BlendMode::Normal;
         solo.clipped = false;
         let mut tmp = doc.clone();
         tmp.layers = vec![solo];
         let mut merged = Layer::new(group.name.clone(), LayerContent::Raster(pixels::composite_layers_uncropped(&tmp, fmt)));
         merged.id = group.id;
         merged.opacity = group.opacity;
-        merged.blend = if group.blend == photocraft_doc::BlendMode::PassThrough { photocraft_doc::BlendMode::Normal } else { group.blend };
+        merged.blend = if group.blend == lienzo_doc::BlendMode::PassThrough { lienzo_doc::BlendMode::Normal } else { group.blend };
         merged.clipped = group.clipped;
         merged.locks = group.locks;
         *doc.layer_mut(id).ok_or(EngineError::NoLayer(id))? = merged;
@@ -263,7 +263,7 @@ mod tests {
         s.execute("layer.layerMask.revealSelection", json!({})).unwrap();
         let b = s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
         let group = s.execute("layer.groupLayers", json!({"layer": b})).unwrap()["layer"].as_u64().unwrap();
-        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().mask.clone();
+        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().mask.clone();
         let original = mask_of(&s, a).expect("a has a mask");
         // Move onto the group.
         s.execute("layer.layerMask.moveTo", json!({"layer": a, "to": group})).unwrap();
@@ -302,14 +302,14 @@ mod tests {
         s.execute("layer.layerMask.edit", json!({"layer": a, "density": 40})).unwrap();
         s.execute("layer.layerMask.enabled", json!({"layer": a, "enabled": false})).unwrap();
         let doc = s.active().unwrap().doc.clone();
-        let mask = doc.layer(photocraft_doc::LayerId(a)).unwrap().mask.clone().expect("a has a mask");
+        let mask = doc.layer(lienzo_doc::LayerId(a)).unwrap().mask.clone().expect("a has a mask");
         assert!(!mask.enabled && (mask.density - 0.4).abs() < 1e-6, "set up: disabled, 40% density");
         let history = s.active().unwrap().history.entries();
         for (copy, replace) in [(false, false), (true, false), (false, true), (true, true)] {
             let r = s.execute("layer.layerMask.moveTo", json!({"layer": a, "to": a, "copy": copy, "replace": replace}));
             assert!(r.is_err(), "copy: {copy}, replace: {replace}: refused");
             let st = s.active().unwrap();
-            assert_eq!(st.doc.layer(photocraft_doc::LayerId(a)).unwrap().mask.as_ref(), Some(&mask), "copy: {copy}, replace: {replace}: the mask is untouched");
+            assert_eq!(st.doc.layer(lienzo_doc::LayerId(a)).unwrap().mask.as_ref(), Some(&mask), "copy: {copy}, replace: {replace}: the mask is untouched");
             assert!(st.doc == doc, "copy: {copy}, replace: {replace}: the document is unchanged");
             assert_eq!(st.history.entries(), history, "copy: {copy}, replace: {replace}: no history step");
         }
@@ -330,7 +330,7 @@ mod tests {
         s.execute("layer.layerMask.hideSelection", json!({"layer": b})).unwrap();
         s.execute("layer.layerMask.enabled", json!({"layer": b, "enabled": false})).unwrap();
         let c = s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
-        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().mask.clone();
+        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().mask.clone();
         let (mask_a, mask_b) = (mask_of(&s, a).expect("a has a mask"), mask_of(&s, b).expect("b has a mask"));
         assert_ne!(mask_a, mask_b, "set up: two different masks");
         let doc = s.active().unwrap().doc.clone();

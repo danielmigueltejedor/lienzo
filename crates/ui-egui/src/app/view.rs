@@ -1,6 +1,6 @@
-use super::PhotocraftApp;
+use super::LienzoApp;
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Zoom of the active document's main view: screen (device) pixels per document pixel, the
     /// user-facing factor (`100%` is `1.0`).
     pub fn current_zoom(&self) -> f32 {

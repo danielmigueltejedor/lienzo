@@ -14,7 +14,7 @@ use egui::{Align2, Color32, ColorImage, CornerRadius, FontId, Pos2, Rect, Sense,
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 use crate::theme::Tokens;
 
@@ -142,7 +142,7 @@ fn float_flag<'a>(p: &'a mut PresetUi, id: &str) -> Option<&'a mut bool> {
 }
 
 /// Window › <panel>: toggles the panel (Gradients and Patterns: the Color card tab).
-pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut LienzoApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if !handles(id) {
         return None;
     }
@@ -163,7 +163,7 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<
     Some(Ok(json!({"visible": *flag})))
 }
 
-pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &LienzoApp, id: &str) -> Option<bool> {
     if let Some(tab) = color_tab(id) {
         return Some(app.ui.panels.color && app.ui.dock_tabs.color == tab);
     }
@@ -171,7 +171,7 @@ pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
     float_flag(&mut p, id).map(|f| *f)
 }
 
-pub(crate) fn run(app: &mut PhotocraftApp, id: &str, p: Value) -> Option<Value> {
+pub(crate) fn run(app: &mut LienzoApp, id: &str, p: Value) -> Option<Value> {
     match app.run(id, p) {
         Ok(v) => Some(v),
         Err(e) => {
@@ -228,7 +228,7 @@ pub fn paint_gradient(ui: &egui::Ui, rect: Rect, stops: &[(f32, [f32; 4])]) {
     p.add(mesh);
 }
 
-fn pattern_texture(ctx: &egui::Context, pat: &photocraft_doc::Pattern) -> TextureHandle {
+fn pattern_texture(ctx: &egui::Context, pat: &lienzo_doc::Pattern) -> TextureHandle {
     cached_texture(ctx, ("pattern", pat.id.clone()), || {
         let (w, h) = (pat.width.max(1), pat.height.max(1));
         let fmt = pat.surface.format();
@@ -242,8 +242,8 @@ fn pattern_texture(ctx: &egui::Context, pat: &photocraft_doc::Pattern) -> Textur
             for x in 0..S {
                 let sx = ((x as f32 * step) as u32) % w;
                 let sy = ((y as f32 * step) as u32) % h;
-                let px = pat.surface.read_region(photocraft_geom::Rect::from_xywh(sx as i32, sy as i32, 1, 1));
-                img.pixels[(y * S + x) as usize] = c32(photocraft_raster::to_rgba(&fmt, &px));
+                let px = pat.surface.read_region(lienzo_geom::Rect::from_xywh(sx as i32, sy as i32, 1, 1));
+                img.pixels[(y * S + x) as usize] = c32(lienzo_raster::to_rgba(&fmt, &px));
             }
         }
         img
@@ -253,7 +253,7 @@ fn pattern_texture(ctx: &egui::Context, pat: &photocraft_doc::Pattern) -> Textur
 /// Photoshop's pattern picker: a swatch of the library pattern `selected` (an id) that opens a grid
 /// of every library pattern's swatch, each named in its tooltip. Returns the id of a newly picked
 /// pattern.
-pub(crate) fn pattern_picker(app: &PhotocraftApp, ui: &mut egui::Ui, selected: &str) -> Option<String> {
+pub(crate) fn pattern_picker(app: &LienzoApp, ui: &mut egui::Ui, selected: &str) -> Option<String> {
     const SWATCH: f32 = 40.0;
     let t = Tokens::get(ui.ctx());
     let ctx = ui.ctx().clone();
@@ -277,7 +277,7 @@ pub(crate) fn pattern_picker(app: &PhotocraftApp, ui: &mut egui::Ui, selected: &
 
 /// Library grid shared by the standalone picker and paint popups. Drawing it inline avoids
 /// replacing an already-open paint popup with a second memory-backed popup.
-pub(crate) fn pattern_grid(app: &PhotocraftApp, ui: &mut egui::Ui, selected: &str) -> Option<String> {
+pub(crate) fn pattern_grid(app: &LienzoApp, ui: &mut egui::Ui, selected: &str) -> Option<String> {
     const SWATCH: f32 = 40.0;
     let t = Tokens::get(ui.ctx());
     let ctx = ui.ctx().clone();
@@ -302,20 +302,20 @@ pub(crate) fn pattern_grid(app: &PhotocraftApp, ui: &mut egui::Ui, selected: &st
     picked.filter(|id| id != selected)
 }
 
-pub(crate) fn style_texture(app: &PhotocraftApp, ctx: &egui::Context, st: &photocraft_engine::presets::styles::StylePreset) -> TextureHandle {
+pub(crate) fn style_texture(app: &LienzoApp, ctx: &egui::Context, st: &lienzo_engine::presets::styles::StylePreset) -> TextureHandle {
     let key = ("style", st.name.clone(), st.effects.len(), format!("{:?}{:?}", st.blend, st.fill_opacity));
     cached_texture(ctx, key, || {
         const S: u32 = 64;
-        let px = photocraft_engine::presets::styles::thumbnail(&app.session, st, S);
+        let px = lienzo_engine::presets::styles::thumbnail(&app.session, st, S);
         ColorImage::from_rgba_unmultiplied([S as usize, S as usize], &px)
     })
 }
 
-fn shape_texture(ctx: &egui::Context, sh: &photocraft_engine::presets::shapes::ShapePreset) -> TextureHandle {
+fn shape_texture(ctx: &egui::Context, sh: &lienzo_engine::presets::shapes::ShapePreset) -> TextureHandle {
     let knots: usize = sh.path.subpaths.iter().map(|s| s.knots.len()).sum();
     cached_texture(ctx, ("shape", sh.name.clone(), knots), || {
         const S: u32 = 64;
-        let cov = photocraft_engine::presets::shapes::thumbnail(&sh.path, S);
+        let cov = lienzo_engine::presets::shapes::thumbnail(&sh.path, S);
         ColorImage::new([S as usize, S as usize], cov.iter().map(|a| Color32::from_white_alpha((a.clamp(0.0, 1.0) * 255.0).round() as u8)).collect())
     })
 }
@@ -653,7 +653,7 @@ pub fn last_group_headers(ctx: &egui::Context, panel: &str) -> Vec<(String, Rect
 }
 
 /// Shared handling of the generic events through `<prefix>.edit` / `.new`.
-fn generic(app: &mut PhotocraftApp, panel: &str, prefix: &str, e: &Ev, new_params: Value) -> bool {
+fn generic(app: &mut LienzoApp, panel: &str, prefix: &str, e: &Ev, new_params: Value) -> bool {
     let edit = format!("{prefix}.edit");
     match e {
         Ev::Rename(k, n) => {
@@ -697,7 +697,7 @@ fn empty(ui: &mut egui::Ui, s: &str) {
 
 /// Where drops onto the canvas are accepted: the canvas proper, rulers excluded (a drop on the
 /// ruler strip is not a canvas drop).
-fn canvas_drop_rect(app: &PhotocraftApp) -> egui::Rect {
+fn canvas_drop_rect(app: &LienzoApp) -> egui::Rect {
     crate::rulers::content_rect(app, app.last_canvas_rect)
 }
 
@@ -707,9 +707,9 @@ mod tests {
     use crate::menus::invoke;
     use crate::state::ToolOptions;
 
-    fn app() -> (PhotocraftApp, egui::Context) {
+    fn app() -> (LienzoApp, egui::Context) {
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         app.sync_views();
         (app, ctx)
@@ -816,7 +816,7 @@ mod tests {
         let d = app.session.active().unwrap();
         let l = d.doc.layer(d.active_layer.unwrap()).unwrap();
         assert_eq!(l.name, "Star");
-        assert!(matches!(l.content, photocraft_doc::LayerContent::Shape(_)));
+        assert!(matches!(l.content, lienzo_doc::LayerContent::Shape(_)));
     }
 
     /// #3658: a group/folder drag reorders by name, stores only a real reorder, and falls back to

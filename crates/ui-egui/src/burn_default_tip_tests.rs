@@ -4,19 +4,19 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::control::{ControlRequest, handle};
 use crate::state::Tool;
 
-pub(super) fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app
 }
 
 /// Run a menu command as the control channel does, then the frame's sync.
-pub(super) fn invoke(app: &mut PhotocraftApp, id: &str, params: serde_json::Value) {
+pub(super) fn invoke(app: &mut LienzoApp, id: &str, params: serde_json::Value) {
     let ctx = egui::Context::default();
     let (req, _rx) = ControlRequest::new("ui.menu.invoke", json!({"id": id, "params": params}));
     handle(app, &ctx, &req);
@@ -24,20 +24,20 @@ pub(super) fn invoke(app: &mut PhotocraftApp, id: &str, params: serde_json::Valu
 }
 
 /// Pick `tool`, and swap its brush in as a frame does.
-pub(super) fn pick(app: &mut PhotocraftApp, tool: Tool) {
+pub(super) fn pick(app: &mut LienzoApp, tool: Tool) {
     app.ui.tool = tool;
     crate::paint_mouse::sync_tool_brush(app);
     app.sync_views();
 }
 
 /// Size, hardness, spacing, angle and roundness of the live brush, as `brush.get` reports them.
-fn tip(app: &mut PhotocraftApp) -> [f64; 5] {
+fn tip(app: &mut LienzoApp) -> [f64; 5] {
     let b = app.run("brush.get", json!({})).unwrap();
     ["size", "hardness", "spacing", "angle", "roundness"].map(|k| (b[k].as_f64().unwrap() * 1e4).round() / 1e4)
 }
 
 /// A tip that is no tool's starting tip, so a reset has something to undo.
-fn scramble(app: &mut PhotocraftApp) {
+fn scramble(app: &mut LienzoApp) {
     let b = &mut app.session.tools.brush;
     (b.size, b.hardness, b.spacing, b.angle, b.roundness) = (57.0, 0.4, 0.6, 30.0, 0.5);
 }

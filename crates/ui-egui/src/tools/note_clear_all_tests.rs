@@ -10,8 +10,8 @@ use serde_json::json;
 use super::*;
 
 /// A 200 × 100 document with three notes, the second one selected, and the Note tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     for (x, author) in [(10, "A"), (60, "B"), (110, "C")] {
         app.run("notes.add", json!({"x": x, "y": 20, "author": author})).unwrap();
@@ -21,9 +21,9 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1200.0, 80.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -31,26 +31,26 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
-fn notes(app: &PhotocraftApp) -> usize {
+fn notes(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.notes.len()
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
 /// The open Clear All alert's id.
-fn alert(app: &PhotocraftApp) -> Option<u64> {
+fn alert(app: &LienzoApp) -> Option<u64> {
     app.ui.dialogs.iter().find(|d| owns_clear_notes(&d.fields)).map(|d| d.id)
 }
 
 /// Click the options bar's Clear All and return the alert it opened.
-fn clear_all(h: &mut Harness<'static, PhotocraftApp>) -> u64 {
+fn clear_all(h: &mut Harness<'static, LienzoApp>) -> u64 {
     h.get_by_label("Clear All").click();
     h.run_steps(3);
     alert(h.state()).expect("Clear All opens the alert")
@@ -139,9 +139,9 @@ fn ok_after_the_document_changed_deletes_nothing() {
 }
 
 /// The options bar with the open dialogs drawn over it, as the window shows them.
-fn harness_with_dialogs(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness_with_dialogs(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1200.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -150,7 +150,7 @@ fn harness_with_dialogs(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }

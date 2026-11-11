@@ -4,7 +4,7 @@ use super::*;
 fn reference(
     work: &mut crate::retouch::Region,
     fp: &crate::retouch::Footprint,
-    fmt: photocraft_color::PixelFormat,
+    fmt: lienzo_color::PixelFormat,
     sample: Option<&Surface>,
     m: &MixerSettings,
     state: &mut MixerState,
@@ -111,7 +111,7 @@ fn reference(
 fn contiguous_mixer_matches_frozen_kernel_across_models_depths_and_spatial_loads() {
     use crate::retouch::Region;
     use crate::{BrushContext, BrushSettings, Stroke, StrokePoint};
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
     let rect = Rect::new(-16, -16, 32, 32);
     for mode in [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab] {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
@@ -158,8 +158,8 @@ fn contiguous_mixer_matches_frozen_kernel_across_models_depths_and_spatial_loads
 fn dry_and_wet_transitions_match_frozen_kernel() {
     use crate::retouch::Region;
     use crate::{BrushContext, BrushSettings, Dab};
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_geom::Point;
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_geom::Point;
 
     let rect = Rect::new(0, 0, 48, 48);
     for mode in [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab] {
@@ -212,11 +212,11 @@ fn dry_and_wet_transitions_match_frozen_kernel() {
 fn sampled_dabs_clipped_by_the_working_rectangle_match_frozen_kernel() {
     use crate::retouch::Region;
     use crate::{BrushContext, BrushSettings, Dab};
-    use photocraft_color::{PixelFormat, SampleType};
-    use photocraft_geom::Point;
+    use lienzo_color::{PixelFormat, SampleType};
+    use lienzo_geom::Point;
 
     let work_rect = Rect::new(10, 10, 60, 50);
-    let fmt = PixelFormat::new(photocraft_color::ColorMode::Cmyk, SampleType::U16, true);
+    let fmt = PixelFormat::new(lienzo_color::ColorMode::Cmyk, SampleType::U16, true);
     let mut surface = Surface::new(fmt);
     surface.fill_rect(Rect::new(0, 0, 80, 80), &from_rgba(&fmt, [0.25, 0.5, 0.75, 0.9]));
     let mut source = Surface::new(PixelFormat::RGBA32F);

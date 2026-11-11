@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_geom::Rect;
+use lienzo_color::BlendMode;
+use lienzo_doc::{DocId, Document, LayerId};
+use lienzo_geom::Rect;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Preview keys (`canvas::display_doc`) are `BASE` plus a hash of the revision and the mode.
 const BASE: u64 = 1 << 37;
@@ -35,7 +35,7 @@ pub(crate) struct BlendPreview {
 
 /// The Layers panel, each frame it draws `layer`'s blend-mode dropdown: the mode under the
 /// pointer in its open list, if any.
-pub(crate) fn hover(app: &mut PhotocraftApp, layers: &[LayerId], mode: Option<BlendMode>) {
+pub(crate) fn hover(app: &mut LienzoApp, layers: &[LayerId], mode: Option<BlendMode>) {
     let frame = app.frame;
     let Some(st) = app.session.active() else { return };
     let (doc, revision) = (st.doc.id, st.revision);
@@ -52,7 +52,7 @@ pub(crate) fn hover(app: &mut PhotocraftApp, layers: &[LayerId], mode: Option<Bl
         let mut area: Option<Rect> = Some(Rect::EMPTY);
         for &id in layers {
             st.doc.layer(id)?;
-            area = match (area, photocraft_compose::layer_change_bounds(&st.doc, id)) {
+            area = match (area, lienzo_compose::layer_change_bounds(&st.doc, id)) {
                 (Some(a), Some(b)) => Some(if a.is_empty() { b } else { a.union(&b) }),
                 _ => None,
             };
@@ -62,7 +62,7 @@ pub(crate) fn hover(app: &mut PhotocraftApp, layers: &[LayerId], mode: Option<Bl
 }
 
 /// The document to show while a blend mode is hovered in document `idx` (`canvas::display_doc`).
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let frame = app.frame;
     let st = app.session.documents().get(idx)?;
     let p = app.blend_preview.as_mut().filter(|p| p.doc == st.doc.id && p.revision == st.revision && p.frame + 1 >= frame)?;
@@ -85,7 +85,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
         return None;
     }
     // Duotone documents display through their inks.
-    let doc = Arc::new(photocraft_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
+    let doc = Arc::new(lienzo_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
     p.shown = Some((key, doc.clone()));
     Some((doc, key))
 }
@@ -93,14 +93,14 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
 /// What changed between preview (or document) key `seen` and `now` of document `doc` at
 /// `revision`: the hovered layers' area. `None` when either key is another kind of preview, or
 /// the layer can change anything (the canvas then recomposites everything).
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, seen: u64, now: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, seen: u64, now: u64) -> Option<Rect> {
     let p = app.blend_preview.as_ref().filter(|p| p.doc == doc && p.revision == revision)?;
     let ours = |k: u64| k == 0 || is_preview_key(k);
     (seen != now && ours(seen) && ours(now) && (is_preview_key(seen) || is_preview_key(now))).then_some(p.area)?
 }
 
 /// Limit an active preview to the view. Returning to the document restores the whole region.
-pub(crate) fn clip_damage(app: &mut PhotocraftApp, doc: DocId, revision: u64, key: u64, region: Rect, visible: Rect) -> Rect {
+pub(crate) fn clip_damage(app: &mut LienzoApp, doc: DocId, revision: u64, key: u64, region: Rect, visible: Rect) -> Rect {
     let Some(p) = app.blend_preview.as_mut().filter(|p| p.doc == doc && p.revision == revision) else { return region };
     if p.shown.as_ref().is_none_or(|(shown, _)| *shown != key) {
         p.covered = None;
@@ -112,7 +112,7 @@ pub(crate) fn clip_damage(app: &mut PhotocraftApp, doc: DocId, revision: u64, ke
 }
 
 /// A pan or zoom can expose pixels not yet rendered for the current preview key.
-pub(crate) fn uncovered(app: &mut PhotocraftApp, doc: DocId, revision: u64, key: u64, visible: Rect) -> Option<Rect> {
+pub(crate) fn uncovered(app: &mut LienzoApp, doc: DocId, revision: u64, key: u64, visible: Rect) -> Option<Rect> {
     let p = app.blend_preview.as_mut().filter(|p| p.doc == doc && p.revision == revision)?;
     let (covered_key, region, covered) = p.covered.as_mut()?;
     if *covered_key != key {

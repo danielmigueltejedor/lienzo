@@ -1,7 +1,7 @@
 //! 24 MP release benchmark: identical pixel access with RAM-only and disk-backed tiles.
-use photocraft_color::PixelFormat;
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::{Surface, spill};
+use lienzo_color::PixelFormat;
+use lienzo_geom::{Rect, TILE_SIZE};
+use lienzo_raster::{Surface, spill};
 use std::time::Instant;
 
 fn run(dir: Option<&std::path::Path>) -> Result<(), String> {
@@ -46,7 +46,7 @@ fn run(dir: Option<&std::path::Path>) -> Result<(), String> {
 
 fn main() -> Result<(), String> {
     run(None)?;
-    let dir = std::env::temp_dir().join(format!("photocraft-24mp-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-24mp-{}", std::process::id()));
     run(Some(&dir))?;
     std::fs::remove_dir(&dir).map_err(|e| e.to_string())
 }

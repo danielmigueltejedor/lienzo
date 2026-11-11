@@ -4,23 +4,23 @@
 
 use egui::vec2;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::vector::PathOp;
-use photocraft_doc::{LayerContent, LayerId, Path};
+use lienzo_doc::vector::PathOp;
+use lienzo_doc::{LayerContent, LayerId, Path};
 use serde_json::json;
 
 use super::{pen_down, pen_path_op, pen_up};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = Tool::Pen;
     app
 }
 
 /// Clicks a closed square with the Pen, from `(x, y)` with side `side`.
-fn square(app: &mut PhotocraftApp, x: f64, y: f64, side: f64) {
+fn square(app: &mut LienzoApp, x: f64, y: f64, side: f64) {
     for (dx, dy) in [(0.0, 0.0), (side, 0.0), (side, side), (0.0, side)] {
         pen_down(app, x + dx, y + dy, false);
         pen_up(app);
@@ -29,7 +29,7 @@ fn square(app: &mut PhotocraftApp, x: f64, y: f64, side: f64) {
     pen_up(app);
 }
 
-fn shape_path(app: &PhotocraftApp) -> (LayerId, Path) {
+fn shape_path(app: &LienzoApp) -> (LayerId, Path) {
     let st = app.session.active().unwrap();
     let id = st.active_layer.unwrap();
     match &st.doc.layer(id).unwrap().content {
@@ -38,16 +38,16 @@ fn shape_path(app: &PhotocraftApp) -> (LayerId, Path) {
     }
 }
 
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &LienzoApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().expect("a work path")
 }
 
-fn layers(app: &PhotocraftApp) -> usize {
+fn layers(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
 fn covered(path: &Path, x: i32, y: i32) -> f32 {
-    photocraft_vector::fill_rasterizer(path, photocraft_vector::DEFAULT_TOLERANCE).render(photocraft_geom::Rect::from_xywh(x, y, 1, 1))[0]
+    lienzo_vector::fill_rasterizer(path, lienzo_vector::DEFAULT_TOLERANCE).render(lienzo_geom::Rect::from_xywh(x, y, 1, 1))[0]
 }
 
 /// The issue's mug: the body is drawn, then the hole in its handle is cut out of the same shape
@@ -119,7 +119,7 @@ fn a_locked_shape_layer_keeps_the_drawn_path() {
 }
 
 /// A hole drawn for a locked shape layer: the Pen's draft, refused, and the History length then.
-fn refused_hole(app: &mut PhotocraftApp) -> (LayerId, Path, usize) {
+fn refused_hole(app: &mut LienzoApp) -> (LayerId, Path, usize) {
     app.ui.tool_options.vector_mode = "shape".into();
     square(app, 20.0, 20.0, 100.0);
     let (id, body) = shape_path(app);
@@ -133,7 +133,7 @@ fn refused_hole(app: &mut PhotocraftApp) -> (LayerId, Path, usize) {
 
 /// The refused hole ended for good: kept, closed, as the Work Path, one History step; the locked
 /// shape is as it was.
-fn assert_kept_as_work_path(app: &PhotocraftApp, id: LayerId, body: &Path, steps: usize) {
+fn assert_kept_as_work_path(app: &LienzoApp, id: LayerId, body: &Path, steps: usize) {
     assert!(app.ui.pen.is_none() && app.ui.pen_doc.is_none());
     assert_eq!(shape_path(app), (id, body.clone()), "the locked shape is unchanged");
     let w = work(app);
@@ -151,7 +151,7 @@ fn assert_kept_as_work_path(app: &PhotocraftApp, id: LayerId, body: &Path, steps
 #[test]
 fn switching_tools_ends_a_refused_draft_once() {
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app()
     });
     h.run_steps(2);
@@ -170,7 +170,7 @@ fn switching_tools_ends_a_refused_draft_once() {
 #[test]
 fn esc_ends_a_refused_draft_and_return_keeps_it() {
     let ctx = egui::Context::default();
-    let key = |app: &mut PhotocraftApp, key: egui::Key| {
+    let key = |app: &mut LienzoApp, key: egui::Key| {
         let raw = egui::RawInput {
             events: vec![egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE }],
             ..Default::default()
@@ -249,16 +249,16 @@ fn the_options_bar_menu_sets_the_operation_and_merges() {
     square(&mut app, 50.0, 50.0, 40.0);
     app.ui.tool_options.pen_path_op = "combine".into();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1100.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal(|ui| super::options_bar(app, ui, Tool::Pen));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
-    let open = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+    let open = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
         h.get_by_label("Path operations").click();
         h.run_steps(3);
     };
@@ -293,14 +293,14 @@ fn merge_is_disabled_with_fewer_than_two_components() {
     let mut app = app();
     square(&mut app, 20.0, 20.0, 100.0);
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1100.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal(|ui| super::options_bar(app, ui, Tool::Pen));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h.get_by_label("Path operations").click();
     h.run_steps(3);
@@ -350,14 +350,14 @@ fn freeform_refuses_a_locked_shape_before_starting_a_stroke() {
 #[test]
 fn make_shape_turns_the_work_path_into_a_shape_layer() {
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal(|ui| super::options_bar(app, ui, Tool::Pen));
             }
         },
         app(),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     assert!(h.get_by_label("Make Shape").accesskit_node().is_disabled(), "no path yet");
     square(h.state_mut(), 20.0, 20.0, 100.0);
@@ -375,7 +375,7 @@ fn make_shape_turns_the_work_path_into_a_shape_layer() {
     assert!(st.doc.work_path.is_none());
     let LayerContent::Shape(sh) = &st.doc.layer(id).unwrap().content else { panic!("not a shape layer") };
     let fg = app.session.tools.foreground;
-    assert_eq!(sh.fill, Some(photocraft_doc::Fill::Solid(photocraft_color::Color::rgba(fg[0], fg[1], fg[2], fg[3]))));
+    assert_eq!(sh.fill, Some(lienzo_doc::Fill::Solid(lienzo_color::Color::rgba(fg[0], fg[1], fg[2], fg[3]))));
     // An open path still being drawn becomes the shape too, still in one History step.
     for (x, y) in [(10.0, 150.0), (60.0, 150.0), (60.0, 190.0)] {
         pen_down(h.state_mut(), x, y, false);
@@ -413,7 +413,7 @@ fn make_shape_while_drawing_leaves_a_targeted_vector_mask_alone() {
     assert_eq!(st.history.past_len(), steps + 1);
     let (_, path) = shape_path(&app);
     assert_eq!(path.subpaths.len(), 1);
-    assert_eq!(path.subpaths[0].knots[0].anchor, photocraft_geom::Point::new(10.0, 150.0));
+    assert_eq!(path.subpaths[0].knots[0].anchor, lienzo_geom::Point::new(10.0, 150.0));
 }
 
 /// Make Shape while drawing into a selected saved path: the shape is the saved path plus the
@@ -449,7 +449,7 @@ fn make_shape_keeps_a_saved_path() {
 }
 
 /// Clicks an open path with the Pen through `points`, without finishing it.
-fn draw(app: &mut PhotocraftApp, points: &[(f64, f64)]) {
+fn draw(app: &mut LienzoApp, points: &[(f64, f64)]) {
     for &(x, y) in points {
         pen_down(app, x, y, false);
         pen_up(app);
@@ -507,7 +507,7 @@ fn make_shape_while_drawing_a_new_work_path_replaces_the_old_one() {
     assert!(st.doc.work_path.is_none(), "the old Work Path is gone, as after a commit and Make Shape");
     let shape = shape_path(&app).1;
     assert_eq!(shape.subpaths.len(), 1);
-    assert_eq!(shape.subpaths[0].knots[0].anchor, photocraft_geom::Point::new(10.0, 150.0));
+    assert_eq!(shape.subpaths[0].knots[0].anchor, lienzo_geom::Point::new(10.0, 150.0));
 }
 
 /// A draft begun in Shape mode that carries on an open subpath of a shape layer, with the mode

@@ -3,14 +3,14 @@
 //! - `brush.presets.importAbr` adds the presets of an `.abr` file (v1, v2, v6+) to the brush
 //!   library as one group named after the file, with the file's own folders nested inside it
 //!   as Photoshop does (Brushes panel › Import Brushes…, Preset Manager). Parsing lives in
-//!   `photocraft-psd` (`abr`), the mapping onto [`BrushSettings`] in `photocraft-io` (`abr_map`).
+//!   `lienzo-psd` (`abr`), the mapping onto [`BrushSettings`] in `lienzo-io` (`abr_map`).
 //! - `brush.presets.importImage` turns an image file (anything File › Open reads: PNG, JPEG,
 //!   TIFF, PSD…) into a sampled-tip brush preset, as Edit › Define Brush Preset does with a
 //!   selection: dark pixels paint, white and transparent ones don't (TOOL-213-12).
 //! - `gradient.presets.importGrd` adds the gradients of a `.grd` file (version 5) to the
 //!   Gradients panel as one group.
 //!
-//! [`BrushSettings`]: photocraft_paint::BrushSettings
+//! [`BrushSettings`]: lienzo_paint::BrushSettings
 
 use serde_json::{Value, json};
 
@@ -30,7 +30,7 @@ pub const MAX_FILE_BYTES: u64 = 512 << 20;
 /// Largest accepted `.abr` file: brush libraries of large sampled tips outgrow [`MAX_FILE_BYTES`].
 /// Tied to the decoder's sample budget (1 GiB, 512 MiB on 32-bit targets) so it never refuses
 /// what this accepts.
-pub const MAX_ABR_FILE_BYTES: u64 = photocraft_psd::abr::MAX_TOTAL_BYTES as u64;
+pub const MAX_ABR_FILE_BYTES: u64 = lienzo_psd::abr::MAX_TOTAL_BYTES as u64;
 
 /// File bytes from `data` (base64) or `path`, plus a default group name.
 pub(crate) fn file_bytes(p: &Value, cmd: &str, what: &str) -> Result<(Vec<u8>, String)> {
@@ -48,7 +48,7 @@ pub(crate) fn file_bytes_limited(p: &Value, cmd: &str, what: &str, max_bytes: u6
         if s.len() as u64 > max_bytes / 3 * 4 + 4 {
             return Err(bad(cmd, "`data` is too large"));
         }
-        let bytes = photocraft_paint::tile::b64_decode(s).ok_or_else(|| bad(cmd, "`data` is not valid base64"))?;
+        let bytes = lienzo_paint::tile::b64_decode(s).ok_or_else(|| bad(cmd, "`data` is not valid base64"))?;
         if bytes.len() as u64 > max_bytes {
             return Err(bad(cmd, "`data` is too large"));
         }
@@ -134,7 +134,7 @@ fn import_abr(s: &mut Session, p: &Value) -> Result<Value> {
             };
             ctx.check()?;
             let imp = ctx
-                .stage(0.05, 1.0, "Importing brushes", |ctl| photocraft_io::abr_map::read_abr_with(&bytes, &group, ctl))
+                .stage(0.05, 1.0, "Importing brushes", |ctl| lienzo_io::abr_map::read_abr_with(&bytes, &group, ctl))
                 .map_err(|e| if ctx.cancelled() { EngineError::Cancelled } else { bad(cmd, e) })?;
             Ok((group, imp))
         },
@@ -150,7 +150,7 @@ fn free_group(name: &str, taken: impl Fn(&str) -> bool) -> String {
     (2..=u32::MAX).map(|i| format!("{name} ({i})")).find(|g| !taken(g)).unwrap_or_else(|| name.to_string())
 }
 
-fn add_abr_presets(s: &mut Session, p: &Value, group: String, imp: photocraft_io::abr_map::AbrImport) -> Result<Value> {
+fn add_abr_presets(s: &mut Session, p: &Value, group: String, imp: lienzo_io::abr_map::AbrImport) -> Result<Value> {
     // A file whose name matches a group already in the library becomes a new group beside it, as
     // in Photoshop, unless `replace` asks to drop that group's own presets first: the group name
     // is only the file name, and the library is outside document history (#10640).
@@ -173,7 +173,7 @@ fn add_abr_presets(s: &mut Session, p: &Value, group: String, imp: photocraft_io
     s.brush_presets_changed();
     if p.get("select").and_then(Value::as_bool).unwrap_or(false)
         && let Some(first) = names.first()
-        && let Some(pr) = photocraft_paint::presets::find(&s.tools.presets, first)
+        && let Some(pr) = lienzo_paint::presets::find(&s.tools.presets, first)
     {
         let mut b = pr.brush.clone().picked_over(&s.tools.brush);
         // Opacity takes 1-100 %, as `tools.setBrush` floors it: a preset saved at 0 % would show
@@ -197,21 +197,21 @@ const MAX_BRUSH_SOURCE_PIXELS: u64 = 1 << 28;
 /// selection), cropped to the painted extent. The composite is rendered in bands twice: once to
 /// find the painted bounds, then only those, so a large mostly-white image never needs a
 /// full-size buffer.
-fn image_paint(doc: &photocraft_doc::Document, cmd: &str) -> Result<(Vec<f32>, usize, usize)> {
+fn image_paint(doc: &lienzo_doc::Document, cmd: &str) -> Result<(Vec<f32>, usize, usize)> {
     // The whole canvas is rendered (twice) to find the painted part: a sparse native file declares
     // its canvas, so refuse one far past any brush source before rendering it.
     let canvas = doc.bounds();
     if u64::from(canvas.width()) * u64::from(canvas.height()) > MAX_BRUSH_SOURCE_PIXELS {
         return Err(bad(cmd, format!("the image's {}×{} canvas is too large to make a brush from", canvas.width(), canvas.height())));
     }
-    let paint = |c: [f32; 4]| ((1.0 - photocraft_color::blend::lum([c[0], c[1], c[2]])) * c[3]).clamp(0.0, 1.0);
-    let mut bounds: Option<photocraft_geom::Rect> = None;
-    let _ = photocraft_compose::render_bands(doc, doc.bounds(), 0, |band| -> std::result::Result<(), ()> {
+    let paint = |c: [f32; 4]| ((1.0 - lienzo_color::blend::lum([c[0], c[1], c[2]])) * c[3]).clamp(0.0, 1.0);
+    let mut bounds: Option<lienzo_geom::Rect> = None;
+    let _ = lienzo_compose::render_bands(doc, doc.bounds(), 0, |band| -> std::result::Result<(), ()> {
         let w = band.rect.width() as usize;
         for (i, c) in band.px.iter().enumerate() {
             if paint(*c) > 1e-4 {
                 let (x, y) = (band.rect.x0 + (i % w.max(1)) as i32, band.rect.y0 + (i / w.max(1)) as i32);
-                let px = photocraft_geom::Rect::new(x, y, x.saturating_add(1), y.saturating_add(1));
+                let px = lienzo_geom::Rect::new(x, y, x.saturating_add(1), y.saturating_add(1));
                 bounds = Some(bounds.map_or(px, |b| b.union(&px)));
             }
         }
@@ -224,7 +224,7 @@ fn image_paint(doc: &photocraft_doc::Document, cmd: &str) -> Result<(Vec<f32>, u
     }
     let (w, h) = (area.width() as usize, area.height() as usize);
     let mut v = vec![0.0f32; w * h];
-    let _ = photocraft_compose::render_bands(doc, area, 0, |band| -> std::result::Result<(), ()> {
+    let _ = lienzo_compose::render_bands(doc, area, 0, |band| -> std::result::Result<(), ()> {
         let bw = band.rect.width() as usize;
         for (i, c) in band.px.iter().enumerate() {
             let (x, y) = ((band.rect.x0 - area.x0) as usize + i % bw.max(1), (band.rect.y0 - area.y0) as usize + i / bw.max(1));
@@ -262,7 +262,7 @@ fn import_image(s: &mut Session, p: &Value) -> Result<Value> {
     let (v, w, h) = image_paint(&doc, cmd)?;
     let (brush, tw, th) = crate::brush_cmds::sampled_brush(cmd, &v, w, h)?;
     let name = UniqueNames::new(s.tools.presets.iter().map(|x| x.name.as_str())).unique(&name);
-    s.tools.presets.push(photocraft_paint::BrushPreset {
+    s.tools.presets.push(lienzo_paint::BrushPreset {
         name: name.clone(),
         brush: brush.clone(),
         builtin: false,
@@ -350,9 +350,9 @@ fn lab_to_rgb([l, a, b]: [f32; 3]) -> [f32; 3] {
     [gamma(r), gamma(g), gamma(bb)]
 }
 
-fn stop_color(c: photocraft_psd::grd::GrdColor) -> crate::presets::gradients::StopColor {
+fn stop_color(c: lienzo_psd::grd::GrdColor) -> crate::presets::gradients::StopColor {
     use crate::presets::gradients::StopColor;
-    use photocraft_psd::grd::GrdColor;
+    use lienzo_psd::grd::GrdColor;
     let clamp = |c: [f32; 3]| StopColor::Rgb(c.map(|v| if v.is_finite() { v.clamp(0.0, 1.0) } else { 0.0 }));
     match c {
         GrdColor::Foreground => StopColor::Foreground,
@@ -375,7 +375,7 @@ fn import_grd(s: &mut Session, p: &Value) -> Result<Value> {
         None if !stem.is_empty() => stem,
         None => "Imported Gradients".to_string(),
     };
-    let grads = photocraft_psd::grd::parse(&bytes).map_err(|e| bad(cmd, format!("not a readable gradient file (.grd): {e}")))?;
+    let grads = lienzo_psd::grd::parse(&bytes).map_err(|e| bad(cmd, format!("not a readable gradient file (.grd): {e}")))?;
     // Same default as the group insertion below and the documented contract (#10640).
     let replace = p.get("replace").and_then(Value::as_bool).unwrap_or(false);
     let mut taken =
@@ -419,7 +419,7 @@ fn import_grd(s: &mut Session, p: &Value) -> Result<Value> {
         warnings.push("colour and opacity midpoints other than 50 % are drawn at 50 %".to_string());
     }
     if items.is_empty() {
-        return Err(bad(cmd, "the file holds no gradients PhotoCraft can use (noise gradients only)"));
+        return Err(bad(cmd, "the file holds no gradients Lienzo can use (noise gradients only)"));
     }
     let names: Vec<String> = items.iter().map(|g| g.name.clone()).collect();
     let st = &mut s.presets;
@@ -459,8 +459,8 @@ mod tests {
         assert!(super::file_bytes_limited(&over_limit, "test", "preset", 2).is_err());
     }
     use super::*;
-    use photocraft_psd::abr::{AbrSample, LegacyBrush, LegacyTip, write_v6, write_v12};
-    use photocraft_psd::descriptor::{Descriptor, UnicodeString, Value as DV};
+    use lienzo_psd::abr::{AbrSample, LegacyBrush, LegacyTip, write_v6, write_v12};
+    use lienzo_psd::descriptor::{Descriptor, UnicodeString, Value as DV};
 
     fn abr_v2() -> Vec<u8> {
         let tip = AbrSample { id: String::new(), width: 6, height: 4, depth: 8, data: vec![255; 24] };
@@ -484,16 +484,16 @@ mod tests {
     /// the value its options-bar field shows, so it paints instead of laying down nothing.
     #[test]
     fn selecting_an_imported_zero_opacity_brush_floors_it_at_one_percent() {
-        use photocraft_psd::descriptor::{Descriptor, UnicodeString, Value as D};
+        use lienzo_psd::descriptor::{Descriptor, UnicodeString, Value as D};
         let preset = |opacity: i32| {
             Descriptor::new("brushPreset")
                 .with("Nm  ", D::Text(UnicodeString::new_nul("Faint")))
                 .with("toolOptions", D::Descriptor(Descriptor::new("currentToolOptions").with("Opct", D::Integer(opacity))))
         };
         for (opacity, expected) in [(0, 0.01), (37, 0.37)] {
-            let abr = photocraft_psd::abr::write_v6_folders(2, &[], &[], &[preset(opacity)], &[vec![]], true).unwrap();
+            let abr = lienzo_psd::abr::write_v6_folders(2, &[], &[], &[preset(opacity)], &[vec![]], true).unwrap();
             let mut s = Session::new();
-            s.execute("brush.presets.importAbr", json!({"data": photocraft_paint::tile::b64_encode(&abr), "select": true})).unwrap();
+            s.execute("brush.presets.importAbr", json!({"data": lienzo_paint::tile::b64_encode(&abr), "select": true})).unwrap();
             assert!((s.tools.brush.opacity - expected).abs() < 1e-6, "{opacity}: {}", s.tools.brush.opacity);
         }
     }
@@ -502,14 +502,14 @@ mod tests {
     fn import_adds_a_group_and_paints() {
         let mut s = Session::new();
         let before = s.tools.presets.len();
-        let data = photocraft_paint::tile::b64_encode(&abr_v2());
+        let data = lienzo_paint::tile::b64_encode(&abr_v2());
         let r = s.execute("brush.presets.importAbr", json!({"data": data, "group": "Legacy", "select": true})).unwrap();
         assert_eq!(r["count"], 2);
         // The name clashing with the built-in Hard Round is made unique.
         assert_eq!(r["imported"], json!(["Hard Round 2", "9 px Round"]));
         assert_eq!(s.tools.presets.len(), before + 2);
         assert!(s.tools.presets.iter().filter(|p| p.group == "Legacy").all(|p| !p.builtin));
-        assert!(matches!(s.tools.brush.tip, photocraft_paint::TipShape::Sampled(_)));
+        assert!(matches!(s.tools.brush.tip, lienzo_paint::TipShape::Sampled(_)));
         // Re-import with `replace` replaces the group.
         s.execute("brush.presets.importAbr", json!({"data": data, "group": "Legacy", "replace": true})).unwrap();
         assert_eq!(s.tools.presets.len(), before + 2);
@@ -535,7 +535,7 @@ mod tests {
     #[test]
     fn reimport_keeps_the_groups_brushes_unless_replace() {
         let mut s = Session::new();
-        let data = photocraft_paint::tile::b64_encode(&abr_v2());
+        let data = lienzo_paint::tile::b64_encode(&abr_v2());
         let builtin = s.tools.presets.iter().filter(|p| p.builtin).count();
         s.execute("brush.presets.importAbr", json!({"data": data, "group": "Kit"})).unwrap();
         // The user's own brush moved into the group.
@@ -576,10 +576,10 @@ mod tests {
             json!({"data": "%%%not base64"}),
             json!({"data": ""}),
             json!({"data": "AAAA"}),
-            json!({"data": photocraft_paint::tile::b64_encode(b"8BPS\0\x01junk")}),
-            json!({"data": photocraft_paint::tile::b64_encode(&abr_v2()), "group": 5}),
-            json!({"data": photocraft_paint::tile::b64_encode(&abr_v2()), "group": "  "}),
-            json!({"data": photocraft_paint::tile::b64_encode(&abr_v2()[..20])}),
+            json!({"data": lienzo_paint::tile::b64_encode(b"8BPS\0\x01junk")}),
+            json!({"data": lienzo_paint::tile::b64_encode(&abr_v2()), "group": 5}),
+            json!({"data": lienzo_paint::tile::b64_encode(&abr_v2()), "group": "  "}),
+            json!({"data": lienzo_paint::tile::b64_encode(&abr_v2()[..20])}),
         ] {
             assert!(s.execute("brush.presets.importAbr", p.clone()).is_err(), "{p}");
         }
@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn duplicate_gradient_names_remain_independently_selectable() {
-        use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
+        use lienzo_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
         let gradients: Vec<_> = [0.2, 0.8]
             .into_iter()
             .map(|red| GrdGradient {
@@ -600,7 +600,7 @@ mod tests {
                 ..Default::default()
             })
             .collect();
-        let data = photocraft_paint::tile::b64_encode(&write(&gradients));
+        let data = lienzo_paint::tile::b64_encode(&write(&gradients));
         let mut s = Session::new();
         // Re-importing over the group replaces it (`replace`, #10640), so it keeps the same names.
         for _ in 0..2 {
@@ -627,7 +627,7 @@ mod tests {
     /// names distinct from the existing group's, keeping name-only selection unambiguous.
     #[test]
     fn default_gradient_reimport_keeps_names_unique_across_sibling_groups() {
-        use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
+        use lienzo_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
         let gradients = vec![GrdGradient {
             name: "Sunset".into(),
             stops: vec![
@@ -636,7 +636,7 @@ mod tests {
             ],
             ..Default::default()
         }];
-        let data = photocraft_paint::tile::b64_encode(&write(&gradients));
+        let data = lienzo_paint::tile::b64_encode(&write(&gradients));
         let mut s = Session::new();
         let first = s.execute("gradient.presets.importGrd", json!({"data": data, "group": "Sky"})).unwrap();
         assert_eq!(first["imported"], json!(["Sunset"]));
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn gradient_import_preserves_original_and_case_distinct_names() {
-        use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
+        use lienzo_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
         let gradients: Vec<_> = ["Foo", "Foo", "Foo 2", "FOO"]
             .into_iter()
             .enumerate()
@@ -669,7 +669,7 @@ mod tests {
             .execute(
                 "gradient.presets.importGrd",
                 json!({
-                    "data": photocraft_paint::tile::b64_encode(&write(&gradients)), "group": "Names"
+                    "data": lienzo_paint::tile::b64_encode(&write(&gradients)), "group": "Names"
                 }),
             )
             .unwrap();
@@ -687,7 +687,7 @@ mod tests {
     #[test]
     fn grd_import_adds_a_gradient_group() {
         use crate::presets::gradients::StopColor;
-        use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
+        use lienzo_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
         let grads = vec![
             GrdGradient {
                 name: "Ember".into(),
@@ -701,7 +701,7 @@ mod tests {
             GrdGradient { name: "Static".into(), noise: true, ..Default::default() },
         ];
         let mut s = Session::new();
-        let data = photocraft_paint::tile::b64_encode(&write(&grads));
+        let data = lienzo_paint::tile::b64_encode(&write(&grads));
         let r = s.execute("gradient.presets.importGrd", json!({"data": data, "group": "Fire"})).unwrap();
         assert_eq!(r["imported"], json!(["Ember"]));
         assert_eq!(r["warnings"].as_array().map(Vec::len), Some(1));
@@ -716,10 +716,10 @@ mod tests {
         s.execute("gradient.presets.importGrd", json!({"data": data, "group": "Fire", "replace": true})).unwrap();
         assert_eq!(s.presets.gradients.len(), n + 1);
         assert_eq!(s.presets.gradients.iter().filter(|g| g.name == "Fire").count(), 1);
-        for p in [json!({}), json!({"data": "@@"}), json!({"data": photocraft_paint::tile::b64_encode(b"8BGR\0\x03")}), json!({"path": "/nope.grd"})] {
+        for p in [json!({}), json!({"data": "@@"}), json!({"data": lienzo_paint::tile::b64_encode(b"8BGR\0\x03")}), json!({"path": "/nope.grd"})] {
             assert!(s.execute("gradient.presets.importGrd", p.clone()).is_err(), "{p}");
         }
-        let only_noise = photocraft_paint::tile::b64_encode(&write(&grads[1..]));
+        let only_noise = lienzo_paint::tile::b64_encode(&write(&grads[1..]));
         assert!(s.execute("gradient.presets.importGrd", json!({"data": only_noise})).is_err());
     }
 
@@ -746,15 +746,15 @@ mod tests {
                 }
             }
         }
-        let img = photocraft_codecs::Image::from_u16(40, 30, photocraft_codecs::ChannelLayout::Rgba, &px).unwrap();
-        photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+        let img = lienzo_codecs::Image::from_u16(40, 30, lienzo_codecs::ChannelLayout::Rgba, &px).unwrap();
+        lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap()
     }
 
     #[test]
     fn imports_an_image_as_a_brush_tip() {
-        use photocraft_paint::TipShape;
+        use lienzo_paint::TipShape;
         let mut s = Session::new();
-        let data = photocraft_paint::tile::b64_encode(&stamp_png16());
+        let data = lienzo_paint::tile::b64_encode(&stamp_png16());
         let r = s.execute("brush.presets.importImage", json!({"data": data, "fileName": "Stamp.png"})).unwrap();
         assert_eq!(r, json!({"name": "Stamp", "width": 10, "height": 6}), "cropped to the dark block");
         let pr = s.tools.presets.iter().find(|p| p.name == "Stamp").unwrap();
@@ -770,8 +770,8 @@ mod tests {
 
         // An 8-bit grayscale JPEG from disk: named after the file.
         let px: Vec<u8> = (0..24 * 24).map(|i| if (8..16).contains(&(i % 24)) && (4..20).contains(&(i / 24)) { 0 } else { 255 }).collect();
-        let img = photocraft_codecs::Image::from_u8(24, 24, photocraft_codecs::ChannelLayout::Gray, px).unwrap();
-        let jpeg = photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &Default::default()).unwrap();
+        let img = lienzo_codecs::Image::from_u8(24, 24, lienzo_codecs::ChannelLayout::Gray, px).unwrap();
+        let jpeg = lienzo_codecs::encode(&img, lienzo_codecs::Format::Jpeg, &Default::default()).unwrap();
         let path = std::env::temp_dir().join(format!("pc-brush-tip-{}.jpg", std::process::id()));
         std::fs::write(&path, jpeg).unwrap();
         let r = s.execute("brush.presets.importImage", json!({"path": path.to_string_lossy()}));
@@ -785,14 +785,14 @@ mod tests {
     #[test]
     fn image_brush_import_fails_cleanly() {
         let mut s = Session::new();
-        let white = photocraft_codecs::Image::from_u8(4, 4, photocraft_codecs::ChannelLayout::Gray, vec![255; 16]).unwrap();
-        let white = photocraft_paint::tile::b64_encode(&photocraft_codecs::encode(&white, photocraft_codecs::Format::Png, &Default::default()).unwrap());
+        let white = lienzo_codecs::Image::from_u8(4, 4, lienzo_codecs::ChannelLayout::Gray, vec![255; 16]).unwrap();
+        let white = lienzo_paint::tile::b64_encode(&lienzo_codecs::encode(&white, lienzo_codecs::Format::Png, &Default::default()).unwrap());
         let n = s.tools.presets.len();
         for p in [
             json!({}),
             json!({"data": white}),
             json!({"data": "@@"}),
-            json!({"data": photocraft_paint::tile::b64_encode(b"not an image")}),
+            json!({"data": lienzo_paint::tile::b64_encode(b"not an image")}),
             json!({"data": white, "name": 3}),
             json!({"data": white, "fileName": ""}),
             json!({"path": "/nope/brush.png"}),
@@ -818,7 +818,7 @@ mod tests {
                 anti_alias: true,
                 tip: LegacyTip::Computed { diameter: 9, hardness: 100, angle: 0, roundness: 100 },
             };
-            let data = photocraft_paint::tile::b64_encode(&write_v12(1, &vec![round; 10_000], false).unwrap());
+            let data = lienzo_paint::tile::b64_encode(&write_v12(1, &vec![round; 10_000], false).unwrap());
             let r = s.execute("brush.presets.importAbr", json!({"data": data})).unwrap();
             let names: Vec<String> = r["imported"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
             let _ = tx.send(names);
@@ -841,7 +841,7 @@ mod tests {
         let tip = AbrSample { id: String::new(), width: 6, height: 4, depth: 8, data: vec![255; 24] };
         let brush = |name: &str| LegacyBrush { name: name.into(), spacing: 25, anti_alias: true, tip: LegacyTip::Sampled(tip.clone()) };
         let file = write_v12(2, &["Speckle", "SPECKLE", "speckle", "Speckle 2", "Speckle", "hard round"].map(brush), true).unwrap();
-        let r = s.execute("brush.presets.importAbr", json!({"data": photocraft_paint::tile::b64_encode(&file)})).unwrap();
+        let r = s.execute("brush.presets.importAbr", json!({"data": lienzo_paint::tile::b64_encode(&file)})).unwrap();
         // Names that differ only in letter case count as the same name. The file's "Speckle 2" comes
         // after "SPECKLE" took that name, and "hard round" clashes with the built-in Hard Round.
         assert_eq!(r["imported"], json!(["Speckle", "SPECKLE 2", "speckle 4", "Speckle 2 2", "Speckle 5", "hard round 2"]));

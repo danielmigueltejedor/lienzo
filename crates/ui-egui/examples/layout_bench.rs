@@ -5,14 +5,14 @@
 //! import path.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example layout_bench -- [--reps 9] [--json out.json] [--direct] [--navigator] [--size 4000x3000]
+//! cargo run --release -p lienzo-ui-egui --example layout_bench -- [--reps 9] [--json out.json] [--direct] [--navigator] [--size 4000x3000]
 //! ```
 //!
-//! The real `PhotocraftApp` runs in an offscreen egui_kittest harness on wgpu (the GPU canvas
+//! The real `LienzoApp` runs in an offscreen egui_kittest harness on wgpu (the GPU canvas
 //! path, with the device the app requests). Interactions go through real input where the harness
 //! can reach it (key shortcuts, pointer drags and clicks on the canvas) and otherwise through the
 //! command a panel runs (`layer.select`, `layer.setProps`), then the frames that follow. Each row
-//! is the median / p90 / max of a frame's time over the repetitions; `PHOTOCRAFT_GPU_SYNC` makes
+//! is the median / p90 / max of a frame's time over the repetitions; `LIENZO_GPU_SYNC` makes
 //! the canvas wait for the GPU, so a frame's time includes its composite. Move drags report the
 //! press, the pointer-move frames and the release (the commit) separately. `--direct` skips the
 //! PSD round trip; `--navigator` also shows the Navigator panel; `--spin idle|select|tool|move-
@@ -26,13 +26,13 @@ use std::time::Instant;
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_ui_egui::canvas::ViewXform;
-use photocraft_ui_egui::state::Tool;
-use photocraft_ui_egui::{PhotocraftApp, Services};
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::state::Tool;
+use lienzo_ui_egui::{LienzoApp, Services};
 use serde_json::{Value, json};
 
-type H = egui_kittest::Harness<'static, PhotocraftApp>;
+type H = egui_kittest::Harness<'static, LienzoApp>;
 
 fn arg(args: &[String], name: &str) -> Option<String> {
     args.iter().position(|a| a == name).and_then(|i| args.get(i + 1).cloned())
@@ -85,7 +85,7 @@ fn screen(h: &H, x: f64, y: f64) -> Pos2 {
     let app = h.state();
     let idx = app.session.active_index().unwrap_or(0);
     let v = &app.ui.views[idx];
-    let rect = photocraft_ui_egui::rulers::content_rect(app, app.last_canvas_rect);
+    let rect = lienzo_ui_egui::rulers::content_rect(app, app.last_canvas_rect);
     ViewXform { rect, zoom: v.zoom, center: v.center, flip: app.ui.view.flip_horizontal, rotation: v.rotation, aspect: 1.0 }.to_screen(x as f32, y as f32)
 }
 
@@ -123,7 +123,7 @@ fn move_rows(rows: &mut Rows, label: &str, drags: &[Vec<f64>]) {
     rows.add(&format!("Move {label}: release (commit)"), pick(&|d| d.len().checked_sub(2).and_then(|i| d.get(i)).copied().into_iter().collect()));
 }
 
-fn contains(l: &photocraft_doc::Layer, t: LayerId) -> bool {
+fn contains(l: &lienzo_doc::Layer, t: LayerId) -> bool {
     l.id == t || l.children().is_some_and(|c| c.iter().any(|k| contains(k, t)))
 }
 
@@ -131,12 +131,12 @@ fn contains(l: &photocraft_doc::Layer, t: LayerId) -> bool {
 fn point_on(h: &H, id: LayerId) -> Option<[f64; 2]> {
     let st = h.state().session.active()?;
     let l = st.doc.layer(id)?;
-    let b = photocraft_engine::layer_multi_cmds::layer_bounds(l)?;
+    let b = lienzo_engine::layer_multi_cmds::layer_bounds(l)?;
     let (cx, cy) = ((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2);
     for r in 0..60 {
         for (dx, dy) in [(0, 0), (r, 0), (-r, 0), (0, r), (0, -r)] {
             let (x, y) = (cx + dx * 3, cy + dy * 3);
-            if photocraft_engine::pick_cmds::layers_at(&st.doc, x, y).first().is_some_and(|&t| contains(l, t)) {
+            if lienzo_engine::pick_cmds::layers_at(&st.doc, x, y).first().is_some_and(|&t| contains(l, t)) {
                 return Some([x as f64 + 0.5, y as f64 + 0.5]);
             }
         }
@@ -145,8 +145,8 @@ fn point_on(h: &H, id: LayerId) -> Option<[f64; 2]> {
 }
 
 /// Preserve current Smart Objects and restore only legacy pixel fallbacks in the fixture.
-fn restore_layout_smart_objects(s: &mut photocraft_engine::Session) -> Result<(), photocraft_engine::EngineError> {
-    let st = s.active().ok_or(photocraft_engine::EngineError::NoDocument)?;
+fn restore_layout_smart_objects(s: &mut lienzo_engine::Session) -> Result<(), lienzo_engine::EngineError> {
+    let st = s.active().ok_or(lienzo_engine::EngineError::NoDocument)?;
     let ids: Vec<_> = st
         .doc
         .walk()
@@ -179,14 +179,14 @@ fn main() {
         doc
     } else {
         let t = Instant::now();
-        let psd = photocraft_io::export(&doc, "layout.psd", &Default::default()).expect("psd export").bytes;
+        let psd = lienzo_io::export(&doc, "layout.psd", &Default::default()).expect("psd export").bytes;
         let t_save = ms(t);
         let t = Instant::now();
-        let r = photocraft_io::import("layout.psd", &psd).expect("psd import");
+        let r = lienzo_io::import("layout.psd", &psd).expect("psd import");
         println!("PSD: {:.1} MB, save {t_save:.0} ms, open {:.0} ms ({} warnings)", psd.len() as f64 / 1e6, ms(t), r.warnings.len());
         // Current PSDs preserve Smart Objects. Restore only raster fallbacks from older
         // writers, selecting each target before the command checks its enabled state.
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.open_document(r.document, None);
         if let Err(error) = restore_layout_smart_objects(&mut s) {
             eprintln!("cannot prepare layout benchmark: {error}");
@@ -211,9 +211,9 @@ fn main() {
     let ppp: f32 = arg(&args, "--ppp").and_then(|v| v.parse().ok()).unwrap_or(1.0);
     let t = Instant::now();
     let builder = egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1000.0)).with_pixels_per_point(ppp);
-    let mut h: H = builder.wgpu_setup(photocraft_ui_egui::gpu_canvas::wgpu_setup()).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
+    let mut h: H = builder.wgpu_setup(lienzo_ui_egui::gpu_canvas::wgpu_setup()).build_eframe(move |cc| {
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
         if let Some(rs) = cc.wgpu_render_state.as_ref() {
             rs.device.set_device_lost_callback(|r, m| eprintln!("GPU device lost ({r:?}): {m}"));
             app.set_wgpu(rs.clone());
@@ -391,7 +391,7 @@ fn shots(h: &mut H, dir: &str, ppp: f32, [group, headline]: [LayerId; 2]) {
     for (what, id) in [("card", group), ("headline", headline)] {
         for view in ["fit", "100"] {
             select(h, id);
-            if let Some(b) = h.state().session.active().and_then(|s| s.doc.layer(id)).and_then(photocraft_engine::layer_multi_cmds::layer_bounds) {
+            if let Some(b) = h.state().session.active().and_then(|s| s.doc.layer(id)).and_then(lienzo_engine::layer_multi_cmds::layer_bounds) {
                 let app = h.state_mut();
                 let v = &mut app.ui.views[0];
                 if view == "100" {
@@ -478,14 +478,14 @@ fn spin(h: &mut H, what: &str, [pixel, text, shape, group, smart, headline]: [La
     }
 }
 
-/// Run again with `PHOTOCRAFT_GPU_SYNC=1` unless it is set (the workspace forbids the `unsafe`
+/// Run again with `LIENZO_GPU_SYNC=1` unless it is set (the workspace forbids the `unsafe`
 /// that setting it in-process needs).
 fn reexec_with_gpu_sync() {
-    if std::env::var_os("PHOTOCRAFT_GPU_SYNC").is_some() {
+    if std::env::var_os("LIENZO_GPU_SYNC").is_some() {
         return;
     }
     let exe = std::env::current_exe().expect("exe");
-    let status = std::process::Command::new(exe).args(std::env::args().skip(1)).env("PHOTOCRAFT_GPU_SYNC", "1").status().expect("re-exec");
+    let status = std::process::Command::new(exe).args(std::env::args().skip(1)).env("LIENZO_GPU_SYNC", "1").status().expect("re-exec");
     std::process::exit(status.code().unwrap_or(1));
 }
 
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn restore_keeps_native_smart_objects_and_converts_legacy_pixels_once() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 4, "height": 3, "background": "white"})).unwrap();
         s.execute("layer.new.layer", json!({"name": "Logo"})).unwrap();
         s.execute("edit.fill", json!({"contents": "color", "color": "#204060"})).unwrap();
@@ -520,6 +520,6 @@ mod tests {
 
     #[test]
     fn restore_without_a_document_returns_an_error() {
-        assert!(matches!(restore_layout_smart_objects(&mut photocraft_engine::Session::new()), Err(photocraft_engine::EngineError::NoDocument)));
+        assert!(matches!(restore_layout_smart_objects(&mut lienzo_engine::Session::new()), Err(lienzo_engine::EngineError::NoDocument)));
     }
 }

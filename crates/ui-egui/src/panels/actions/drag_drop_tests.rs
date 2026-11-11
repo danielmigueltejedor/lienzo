@@ -2,16 +2,16 @@
 use super::*;
 use egui_kittest::{Harness, kittest::Queryable};
 
-fn names(app: &PhotocraftApp) -> Vec<String> {
+fn names(app: &LienzoApp) -> Vec<String> {
     app.session.actions.list.iter().map(|a| a.name.clone()).collect()
 }
 
-fn steps(app: &PhotocraftApp, action: usize) -> Vec<String> {
+fn steps(app: &LienzoApp, action: usize) -> Vec<String> {
     app.session.actions.list[action].steps.iter().map(|s| s.0.clone()).collect()
 }
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.actions.list.push(Action {
         name: "First".into(),
         steps: vec![("view.zoomOut".into(), json!({})), ("view.fitOnScreen".into(), json!({})), ("view.actualPixels".into(), json!({}))],
@@ -24,7 +24,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn drag(h: &mut Harness<'_, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2) {
+fn drag(h: &mut Harness<'_, LienzoApp>, from: egui::Pos2, to: egui::Pos2) {
     h.event(egui::Event::PointerMoved(from));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
@@ -37,7 +37,7 @@ fn drag(h: &mut Harness<'_, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2) {
     h.run_steps(3);
 }
 
-fn center(h: &Harness<'_, PhotocraftApp>, label: &str) -> egui::Pos2 {
+fn center(h: &Harness<'_, LienzoApp>, label: &str) -> egui::Pos2 {
     h.get_by_label(label).rect().center()
 }
 
@@ -104,11 +104,11 @@ fn action_dropped_on_trash_while_recording_is_not_deleted() {
     assert!(names(h.state()).contains(&"First".to_string()));
 }
 
-fn rename_open_on(app: &mut PhotocraftApp, index: usize, text: &str) {
+fn rename_open_on(app: &mut LienzoApp, index: usize, text: &str) {
     app.ui.actions.renaming = Some(RenameAction { index, text: text.into(), focused: true });
 }
 
-fn renaming(app: &PhotocraftApp) -> Option<(usize, String)> {
+fn renaming(app: &LienzoApp) -> Option<(usize, String)> {
     app.ui.actions.renaming.as_ref().map(|r| (r.index, r.text.clone()))
 }
 

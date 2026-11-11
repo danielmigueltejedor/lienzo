@@ -5,12 +5,12 @@
 //! turns pointer gestures into them.
 
 use egui::{Color32, Rect, Stroke, vec2};
-use photocraft_doc::slices::{self, ResolvedSlice};
-use photocraft_doc::{Document, SliceOrigin};
+use lienzo_doc::slices::{self, ResolvedSlice};
+use lienzo_doc::{Document, SliceOrigin};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::{DialogKind, Tool};
 
@@ -37,7 +37,7 @@ pub enum SliceDrag {
         id: u32,
         start: [f64; 2],
         cur: [f64; 2],
-        rect: photocraft_geom::Rect,
+        rect: lienzo_geom::Rect,
     },
     /// A handle of the selected slice: `handle` is −1, 0 or 1 per axis (the left, untouched or
     /// right edge; the top, untouched or bottom edge).
@@ -46,7 +46,7 @@ pub enum SliceDrag {
         handle: [i8; 2],
         start: [f64; 2],
         cur: [f64; 2],
-        rect: photocraft_geom::Rect,
+        rect: lienzo_geom::Rect,
     },
 }
 
@@ -55,7 +55,7 @@ const HANDLE_REACH: f64 = 5.0;
 
 /// The handle of `r` at document point `p`, within `reach` document pixels: the corners first,
 /// then the edge middles, as the overlay draws them.
-fn handle_at(r: photocraft_geom::Rect, p: [f64; 2], reach: f64) -> Option<[i8; 2]> {
+fn handle_at(r: lienzo_geom::Rect, p: [f64; 2], reach: f64) -> Option<[i8; 2]> {
     let (x0, y0, x1, y1) = (f64::from(r.x0), f64::from(r.y0), f64::from(r.x1), f64::from(r.y1));
     let at = |h: [i8; 2]| {
         let x = match h[0] {
@@ -75,7 +75,7 @@ fn handle_at(r: photocraft_geom::Rect, p: [f64; 2], reach: f64) -> Option<[i8; 2
 
 /// `r` with the edges `handle` grabs moved by (`dx`, `dy`), turned the right way round when an
 /// edge is dragged past the opposite one, and at least 1 × 1.
-fn resized(r: photocraft_geom::Rect, handle: [i8; 2], dx: i32, dy: i32) -> photocraft_geom::Rect {
+fn resized(r: lienzo_geom::Rect, handle: [i8; 2], dx: i32, dy: i32) -> lienzo_geom::Rect {
     let (mut x0, mut y0, mut x1, mut y1) = (r.x0, r.y0, r.x1, r.y1);
     match handle[0] {
         -1 => x0 = x0.saturating_add(dx),
@@ -89,7 +89,7 @@ fn resized(r: photocraft_geom::Rect, handle: [i8; 2], dx: i32, dy: i32) -> photo
     }
     let (x0, x1) = (x0.min(x1), x0.max(x1).max(x0.min(x1).saturating_add(1)));
     let (y0, y1) = (y0.min(y1), y0.max(y1).max(y0.min(y1).saturating_add(1)));
-    photocraft_geom::Rect::new(x0, y0, x1, y1)
+    lienzo_geom::Rect::new(x0, y0, x1, y1)
 }
 
 fn is_slice_tool(t: Tool) -> bool {
@@ -104,10 +104,10 @@ pub fn slice_at(doc: &Document, x: f64, y: f64) -> Option<ResolvedSlice> {
     all.iter().filter(|r| r.rect.contains(xi, yi)).max_by_key(|r| order(r).map_or(0, |i| i + 1)).cloned()
 }
 
-fn rect_from(a: [f64; 2], b: [f64; 2]) -> photocraft_geom::Rect {
+fn rect_from(a: [f64; 2], b: [f64; 2]) -> lienzo_geom::Rect {
     let (x0, x1) = (a[0].min(b[0]).floor() as i32, a[0].max(b[0]).ceil() as i32);
     let (y0, y1) = (a[1].min(b[1]).floor() as i32, a[1].max(b[1]).ceil() as i32);
-    photocraft_geom::Rect::new(x0, y0, x1, y1)
+    lienzo_geom::Rect::new(x0, y0, x1, y1)
 }
 
 /// The new slice drawn from `start` to `cur` under the Slice tool's Style (Normal, Fixed Ratio,
@@ -116,7 +116,7 @@ fn rect_from(a: [f64; 2], b: [f64; 2]) -> photocraft_geom::Rect {
 /// and the shorter side takes the ratio from it, as close as whole pixels allow: rounding each edge of
 /// a fractional drag apart would make 2 : 1 into 5 × 3, and keeping to whole multiples of the
 /// ratio would grow a 1366 : 768 slice in steps of 683 px.
-fn new_rect(app: &PhotocraftApp, start: [f64; 2], cur: [f64; 2]) -> photocraft_geom::Rect {
+fn new_rect(app: &LienzoApp, start: [f64; 2], cur: [f64; 2]) -> lienzo_geom::Rect {
     let o = &app.ui.tool_options;
     let (w, h) = (f64::from(o.slice_width), f64::from(o.slice_height));
     let size = match o.slice_style.as_str() {
@@ -149,7 +149,7 @@ fn new_rect(app: &PhotocraftApp, start: [f64; 2], cur: [f64; 2]) -> photocraft_g
 }
 
 /// Pointer input for the two slice tools. Returns true when the event was theirs.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, _mods: egui::Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, _mods: egui::Modifiers) -> bool {
     let tool = app.ui.tool;
     if !is_slice_tool(tool) {
         return false;
@@ -230,7 +230,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, _mods: egui::Modifiers) -
 }
 
 /// The slice colour from Preferences › Guides, Grid & Slices.
-pub fn slice_color(app: &PhotocraftApp) -> Color32 {
+pub fn slice_color(app: &LienzoApp) -> Color32 {
     hex(&app.session.prefs().guides_grid_and_slices.slice_color, Color32::from_rgb(0x38, 0xb5, 0xff))
 }
 
@@ -244,7 +244,7 @@ fn hex(s: &str, fallback: Color32) -> Color32 {
 }
 
 /// Slice outlines and numbered badges (View › Show › Slices; always while a slice tool is on).
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let tool_on = is_slice_tool(app.ui.tool);
     let Some(doc) = app.session.active().map(|d| d.doc.clone()) else { return };
     if !(tool_on || (app.ui.view.shows(app.ui.view.show.slices) && !doc.slices.is_empty())) {
@@ -254,7 +254,7 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
     let color = slice_color(app);
     let numbers = prefs.show_slice_numbers;
     let selected_color = Color32::from_rgb(0xff, 0xb0, 0x00);
-    let to_screen = |r: photocraft_geom::Rect| Rect::from_two_pos(xf.to_screen(r.x0 as f32, r.y0 as f32), xf.to_screen(r.x1 as f32, r.y1 as f32));
+    let to_screen = |r: lienzo_geom::Rect| Rect::from_two_pos(xf.to_screen(r.x0 as f32, r.y0 as f32), xf.to_screen(r.x1 as f32, r.y1 as f32));
     let all = slices::resolve(&doc);
     // Auto slices first (dotted, underneath), then user and layer slices.
     for pass in [true, false] {
@@ -327,7 +327,7 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
 }
 
 /// The selected slice's id, promoting an auto slice first when `promote`.
-fn selected_id(app: &mut PhotocraftApp, promote: bool) -> Option<u32> {
+fn selected_id(app: &mut LienzoApp, promote: bool) -> Option<u32> {
     let n = app.ui.slices.selected?;
     let doc = app.session.active()?.doc.clone();
     let r = slices::resolve(&doc).into_iter().find(|r| r.number == n)?;
@@ -341,7 +341,7 @@ fn selected_id(app: &mut PhotocraftApp, promote: bool) -> Option<u32> {
 /// Delete or Backspace with no modifiers, with the Slice Select tool and a slice selected,
 /// deletes that slice, as in Photoshop (#7862). It never reaches Layer › Delete or Edit › Clear.
 /// An auto slice has nothing to delete, and View › Lock Slices refuses with a message.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     use crate::shortcut_dispatch::Focus;
     // Text fields and widgets that delete with these keys themselves keep them.
     if app.ui.tool != Tool::SliceSelect
@@ -372,11 +372,11 @@ pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// Slice Options dialog for the selected slice (auto slices are promoted on OK).
-pub fn open_options(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn open_options(app: &mut LienzoApp) -> Result<Value, String> {
     let n = app.ui.slices.selected.ok_or("select a slice with the Slice Select tool")?;
     let st = app.session.active().ok_or("no document")?;
     let r = slices::resolve(&st.doc).into_iter().find(|r| r.number == n).ok_or("no such slice")?;
-    let v = photocraft_engine::slice_cmds::resolved_json(&st.doc, &r);
+    let v = lienzo_engine::slice_cmds::resolved_json(&st.doc, &r);
     let mut f = serde_json::Map::new();
     f.insert("__command".into(), json!("slice.set"));
     f.insert("__label".into(), json!("Slice Options"));
@@ -392,7 +392,7 @@ pub fn open_options(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Divide Slice dialog.
-fn open_divide(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn open_divide(app: &mut LienzoApp) -> Result<Value, String> {
     let n = app.ui.slices.selected.ok_or("select a slice first")?;
     let mut f = serde_json::Map::new();
     f.insert("__command".into(), json!("slice.divide"));
@@ -406,7 +406,7 @@ fn open_divide(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Options bars of the Slice and Slice Select tools.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     if !is_slice_tool(tool) {
         return false;
     }

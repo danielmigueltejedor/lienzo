@@ -2,11 +2,11 @@
 //!
 //! Fixtures are generated here from the published sRGB equation and a synthetic monitor,
 //! with no photograph or device profile. The expected values implement ICC.1:2010 Annex F.3
-//! directly in f64, without Transform, Curve evaluation, or photocraft_cms::math:
+//! directly in f64, without Transform, Curve evaluation, or lienzo_cms::math:
 //! https://www.color.org/specification/ICC1v43_2010-12.pdf
 
-use photocraft_cms::pipeline::{Pipeline, Stage};
-use photocraft_cms::{Builtin, Clut, Curve, GpuMatrixShaper, Intent, Lut3d, Profile, Transform, TransformOptions};
+use lienzo_cms::pipeline::{Pipeline, Stage};
+use lienzo_cms::{Builtin, Clut, Curve, GpuMatrixShaper, Intent, Lut3d, Profile, Transform, TransformOptions};
 
 const SOURCE_MATRIX: [[f64; 3]; 3] = [[0.4360747, 0.3850649, 0.1430804], [0.2225045, 0.7168786, 0.0606169], [0.0139322, 0.0971045, 0.7141733]];
 // Deliberately synthetic, D50-referenced wider-gamut monitor; not a user's measured profile.

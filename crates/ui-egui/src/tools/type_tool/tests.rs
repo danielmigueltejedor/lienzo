@@ -1,7 +1,7 @@
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 400, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
@@ -43,13 +43,13 @@ fn lowering_the_recent_fonts_cap_applies_at_once() {
     assert!(app.ui.recent_fonts.is_empty(), "0 clears the list");
 }
 
-fn layer_text(app: &PhotocraftApp) -> String {
+fn layer_text(app: &LienzoApp) -> String {
     let ed = app.ui.text_edit.as_ref().unwrap();
     current_text(app, LayerId(ed.layer)).unwrap()
 }
 
 /// A committed type layer reading `s` at the same spot as the others (stacked variants, #4320).
-fn stacked_variant(app: &mut PhotocraftApp, s: &str) -> LayerId {
+fn stacked_variant(app: &mut LienzoApp, s: &str) -> LayerId {
     app.ui.text_edit = None;
     pointer_up(app, [50.0, 100.0], [50.0, 100.0]);
     insert(app, s);
@@ -57,12 +57,12 @@ fn stacked_variant(app: &mut PhotocraftApp, s: &str) -> LayerId {
     app.session.active().unwrap().active_layer.unwrap()
 }
 
-fn hide(app: &mut PhotocraftApp, id: LayerId) {
+fn hide(app: &mut LienzoApp, id: LayerId) {
     app.run("layer.setProps", json!({"layer": id.0, "visible": false})).unwrap();
 }
 
 /// Wraps `id` in a new group and returns the group.
-fn group_of(app: &mut PhotocraftApp, id: LayerId) -> LayerId {
+fn group_of(app: &mut LienzoApp, id: LayerId) -> LayerId {
     app.run("layer.select", json!({"layer": id.0, "mode": "replace"})).unwrap();
     app.run("layer.groupLayers", json!({})).unwrap();
     let doc = &app.session.active().unwrap().doc;
@@ -71,7 +71,7 @@ fn group_of(app: &mut PhotocraftApp, id: LayerId) -> LayerId {
 }
 
 /// Three type variants at one spot, bottom to top: A, B, C.
-fn variants() -> (PhotocraftApp, [LayerId; 3]) {
+fn variants() -> (LienzoApp, [LayerId; 3]) {
     let mut app = app();
     let ids = ["Variant A", "Variant B", "Variant C"].map(|s| stacked_variant(&mut app, s));
     (app, ids)
@@ -181,8 +181,8 @@ fn closed_path_forward_hit_after_last_caret() {
     for align in ["left", "center", "right"] {
         let mut app = app();
         app.ui.tool_options.type_align = align.into();
-        let path = photocraft_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
-        app.run("path.set", json!({"path": photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
+        let path = lienzo_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
+        app.run("path.set", json!({"path": lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
         pointer_up(&mut app, [20.0, 45.0], [20.0, 45.0]);
         insert(&mut app, "ssssssssssss");
         let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
@@ -197,8 +197,8 @@ fn closed_path_forward_hit_after_last_caret() {
 #[test]
 fn open_path_hits_keep_endpoint_clamping() {
     let mut app = app();
-    let path = photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polyline(&[(20.0, 100.0), (380.0, 100.0)])]);
-    app.run("path.set", json!({"path": photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
+    let path = lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polyline(&[(20.0, 100.0), (380.0, 100.0)])]);
+    app.run("path.set", json!({"path": lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
     pointer_up(&mut app, [200.0, 100.0], [200.0, 100.0]);
     insert(&mut app, "ssss");
     let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
@@ -212,8 +212,8 @@ fn closed_path_backward_hit_before_first_caret() {
     for align in ["left", "center", "right"] {
         let mut app = app();
         app.ui.tool_options.type_align = align.into();
-        let path = photocraft_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
-        app.run("path.set", json!({"path": photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
+        let path = lienzo_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
+        app.run("path.set", json!({"path": lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
         pointer_up(&mut app, [20.0, 45.0], [20.0, 45.0]);
         insert(&mut app, "ssssssssssss");
         let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
@@ -230,15 +230,15 @@ fn closed_path_backward_hit_before_first_caret() {
 #[test]
 fn closed_path_upstream_caret_rectangle_left_edge_roundtrip() {
     let mut app = app();
-    let path = photocraft_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
-    app.run("path.set", json!({"path": photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
+    let path = lienzo_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
+    app.run("path.set", json!({"path": lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
     pointer_up(&mut app, [20.0, 45.0], [20.0, 45.0]);
     insert(&mut app, "ssssssssssss");
     let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
     let (layout, _, _) = layout(&mut app, id).unwrap();
     let shape = text_layer(&app.session.active().unwrap().doc, id).unwrap().shape.clone();
-    let photocraft_doc::text::TextShape::Path { start, .. } = shape else {
-        assert!(matches!(shape, photocraft_doc::text::TextShape::Path { .. }), "outline click must attach path text");
+    let lienzo_doc::text::TextShape::Path { start, .. } = shape else {
+        assert!(matches!(shape, lienzo_doc::text::TextShape::Path { .. }), "outline click must attach path text");
         return;
     };
     // Independent rectangle perimeter oracle: never use the warp under test to
@@ -270,11 +270,11 @@ fn closed_path_upstream_caret_rectangle_left_edge_roundtrip() {
 /// clicked, in one history step with the placeholder selected; a click off it is point text.
 #[test]
 fn click_on_a_path_starts_type_on_the_path() {
-    use photocraft_doc::text::TextShape;
+    use lienzo_doc::text::TextShape;
     let mut app = app();
     app.session
         .edit("path", |doc, _| {
-            doc.work_path = Some(photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polyline(&[(20.0, 100.0), (380.0, 100.0)])]));
+            doc.work_path = Some(lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polyline(&[(20.0, 100.0), (380.0, 100.0)])]));
             Ok(())
         })
         .unwrap();
@@ -307,14 +307,14 @@ fn caret_hits_type_on_a_path_along_the_curve() {
     let mut app = app();
     app.session
         .edit("path", |doc, _| {
-            doc.work_path = Some(photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polyline(&[(300.0, 10.0), (300.0, 195.0)])]));
+            doc.work_path = Some(lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polyline(&[(300.0, 10.0), (300.0, 195.0)])]));
             Ok(())
         })
         .unwrap();
     pointer_up(&mut app, [300.0, 20.0], [300.0, 20.0]);
     insert(&mut app, "ABCDEFGH");
     let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
-    assert!(matches!(text_layer(&app.session.active().unwrap().doc, id).unwrap().shape, photocraft_doc::text::TextShape::Path { .. }));
+    assert!(matches!(text_layer(&app.session.active().unwrap().doc, id).unwrap().shape, lienzo_doc::text::TextShape::Path { .. }));
     // The type runs down the path: near its start the caret is at the beginning, far down at the end.
     assert_eq!(offset_at(&mut app, id, 300.0, 18.0), 0);
     // (The straight line would put both of these at the start: they are left of its first glyph.)
@@ -382,7 +382,7 @@ fn a_name_from_text_after_blank_lines_keeps_following_the_text() {
     insert(&mut app, "\n\nTitle");
     let id = app.ui.text_edit.as_ref().unwrap().layer;
     commit(&mut app);
-    let name = |app: &PhotocraftApp| app.session.active().unwrap().doc.layers.last().unwrap().name.clone();
+    let name = |app: &LienzoApp| app.session.active().unwrap().doc.layers.last().unwrap().name.clone();
     assert_eq!(name(&app), "Title");
     // Edited later, outside the session that created it (#483).
     app.run("type.edit", json!({"layer": id, "text": "\nSubtitle"})).unwrap();
@@ -479,7 +479,7 @@ fn arrow_keys_reset_caret_blink_phase() {
     app.ui.caret_blink_time = 0.0;
     let ctx = egui::Context::default();
 
-    let has_caret = |app: &mut PhotocraftApp, ctx: &egui::Context, time: f64| -> bool {
+    let has_caret = |app: &mut LienzoApp, ctx: &egui::Context, time: f64| -> bool {
         let mut out = ctx.run_ui(egui::RawInput { time: Some(time), ..Default::default() }, |ui| {
             let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(400.0, 400.0));
             let painter = ui.ctx().layer_painter(egui::LayerId::background()).with_clip_rect(rect);
@@ -559,16 +559,16 @@ fn closed_path_aligned_selection_highlights_every_visible_cluster() {
     for align in ["center", "right"] {
         let mut app = app();
         app.ui.tool_options.type_align = align.into();
-        let path = photocraft_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
-        app.run("path.set", json!({"path":photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
+        let path = lienzo_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
+        app.run("path.set", json!({"path":lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
         pointer_up(&mut app, [20.0, 45.0], [20.0, 45.0]);
         insert(&mut app, "ssssssssssss");
         let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
         let (l, _, _) = layout(&mut app, id).unwrap();
         assert!(l.bounds().unwrap()[0] < 0.0, "{align} must exercise negative text coordinates");
         let text_layer = text_layer(&app.session.active().unwrap().doc, id).unwrap();
-        let rendered = photocraft_text::render::layout_deform(&l, text_layer).unwrap();
-        let visible = l.clusters.iter().filter(|c| rendered.place_glyph(f64::from(c.x + c.advance / 2.0)) != photocraft_text::warp::Placement::Hidden).count();
+        let rendered = lienzo_text::render::layout_deform(&l, text_layer).unwrap();
+        let visible = l.clusters.iter().filter(|c| rendered.place_glyph(f64::from(c.x + c.advance / 2.0)) != lienzo_text::warp::Placement::Hidden).count();
         assert_eq!(visible, l.clusters.len());
         let ed = app.ui.text_edit.as_mut().unwrap();
         ed.anchor = 0;

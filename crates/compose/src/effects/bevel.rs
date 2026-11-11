@@ -260,11 +260,11 @@ pub(super) fn bevel_maps(shape: &Map, b: &Bevel, light: &GlobalLight, tex: &Text
 
 /// The distance the two satin copies are offset by. Photoshop draws Distance 0 as 1 px (an
 /// edge band of 2/size, measured in Photoshop 27.11), not as two copies cancelling out.
-pub fn satin_distance(s: &photocraft_doc::effects::Satin) -> f32 {
+pub fn satin_distance(s: &lienzo_doc::effects::Satin) -> f32 {
     s.distance.max(1.0)
 }
 
-pub(super) fn satin_map(shape: &Map, s: &photocraft_doc::effects::Satin) -> Map {
+pub(super) fn satin_map(shape: &Map, s: &lienzo_doc::effects::Satin) -> Map {
     let (dx, dy) = offset(s.angle, satin_distance(s));
     let mut a = shape.shifted(dx, dy, 0.0);
     let mut b = shape.shifted(-dx, -dy, 0.0);

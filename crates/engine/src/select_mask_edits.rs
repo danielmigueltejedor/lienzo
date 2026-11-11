@@ -10,12 +10,12 @@
 
 use std::collections::BTreeSet;
 
-use photocraft_algo::matting;
-use photocraft_algo::segment::{grabcut, quick, subject};
-use photocraft_algo::selection::{self as sel, Region, SelectionMode, combine_region};
-use photocraft_doc::{Document, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::matting;
+use lienzo_algo::segment::{grabcut, quick, subject};
+use lienzo_algo::selection::{self as sel, Region, SelectionMode, combine_region};
+use lienzo_doc::{Document, LayerId};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::Value;
 
 use crate::smartselect_cmds::with_doc_sampler;
@@ -228,7 +228,7 @@ pub fn check_strokes(strokes: &[matting::EdgeStroke], canvas: Rect) -> Result<()
 /// sparse selection nor a huge canvas costs a canvas-sized buffer (the #8783 review).
 fn invert(base: Option<&Surface>, canvas: Rect) -> Option<Surface> {
     let outside = base.map_or(0.0, |b| b.default_pixel().first().copied().unwrap_or(0.0).clamp(0.0, 1.0));
-    let mut s = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut s = Surface::new(lienzo_color::PixelFormat::GRAY8);
     if outside < 1.0 {
         s.fill_rect(canvas, &[1.0 - outside]);
     }
@@ -241,7 +241,7 @@ fn invert(base: Option<&Surface>, canvas: Rect) -> Option<Surface> {
             }
             let read = b.read_region(r);
             let inverted: Vec<f32> = read.chunks_exact(ch).map(|px| 1.0 - px.first().copied().unwrap_or(0.0).clamp(0.0, 1.0)).collect();
-            photocraft_raster::scratch::give(read);
+            lienzo_raster::scratch::give(read);
             s.write_region(r, &inverted);
         }
     }
@@ -392,17 +392,17 @@ mod tests {
     #[test]
     fn tiled_invert_matches_the_dense_one() {
         let canvas = Rect::new(0, 0, 600, 333);
-        let mut soft = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let mut soft = Surface::new(lienzo_color::PixelFormat::GRAY8);
         soft.fill_rect(Rect::new(250, 20, 900, 300), &[1.0]);
         soft.fill_rect(Rect::new(10, 10, 40, 30), &[0.4]);
-        let mut white = Surface::with_default(photocraft_color::PixelFormat::GRAY8, &[1.0]);
+        let mut white = Surface::with_default(lienzo_color::PixelFormat::GRAY8, &[1.0]);
         white.fill_rect(Rect::new(300, 100, 520, 140), &[0.0]);
         for base in [None, Some(soft), Some(white)] {
             let got = bytes(invert(base.as_ref(), canvas).as_ref(), canvas);
             assert_eq!(got, dense_invert(base.as_ref(), canvas));
         }
         // Inverting everything selects nothing.
-        let mut all = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let mut all = Surface::new(lienzo_color::PixelFormat::GRAY8);
         all.fill_rect(canvas, &[1.0]);
         assert!(invert(Some(&all), canvas).is_none());
     }
@@ -410,8 +410,8 @@ mod tests {
     /// A huge canvas inverts without a canvas-sized buffer, and a run of Inverts costs one.
     #[test]
     fn invert_on_a_huge_canvas_and_runs_of_inverts() {
-        let doc = Document::new("huge", photocraft_doc::Size::new(100_000, 100_000), photocraft_doc::ColorMode::Rgb, photocraft_color::SampleType::U8);
-        let mut small = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let doc = Document::new("huge", lienzo_doc::Size::new(100_000, 100_000), lienzo_doc::ColorMode::Rgb, lienzo_color::SampleType::U8);
+        let mut small = Surface::new(lienzo_color::PixelFormat::GRAY8);
         small.fill_rect(Rect::new(10, 10, 20, 20), &[1.0]);
         let t = std::time::Instant::now();
         let one = apply(&doc, None, Some(small.clone()), &[SelectionEdit::Invert]).expect("almost everything selected");
@@ -432,9 +432,9 @@ mod tests {
     /// subtraction paint only the tiles they cross, and keep the selection there was.
     #[test]
     fn thin_edits_across_a_huge_canvas_paint_only_their_tiles() {
-        let doc = Document::new("huge", photocraft_doc::Size::new(100_000, 100_000), photocraft_doc::ColorMode::Rgb, photocraft_color::SampleType::U8);
+        let doc = Document::new("huge", lienzo_doc::Size::new(100_000, 100_000), lienzo_doc::ColorMode::Rgb, lienzo_color::SampleType::U8);
         let canvas = doc.bounds();
-        let mut small = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let mut small = Surface::new(lienzo_color::PixelFormat::GRAY8);
         small.fill_rect(Rect::new(10, 60, 20, 70), &[1.0]);
         let diagonal = vec![(0.0, 0.0), (99_999.0, 99_999.0)];
         let brush = SelectionEdit::Brush { points: diagonal.clone(), size: 1.0, hardness: 100.0, add: true };

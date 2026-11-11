@@ -1,9 +1,9 @@
 //! `layer.layerStyle.*` commands: add/replace layer effects on a layer.
 
-use photocraft_color::{BlendMode, Color};
-use photocraft_doc::adjust::CurvePoint;
-use photocraft_doc::effects::PATTERN_SCALE_RANGE;
-use photocraft_doc::{
+use lienzo_color::{BlendMode, Color};
+use lienzo_doc::adjust::CurvePoint;
+use lienzo_doc::effects::PATTERN_SCALE_RANGE;
+use lienzo_doc::{
     Bevel, BevelStyle, BevelTechnique, Contour, Effect, FxCommon, FxPaint, Glow, GlowSource, GlowTechnique, Gradient, GradientStyle, Satin, Shadow, StrokeFx,
     StrokePosition,
 };
@@ -65,8 +65,8 @@ fn color(p: &Value, k: &str, d: [f32; 3]) -> Color {
 /// colours: a straight ramp was up to 12 levels off.
 fn gradient_stops(p: &Value, from: Color, to: Color) -> Vec<(f32, Color)> {
     let stops = vec![(0.0, from), (1.0, to)];
-    match p.get("method").and_then(Value::as_str).and_then(photocraft_io::GradientMethod::from_name) {
-        Some(m) => photocraft_io::bake_gradient(stops, &[0.5], (f(p, "smoothness", 100.0) / 100.0).clamp(0.0, 1.0), m),
+    match p.get("method").and_then(Value::as_str).and_then(lienzo_io::GradientMethod::from_name) {
+        Some(m) => lienzo_io::bake_gradient(stops, &[0.5], (f(p, "smoothness", 100.0) / 100.0).clamp(0.0, 1.0), m),
         None => stops,
     }
 }
@@ -181,7 +181,7 @@ pub type ContourPoint = (f32, f32, bool);
 /// Built-in contour presets, in the order of Photoshop's default contour picker. Each is Photoshop's
 /// own curve as measured in Photoshop 27.11 (a Satin of each preset against a Linear one, 38
 /// levels per curve, read back through Satin's mirrored lookup — see
-/// `photocraft_compose::effects::satin_lut` — and thinned to within 1 %), joined by straight
+/// `lienzo_compose::effects::satin_lut` — and thinned to within 1 %), joined by straight
 /// segments (every inner point a corner). Imported PSD contours keep their own points.
 pub const CONTOURS: &[(&str, &[ContourPoint])] = &[
     ("Linear", &[(0.0, 0.0, false), (1.0, 1.0, false)]),
@@ -512,7 +512,7 @@ pub fn contour_from_param(v: &Value) -> Option<Contour> {
 /// The contours of an `.shc` contour preset file (Contour Editor › Load…), as `contour` params.
 /// Points are rescaled from the file's `0..=255` levels; unusable curves are skipped.
 pub fn contours_from_shc(bytes: &[u8]) -> Result<Vec<Value>> {
-    let file = photocraft_psd::shc::parse(bytes).map_err(|e| EngineError::Other(format!("not a contour file: {e}")))?;
+    let file = lienzo_psd::shc::parse(bytes).map_err(|e| EngineError::Other(format!("not a contour file: {e}")))?;
     Ok(file
         .into_iter()
         .filter_map(|c| {
@@ -533,7 +533,7 @@ pub fn contour_to_shc(contour: &Contour) -> Result<Vec<u8>> {
 
 /// An `.shc` file holding every contour of `list` (Save Contours…).
 pub fn contour_to_shc_all(list: &[&Contour]) -> Result<Vec<u8>> {
-    let file: Vec<photocraft_psd::shc::ShcContour> = list
+    let file: Vec<lienzo_psd::shc::ShcContour> = list
         .iter()
         .map(|contour| {
             let (name, points) = match contour {
@@ -543,12 +543,12 @@ pub fn contour_to_shc_all(list: &[&Contour]) -> Result<Vec<u8>> {
             let points = points
                 .iter()
                 .enumerate()
-                .map(|(i, p)| photocraft_psd::shc::ShcPoint { input: p.input * 255.0, output: p.output * 255.0, continuous: !contour.is_corner(i) })
+                .map(|(i, p)| lienzo_psd::shc::ShcPoint { input: p.input * 255.0, output: p.output * 255.0, continuous: !contour.is_corner(i) })
                 .collect();
-            photocraft_psd::shc::ShcContour { name, points }
+            lienzo_psd::shc::ShcContour { name, points }
         })
         .collect();
-    photocraft_psd::shc::write(&file).map_err(|e| EngineError::Other(format!("can't write the contour: {e}")))
+    lienzo_psd::shc::write(&file).map_err(|e| EngineError::Other(format!("can't write the contour: {e}")))
 }
 
 /// An effect of `kind` with its factory settings (before params are applied).
@@ -649,7 +649,7 @@ fn overlay_gradient(g: &mut Gradient, p: &Value) {
         g.opacity_stops = os;
     }
     // A method rebuilds the gradient from its end colours (the stops between are the old curve).
-    if p.get("stops").is_none() && p.get("method").and_then(Value::as_str).is_some_and(|m| photocraft_io::GradientMethod::from_name(m).is_some()) {
+    if p.get("stops").is_none() && p.get("method").and_then(Value::as_str).is_some_and(|m| lienzo_io::GradientMethod::from_name(m).is_some()) {
         let ends = (g.stops.first().map(|s| s.1), g.stops.last().map(|s| s.1));
         let from = color_of(p, "from").or(ends.0).unwrap_or(Color::BLACK);
         let to = color_of(p, "to").or(ends.1).unwrap_or(Color::WHITE);
@@ -899,7 +899,7 @@ fn overlay_bevel(bv: &mut Bevel, p: &Value) {
     }
     match b_of(p, "contour") {
         Some(false) => bv.contour = None,
-        Some(true) if bv.contour.is_none() => bv.contour = Some(photocraft_doc::BevelContour::default()),
+        Some(true) if bv.contour.is_none() => bv.contour = Some(lienzo_doc::BevelContour::default()),
         _ => {}
     }
     if let Some(c) = &mut bv.contour {
@@ -910,7 +910,7 @@ fn overlay_bevel(bv: &mut Bevel, p: &Value) {
         overlay_bool(p, "contourAntiAlias", &mut c.anti_alias);
     }
     if let Some(t) = p.get("texture").and_then(Value::as_str).filter(|t| !t.is_empty()) {
-        bv.texture = Some(photocraft_doc::BevelTexture {
+        bv.texture = Some(lienzo_doc::BevelTexture {
             name: t.to_string(),
             id: t.to_string(),
             scale: (f(p, "textureScale", 100.0) / 100.0).clamp(PATTERN_SCALE_RANGE.0, PATTERN_SCALE_RANGE.1),
@@ -1230,7 +1230,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 s.edit("Clear Layer Style", |doc, _| {
                     for id in ids {
                         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-                        l.effects = photocraft_doc::Effects { enabled: true, ..Default::default() };
+                        l.effects = lienzo_doc::Effects { enabled: true, ..Default::default() };
                     }
                     Ok(())
                 })?;
@@ -1248,7 +1248,7 @@ fn delete_effect(s: &mut Session, p: &Value, effect: &Value) -> Result<Value> {
     let index = effect.as_u64().and_then(|i| usize::try_from(i).ok()).ok_or_else(|| bad(CMD, "`effect` must be an effect index"))?;
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let id = match p.get("layer").filter(|v| !v.is_null()) {
-        Some(v) => photocraft_doc::LayerId(v.as_u64().ok_or_else(|| bad(CMD, "`layer` must be a layer id"))?),
+        Some(v) => lienzo_doc::LayerId(v.as_u64().ok_or_else(|| bad(CMD, "`layer` must be a layer id"))?),
         None => d.active_layer.ok_or_else(|| bad(CMD, "no active layer"))?,
     };
     let count = d.doc.layer(id).ok_or(EngineError::NoLayer(id))?.effects.items.len();

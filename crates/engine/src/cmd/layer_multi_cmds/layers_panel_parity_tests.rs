@@ -121,7 +121,7 @@ fn assert_preview_is_commit(mut s: Session, params: Value, want: &str) {
     let committed = &s.active().unwrap().doc;
     assert_eq!(stack_text(&preview), want, "preview of {params}");
     assert_eq!(stack_text(committed), want, "commit of {params}");
-    assert_eq!(photocraft_compose::flatten(&preview).px, photocraft_compose::flatten(committed).px, "composite of {params}");
+    assert_eq!(lienzo_compose::flatten(&preview).px, lienzo_compose::flatten(committed).px, "composite of {params}");
 }
 
 /// Previewed moves join and release clipping groups exactly as the committed reorder does, copies included.
@@ -169,7 +169,7 @@ fn preview_copies_the_background_like_the_committed_copy() {
         assert_eq!(doc.layers.get(2).unwrap().locks, Default::default());
         assert!(doc.layers.first().unwrap().locks != Default::default());
     }
-    assert_eq!(photocraft_compose::flatten(&preview).px, photocraft_compose::flatten(committed).px);
+    assert_eq!(lienzo_compose::flatten(&preview).px, lienzo_compose::flatten(committed).px);
 }
 
 /// A drop that would move the Background off the bottom has no preview, as the command refuses it.

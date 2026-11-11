@@ -4,7 +4,7 @@
 //! Not part of the default suite. Run it in release on one thread, as the web build has:
 //!
 //! ```sh
-//! RAYON_NUM_THREADS=1 cargo test --release -p photocraft-engine --test place_steps_measure -- --ignored --nocapture
+//! RAYON_NUM_THREADS=1 cargo test --release -p lienzo-engine --test place_steps_measure -- --ignored --nocapture
 //! ```
 //!
 //! A synthetic 4096×4096 RGBA PNG is placed into a 3600×4200 document three ways: inline as one
@@ -14,9 +14,9 @@
 
 use std::time::{Duration, Instant};
 
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
-use photocraft_engine::jobs::{JobOutcome, Started};
-use photocraft_engine::{Session, file_cmds};
+use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
+use lienzo_engine::jobs::{JobOutcome, Started};
+use lienzo_engine::{Session, file_cmds};
 use serde_json::json;
 
 const SIZE: u32 = 4096;
@@ -36,7 +36,7 @@ fn synthetic_png() -> Vec<u8> {
         }
     }
     let img = Image::from_raw(SIZE, SIZE, ChannelLayout::Rgba, SampleType::U8, data).unwrap();
-    photocraft_codecs::encode(&img, Format::Png, &EncodeOptions::default()).unwrap()
+    lienzo_codecs::encode(&img, Format::Png, &EncodeOptions::default()).unwrap()
 }
 
 fn document() -> Session {
@@ -59,7 +59,7 @@ fn ms(d: Duration) -> f64 {
 /// Polls a started place to the end, timing every poll; returns (stage label, time) per poll. The
 /// label is the status the poll left (the message is set as a unit starts, so a poll that ends in
 /// a new one began a stage's last unit).
-fn timed_polls(s: &mut Session, id: photocraft_engine::jobs::JobId) -> (Vec<(String, String, Duration)>, serde_json::Value) {
+fn timed_polls(s: &mut Session, id: lienzo_engine::jobs::JobId) -> (Vec<(String, String, Duration)>, serde_json::Value) {
     let mut polls = Vec::new();
     loop {
         let before = s.job(id).map(|j| j.message).unwrap_or_default();

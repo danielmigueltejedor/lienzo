@@ -2,11 +2,11 @@
 //! through the existing compositor oracle; float tiles retain its signed/HDR formulae.
 use std::{collections::BTreeSet, sync::Arc};
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType, read_sample, write_sample};
-use photocraft_compose::{Buffer, adjust};
-use photocraft_doc::Adjustment;
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType, read_sample, write_sample};
+use lienzo_compose::{Buffer, adjust};
+use lienzo_doc::Adjustment;
+use lienzo_geom::{Rect, TILE_SIZE};
+use lienzo_raster::Surface;
 use rayon::prelude::*;
 
 use super::{ColorChannels, scalar_adjustment};
@@ -207,7 +207,7 @@ fn output(tone: f32, adjusted: f32, weight: f32, component: &Component, fmt: Pix
         tone + (256.0 / 255.0 - tone.clamp(0.0, 1.0) - tone) * weight
     } else {
         // Match the scalar compositor: full coverage keeps the edit even over huge HDR values.
-        photocraft_color::convert::rgb_to_gray([tone * (1.0 - weight) + adjusted * weight; 3])
+        lienzo_color::convert::rgb_to_gray([tone * (1.0 - weight) + adjusted * weight; 3])
     };
     let mut encoded = [0; 4];
     write_sample(&mut encoded, fmt.sample, 0, value);
@@ -218,7 +218,7 @@ fn output(tone: f32, adjusted: f32, weight: f32, component: &Component, fmt: Pix
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::adjust::{CurvePoint, LevelsChannel, ToneSpace};
+    use lienzo_doc::adjust::{CurvePoint, LevelsChannel, ToneSpace};
 
     #[test]
     fn full_coverage_keeps_threshold_over_extreme_float_channels() {

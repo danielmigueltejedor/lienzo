@@ -4,8 +4,8 @@
 //! doesn't build on an adapter that can run it fails. The shader itself is validated without a
 //! GPU ([`the_shader_validates_without_a_gpu`]), so a WGSL error fails on every runner.
 
-use photocraft_algo::camera_raw::{CameraRaw, Wheel, develop, per_pixel, white_black_points};
-use photocraft_gpu::{CameraRawDevelop, DeviceHealth, Fault};
+use lienzo_algo::camera_raw::{CameraRaw, Wheel, develop, per_pixel, white_black_points};
+use lienzo_gpu::{CameraRawDevelop, DeviceHealth, Fault};
 
 /// Largest difference from the CPU develop, per channel. The pass evaluates the same
 /// expressions in f32, so what remains is the GPU's own `pow`, `exp2` and `sin` (a few ulps) and
@@ -24,9 +24,9 @@ struct Gpu {
 fn gpu() -> Option<Gpu> {
     let lock = crate::GPU_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     let required = std::env::var_os("WGPU_BACKEND").is_some();
-    // `WGPU_BACKEND` picks the backend; `PHOTOCRAFT_TEST_FALLBACK_ADAPTER=1` the software one (WARP).
+    // `WGPU_BACKEND` picks the backend; `LIENZO_TEST_FALLBACK_ADAPTER=1` the software one (WARP).
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
-    let fallback = std::env::var_os("PHOTOCRAFT_TEST_FALLBACK_ADAPTER").is_some();
+    let fallback = std::env::var_os("LIENZO_TEST_FALLBACK_ADAPTER").is_some();
     let options = wgpu::RequestAdapterOptions { force_fallback_adapter: fallback, ..Default::default() };
     let adapter = match pollster::block_on(instance.request_adapter(&options)) {
         Ok(a) => a,
@@ -60,7 +60,7 @@ fn gpu() -> Option<Gpu> {
 /// with no adapter: the GPU tests below skip on runners without one.
 #[test]
 fn the_shader_validates_without_a_gpu() {
-    let src = photocraft_gpu::CAMERA_RAW_SHADER;
+    let src = lienzo_gpu::CAMERA_RAW_SHADER;
     let module = wgpu::naga::front::wgsl::parse_str(src).unwrap_or_else(|e| panic!("{}", e.emit_to_string(src)));
     wgpu::naga::valid::Validator::new(wgpu::naga::valid::ValidationFlags::all(), wgpu::naga::valid::Capabilities::empty())
         .validate(&module)

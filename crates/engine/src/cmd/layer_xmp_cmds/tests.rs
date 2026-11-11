@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::Layer;
+use lienzo_doc::Layer;
 
 const PACKET: &str = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:app="http://example.com/app/1.0/"><app:arc>120</app:arc></rdf:Description></rdf:RDF></x:xmpmeta>"#;
 
@@ -35,7 +35,7 @@ fn sets_reads_and_removes_as_one_undo_step_each() {
         assert_eq!(s.execute(ID, json!({"rawData": PACKET})).unwrap(), json!({"layer": a.0, "rawData": PACKET, "changed": true}));
         assert_eq!(s.execute(ID, json!({"layer": b.0, "rawData": PACKET})).unwrap()["changed"], true);
         assert_eq!(s.active().unwrap().history.past_len(), past + 2);
-        assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+        assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
         assert_eq!(s.execute(ID, Value::Null).unwrap()["rawData"], PACKET);
         assert_eq!(crate::inspect::layer(s.active().unwrap().doc.layer(b).unwrap())["hasXmp"], true);
 

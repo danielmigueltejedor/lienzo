@@ -1,4 +1,4 @@
-use photocraft_codecs::{
+use lienzo_codecs::{
     ChannelLayout, CodecError, DecodeOptions, Format, Limits, SampleType, caps, decode, decode_as, decode_as_with, detect, encode, from_extension,
 };
 
@@ -68,7 +68,7 @@ const INDICES_0123: [u8; 4] = [0x04, 0x0e, 0, 0];
 fn dds_is_readable_and_writable() {
     assert_eq!(from_extension("texture.DDS"), Some(Format::Dds));
     assert!(caps(Format::Dds).read && caps(Format::Dds).write);
-    let img = photocraft_codecs::Image::from_u8(1, 1, ChannelLayout::Rgba, vec![1, 2, 3, 0]).unwrap();
+    let img = lienzo_codecs::Image::from_u8(1, 1, ChannelLayout::Rgba, vec![1, 2, 3, 0]).unwrap();
     let b = encode(&img, Format::Dds, &Default::default()).unwrap();
     assert_eq!(decode(&b).unwrap().data(), &[1, 2, 3, 0]);
 }
@@ -333,7 +333,7 @@ fn source_probe_distinguishes_extra_faces_from_single_images_and_padding() {
             b.extend(bc1_block(BLUE, BLUE, [0; 4]));
         }
         assert!(decode(&b).unwrap().data().chunks(4).all(|p| p == [255, 0, 0, 255]));
-        assert_eq!(photocraft_codecs::has_unretained_source_data(&b).unwrap(), caps.count_ones() > 1);
+        assert_eq!(lienzo_codecs::has_unretained_source_data(&b).unwrap(), caps.count_ones() > 1);
     }
     // A FourCC-looking unused union and trailing bytes are not a DX10 declaration.
     let mut single = header(1, 1, DDPF_RGB, b"DX10", 24, [0xff, 0xff00, 0xff_0000, 0]);
@@ -342,7 +342,7 @@ fn source_probe_distinguishes_extra_faces_from_single_images_and_padding() {
     assert_eq!(decode(&single).unwrap().data(), &[1, 2, 3]);
     for mips in [0u32, 1] {
         single[28..32].copy_from_slice(&mips.to_le_bytes());
-        assert!(!photocraft_codecs::has_unretained_source_data(&single).unwrap());
+        assert!(!lienzo_codecs::has_unretained_source_data(&single).unwrap());
     }
 }
 
@@ -353,7 +353,7 @@ fn source_probe_reads_dx10_array_and_cube_declarations() {
         let mut b = dx10(1, 1, 28, 3, misc, array);
         b.extend([1, 2, 3, 4]);
         let multiple = array > 1 || misc == 4;
-        assert_eq!(photocraft_codecs::has_unretained_source_data(&b).unwrap(), multiple);
+        assert_eq!(lienzo_codecs::has_unretained_source_data(&b).unwrap(), multiple);
         if multiple {
             assert!(matches!(decode(&b), Err(CodecError::Unsupported { .. })));
         } else {

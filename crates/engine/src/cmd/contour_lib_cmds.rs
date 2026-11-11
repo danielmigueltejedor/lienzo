@@ -5,10 +5,10 @@
 //! The library is [`PresetState::contours`](crate::presets::PresetState); like the other preset
 //! sets it lives in the preferences document and changes the preferences, not a document's
 //! history. A user contour is applied to an effect as a `contour` curve object (see
-//! [`contour_param`]); `.shc` files go through `photocraft_psd::shc` (see [`contours_from_shc`]).
+//! [`contour_param`]); `.shc` files go through `lienzo_psd::shc` (see [`contours_from_shc`]).
 
-use photocraft_doc::Contour;
-use photocraft_doc::adjust::CurvePoint;
+use lienzo_doc::Contour;
+use lienzo_doc::adjust::CurvePoint;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -166,7 +166,7 @@ fn save(s: &mut Session, p: &Value) -> Result<Value> {
             crate::file_cmds::write_file(path, &bytes)?;
             out["path"] = json!(path);
         }
-        None => out["data"] = json!(photocraft_paint::tile::b64_encode(&bytes)),
+        None => out["data"] = json!(lienzo_paint::tile::b64_encode(&bytes)),
     }
     Ok(out)
 }

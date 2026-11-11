@@ -1,4 +1,4 @@
-// Camera Raw's per-pixel develop stages (`photocraft_algo::camera_raw::develop`, constants from
+// Camera Raw's per-pixel develop stages (`lienzo_algo::camera_raw::develop`, constants from
 // `camera_raw::per_pixel`), one fragment per pixel. Each function mirrors the CPU code it is
 // named after, in the same order of operations; `camera_raw.rs` holds the bindings.
 

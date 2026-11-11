@@ -1,6 +1,6 @@
 ---
 title: Guides
-description: Step-by-step guides for the everyday tasks in PhotoCraft.
+description: Step-by-step guides for the everyday tasks in Lienzo.
 order: 20
 verified: 0.8.2
 ---

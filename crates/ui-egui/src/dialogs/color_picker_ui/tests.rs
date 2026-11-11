@@ -34,7 +34,7 @@ fn picker(color: &str) -> Harness<'static, Map<String, Value>> {
         },
         f,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
     h
 }
@@ -242,9 +242,9 @@ fn color_picker_opens_with_hex_focused_and_selected() {
 
 #[test]
 fn color_picker_dialog_hex_field_is_in_tab_order_and_confirms_typed_color() {
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut h = Harness::builder().with_size(vec2(760.0, 480.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     open(h.state_mut(), "foreground");
     h.run_steps(3);
     assert!(h.get_by_role(Role::TextInput).is_focused(), "hex field has focus in dialog frame");
@@ -259,7 +259,7 @@ fn color_picker_dialog_hex_field_is_in_tab_order_and_confirms_typed_color() {
 
 #[test]
 fn alt_reset_restores_orig_color() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.tools.foreground = [0.2, 0.4, 0.6, 1.0];
     let id = open(&mut app, "foreground");
     let f = &mut app.ui.dialog_mut(id).unwrap().fields;
@@ -272,13 +272,13 @@ fn alt_reset_restores_orig_color() {
 #[test]
 fn lab_and_cmyk_fields_take_multi_digit_values() {
     let base = parse_hex("#336699").unwrap();
-    let lab = photocraft_color::convert::srgb_to_lab(base);
-    let cmyk = photocraft_color::convert::rgb_to_cmyk(base);
+    let lab = lienzo_color::convert::srgb_to_lab(base);
+    let cmyk = lienzo_color::convert::rgb_to_cmyk(base);
     // Fields in order: H S B R G B, L a b, C M Y K.
     for (field, typed, want) in [
-        (6, "60", photocraft_color::convert::lab_to_srgb([60.0, lab[1], lab[2]])),
-        (7, "30", photocraft_color::convert::lab_to_srgb([lab[0], 30.0, lab[2]])),
-        (9, "40", photocraft_color::convert::cmyk_to_rgb([0.4, cmyk[1], cmyk[2], cmyk[3]])),
+        (6, "60", lienzo_color::convert::lab_to_srgb([60.0, lab[1], lab[2]])),
+        (7, "30", lienzo_color::convert::lab_to_srgb([lab[0], 30.0, lab[2]])),
+        (9, "40", lienzo_color::convert::cmyk_to_rgb([0.4, cmyk[1], cmyk[2], cmyk[3]])),
     ] {
         let mut h = picker("#336699");
         h.query_all_by_role(Role::SpinButton).nth(field).unwrap().click();
@@ -306,7 +306,7 @@ fn picker_places_actions_above_two_columns_and_web_colors_under_the_field() {
     assert_eq!(h.query_all_by_label("OK").count(), 1);
     let web = h.get_by_label("Only Web Colors").rect();
     assert!(web.left() < hue.left() && web.top() > hue.bottom());
-    // The full dialog should fit even in PhotoCraft's minimum 760 x 480 window.
+    // The full dialog should fit even in Lienzo's minimum 760 x 480 window.
     assert!(black.bottom() - ok.top() < 360.0);
     assert!(black.right() - web.left() < 600.0);
     let hex = h.get_by_role(Role::TextInput).rect();
@@ -315,12 +315,12 @@ fn picker_places_actions_above_two_columns_and_web_colors_under_the_field() {
 
 /// The whole Color Picker window (title, frame and all) is no bigger than Photoshop's: about
 /// 534 x 376 points (Photoshop 27.11 on macOS, measured from a screenshot at the same scale as
-/// PhotoCraft's, which was 682 x 438).
+/// Lienzo's, which was 682 x 438).
 #[test]
 fn the_picker_window_is_no_bigger_than_photoshops() {
     let mut h = Harness::builder().with_size(vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(photocraft_engine::Session::new(), Default::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(lienzo_engine::Session::new(), Default::default())
     });
     h.run_steps(4);
     let id = open(h.state_mut(), "foreground");
@@ -364,14 +364,14 @@ fn web_only_snaps_hex_field_and_component_edits() {
     set_rgb(&mut f, hsb_to_rgb([40.0, 1.0, 1.0]), Keep::Hsv([40.0, 1.0, 1.0]));
     assert_eq!(f["color"], json!("#ff9900"));
     assert!(f.get("__hsv").is_none(), "kept HSV does not outlive a web snap");
-    set_rgb(&mut f, photocraft_color::convert::lab_to_srgb([50.0, 40.0, 20.0]).map(|c| c.clamp(0.0, 1.0)), Keep::Lab([50.0, 40.0, 20.0]));
+    set_rgb(&mut f, lienzo_color::convert::lab_to_srgb([50.0, 40.0, 20.0]).map(|c| c.clamp(0.0, 1.0)), Keep::Lab([50.0, 40.0, 20.0]));
     assert_eq!(not_web_safe(parse_hex(f["color"].as_str().unwrap()).unwrap()), None);
     assert!(f.get("__lab").is_none());
 }
 
 #[test]
 fn web_only_survives_reopen_and_other_picker_targets() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.color_panel.web_only = true;
     let id = open(&mut app, "foreground");
     let f = &app.ui.dialog_mut(id).unwrap().fields;
@@ -388,7 +388,7 @@ fn web_only_survives_reopen_and_other_picker_targets() {
 
 #[test]
 fn sample_at_snaps_when_only_web_colors_is_on() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let id = open(&mut app, "foreground");
     let f = &mut app.ui.dialog_mut(id).unwrap().fields;
     f.insert("__webOnly".into(), json!(true));
@@ -400,9 +400,9 @@ fn sample_at_snaps_when_only_web_colors_is_on() {
 fn side_buttons_and_keyboard_confirm_or_cancel_without_changing_the_other_color() {
     for target in ["foreground", "background"] {
         for action in ["OK", "Cancel", "Enter", "Escape"] {
-            let app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            let app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             let mut h = Harness::builder().with_size(vec2(760.0, 480.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
             let original_fg = h.state().session.tools.foreground;
             let original_bg = h.state().session.tools.background;
             let id = open(h.state_mut(), target);
@@ -449,7 +449,7 @@ fn parse_hex_rejects_multibyte_text() {
 /// The shared HSB conversions give bit-identical output to the picker's old copies.
 #[test]
 fn shared_hsb_output_matches_the_old_picker_conversions() {
-    /// The picker's HSB to sRGB before it used photocraft-color.
+    /// The picker's HSB to sRGB before it used lienzo-color.
     fn old_hsv_to_rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
         let h = (h.rem_euclid(360.0)) / 60.0;
         let c = v * s;
@@ -465,7 +465,7 @@ fn shared_hsb_output_matches_the_old_picker_conversions() {
         let m = v - c;
         [r + m, g + m, b + m]
     }
-    /// The picker's sRGB to HSB before it used photocraft-color.
+    /// The picker's sRGB to HSB before it used lienzo-color.
     fn old_rgb_to_hsv(c: [f32; 3]) -> [f32; 3] {
         let (mx, mn) = (c[0].max(c[1]).max(c[2]), c[0].min(c[1]).min(c[2]));
         let d = mx - mn;
@@ -523,7 +523,7 @@ fn hsv_round_trips() {
 #[test]
 fn field_and_locate_are_inverse_in_every_mode() {
     let rgb = [0.8, 0.3, 0.2];
-    let (hsv, lab) = (rgb_to_hsb(rgb), photocraft_color::convert::srgb_to_lab(rgb));
+    let (hsv, lab) = (rgb_to_hsb(rgb), lienzo_color::convert::srgb_to_lab(rgb));
     for (m, _) in MODES.iter().chain(LAB_MODES) {
         let (x, y, z) = locate(m, hsv, rgb, lab);
         let c = field_color(m, z, x, y);
@@ -534,20 +534,20 @@ fn field_and_locate_are_inverse_in_every_mode() {
 #[test]
 fn lab_fields_are_laid_out_like_photoshops() {
     // Photoshop 25.4. L: a across (green to red), b upwards (blue to yellow).
-    let l = |x, y| photocraft_color::convert::srgb_to_lab(field_color("lab_l", 0.6, x, y));
+    let l = |x, y| lienzo_color::convert::srgb_to_lab(field_color("lab_l", 0.6, x, y));
     assert!(l(0.0, 0.5)[1] < -40.0 && l(1.0, 0.5)[1] > 40.0, "{:?} {:?}", l(0.0, 0.5), l(1.0, 0.5));
     assert!(l(0.5, 1.0)[2] < -40.0 && l(0.5, 0.0)[2] > 40.0, "{:?} {:?}", l(0.5, 1.0), l(0.5, 0.0));
     // a: b across, L upwards (white at the top, black at the bottom).
     assert!(field_color("lab_a", 0.5, 0.5, 0.0).iter().all(|&c| c > 0.99), "white at the top");
     assert!(field_color("lab_a", 0.5, 0.5, 1.0).iter().all(|&c| c < 0.01), "black at the bottom");
-    let a = |x| photocraft_color::convert::srgb_to_lab(field_color("lab_a", 0.5, x, 0.5));
+    let a = |x| lienzo_color::convert::srgb_to_lab(field_color("lab_a", 0.5, x, 0.5));
     assert!(a(0.0)[2] < -40.0 && a(1.0)[2] > 40.0);
     // b: a across, L upwards; its slider runs from yellow (top) to blue.
-    let b = |x| photocraft_color::convert::srgb_to_lab(field_color("lab_b", 0.5, x, 0.5));
+    let b = |x| lienzo_color::convert::srgb_to_lab(field_color("lab_b", 0.5, x, 0.5));
     assert!(b(0.0)[1] < -40.0 && b(1.0)[1] > 40.0);
     let lab = [60.0, 0.0, 0.0];
-    let top = photocraft_color::convert::srgb_to_lab(slider_color("lab_b", 1.0, [0.0; 3], [0.0; 3], lab));
-    let bottom = photocraft_color::convert::srgb_to_lab(slider_color("lab_b", 0.0, [0.0; 3], [0.0; 3], lab));
+    let top = lienzo_color::convert::srgb_to_lab(slider_color("lab_b", 1.0, [0.0; 3], [0.0; 3], lab));
+    let bottom = lienzo_color::convert::srgb_to_lab(slider_color("lab_b", 0.0, [0.0; 3], [0.0; 3], lab));
     assert!(top[2] > 40.0 && bottom[2] < -40.0, "{top:?} {bottom:?}");
 }
 
@@ -569,7 +569,7 @@ fn hue_survives_grey_and_ok_sets_the_colour() {
     f.insert("color".into(), json!("#808080"));
     f.insert("__hsv".into(), json!([200.0, 0.0, 128.0 / 255.0]));
     assert_eq!(current(&f).hsv[0], 200.0);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let id = open(&mut app, "background");
     let d = app.ui.dialog_mut(id).unwrap();
     d.fields.insert("color".into(), json!("#3366cc"));
@@ -582,11 +582,11 @@ fn hue_survives_grey_and_ok_sets_the_colour() {
 /// reopening the picker shows them again.
 #[test]
 fn cmyk_values_survive_ok_and_a_reopen() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let cyan = [1.0, 0.0, 0.0, 0.0];
     let id = open(&mut app, "foreground");
     let d = app.ui.dialog_mut(id).unwrap();
-    set_rgb(&mut d.fields, photocraft_color::convert::cmyk_to_rgb(cyan).map(|c| c.clamp(0.0, 1.0)), Keep::Cmyk(cyan));
+    set_rgb(&mut d.fields, lienzo_color::convert::cmyk_to_rgb(cyan).map(|c| c.clamp(0.0, 1.0)), Keep::Cmyk(cyan));
     let fields = d.fields.clone();
     confirm(&mut app, &fields).unwrap();
     let fg = app.session.tools.foreground;
@@ -596,13 +596,13 @@ fn cmyk_values_survive_ok_and_a_reopen() {
     assert_eq!(again.cmyk, cyan);
 }
 
-fn dialog_color(app: &PhotocraftApp, id: u64) -> &str {
+fn dialog_color(app: &LienzoApp, id: u64) -> &str {
     app.ui.dialogs.iter().find(|d| d.id == id).and_then(|d| d.fields.get("color")).and_then(Value::as_str).unwrap()
 }
 
 #[test]
 fn the_top_picker_samples_the_image() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 40, "height": 20, "background": "transparent"})).unwrap();
     app.run("shape.create", json!({"kind": "rect", "rect": [0, 0, 20, 20], "fill": "#ff0000"})).unwrap();
     app.run("shape.create", json!({"kind": "rect", "rect": [20, 0, 10, 20], "fill": "#00ff00"})).unwrap();

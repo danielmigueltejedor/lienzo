@@ -9,7 +9,7 @@
 use egui::{Align2, Pos2, Rect, Stroke, pos2, vec2};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::paint_mouse::Buttons;
 use crate::state::View;
@@ -164,7 +164,7 @@ pub fn trackpad_delta(ctx: &egui::Context, enabled: bool, touch_gestures: bool) 
 }
 
 /// `view.rotateView`: set or add degrees on the active document's camera.
-pub fn command(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+pub fn command(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let i = app.session.active_index().ok_or("no document open")?;
     let current = app.ui.views.get(i).map(|v| v.rotation).ok_or("no document open")?;
     let rotation = apply_params(current, p)?;
@@ -174,7 +174,7 @@ pub fn command(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
 }
 
 /// `view.resetView`: angle 0, zoom and centre unchanged.
-pub fn reset(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub fn reset(app: &mut LienzoApp) -> Result<Value, String> {
     let i = app.session.active_index().ok_or("no document open")?;
     let v = app.ui.views.get_mut(i).ok_or("no document open")?;
     v.rotation = 0.0;
@@ -227,7 +227,7 @@ pub fn compass_visible(rotation: f32) -> bool {
 
 /// Draw the compass and handle a click / Escape / double-click reset. Returns true when the
 /// pointer over the compass should not start a rotate drag.
-pub fn overlay(app: &PhotocraftApp, ctx: &egui::Context, painter: &egui::Painter, xf: &ViewXform, view: &mut View, response: &egui::Response) -> bool {
+pub fn overlay(app: &LienzoApp, ctx: &egui::Context, painter: &egui::Painter, xf: &ViewXform, view: &mut View, response: &egui::Response) -> bool {
     if app.ui.tool == crate::state::Tool::RotateView && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) && view.rotation != 0.0 {
         view.rotation = 0.0;
         ctx.data_mut(|d| d.remove::<RotateDrag>(id()));

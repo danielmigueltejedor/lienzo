@@ -185,7 +185,7 @@ fn read(d: &Descriptor) -> Option<Value> {
 /// Retain original metadata beside native params so an unedited save need not canonicalize the descriptor.
 pub(super) fn batch_from(d: &Descriptor) -> Mapped {
     let p = read(d).map(|mut p| {
-        p[ORIGINAL] = json!(photocraft_paint::tile::b64_encode(&d.to_bytes()));
+        p[ORIGINAL] = json!(lienzo_paint::tile::b64_encode(&d.to_bytes()));
         p
     });
     p.map_or(Mapped::Unsupported { harmless: false }, |p| step("file.automate.batch", p))
@@ -275,7 +275,7 @@ pub(super) fn batch_to(_: &str, p: &Value) -> Option<Descriptor> {
 /// The original descriptor is reusable only while all represented settings remain unchanged.
 pub(super) fn original_batch(p: &Value) -> Option<Descriptor> {
     let original = p.get(ORIGINAL)?.as_str()?;
-    let d = Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(original)?).ok()?;
+    let d = Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(original)?).ok()?;
     let expected = read(&d)?;
     let mut core = p.clone();
     core.as_object_mut()?.remove(ORIGINAL);

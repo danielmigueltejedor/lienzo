@@ -9,11 +9,11 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
 use super::*;
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#dc1e1e"})).unwrap();
@@ -23,9 +23,9 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// The canvas with the picker open as the brush chip opens it.
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -35,19 +35,19 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn open(h: &mut Harness<'static, PhotocraftApp>) {
+fn open(h: &mut Harness<'static, LienzoApp>) {
     let c = h.state().last_canvas_rect.center();
     let ctx = h.ctx.clone();
     crate::brush_picker::open(&mut h.state_mut().ui, &ctx, [c.x, c.y]);
     h.run_steps(3);
 }
 
-fn top(h: &Harness<'static, PhotocraftApp>, label: &str) -> f32 {
+fn top(h: &Harness<'static, LienzoApp>, label: &str) -> f32 {
     h.get_by_label(label).rect().top()
 }
 

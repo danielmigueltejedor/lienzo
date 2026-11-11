@@ -6,7 +6,7 @@
 use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 use crate::theme::Tokens;
 
@@ -14,8 +14,8 @@ const UNITS: [(&str, &str); 7] =
     [("px", "Pixels"), ("percent", "Percent"), ("in", "Inches"), ("cm", "Centimeters"), ("mm", "Millimeters"), ("pt", "Points"), ("pica", "Picas")];
 
 /// Dialog unit for the Units & Rulers preference.
-fn pref_unit(u: photocraft_engine::prefs::Unit) -> &'static str {
-    use photocraft_engine::prefs::Unit;
+fn pref_unit(u: lienzo_engine::prefs::Unit) -> &'static str {
+    use lienzo_engine::prefs::Unit;
     match u {
         Unit::Pixels => "px",
         Unit::Percent => "percent",
@@ -28,8 +28,8 @@ fn pref_unit(u: photocraft_engine::prefs::Unit) -> &'static str {
 }
 
 /// Image Size resampling for Preferences › General › Image Interpolation.
-pub(crate) fn pref_resample(i: photocraft_engine::prefs::Interpolation) -> &'static str {
-    use photocraft_engine::prefs::Interpolation;
+pub(crate) fn pref_resample(i: lienzo_engine::prefs::Interpolation) -> &'static str {
+    use lienzo_engine::prefs::Interpolation;
     match i {
         Interpolation::BicubicAutomatic => "automatic",
         Interpolation::Nearest => "nearest",
@@ -68,13 +68,13 @@ pub fn reset(f: &mut Map<String, Value>) {
     }
 }
 
-pub fn open(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
+pub fn open(app: &mut LienzoApp, command: &str) -> Option<u64> {
     let unit = pref_unit(app.session.prefs().units_and_rulers.rulers);
     let mut resample = pref_resample(app.session.prefs().general.image_interpolation);
     let pt_per_in = app.session.prefs().units_and_rulers.point_size.per_inch();
     let d = &app.session.active()?.doc;
     let (w, h, res) = (d.size.width as f64, d.size.height as f64, d.resolution_dpi as f64);
-    let label = photocraft_engine::commands::find(command).map(|c| c.label).unwrap_or("Image Size…");
+    let label = lienzo_engine::commands::find(command).map(|c| c.label).unwrap_or("Image Size…");
     let mut f = Map::new();
     f.insert("__command".into(), json!(command));
     f.insert("__label".into(), json!(label));
@@ -89,7 +89,7 @@ pub fn open(app: &mut PhotocraftApp, command: &str) -> Option<u64> {
     f.insert("height".into(), json!(h));
     if command == "image.imageSize" {
         // Indexed Color resamples with Nearest Neighbor only, as the command does (#6019).
-        let indexed = d.mode == photocraft_color::ColorMode::Indexed;
+        let indexed = d.mode == lienzo_color::ColorMode::Indexed;
         if indexed && resample != "automatic" {
             resample = "nearest";
         }

@@ -7,10 +7,8 @@ use exr::prelude::{
     AnyChannel, AnyChannels, Blocks, Compression, Encoding, FlatSamples, Image, ImageAttributes, IntegerBounds, Layer, LayerAttributes, LineOrder,
     WritableImage,
 };
-use photocraft_codecs::f16;
-use photocraft_codecs::{
-    ChannelLayout, DecodeOptions, DecodeWarning, Format, Limits, SampleType, decode, decode_as_with, decode_exr_part, exr_info, probe_size,
-};
+use lienzo_codecs::f16;
+use lienzo_codecs::{ChannelLayout, DecodeOptions, DecodeWarning, Format, Limits, SampleType, decode, decode_as_with, decode_exr_part, exr_info, probe_size};
 
 fn layer_f32(name: &str, comp: Compression, chans: &[(&str, Vec<f32>)]) -> Layer<AnyChannels<FlatSamples>> {
     let n = chans.iter().find(|(_, v)| !v.is_empty()).map_or(0, |(_, v)| v.len());

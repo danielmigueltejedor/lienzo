@@ -2,9 +2,9 @@
 //! scale (sharp at 10×, where a 20×10 px raster would blur), re-rendered when the placement
 //! changes, and its contents open as shape layers.
 
-use photocraft_doc::LayerContent;
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerContent;
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
 use serde_json::json;
 
 const SVG: &str = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\">\
@@ -12,12 +12,12 @@ const SVG: &str = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height
   <rect x=\"0\" y=\"4\" width=\"20\" height=\"0.5\" fill=\"#000000\"/>\
 </svg>";
 
-fn alpha(s: &photocraft_raster::Surface, x: i32, y: i32) -> f32 {
+fn alpha(s: &lienzo_raster::Surface, x: i32, y: i32) -> f32 {
     let px = s.read_region(Rect::new(x, y, x + 1, y + 1));
     *px.last().unwrap()
 }
 
-fn red(s: &photocraft_raster::Surface, x: i32, y: i32) -> f32 {
+fn red(s: &lienzo_raster::Surface, x: i32, y: i32) -> f32 {
     let px = s.read_region(Rect::new(x, y, x + 1, y + 1));
     px[0]
 }
@@ -26,7 +26,7 @@ fn red(s: &photocraft_raster::Surface, x: i32, y: i32) -> f32 {
 fn placed_svg_is_sharp_at_its_placement_scale_and_opens_as_shapes() {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 400, "height": 400, "background": "white"})).unwrap();
-    let r = photocraft_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 1000})).unwrap();
+    let r = lienzo_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 1000})).unwrap();
     assert_eq!(r["bounds"], json!([100.0, 150.0, 300.0, 250.0]), "{r}");
     let doc = s.active().unwrap().doc.clone();
     let layer = doc.layers.last().unwrap();
@@ -40,8 +40,8 @@ fn placed_svg_is_sharp_at_its_placement_scale_and_opens_as_shapes() {
     assert!(red(surf, 200, 189) > 0.9 || red(surf, 200, 189) < 0.1, "edge rows are not half-covered");
 
     // Edit Contents on this smart object: the embedded source opens as shape layers.
-    let photocraft_doc::SmartSource::Embedded { file_name, bytes } = &sm.source else { panic!("embedded") };
-    let inner = photocraft_engine::smart_cmds::decode_source(file_name, bytes).unwrap();
+    let lienzo_doc::SmartSource::Embedded { file_name, bytes } = &sm.source else { panic!("embedded") };
+    let inner = lienzo_engine::smart_cmds::decode_source(file_name, bytes).unwrap();
     assert_eq!(inner.layers.len(), 2);
     assert!(inner.layers.iter().all(|l| matches!(l.content, LayerContent::Shape(_))));
 }
@@ -50,14 +50,14 @@ fn placed_svg_is_sharp_at_its_placement_scale_and_opens_as_shapes() {
 fn re_placing_at_another_scale_re_renders_the_vector_source() {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 300, "height": 300, "background": "white"})).unwrap();
-    photocraft_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 100})).unwrap();
+    lienzo_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 100})).unwrap();
     let doc = s.active().unwrap().doc.clone();
     let layer = doc.layers.last().unwrap();
     let LayerContent::Smart(sm) = &layer.content else { panic!() };
     let mut big = sm.clone();
     let [a, b, c, d, _, _] = big.transform.m;
     big.transform.m = [a * 12.0, b * 12.0, c * 12.0, d * 12.0, 30.0, 30.0];
-    let surf = photocraft_engine::smart_cmds::render(&doc, &big).unwrap().expect("source available");
+    let surf = lienzo_engine::smart_cmds::render(&doc, &big).unwrap().expect("source available");
     // 20 × 10 units at 12× from (30, 30): a hard edge at x = 270 and the thin line at rows 78..84.
     assert!(alpha(&surf, 268, 60) > 0.99 && alpha(&surf, 271, 60) < 0.01);
     assert!(red(&surf, 150, 81) < 0.02 && red(&surf, 150, 75) > 0.98 && red(&surf, 150, 87) > 0.98);
@@ -76,13 +76,13 @@ fn a_pcraft_smart_object_with_a_hostile_svg_does_not_abort_a_later_edit() {
         .spawn(move || {
             let mut s = Session::new();
             s.execute("file.new", json!({"width": 100, "height": 100, "background": "white"})).unwrap();
-            photocraft_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 100})).unwrap();
+            lienzo_engine::file_cmds::place_bytes(&mut s, "logo.svg", SVG.as_bytes().to_vec(), None, &json!({"scale": 100})).unwrap();
             let mut doc = (*s.active().unwrap().doc).clone();
             let LayerContent::Smart(sm) = &mut doc.layers.last_mut().unwrap().content else { panic!("smart object") };
-            sm.source = photocraft_doc::SmartSource::Embedded { file_name: "logo.svg".into(), bytes: std::sync::Arc::new(hostile.into_bytes()) };
-            let carrier = photocraft_format::save_to_bytes(&doc, &photocraft_format::SaveOptions::default()).unwrap();
+            sm.source = lienzo_doc::SmartSource::Embedded { file_name: "logo.svg".into(), bytes: std::sync::Arc::new(hostile.into_bytes()) };
+            let carrier = lienzo_format::save_to_bytes(&doc, &lienzo_format::SaveOptions::default()).unwrap();
 
-            photocraft_engine::file_cmds::open_bytes_as(&mut s, "carrier.pcraft", &carrier, None, None).unwrap();
+            lienzo_engine::file_cmds::open_bytes_as(&mut s, "carrier.pcraft", &carrier, None, None).unwrap();
             let _ = s.execute("image.imageSize", json!({"width": 50, "height": 50}));
             let dir = tempfile::tempdir().unwrap();
             let _ = s.execute("file.saveACopy", json!({"path": dir.path().join("copy.psd").to_string_lossy()}));
@@ -96,8 +96,8 @@ fn a_pcraft_smart_object_with_a_hostile_svg_does_not_abort_a_later_edit() {
 /// lands exactly as the inline place does: still sharp, not a resampled raster.
 #[test]
 fn an_svg_placed_as_a_job_is_as_sharp_as_the_inline_place() {
-    use photocraft_engine::jobs::Started;
-    let dir = std::env::temp_dir().join(format!("photocraft-svg-place-job-{}", std::process::id()));
+    use lienzo_engine::jobs::Started;
+    let dir = std::env::temp_dir().join(format!("lienzo-svg-place-job-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("logo.svg");
     std::fs::write(&path, SVG).unwrap();
@@ -134,7 +134,7 @@ fn an_svg_placed_as_a_job_is_as_sharp_as_the_inline_place() {
 /// at its placement scale like the inline place does.
 #[test]
 fn an_svg_placed_in_steps_is_as_sharp_as_the_inline_place() {
-    use photocraft_engine::jobs::{JobOutcome, Started};
+    use lienzo_engine::jobs::{JobOutcome, Started};
     let params = json!({"scale": 1000});
     let new_doc = || {
         let mut s = Session::new();
@@ -142,7 +142,7 @@ fn an_svg_placed_in_steps_is_as_sharp_as_the_inline_place() {
         s
     };
     let mut inline = new_doc();
-    let want = photocraft_engine::file_cmds::place_bytes(&mut inline, "logo.svg", SVG.as_bytes().to_vec(), None, &params).unwrap();
+    let want = lienzo_engine::file_cmds::place_bytes(&mut inline, "logo.svg", SVG.as_bytes().to_vec(), None, &params).unwrap();
 
     let mut s = new_doc();
     s.set_cooperative_jobs(true);

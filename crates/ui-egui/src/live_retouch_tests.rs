@@ -6,7 +6,7 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, display_doc, strokes_live, tool_event};
 use crate::state::Tool;
 
@@ -14,8 +14,8 @@ const STROKE: [(f64, f64); 4] = [(12.0, 20.0), (30.0, 24.0), (48.0, 18.0), (66.0
 
 /// An 80×40 document at `depth` bits: a white Background with a black block on its left half,
 /// with `tool` picked (14 px, soft, no smoothing).
-fn app(depth: u32, tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(depth: u32, tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 80, "height": 40, "depth": depth})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 40, "height": 40})).unwrap();
     app.run("edit.fill", json!({"color": "#000000"})).unwrap();
@@ -27,15 +27,15 @@ fn app(depth: u32, tool: Tool) -> PhotocraftApp {
 }
 
 /// The active layer's pixels (or its mask) in `doc`.
-fn surface(doc: &photocraft_doc::Document, app: &PhotocraftApp, mask: bool) -> Vec<f32> {
+fn surface(doc: &lienzo_doc::Document, app: &LienzoApp, mask: bool) -> Vec<f32> {
     let l = doc.layer(app.session.active().unwrap().active_layer.unwrap()).unwrap();
     let s = if mask { &l.mask.as_ref().unwrap().surface } else { l.surface().unwrap() };
-    s.read_region(photocraft_geom::Rect::new(0, 0, 80, 40))
+    s.read_region(lienzo_geom::Rect::new(0, 0, 80, 40))
 }
 
 /// Drag `STROKE` with the picked tool. Returns what the canvas showed at the last move (the
 /// targeted surface) and the params the release committed.
-fn live_drag(app: &mut PhotocraftApp, cmd: &str, mask: bool) -> (Vec<f32>, Value) {
+fn live_drag(app: &mut LienzoApp, cmd: &str, mask: bool) -> (Vec<f32>, Value) {
     let (before, steps) = (app.session.active().unwrap().doc.clone(), app.session.active().unwrap().history.past_len());
     let m = Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: STROKE[0].0, y: STROKE[0].1, pressure: 1.0 }, m);
@@ -60,7 +60,7 @@ fn live_drag(app: &mut PhotocraftApp, cmd: &str, mask: bool) -> (Vec<f32>, Value
 /// The release committed what the drag showed, and the one-shot command gives the same pixels
 /// again; without the live stroke's seed too where nothing is jittered (`keep_seed` false: a
 /// brush without jitter paints the same whatever the seed; Impressionist jitters every dab).
-fn check_commit(app: &mut PhotocraftApp, cmd: &str, shown: &[f32], mut params: Value, mask: bool, keep_seed: bool) {
+fn check_commit(app: &mut LienzoApp, cmd: &str, shown: &[f32], mut params: Value, mask: bool, keep_seed: bool) {
     let committed = app.session.active().unwrap().doc.clone();
     assert!(surface(&committed, app, mask) == shown, "{cmd}: the release commits the pixels the drag showed");
     app.run("edit.undo", json!({})).unwrap();

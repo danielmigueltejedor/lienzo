@@ -7,7 +7,7 @@ use super::gesture::constrained_polygon_point;
 use super::strokes::{EngineStroke, SPOT_HEALING_TRAIL, draw_smoothing_string, strokes_live};
 use super::textures::texture_side;
 use super::view_xform::ViewXform;
-use super::{Color32, DRect, Document, Mesh, PhotocraftApp, Pos2, Rect, Stroke, TextureOptions, Tool, json, pos2, vec2};
+use super::{Color32, DRect, Document, LienzoApp, Mesh, Pos2, Rect, Stroke, TextureOptions, Tool, json, pos2, vec2};
 
 /// A texture mapped over the `size` document area starting at `origin` (follows a rotated view).
 pub(super) fn paint_mapped_image_at(painter: &egui::Painter, xf: &ViewXform, tex: egui::TextureId, uv: Rect, origin: [f32; 2], size: [f32; 2], tint: Color32) {
@@ -401,7 +401,7 @@ fn ring(outer: DRect, inner: DRect) -> Vec<DRect> {
 /// downsampled proxy past that (so a far-off layer costs no more than a 16 MP composite).
 /// Drawn before the canvas, each band reaching a point under its edge. Returns whether anything
 /// past the canvas was drawn.
-pub(super) fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, idx: usize, output: Option<u32>) -> bool {
+pub(super) fn draw_beyond_canvas(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform, idx: usize, output: Option<u32>) -> bool {
     let ctx = painter.ctx().clone();
     let Some((snapshot, id)) = app.session.documents().get(idx).map(|st| (std::sync::Arc::downgrade(&st.doc), st.doc.id)) else { return false };
     let key = egui::Id::unique(("crop-beyond-canvas", id.0, output));
@@ -422,10 +422,10 @@ pub(super) fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painte
         Some(c) => c,
         None => {
             let t0 = crate::gpu_canvas::now_ms();
-            let extent = photocraft_engine::extra_cmds::reveal_all_bounds(&doc);
+            let extent = lienzo_engine::extra_cmds::reveal_all_bounds(&doc);
             // One texel per `k` document pixels keeps every texture within the device's side.
             let k = extent.width().max(extent.height()).div_ceil(texture_side(&ctx)).max(1);
-            let proxy = (k > 1).then(|| photocraft_compose::proxy::proxy_document(&doc, k));
+            let proxy = (k > 1).then(|| lienzo_compose::proxy::proxy_document(&doc, k));
             let src = proxy.as_ref().unwrap_or(&*doc);
             let k = k as i32;
             let opts = TextureOptions { magnification: egui::TextureFilter::Nearest, ..TextureOptions::LINEAR };
@@ -435,7 +435,7 @@ pub(super) fn draw_beyond_canvas(app: &mut PhotocraftApp, painter: &egui::Painte
                     // The proxy pixels over `b`: document pixels / k, rounded outwards.
                     let up = |v: i32| v.div_euclid(k) + i32::from(v.rem_euclid(k) != 0);
                     let p = DRect::new(b.x0.div_euclid(k), b.y0.div_euclid(k), up(b.x1), up(b.y1));
-                    let buf = photocraft_compose::render_reduced_rect(src, p, p.width(), p.height());
+                    let buf = lienzo_compose::render_reduced_rect(src, p, p.width(), p.height());
                     let tex = ctx.load_texture("crop-beyond-canvas", display_image(display.as_deref(), &buf), opts);
                     (b, DRect::new(p.x0.saturating_mul(k), p.y0.saturating_mul(k), p.x1.saturating_mul(k), p.y1.saturating_mul(k)), tex)
                 })
@@ -523,7 +523,7 @@ fn textured_quad(painter: &egui::Painter, tex: egui::TextureId, q: [Pos2; 4], uv
 }
 
 /// Overlays that persist between gestures: polygonal or magnetic lasso in progress, pending crop box.
-pub(super) fn draw_tool_state(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, hover: Option<Pos2>) {
+pub(super) fn draw_tool_state(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform, hover: Option<Pos2>) {
     crate::magnetic_lasso_ui::draw(app, painter, xf, hover);
     if !app.ui.polygon.is_empty() {
         let mut pts: Vec<Pos2> = app.ui.polygon.iter().map(|p| xf.to_screen(p[0] as f32, p[1] as f32)).collect();
@@ -578,7 +578,7 @@ pub(super) fn draw_tool_state(app: &PhotocraftApp, painter: &egui::Painter, xf: 
     }
 }
 
-pub(super) fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub(super) fn draw_drag_preview(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     draw_tool_state(app, painter, xf, painter.ctx().input(|i| i.pointer.hover_pos()));
     // Remove strokes waiting for ↩ stay tinted between drags.
     crate::retouch_ui::draw_remove_pending(app, painter, xf);
@@ -628,7 +628,7 @@ pub(super) fn draw_drag_preview(app: &mut PhotocraftApp, painter: &egui::Painter
             let size = [st.doc.size.width, st.doc.size.height];
             let doc_rect = xf.doc_rect(st.doc.bounds());
             let trail = app.trail.get_or_insert_with(|| crate::stroke_trail::Trail::new(size));
-            let brush = || photocraft_engine::retouch_cmds::stroke_brush(&app.session.tools.brush, &json!({}));
+            let brush = || lienzo_engine::retouch_cmds::stroke_brush(&app.session.tools.brush, &json!({}));
             match t {
                 // Quick Selection reads the brush's size alone (`select.quick`).
                 Tool::QuickSelection => trail.feed(&d.points, app.session.tools.brush.size),

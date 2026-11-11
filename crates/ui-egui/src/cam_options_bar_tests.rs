@@ -9,15 +9,15 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DialogKind, Tool};
 
 use super::{COLOR_RANGE_ALERT, STRUCTURE_RANGE_ALERT};
 
-fn app_harness(live_box: bool) -> Harness<'static, PhotocraftApp> {
+fn app_harness(live_box: bool) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1600.0, 900.0)).with_step_dt(1.0 / 60.0).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("select.rect", json!({"x": 10, "y": 10, "width": 40, "height": 30})).unwrap();
         app.ui.tool = Tool::ContentAwareMove;
@@ -31,12 +31,12 @@ fn app_harness(live_box: bool) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn spin<'a>(h: &'a Harness<'static, PhotocraftApp>, label: &str) -> egui_kittest::Node<'a> {
+fn spin<'a>(h: &'a Harness<'static, LienzoApp>, label: &str) -> egui_kittest::Node<'a> {
     h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some(label)).unwrap_or_else(|| panic!("the {label} field"))
 }
 
 /// Types `text` into the named field, then leaves it with Tab or Enter.
-fn type_field(h: &mut Harness<'static, PhotocraftApp>, label: &str, text: &str, key: egui::Key) {
+fn type_field(h: &mut Harness<'static, LienzoApp>, label: &str, text: &str, key: egui::Key) {
     spin(h, label).click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -46,15 +46,15 @@ fn type_field(h: &mut Harness<'static, PhotocraftApp>, label: &str, text: &str, 
     h.run_steps(3);
 }
 
-fn alert(h: &Harness<'static, PhotocraftApp>) -> Option<String> {
+fn alert(h: &Harness<'static, LienzoApp>) -> Option<String> {
     h.state().ui.dialogs.iter().find(|d| d.kind == DialogKind::Error).and_then(|d| d.fields.get("message")).and_then(|m| m.as_str()).map(str::to_owned)
 }
 
-fn steps(h: &Harness<'static, PhotocraftApp>) -> usize {
+fn steps(h: &Harness<'static, LienzoApp>) -> usize {
     h.state().session.active().unwrap().history.past_len()
 }
 
-fn click_at(h: &mut Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+fn click_at(h: &mut Harness<'static, LienzoApp>, p: egui::Pos2) {
     h.hover_at(p);
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });

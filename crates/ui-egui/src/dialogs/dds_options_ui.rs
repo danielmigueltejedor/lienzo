@@ -1,20 +1,20 @@
 //! DDS Options: the compression and mip chain File › Save As and Save a Copy ask for before
 //! writing a DirectDraw Surface texture (#1327). Photoshop has no DDS writer of its own (a plug-in
 //! adds one), so this follows the texture tools' usual choices: uncompressed, or BC1/BC2/BC3
-//! (DXT1/DXT3/DXT5), and whether to generate mipmaps (see `photocraft_io::DdsOptions`).
+//! (DXT1/DXT3/DXT5), and whether to generate mipmaps (see `lienzo_io::DdsOptions`).
 //!
 //! The save is parked in [`Prompt`] while the modal is up (egui is immediate-mode) and written
 //! once answered. Cancel drops the save. Scripts skip the prompt by passing `ddsCompression` or
 //! `ddsMipmaps`.
 
-use photocraft_io::{DdsCompression, DdsOptions};
+use lienzo_io::{DdsCompression, DdsOptions};
 
-use crate::{ExportSettings, PhotocraftApp};
+use crate::{ExportSettings, LienzoApp};
 
 /// A save waiting on the DDS Options answer.
 pub struct Prompt {
     /// The document that requested the save, even if tabs change while this is open.
-    doc: photocraft_doc::DocId,
+    doc: lienzo_doc::DocId,
     /// Where the texture goes.
     pub path: String,
     /// The options chosen, starting uncompressed without mipmaps.
@@ -29,13 +29,13 @@ pub struct Prompt {
 
 /// `true` when `path` names a DDS texture.
 pub fn wants_prompt(path: &str) -> bool {
-    photocraft_engine::file_cmds::extension(path).and_then(|e| photocraft_codecs::from_extension(&e)) == Some(photocraft_codecs::Format::Dds)
+    lienzo_engine::file_cmds::extension(path).and_then(|e| lienzo_codecs::from_extension(&e)) == Some(lienzo_codecs::Format::Dds)
 }
 
 /// The DDS options a command or control call asks for (`"ddsCompression"`, `"ddsMipmaps"`),
 /// which skip the prompt.
 pub fn options_param(params: &serde_json::Value, cmd: &str) -> Result<Option<DdsOptions>, String> {
-    photocraft_engine::file_cmds::dds_param(params, cmd).map_err(|e| e.to_string())
+    lienzo_engine::file_cmds::dds_param(params, cmd).map_err(|e| e.to_string())
 }
 
 /// The params a save with `options` is recorded with.
@@ -45,7 +45,7 @@ pub fn record(options: DdsOptions, step: &mut serde_json::Value) {
 }
 
 /// Parks the save behind the prompt. A prompt already waiting is never replaced.
-pub fn park(app: &mut PhotocraftApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
+pub fn park(app: &mut LienzoApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
     if app.save_options_open() {
         return Err(crate::SAVE_OPTIONS_OPEN.into());
     }
@@ -65,7 +65,7 @@ fn label(c: DdsCompression) -> &'static str {
     }
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = &mut app.dds_options else { return };
     let (mut ok, mut cancel) = (false, false);
     let mut options = p.options;

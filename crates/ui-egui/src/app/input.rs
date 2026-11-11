@@ -1,4 +1,4 @@
-use super::{PhotocraftApp, SyntheticTarget};
+use super::{LienzoApp, SyntheticTarget};
 
 /// Remove one contiguous run equal to `batch` from `events` (eframe's preserved synthetic
 /// input). A no-op when the run is not present.
@@ -22,7 +22,7 @@ pub(crate) fn read_dropped(_f: &dyn egui::DroppedFile) -> Result<Vec<u8>, String
     Err("drag-and-drop on the web is handled by the page; use File → Open".into())
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// The document/focus identity the in-flight synthetic batch was queued for.
     fn synthetic_target(&self, ctx: &egui::Context) -> SyntheticTarget {
         SyntheticTarget { document: self.document_identity(), focus: ctx.memory(|m| m.focused()) }
@@ -38,7 +38,7 @@ impl PhotocraftApp {
     /// further step is drained, so hidden logic ticks cannot accumulate several batches into one
     /// pass. A document or focus change observed here is before eframe consumes the events, so the
     /// batch is dropped and its waiting control replies fail instead of landing somewhere else.
-    /// If a pass consumed it but PhotoCraft returned before handling input (fonts not ready), the
+    /// If a pass consumed it but Lienzo returned before handling input (fonts not ready), the
     /// same batch is appended again on the next hook, exactly once.
     pub(crate) fn inject_synthetic(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
         if self.synthetic_batch.is_some() {

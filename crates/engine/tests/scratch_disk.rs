@@ -1,18 +1,18 @@
 //! Disk-backed current pixels and history: lossless undo, and failed reads never commit.
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer};
-use photocraft_engine::Session;
-use photocraft_geom::{Rect, Size, TileCoord};
-use photocraft_raster::spill;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer};
+use lienzo_engine::Session;
+use lienzo_geom::{Rect, Size, TileCoord};
+use lienzo_raster::spill;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
 
 #[test]
 fn scratch_pixels_history_and_failed_save_are_transactional() {
-    let dir = std::env::temp_dir().join(format!("photocraft-engine-scratch-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-engine-scratch-{}", std::process::id()));
     let mut session = Session::new();
     session.edit_prefs(|p| {
-        p.scratch_disks.disks = vec![photocraft_engine::prefs::ScratchDisk { path: dir.to_string_lossy().into(), enabled: true }];
+        p.scratch_disks.disks = vec![lienzo_engine::prefs::ScratchDisk { path: dir.to_string_lossy().into(), enabled: true }];
         p.performance.memory_usage_mb = 1;
     });
     assert!(spill::enabled());
@@ -68,9 +68,9 @@ fn scratch_pixels_history_and_failed_save_are_transactional() {
     assert!(Arc::ptr_eq(&session.active().unwrap().doc, &retained));
     assert_eq!(session.active().unwrap().revision, revision);
     assert_eq!(session.active().unwrap().active_layer, Some(id));
-    let mut writer = photocraft_format::PcraftWriter::new();
+    let mut writer = lienzo_format::PcraftWriter::new();
     assert!(writer.save_zip(&retained, &Default::default()).is_err());
-    assert!(photocraft_io::export(&retained, "png", &Default::default()).is_err());
+    assert!(lienzo_io::export(&retained, "png", &Default::default()).is_err());
     // No failure or recovery happens during a retry, so only the document's own health
     // refuses it.
     let generation = spill::read_error_generation();
@@ -96,9 +96,9 @@ fn scratch_pixels_history_and_failed_save_are_transactional() {
     spill::settle();
     let healthy = session.active().unwrap().doc.clone();
     assert!(healthy.scratch_health().is_ok());
-    let (saved, _) = photocraft_format::PcraftWriter::new().save_zip(&healthy, &Default::default()).unwrap();
-    assert_eq!(photocraft_format::load_from_bytes(&saved).unwrap().layers, healthy.layers);
-    assert!(photocraft_io::export(&healthy, "png", &Default::default()).is_ok());
+    let (saved, _) = lienzo_format::PcraftWriter::new().save_zip(&healthy, &Default::default()).unwrap();
+    assert_eq!(lienzo_format::load_from_bytes(&saved).unwrap().layers, healthy.layers);
+    assert!(lienzo_io::export(&healthy, "png", &Default::default()).is_ok());
     assert!(retained.scratch_health().is_err());
 
     file.seek(SeekFrom::Start(0)).unwrap();
@@ -111,7 +111,7 @@ fn scratch_pixels_history_and_failed_save_are_transactional() {
     }
     assert!(spill::check_integrity().is_ok());
     let (bytes, _) = writer.save_zip(&retained, &Default::default()).unwrap();
-    let loaded = photocraft_format::load_from_bytes(&bytes).unwrap();
+    let loaded = lienzo_format::load_from_bytes(&bytes).unwrap();
     assert_eq!(loaded.layers, retained.layers);
     drop((session, before, retained, healthy, loaded, writer, file));
     spill::configure(None, 0).unwrap();

@@ -60,7 +60,7 @@ fn mask_from_selection(sel: &Surface) -> LayerMask {
 /// Appends a smart filter (from a `filter.*` command) and re-renders. A selection becomes the
 /// filter mask, as in Photoshop. Without a renderable source the filter is applied to the cached
 /// pixels (and still recorded).
-pub(crate) fn add_smart_filter(doc: &mut Document, id: LayerId, sf: photocraft_doc::SmartFilter, selection: Option<&Surface>) -> Result<()> {
+pub(crate) fn add_smart_filter(doc: &mut Document, id: LayerId, sf: lienzo_doc::SmartFilter, selection: Option<&Surface>) -> Result<()> {
     add_smart_filter_in(doc, id, sf, selection, &crate::jobs::JobCtx::new())
 }
 
@@ -68,7 +68,7 @@ pub(crate) fn add_smart_filter(doc: &mut Document, id: LayerId, sf: photocraft_d
 pub(crate) fn add_smart_filter_in(
     doc: &mut Document,
     id: LayerId,
-    sf: photocraft_doc::SmartFilter,
+    sf: lienzo_doc::SmartFilter,
     selection: Option<&Surface>,
     ctx: &crate::jobs::JobCtx,
 ) -> Result<()> {
@@ -199,7 +199,7 @@ pub(super) fn set_filter_params(s: &mut Session, p: &Value) -> Result<Value> {
         let mut fp = crate::filters::params_for(DISPLACE, &request).ok_or_else(|| bad(CMD, "unreadable Displace settings"))?;
         crate::filters_ext::resolve(s, &mut fp, &request)?;
         match fp {
-            photocraft_algo::FilterParams::Displace { map, .. } => map,
+            lienzo_algo::FilterParams::Displace { map, .. } => map,
             _ => None,
         }
     } else {
@@ -208,8 +208,8 @@ pub(super) fn set_filter_params(s: &mut Session, p: &Value) -> Result<Value> {
     edit_filters(s, p, "Edit Smart Filter", |sm| {
         let i = filter_index(CMD, p, sm)?;
         let f = &mut sm.smart_filters[i];
-        if f.command == photocraft_io::smart_map::UNSUPPORTED_FILTER {
-            return Err(bad(CMD, "this smart filter isn't implemented in PhotoCraft: it is kept as is (it can be hidden, moved or deleted)"));
+        if f.command == lienzo_io::smart_map::UNSUPPORTED_FILTER {
+            return Err(bad(CMD, "this smart filter isn't implemented in Lienzo: it is kept as is (it can be hidden, moved or deleted)"));
         }
         if let Some(params) = shape_params {
             f.params = params;
@@ -223,10 +223,10 @@ pub(super) fn set_filter_params(s: &mut Session, p: &Value) -> Result<Value> {
         }
         if f.command == DISPLACE {
             if let Some(map) = &new_map {
-                f.params = photocraft_io::smart_map::displace_embed_map(&f.params, map)
+                f.params = lienzo_io::smart_map::displace_embed_map(&f.params, map)
                     .ok_or_else(|| bad(CMD, "the displacement map is too large to keep in a Smart Object's filter"))?;
             } else if new_path {
-                f.params = photocraft_io::smart_map::displace_without_map(&f.params);
+                f.params = lienzo_io::smart_map::displace_without_map(&f.params);
             }
         }
         // Authorize the underlying command with the complete merged params, including paths

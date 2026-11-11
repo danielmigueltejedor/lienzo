@@ -10,10 +10,10 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use photocraft_color::ColorMode;
-use photocraft_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, TextStyles};
-use photocraft_geom::Rect;
+use lienzo_color::ColorMode;
+use lienzo_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, TextStyles};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;

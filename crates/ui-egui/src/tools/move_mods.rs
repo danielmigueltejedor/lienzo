@@ -21,7 +21,7 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
@@ -80,22 +80,22 @@ pub struct MoveDrag {
     dup_from: Option<usize>,
 }
 
-fn past_len(app: &PhotocraftApp) -> Option<usize> {
+fn past_len(app: &LienzoApp) -> Option<usize> {
     app.session.active().map(|st| st.history.past_len())
 }
 
-fn moving(app: &PhotocraftApp) -> bool {
+fn moving(app: &LienzoApp) -> bool {
     app.drag.as_ref().is_some_and(|d| d.tool == Tool::Move)
 }
 
 /// The pointer reflects the pending copy, then the latched duplication for the whole drag.
-pub fn copying(app: &PhotocraftApp, alt: bool) -> bool {
+pub fn copying(app: &LienzoApp, alt: bool) -> bool {
     if moving(app) && app.move_mods.start.is_some() { app.move_mods.alt || app.move_mods.dup_from.is_some() } else { alt }
 }
 
 /// Duplicates the selected layers (the copies become the selection), remembering the history
 /// length before so [`fold_history`] can merge the copy and the move into one step.
-fn duplicate(app: &mut PhotocraftApp) -> Option<usize> {
+fn duplicate(app: &mut LienzoApp) -> Option<usize> {
     let before = past_len(app)?;
     // In place: the copy follows the pointer from the original, artboards too (#1531).
     match app.run("layer.duplicate", json!({"inPlace": true})) {
@@ -110,7 +110,7 @@ fn duplicate(app: &mut PhotocraftApp) -> Option<usize> {
 }
 
 /// Merges every history step after `from` into one step called `label`.
-fn fold_history(app: &mut PhotocraftApp, from: usize, label: &str) {
+fn fold_history(app: &mut LienzoApp, from: usize, label: &str) {
     let Some(st) = app.session.active_mut() else { return };
     while st.history.past_len() > from + 1 {
         if !st.history.purge_last() {
@@ -124,7 +124,7 @@ fn fold_history(app: &mut PhotocraftApp, from: usize, label: &str) {
 
 /// Rewrites a Move-tool pointer event for the held modifiers: ⇧ locks it to an axis, and the
 /// first real movement of an ⌥-drag duplicates the layers being moved. Other tools pass through.
-pub fn filter_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> ToolEvent {
+pub fn filter_event(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) -> ToolEvent {
     if app.active_tool() != Tool::Move || app.ui.transform.is_some() {
         app.move_mods = MoveDrag::default();
         return ev;
@@ -145,7 +145,7 @@ pub fn filter_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifier
     }
 }
 
-fn drag_to(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
+fn drag_to(app: &mut LienzoApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
     let Some(start) = app.move_mods.start.filter(|_| moving(app)) else { return p };
     // Selected pixels (`move_ui`): ⌥ copied them at the press.
     let pixels = app.drag.as_ref().is_some_and(|d| d.sel_move.is_some());
@@ -181,12 +181,12 @@ pub(crate) fn selection_drag_to(d: &mut crate::canvas::Drag, p: [f64; 2], shift:
 }
 
 /// The Move drag in progress is an ⌥-drag that has duplicated the layers (it now moves the copies).
-pub(crate) fn duplicated(app: &PhotocraftApp) -> bool {
+pub(crate) fn duplicated(app: &LienzoApp) -> bool {
     moving(app) && app.move_mods.dup_from.is_some()
 }
 
 /// Call after the Move tool finished its drag: an ⌥-drag's copy and move become one step.
-pub fn finish(app: &mut PhotocraftApp) {
+pub fn finish(app: &mut LienzoApp) {
     let st = std::mem::take(&mut app.move_mods);
     if let Some(from) = st.dup_from {
         fold_history(app, from, tl!("Move"));
@@ -195,7 +195,7 @@ pub fn finish(app: &mut PhotocraftApp) {
 
 /// Call when a Move drag ends without moving (its layers were dragged to another document): an
 /// ⌥-drag's copy is taken back.
-pub fn abandon(app: &mut PhotocraftApp) {
+pub fn abandon(app: &mut LienzoApp) {
     if std::mem::take(&mut app.move_mods).dup_from.is_some() {
         // Exactly, also in non-linear history (where an undo would land on a later state).
         app.session.rollback();
@@ -207,7 +207,7 @@ pub fn abandon(app: &mut PhotocraftApp) {
 /// 25 %; 1 at 66.7 %: whole pixels only), zoomed in still one. No cap: the zoom bottoms out
 /// with the document's shorter side 2 px on screen (`zoom_levels::min`), so a step is at most
 /// half that side. ⇧'s 10 px don't scale. Free Transform keeps 1 px.
-fn screen_pixel_step(app: &PhotocraftApp) -> f64 {
+fn screen_pixel_step(app: &LienzoApp) -> f64 {
     let zoom = f64::from(app.current_zoom());
     if app.ui.transform.is_some() || !zoom.is_finite() || zoom <= 0.0 {
         return 1.0;
@@ -224,7 +224,7 @@ fn screen_pixel_step(app: &PhotocraftApp) -> f64 {
 /// ⌥ duplicates the layers first. ⌘-arrows (Ctrl off the Mac) do the same from most other tools,
 /// where ⌘ is the temporary Move tool (`hold_keys::cmd_nudges`, #2474). Returns true when a key
 /// was used.
-pub fn arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn arrow_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if app.ui.text_edit.is_some() {
         return false;
     }
@@ -252,7 +252,7 @@ pub fn arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 
 /// ← / → with a painting tool: turn the brush tip 1° (⇧ 15°), as Photoshop does; → turns it
 /// clockwise. Returns true when a key was used.
-fn brush_arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn brush_arrow_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     use egui::{Key, Modifiers};
     // Only plain or ⇧ arrows (`consume_key` ignores an extra ⌥, which kerns type), and never
     // while type is being edited.
@@ -278,7 +278,7 @@ fn brush_arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 /// pixels, as the Move tool (also when ⌘ makes it the temporary Move tool). Nudges that follow
 /// each other are one History state, or one Undo step of the box (`nudge_bundle`); the selected
 /// pixels float until dropped, which is one state already.
-pub fn nudge(app: &mut PhotocraftApp, dx: f64, dy: f64, duplicate_first: bool) {
+pub fn nudge(app: &mut LienzoApp, dx: f64, dy: f64, duplicate_first: bool) {
     if app.ui.transform.is_some() {
         crate::transform_tool::nudge(app, dx, dy);
         return;
@@ -321,11 +321,11 @@ pub fn nudge(app: &mut PhotocraftApp, dx: f64, dy: f64, duplicate_first: bool) {
 /// (`nudge_bundle`); the pixels stay put. A floating piece (⌘-dragged pixels) moves instead, like
 /// a plain drag on it. Not while a drag, a polygon or a Magnetic Lasso border is in progress.
 /// Returns true when a key was used.
-fn selection_arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+fn selection_arrow_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if !crate::tool_feedback::is_selection_tool(app.ui.tool) || app.drag.is_some() || !app.ui.polygon.is_empty() || app.ui.magnetic.active() {
         return false;
     }
-    let floating = app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
+    let floating = app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
     if !floating && !app.session.is_enabled("select.transformSelection") {
         return false;
     }

@@ -1,6 +1,6 @@
 //! Process-wide, capped pool of large scratch buffers.
 //!
-//! With glibc's mmap threshold pinned (`MALLOC_TRIM_THRESHOLD_`, which is how PhotoCraft returns
+//! With glibc's mmap threshold pinned (`MALLOC_TRIM_THRESHOLD_`, which is how Lienzo returns
 //! memory to the OS), every allocation over 128 KiB is a fresh `mmap` that is page-faulted in and
 //! `munmap`ed on free. Tiles, compositor bands and filter scratch are all that size, so a single
 //! viewport render took 350× the page faults. This pool keeps freed buffers (at least

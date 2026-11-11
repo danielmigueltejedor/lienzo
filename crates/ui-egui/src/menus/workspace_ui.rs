@@ -10,7 +10,7 @@ use egui::{Align2, RichText, vec2};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 /// A View › Pixel Aspect Ratio › Custom entry.
@@ -55,17 +55,17 @@ pub fn handles(id: &str) -> bool {
 }
 
 /// Saved workspace names, in menu order.
-pub fn saved_names(app: &PhotocraftApp) -> Vec<String> {
+pub fn saved_names(app: &LienzoApp) -> Vec<String> {
     app.session.prefs().workspaces.keys().cloned().collect()
 }
 
-fn saved_name(app: &PhotocraftApp, id: &str) -> Option<String> {
+fn saved_name(app: &LienzoApp, id: &str) -> Option<String> {
     let i = id.strip_prefix(SAVED)?.parse::<usize>().ok()?;
     app.session.prefs().workspaces.keys().nth(i).cloned()
 }
 
 /// The top-bar workspace switcher's options as (key, label): the presets, then saved workspaces.
-pub fn switcher_options(app: &PhotocraftApp) -> Vec<(String, String)> {
+pub fn switcher_options(app: &LienzoApp) -> Vec<(String, String)> {
     // Keys stay English (`apply_workspace` matches them); the dropdown shows the preset labels
     // in the UI language.
     let presets = [
@@ -81,7 +81,7 @@ pub fn switcher_options(app: &PhotocraftApp) -> Vec<(String, String)> {
     opts
 }
 
-pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &LienzoApp, id: &str) -> Option<bool> {
     match id {
         i if i.starts_with(SAVED) => Some(saved_name(app, i).is_some_and(|n| n == app.ui.workspace)),
         "window.panel.modifierKeys" => Some(app.ui.shell.modifier_keys),
@@ -91,7 +91,7 @@ pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
     }
 }
 
-pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn is_enabled(app: &LienzoApp, id: &str) -> Option<bool> {
     Some(match id {
         "window.workspace.deleteWorkspace" => !app.session.prefs().workspaces.is_empty(),
         "view.thirtyTwoBitPreviewOptions" => app.session.is_enabled(id),
@@ -101,7 +101,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
 }
 
 /// Latched Modifier Keys panel keys added to the real ones.
-pub fn sticky_mods(app: &PhotocraftApp, mut m: egui::Modifiers) -> egui::Modifiers {
+pub fn sticky_mods(app: &LienzoApp, mut m: egui::Modifiers) -> egui::Modifiers {
     let s = &app.ui.shell;
     m.shift |= s.sticky_shift;
     m.alt |= s.sticky_alt;
@@ -124,7 +124,7 @@ fn fields(v: Value) -> Map<String, Value> {
     v.as_object().cloned().unwrap_or_default()
 }
 
-fn open(app: &mut PhotocraftApp, kind: &str, f: Value) -> Result<Value, String> {
+fn open(app: &mut LienzoApp, kind: &str, f: Value) -> Result<Value, String> {
     app.ui.shell.dialog = Some((kind.to_string(), fields(f)));
     Ok(json!({"dialog": kind}))
 }
@@ -133,7 +133,7 @@ fn open(app: &mut PhotocraftApp, kind: &str, f: Value) -> Result<Value, String> 
 const PRESETS: [&str; 6] = ["Essentials", "Photography", "Painting", "Pixel Art", "Graphic and Web", "Motion"];
 
 /// Run a shell command, or open its dialog. `None` when `id` isn't ours.
-pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut LienzoApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id == "view.thirtyTwoBitPreviewOptions" && no_params(params) {
         let d = app.session.active()?;
         let h = app.session.color.hdr.get(&d.doc.id).copied().unwrap_or_default();
@@ -204,7 +204,7 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<
 
 /// Window › Workspace › New Workspace…: save the panel layout (and optionally keyboard
 /// shortcuts, menus and toolbar) under a name, and make it current.
-fn new_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+fn new_workspace(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let name = p.get("name").and_then(Value::as_str).map(str::trim).unwrap_or("").to_string();
     if name.is_empty() {
         return Err("a workspace needs a name".into());
@@ -236,7 +236,7 @@ fn new_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
     Ok(json!({"workspace": name, "replaced": replaced}))
 }
 
-fn delete_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+fn delete_workspace(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let name = p.get("name").and_then(Value::as_str).ok_or("pass `name`")?.to_string();
     if !app.session.prefs().workspaces.contains_key(&name) {
         return Err(format!("no saved workspace \"{name}\""));
@@ -249,7 +249,7 @@ fn delete_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String>
     Ok(json!({"deleted": name}))
 }
 
-fn select_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+fn select_workspace(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let name = p.get("name").and_then(Value::as_str).ok_or("pass `name`")?.to_string();
     if PRESETS.contains(&name.as_str()) {
         app.ui.workspace = name.clone();
@@ -265,7 +265,7 @@ fn select_workspace(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String>
 }
 
 /// Apply the current workspace when it is a saved one. Returns false for the built-in presets.
-pub fn apply_custom(app: &mut PhotocraftApp) -> bool {
+pub fn apply_custom(app: &mut LienzoApp) -> bool {
     let Some(ws) = app.session.prefs().workspaces.get(&app.ui.workspace).cloned() else { return false };
     // Workspaces saved before the dock layout existed get the default heights.
     app.ui.dock = Default::default();
@@ -289,7 +289,7 @@ pub fn apply_custom(app: &mut PhotocraftApp) -> bool {
 
 /// Custom Pixel Aspect Ratio: `{name, ratio}` adds (or updates) and selects; `{delete: name}`
 /// removes; `{select: name}` selects a saved one.
-fn custom_par(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+fn custom_par(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let s = &mut app.ui.shell;
     if let Some(n) = p.get("delete").and_then(Value::as_str) {
         let before = s.custom_pars.len();
@@ -366,7 +366,7 @@ pub fn title(kind: &str) -> &'static str {
 
 /// OK on the open dialog (its button, or `ui.dialog.confirm {"dialog": "shell"}`): runs its
 /// command, then closes it; on an error the dialog stays open.
-pub fn confirm(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, ctx: &egui::Context) -> Result<Value, String> {
     let (kind, f) = app.ui.shell.dialog.clone().ok_or("no dialog is open")?;
     let (id, p) = dialog_command(&kind, &f).ok_or_else(|| format!("unknown dialog `{kind}`"))?;
     let r = crate::menus::invoke(app, ctx, id, p);
@@ -377,7 +377,7 @@ pub fn confirm(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<Value, St
 }
 
 /// Draws the Modifier Keys panel and the open dialog.
-pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.ui.shell.modifier_keys {
         let mut close = false;
         let mut s = app.ui.shell.clone();
@@ -402,7 +402,7 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn dialog(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some((kind, mut f)) = app.ui.shell.dialog.clone() else { return };
     let t = Tokens::get(ctx);
     let title = title(&kind);
@@ -529,8 +529,8 @@ mod tests {
     use super::*;
     use crate::state::Tool;
 
-    fn app() -> (PhotocraftApp, egui::Context) {
-        (PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default()), egui::Context::default())
+    fn app() -> (LienzoApp, egui::Context) {
+        (LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default()), egui::Context::default())
     }
 
     #[test]
@@ -584,8 +584,8 @@ mod tests {
             for width in [800.0, 1200.0] {
                 let builder = egui_kittest::Harness::builder().with_size(egui::vec2(width, 800.0)).with_max_steps(64);
                 let mut h = builder.build_eframe(move |cc| {
-                    PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-                    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                    LienzoApp::setup_context(&cc.egui_ctx, theme);
+                    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                     app.run("prefs.set", json!({"path": "interface.theme", "value": theme.id()})).unwrap();
                     app.ui.theme = theme;
                     // The workspace's docks, not the Home screen (which draws none).
@@ -617,7 +617,7 @@ mod tests {
     #[test]
     fn new_select_delete_workspaces() {
         let (mut app, ctx) = app();
-        let inv = |app: &mut PhotocraftApp, id: &str, p: Value| crate::menus::invoke(app, &ctx, id, p);
+        let inv = |app: &mut LienzoApp, id: &str, p: Value| crate::menus::invoke(app, &ctx, id, p);
         assert!(!crate::menus::is_enabled(&app, "window.workspace.deleteWorkspace"));
         assert_eq!(inv(&mut app, "window.workspace.newWorkspace", json!({})).unwrap()["dialog"], "newWorkspace");
         app.ui.panels.history = true;
@@ -651,7 +651,7 @@ mod tests {
         // Saved workspaces persist with the preferences.
         inv(&mut app, "window.workspace.newWorkspace", json!({"name": "Mine"})).unwrap();
         let json = app.session.prefs_to_json();
-        let mut s2 = photocraft_engine::Session::new();
+        let mut s2 = lienzo_engine::Session::new();
         s2.load_prefs_json(&json).unwrap();
         assert!(s2.prefs().workspaces.contains_key("Mine"));
     }
@@ -660,7 +660,7 @@ mod tests {
     fn saved_workspaces_are_listed_checked_and_selectable() {
         let (mut app, ctx) = app();
         let ws_items =
-            |app: &PhotocraftApp| crate::menus::menu_items(app).into_iter().filter(|i| i.path == ["Window", "Workspace"] && i.id != "---").collect::<Vec<_>>();
+            |app: &LienzoApp| crate::menus::menu_items(app).into_iter().filter(|i| i.path == ["Window", "Workspace"] && i.id != "---").collect::<Vec<_>>();
         assert!(!ws_items(&app).iter().any(|i| i.id.starts_with(SAVED)));
         app.ui.panels.history = true;
         crate::menus::invoke(&mut app, &ctx, "window.workspace.newWorkspace", json!({"name": "Retouch"})).unwrap();
@@ -722,7 +722,7 @@ mod tests {
     #[test]
     fn custom_pixel_aspect_ratio_and_extras_options() {
         let (mut app, ctx) = app();
-        let inv = |app: &mut PhotocraftApp, id: &str, p: Value| crate::menus::invoke(app, &ctx, id, p);
+        let inv = |app: &mut LienzoApp, id: &str, p: Value| crate::menus::invoke(app, &ctx, id, p);
         assert_eq!(inv(&mut app, "view.pixelAspectRatio.custom", json!({})).unwrap()["dialog"], "customPar");
         inv(&mut app, "view.pixelAspectRatio.custom", json!({"name": "Cinema", "ratio": 1.25})).unwrap();
         assert_eq!(crate::view_cmds::pixel_aspect_ratio(&app.ui.view.pixel_aspect), 1.25);
@@ -778,7 +778,7 @@ mod tests {
                 let (mut app, _) = app();
                 app.run("file.new", json!({"width": 20, "height": 20, "depth": 32})).unwrap();
                 let mut h = Harness::builder().with_size(size).with_pixels_per_point(scale).build_ui_state(|ui, app| windows(app, ui.ctx()), app);
-                PhotocraftApp::setup_context(&h.ctx, theme);
+                LienzoApp::setup_context(&h.ctx, theme);
                 let ctx = h.ctx.clone();
                 crate::menus::invoke(h.state_mut(), &ctx, "view.thirtyTwoBitPreviewOptions", json!({})).unwrap();
                 h.run_steps(4);

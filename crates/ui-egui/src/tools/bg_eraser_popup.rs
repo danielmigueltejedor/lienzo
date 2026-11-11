@@ -8,8 +8,8 @@
 //! `tools.setBrush`); the Tolerance control is a tool option (`ToolOptions::bg_tolerance_control`).
 
 use egui::{RichText, vec2};
-use photocraft_engine::BrushSettings;
-use photocraft_engine::paint::{Control, MAX_BRUSH_SIZE, TipShape};
+use lienzo_engine::BrushSettings;
+use lienzo_engine::paint::{Control, MAX_BRUSH_SIZE, TipShape};
 
 use crate::theme::Tokens;
 use crate::widgets;

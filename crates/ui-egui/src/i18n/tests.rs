@@ -390,7 +390,7 @@ fn azerbaijani_keeps_context_placeholders_and_command_names() {
     assert_eq!(tr_ctx(lang, "cameraRaw", "Light"), "İşıq");
     assert_eq!(tr_ctx(lang, "fontWeight", "Light"), "İncə");
     assert_ne!(tr_id(lang, "edit.clear", "Clear"), "Clear");
-    assert!(fmt(tr(lang, "About {app}"), &[("app", "PhotoCraft")]).contains("PhotoCraft"));
+    assert!(fmt(tr(lang, "About {app}"), &[("app", "Lienzo")]).contains("Lienzo"));
 }
 
 /// Bosnian locales, with or without region, script or encoding, select the Latin catalog.

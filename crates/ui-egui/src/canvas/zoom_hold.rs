@@ -123,7 +123,7 @@ pub fn update(ctx: &egui::Context, view: &mut View, xf: &ViewXform, enabled: boo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
     use egui::{Event, PointerButton, vec2};
     use egui_kittest::Harness;
     use serde_json::json;
@@ -159,8 +159,8 @@ mod tests {
         assert_eq!(hold_zoom(1.0, 0.1, false, [0, 0]), hold_zoom(1.0, 0.1, false, [0, 0]));
     }
 
-    fn harness(animated: bool) -> Harness<'static, PhotocraftApp> {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn harness(animated: bool) -> Harness<'static, LienzoApp> {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.run("prefs.set", json!({"values": {"general.animatedZoom": animated, "tools.zoomClickedPointToCenter": false}})).unwrap();
         app.sync_views();
@@ -169,7 +169,7 @@ mod tests {
         app.ui.tool_options.zoom_scrubby = true;
         // Each step is 0.1 s of egui time.
         let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_step_dt(0.1).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -177,7 +177,7 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         let view = &mut h.state_mut().ui.views[0];
         view.zoom = 1.0;
@@ -188,11 +188,11 @@ mod tests {
         h
     }
 
-    fn xf(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
+    fn xf(h: &Harness<'static, LienzoApp>) -> ViewXform {
         ViewXform::active(h.state()).unwrap()
     }
 
-    fn button(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, pressed: bool, alt: bool) {
+    fn button(h: &mut Harness<'static, LienzoApp>, p: Pos2, pressed: bool, alt: bool) {
         let modifiers = egui::Modifiers { alt, ..Default::default() };
         h.event(Event::ModifiersChanged(modifiers));
         h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers });
@@ -201,7 +201,7 @@ mod tests {
 
     /// Press at `p`, hold still for `frames` steps, release; returns the zoom after every step,
     /// then after the release step and two more frames.
-    fn hold(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, frames: usize, alt: bool) -> Vec<f32> {
+    fn hold(h: &mut Harness<'static, LienzoApp>, p: Pos2, frames: usize, alt: bool) -> Vec<f32> {
         h.event(Event::PointerMoved(p));
         h.step();
         button(h, p, true, alt);

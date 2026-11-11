@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use std::cell::Cell;
 use std::ops::Range;
 
+use lienzo_doc::text::{CharStyle, ParagraphStyle, TextAlign, TextDirection};
 use parley::{Alignment, AlignmentOptions, FontFeatures, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
-use photocraft_doc::text::{CharStyle, ParagraphStyle, TextAlign, TextDirection};
 
 use super::area::{LineMetrics, MAX_AREA_PASSES, area_metrics, break_area};
 use super::paragraphs::{TabWidth, strip_break, tab_widths};
@@ -20,7 +20,7 @@ use crate::layout::DEFAULT_TAB_STOP_PT;
 
 /// The character styles of `runs`, with families resolved (PostScript names from PSDs, unknown
 /// families) and drawn the way they are laid out.
-pub(super) fn resolve_run_styles(fonts: &mut FontDb, runs: &[photocraft_doc::text::TextRun]) -> Vec<CharStyle> {
+pub(super) fn resolve_run_styles(fonts: &mut FontDb, runs: &[lienzo_doc::text::TextRun]) -> Vec<CharStyle> {
     runs.iter()
         .map(|r| {
             let mut s = r.style.clone();
@@ -70,7 +70,7 @@ pub(super) fn small_caps_modes(fonts: &mut FontDb, styles: &[CharStyle]) -> Vec<
     styles
         .iter()
         .map(|style| match style.caps {
-            photocraft_doc::text::Caps::SmallCaps => small_caps_mode(style.caps, probe_smcp(fonts, style)),
+            lienzo_doc::text::Caps::SmallCaps => small_caps_mode(style.caps, probe_smcp(fonts, style)),
             _ => SmallCapsMode::None,
         })
         .collect()
@@ -121,11 +121,11 @@ fn paragraph_text(env: &Env<'_>, prefix: &str, range: &Range<usize>, content_end
 /// uppercase form has the same length, so offsets don't move), recording small-cap pieces.
 fn push_cased(ptext: &mut String, small_caps: &mut Vec<(Range<usize>, f32)>, ch: char, style: &CharStyle, synthetic: bool, k: f32) {
     let caps = style.caps;
-    if caps == photocraft_doc::text::Caps::AllCaps || synthetic {
+    if caps == lienzo_doc::text::Caps::AllCaps || synthetic {
         let up: String = ch.to_uppercase().collect();
         if up.len() == ch.len_utf8() {
             ptext.push_str(&up);
-            if caps == photocraft_doc::text::Caps::SmallCaps && ch.is_lowercase() {
+            if caps == lienzo_doc::text::Caps::SmallCaps && ch.is_lowercase() {
                 let end = ptext.len();
                 small_caps.push((end - up.len()..end, style.size_pt * k * SYNTHETIC_SMALL_CAPS_SCALE));
             }

@@ -1,8 +1,8 @@
 //! Renderer contract and band provider interface for headless composition and export.
 
-use photocraft_doc::{DocId, Document};
-use photocraft_geom::Rect;
-use photocraft_raster::Interrupt;
+use lienzo_doc::{DocId, Document};
+use lienzo_geom::Rect;
+use lienzo_raster::Interrupt;
 
 use crate::IoError;
 
@@ -100,7 +100,7 @@ pub trait BandRenderer: Send {
     fn forget_document(&mut self, _doc: DocId) {}
 }
 
-/// Default reference band renderer using `photocraft-compose`.
+/// Default reference band renderer using `lienzo-compose`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CpuRenderer;
 
@@ -114,7 +114,7 @@ impl BandRenderer for CpuRenderer {
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         ctl.check().map_err(|_| RenderError::Cancelled)?;
-        photocraft_compose::render_bands(doc, rect, band_rows, |buf| {
+        lienzo_compose::render_bands(doc, rect, band_rows, |buf| {
             // Stop at the next band when the sink cancels, instead of composing the whole canvas.
             ctl.check().map_err(|_| IoError::Cancelled)?;
             sink(RenderBand { rect: buf.rect, pixels: buf.into_px() })

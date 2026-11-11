@@ -4,7 +4,7 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas_tool_menu::{CanvasToolMenu, EYEDROPPER_COPY_HEX, EYEDROPPER_COPY_HTML, available, choose, mode_checked, open_at, rows};
 use crate::control::{ControlRequest, Outcome, handle};
 use crate::state::Tool;
@@ -12,10 +12,10 @@ use crate::state::Tool;
 /// 400 × 300 white with three layers: a red (220,30,30) block at 100,100–300,250 ("Red", active),
 /// a blue (30,30,220) block at 320,100–380,160 above it ("Blue"), and a green (30,160,30) block at
 /// 20,20–80,80 on a 50 % opacity layer ("Green"). The Eyedropper is the tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
-    let block = |app: &mut PhotocraftApp, name: &str, rect: [i32; 4], color: &str, opacity: f64| {
+    let block = |app: &mut LienzoApp, name: &str, rect: [i32; 4], color: &str, opacity: f64| {
         app.run("layer.new.layer", json!({"name": name})).unwrap();
         app.run("select.rect", json!({"x": rect[0], "y": rect[1], "width": rect[2], "height": rect[3]})).unwrap();
         app.run("edit.fill", json!({"contents": "color", "color": color})).unwrap();
@@ -33,7 +33,7 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn call(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (req, _rx) = ControlRequest::new(method, params);
     match handle(app, ctx, &req) {
         Outcome::Done(v) => v,
@@ -42,13 +42,13 @@ fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Valu
 }
 
 /// Right-click at document point `at` (the shell's path) and return the open menu.
-fn right_click(app: &mut PhotocraftApp, ctx: &egui::Context, at: [f64; 2]) -> CanvasToolMenu {
+fn right_click(app: &mut LienzoApp, ctx: &egui::Context, at: [f64; 2]) -> CanvasToolMenu {
     assert!(open_at(app, ctx, Tool::Eyedropper, [50.0, 50.0], Some(at)), "a menu opens");
     app.ui.canvas_tool_menu.clone().unwrap()
 }
 
 /// What picking `command` in a freshly opened menu at `at` puts on the clipboard.
-fn copied(app: &mut PhotocraftApp, at: [f64; 2], command: &str) -> Vec<String> {
+fn copied(app: &mut LienzoApp, at: [f64; 2], command: &str) -> Vec<String> {
     let ctx = egui::Context::default();
     right_click(app, &ctx, at);
     let mut out = ctx.run_ui(egui::RawInput::default(), |ui| choose(app, ui.ctx(), command));
@@ -56,7 +56,7 @@ fn copied(app: &mut PhotocraftApp, at: [f64; 2], command: &str) -> Vec<String> {
     out.platform_output.commands.iter().filter_map(|c| if let egui::OutputCommand::CopyText(t) = c { Some(t.clone()) } else { None }).collect()
 }
 
-fn fg_bg(app: &PhotocraftApp) -> ([f32; 4], [f32; 4]) {
+fn fg_bg(app: &LienzoApp) -> ([f32; 4], [f32; 4]) {
     (app.session.tools.foreground, app.session.tools.background)
 }
 
@@ -147,7 +147,7 @@ fn the_right_click_and_the_picks_change_no_colours_and_add_no_history() {
 
 #[test]
 fn over_transparency_the_copy_rows_are_greyed() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30, "background": "transparent"})).unwrap();
     app.ui.tool = Tool::Eyedropper;
     let ctx = egui::Context::default();

@@ -537,7 +537,7 @@ fn txt2_font_entry(name: &str, kind: i64) -> E {
 /// The index of the PostScript font `name` in a `Txt2` font list (`<< /0 << /99 /CoolTypeFont
 /// /0 << /0 name /2 type >> >> >>` entries), appending it (shaped like the list's first entry)
 /// when missing. An empty list gets a seeded CoolTypeFont entry only when `seed_empty` is set —
-/// a PhotoCraft-native block (#10308); a file's own block keeps its `/0` as it was (#2374), so
+/// a Lienzo-native block (#10308); a file's own block keeps its `/0` as it was (#2374), so
 /// `None` there, as before.
 fn txt2_font(fonts: &mut Vec<E>, name: &str, seed_empty: bool) -> Option<i64> {
     let named = |f: &E| f.path(&["0", "0", "0"]).and_then(E::as_str) == Some(name);
@@ -607,7 +607,7 @@ fn simple_paint_dict() -> E {
 }
 
 /// A minimal `Txt2` style run Photoshop will read: the shape [`txt2_style_runs`] fills from a
-/// layer when the file has no template object to copy (a PhotoCraft-native document). Includes an
+/// layer when the file has no template object to copy (a Lienzo-native document). Includes an
 /// empty `/53` SimplePaint dict so the fill colour can be written.
 fn minimal_txt2_style_run() -> E {
     let style = E::Dict(vec![("0".into(), E::Int(0)), ("11".into(), E::Int(1)), ("53".into(), simple_paint_dict())]);
@@ -678,7 +678,7 @@ pub fn build_txt2_at(objects: &[(i32, &TextLayer)], previous: Option<&[u8]>, dpi
     let td_fonts_before = td_fonts.len();
     let mut fonts: Vec<E> = prev.as_ref().and_then(|p| p.path(&["0", "1", "0"]).and_then(E::as_array)).map(<[E]>::to_vec).unwrap_or_default();
     let fonts_before = fonts.len();
-    // A PhotoCraft-native block: the document had no `Txt2` of its own (#10308). Only such a
+    // A Lienzo-native block: the document had no `Txt2` of its own (#10308). Only such a
     // block gets the fresh point-text objects, minimal style runs, seeded font list and frame
     // list below; a file's own block (Photoshop's, any era) is written as before (#2374, #7698).
     let native = prev.is_none();
@@ -756,7 +756,7 @@ pub fn build_txt2_at(objects: &[(i32, &TextLayer)], previous: Option<&[u8]>, dpi
         // can't be refitted keeps the frame that object was drawn in.
         let fresh = (kept.is_none() && edited.is_none())
             .then(|| {
-                // Without a template, only a PhotoCraft-native block gets a fresh object; a file's
+                // Without a template, only a Lienzo-native block gets a fresh object; a file's
                 // block keeps the stub it always got.
                 if template.is_none() && !native {
                     return None;
@@ -773,7 +773,7 @@ pub fn build_txt2_at(objects: &[(i32, &TextLayer)], previous: Option<&[u8]>, dpi
                     None => at,
                 };
                 // Prefer a file object as template (#7698); otherwise a point-text object with a
-                // view naming its own frame so a PhotoCraft-native Txt2 still opens (#10308).
+                // view naming its own frame so a Lienzo-native Txt2 still opens (#10308).
                 let object = match template {
                     Some(template) => new_object(template, frame, &text)?,
                     None => fresh_point_text_object(frame, &text),
@@ -827,7 +827,7 @@ pub fn build_txt2_at(objects: &[(i32, &TextLayer)], previous: Option<&[u8]>, dpi
         }
     }
     // The outer dictionary keeps whatever the block held (`/98` version, block extras, …), and
-    // `/1` whatever it holds beside the text objects. A PhotoCraft-native block gets a frame list
+    // `/1` whatever it holds beside the text objects. A Lienzo-native block gets a frame list
     // (`/0 /8 /0`) so each object's view can name a frame (#10308, #7698); a file's block is never
     // given a `/0` or a frame list it didn't have (#2374).
     let mut outer = prev.clone().unwrap_or_else(|| {
@@ -854,7 +854,7 @@ pub fn build_txt2_at(objects: &[(i32, &TextLayer)], previous: Option<&[u8]>, dpi
             }
         }
     }
-    // Write the font list whenever it grew. Create `/0/1` only in a PhotoCraft-native block;
+    // Write the font list whenever it grew. Create `/0/1` only in a Lienzo-native block;
     // otherwise leave the file's `/0` alone (#2374).
     if fonts.len() != fonts_before
         && let Some(doc @ E::Dict(_)) = outer.get_mut("0")

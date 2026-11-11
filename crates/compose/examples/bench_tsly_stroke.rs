@@ -1,13 +1,13 @@
 //! Reproduce tall-document TSL-off stroke-effect compositing from issue #2102.
-//! Run in release mode: `cargo run --release -p photocraft-compose --example bench_tsly_stroke`.
+//! Run in release mode: `cargo run --release -p lienzo-compose --example bench_tsly_stroke`.
 
 use std::error::Error;
 use std::time::Instant;
 
-use photocraft_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
-use photocraft_compose::render_bands;
-use photocraft_doc::{Document, Effect, FxCommon, FxPaint, Layer, Size, StrokeFx, StrokePosition};
-use photocraft_geom::Rect;
+use lienzo_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
+use lienzo_compose::render_bands;
+use lienzo_doc::{Document, Effect, FxCommon, FxPaint, Layer, Size, StrokeFx, StrokePosition};
+use lienzo_geom::Rect;
 
 const WIDTH: u32 = 1920;
 const HEIGHT: u32 = 103_675;

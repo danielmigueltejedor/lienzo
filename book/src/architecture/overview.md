@@ -1,6 +1,6 @@
 # Architecture overview
 
-PhotoCraft separates the document engine from presentation and transport. The desktop UI, CLI, JSON control channel, and MCP server reach editing behavior through the command registry rather than maintaining separate implementations.
+Lienzo separates the document engine from presentation and transport. The desktop UI, CLI, JSON control channel, and MCP server reach editing behavior through the command registry rather than maintaining separate implementations.
 
 ```text
 desktop UI       CLI       JSON control       MCP
@@ -22,12 +22,12 @@ The complete design narrative and dependency diagram remain in [`docs/architectu
 
 ## Core properties
 
-- `photocraft-doc` holds the pure-data document model.
-- `photocraft-engine::Session` owns open documents, active state, history, and command dispatch.
-- `photocraft-compose` is the CPU reference compositor; `photocraft-gpu` accelerates supported interactive paths.
-- `photocraft-io` maps between documents and PSD or flat formats.
-- `photocraft-format` reads and writes the native `.pcraft` bundle.
-- `photocraft-ui-egui` is a thin shell over engine commands.
-- `photocraft-automation` exposes the headless engine and the live-GUI bridge.
+- `lienzo-doc` holds the pure-data document model.
+- `lienzo-engine::Session` owns open documents, active state, history, and command dispatch.
+- `lienzo-compose` is the CPU reference compositor; `lienzo-gpu` accelerates supported interactive paths.
+- `lienzo-io` maps between documents and PSD or flat formats.
+- `lienzo-format` reads and writes the native `.pcraft` bundle.
+- `lienzo-ui-egui` is a thin shell over engine commands.
+- `lienzo-automation` exposes the headless engine and the live-GUI bridge.
 
 See [Crates and dependency layers](crates.md) for the complete workspace map.

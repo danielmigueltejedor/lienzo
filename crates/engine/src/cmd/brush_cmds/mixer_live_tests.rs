@@ -1,6 +1,6 @@
 use super::mixer_live::LiveMixer;
 use super::*;
-use photocraft_color::PixelFormat;
+use lienzo_color::PixelFormat;
 use std::sync::Arc;
 
 /// Build format-specific red/green sampling layers and an empty painting target.
@@ -100,9 +100,9 @@ fn mixer_live_current_layer_matches_reference_and_cancels() {
     let p = json!({"points":[[30,30],[60,34],[100,60]],"seed":9,"size":16,"sampleAllLayers":false,"wet":65,"mix":70,"load":90});
     let mut expected = target(&s);
     let brush = resolve_brush(&s, &p, "paint.mixerBrush").unwrap();
-    let mut state = photocraft_paint::mixer::MixerState::default();
+    let mut state = lienzo_paint::mixer::MixerState::default();
     state.load(s.tools.foreground);
-    photocraft_paint::mixer::apply_mixer_stroke(
+    lienzo_paint::mixer::apply_mixer_stroke(
         &mut expected,
         None,
         &Stroke { brush, points: parse_points(&p, "paint.mixerBrush").unwrap() },
@@ -172,12 +172,12 @@ fn mixer_sampling_obeys_masks_opacity_blend_and_current_layer_switch() {
     s.edit("source composition", |doc, _| {
         let layer = doc.layer_mut(source).unwrap();
         layer.opacity = 0.4;
-        layer.blend = photocraft_color::BlendMode::Multiply;
-        layer.mask = Some(photocraft_doc::LayerMask::hide_all());
+        layer.blend = lienzo_color::BlendMode::Multiply;
+        layer.mask = Some(lienzo_doc::LayerMask::hide_all());
         Ok(())
     })
     .unwrap();
-    let expected = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(39, 39, 40, 40)).px[0];
+    let expected = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(39, 39, 40, 40)).px[0];
     s.execute("brush.mixer.sample", json!({"points":[[40,40]],"size":8})).unwrap();
     let actual = s.tools.mixer.reservoir.unwrap();
     for c in 0..3 {

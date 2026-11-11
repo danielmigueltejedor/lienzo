@@ -3,26 +3,26 @@ use egui_kittest::{
     Harness,
     kittest::{NodeT, Queryable},
 };
-use photocraft_doc::{Color, ColorMode, SampleType, Size};
-use photocraft_geom::Rect as GRect;
+use lienzo_doc::{Color, ColorMode, SampleType, Size};
+use lienzo_geom::Rect as GRect;
 
 /// 40 × 30: red block (0..20, 0..15), blue block (20..40, 0..15), black and white below.
-fn app_with_doc() -> PhotocraftApp {
+fn app_with_doc() -> LienzoApp {
     let mut doc = Document::with_background("cr", Size::new(40, 30), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let bg = doc.layers[0].surface_mut().unwrap();
     bg.fill_rect(GRect::new(0, 0, 20, 15), &[1.0, 0.0, 0.0, 1.0]);
     bg.fill_rect(GRect::new(20, 0, 40, 15), &[0.0, 0.0, 1.0, 1.0]);
     bg.fill_rect(GRect::new(0, 15, 20, 30), &[0.0, 0.0, 0.0, 1.0]);
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
-    PhotocraftApp::new(s, crate::Services::default())
+    LienzoApp::new(s, crate::Services::default())
 }
 
-fn coverage(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn coverage(app: &LienzoApp, x: i32, y: i32) -> f32 {
     app.session.active().unwrap().doc.selection.as_ref().map_or(0.0, |s| s.sample_channel(x, y, 0))
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 900.0)).build_ui_state(
         |ui, app| {
             crate::menus::menu_bar(app, ui);
@@ -30,27 +30,27 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
     h
 }
 
-fn dialog_id(app: &PhotocraftApp) -> u64 {
+fn dialog_id(app: &LienzoApp) -> u64 {
     app.ui.dialogs.iter().find(|d| owns(&d.fields)).map(|d| d.id).expect("Color Range dialog open")
 }
 
-fn set(h: &mut Harness<'static, PhotocraftApp>, key: &str, v: Value) {
+fn set(h: &mut Harness<'static, LienzoApp>, key: &str, v: Value) {
     let id = dialog_id(h.state());
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert(key.into(), v);
     h.run_steps(3);
 }
 
 /// OK / Cancel are painted buttons without accessibility labels; the dialog's keys do the same.
-fn ok(h: &mut Harness<'static, PhotocraftApp>) {
+fn ok(h: &mut Harness<'static, LienzoApp>) {
     h.key_press(egui::Key::Enter);
 }
 
-fn click(h: &mut Harness<'static, PhotocraftApp>, at: egui::Pos2) {
+fn click(h: &mut Harness<'static, LienzoApp>, at: egui::Pos2) {
     h.hover_at(at);
     h.run_steps(1);
     h.drag_at(at);
@@ -58,7 +58,7 @@ fn click(h: &mut Harness<'static, PhotocraftApp>, at: egui::Pos2) {
     h.drop_at(at);
 }
 
-fn disabled(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn disabled(h: &Harness<'static, LienzoApp>, label: &str) -> bool {
     // A slider row names both its number and its slider with the caption; either reports it.
     h.query_all_by_label(label).next().unwrap_or_else(|| panic!("`{label}`")).accesskit_node().is_disabled()
 }
@@ -121,7 +121,7 @@ fn preview_cache_refreshes_after_foreground_and_proof_changes() {
 #[test]
 fn eyedropper_hover_reuses_preview_textures_without_sampling() {
     let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app_with_doc()
     });
     h.state_mut().ui.views[0].zoom = 20.0;
@@ -131,7 +131,7 @@ fn eyedropper_hover_reuses_preview_textures_without_sampling() {
     let id = open(h.state_mut());
     set(&mut h, "__selectionPreview", json!("quickMask"));
     let fields = h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone();
-    let cached = |app: &PhotocraftApp| {
+    let cached = |app: &LienzoApp| {
         let p = app.color_range.as_ref().unwrap();
         (p.mask_key, p.overlay_key, p.mask.as_ref().unwrap().id(), p.overlay.as_ref().unwrap().id(), Arc::as_ptr(&p.proxy))
     };
@@ -210,7 +210,7 @@ fn dialog_shrinks_back_when_a_mode_needs_fewer_controls() {
     open(h.state_mut());
     h.run_steps(4);
     let area = egui::Id::unique(("dialog", dialog_id(h.state())));
-    let rect = |h: &Harness<'static, PhotocraftApp>| h.ctx.memory(|m| m.area_rect(area)).unwrap_or(egui::Rect::NOTHING);
+    let rect = |h: &Harness<'static, LienzoApp>| h.ctx.memory(|m| m.area_rect(area)).unwrap_or(egui::Rect::NOTHING);
     set(&mut h, "select", json!("outOfGamut"));
     let short = rect(&h);
     set(&mut h, "select", json!("midtones"));
@@ -288,13 +288,13 @@ fn eyedroppers_pick_on_the_preview() {
     open(h.state_mut());
     h.run_steps(4);
     // 40 × 30 at 200 pt: 5 pt per pixel; the image is centred vertically (150 pt tall).
-    let at = |h: &Harness<'static, PhotocraftApp>, x: f32, y: f32| {
+    let at = |h: &Harness<'static, LienzoApp>, x: f32, y: f32| {
         h.get_by_label("Color Range preview").rect().left_top() + egui::vec2(x * 5.0 + 2.5, 25.0 + y * 5.0 + 2.5)
     };
     let p = at(&h, 30.0, 5.0);
     click(&mut h, p);
     h.run_steps(2);
-    let f = |h: &Harness<'static, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| owns(&d.fields)).unwrap().fields.clone();
+    let f = |h: &Harness<'static, LienzoApp>| h.state().ui.dialogs.iter().find(|d| owns(&d.fields)).unwrap().fields.clone();
     assert_eq!(points(&f(&h), "points"), vec![[30.0, 5.0]]);
     // Add to Sample: the red block too; the selection then covers both.
     h.get_by_label("Add to Sample").click();
@@ -431,16 +431,16 @@ fn reduced_preview_matches_the_original_eyedropper_sample() {
     let surface = doc.layers[0].surface_mut().unwrap();
     surface.fill_rect(GRect::new(200, 0, 400, 4), &[0.0, 0.0, 1.0, 1.0]);
     surface.fill_rect(GRect::new(101, 0, 102, 4), &[0.0, 0.0, 1.0, 1.0]);
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.add_document(doc, None);
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
+    let mut app = LienzoApp::new(session, crate::Services::default());
     let id = open(&mut app);
     let mut fields = app.ui.dialog_mut(id).unwrap().fields.clone();
     pick(&app, &mut fields, [101.0, 1.0], egui::Modifiers::NONE);
     fields.insert("fuzziness".into(), json!(0.0));
     let original = app.session.active().unwrap().doc.clone();
     let proxy = crate::proxy::proxy_document(&original, 2);
-    let mut old = photocraft_engine::Session::new();
+    let mut old = lienzo_engine::Session::new();
     old.add_document(proxy.clone(), None);
     old.execute(COMMAND, json!({"points": [[50, 0]], "fuzziness": 0})).unwrap();
     assert_eq!(
@@ -460,7 +460,7 @@ fn reduced_preview_matches_the_original_eyedropper_sample() {
 fn preview_honours_sample_all_layers_like_ok() {
     let mut app = app_with_doc();
     let doc = app.session.active().unwrap().doc.clone();
-    let mut top = photocraft_doc::Layer::new("blue cover", photocraft_doc::LayerContent::Raster(doc.layers[0].surface().unwrap().clone()));
+    let mut top = lienzo_doc::Layer::new("blue cover", lienzo_doc::LayerContent::Raster(doc.layers[0].surface().unwrap().clone()));
     top.surface_mut().unwrap().fill_rect(GRect::new(0, 0, 40, 30), &[0.0, 0.0, 1.0, 1.0]);
     app.session
         .edit("layers", |doc, _| {
@@ -515,7 +515,7 @@ fn params_send_only_what_the_mode_uses() {
 #[test]
 fn opens_and_previews_in_the_full_app_without_a_gpu() {
     let mut h = Harness::builder().with_size(egui::vec2(1024.0, 600.0)).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         assert!(cc.wgpu_render_state.is_none(), "this test covers the no-GPU path");
         app_with_doc()
     });

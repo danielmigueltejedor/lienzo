@@ -4,17 +4,17 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 
 /// A 64 x 64 document with a layer filled at 4..60 and Free Transform open on it.
-fn transforming(reference_point: bool) -> PhotocraftApp {
+fn transforming(reference_point: bool) -> LienzoApp {
     transforming_box(reference_point, 56)
 }
 
 /// [`transforming`] with a filled square of `side` px at 4, 4.
-fn transforming_box(reference_point: bool, side: u32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn transforming_box(reference_point: bool, side: u32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -27,7 +27,7 @@ fn transforming_box(reference_point: bool, side: u32) -> PhotocraftApp {
 }
 
 /// Drags 5 px to the right from the reference point.
-fn drag_from_pivot(app: &mut PhotocraftApp) -> ([[f64; 2]; 4], [f64; 2]) {
+fn drag_from_pivot(app: &mut LienzoApp) -> ([[f64; 2]; 4], [f64; 2]) {
     let t = app.ui.transform.as_ref().unwrap();
     let (quad, pivot) = (t.quad, t.pivot);
     let none = egui::Modifiers::NONE;
@@ -39,7 +39,7 @@ fn drag_from_pivot(app: &mut PhotocraftApp) -> ([[f64; 2]; 4], [f64; 2]) {
 
 #[test]
 fn the_reference_point_is_off_by_default() {
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(!app.ui.tool_options.transform_reference_point);
 }
 

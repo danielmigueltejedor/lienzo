@@ -1,40 +1,40 @@
 //! Pen drafts and explicit document paths retain their destination until a single commit.
 
 use egui::Modifiers;
-use photocraft_doc::{LayerContent, Path};
+use lienzo_doc::{LayerContent, Path};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 use crate::vector_ui;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn seed(app: &mut PhotocraftApp, name: &str, y: f64) {
+fn seed(app: &mut LienzoApp, name: &str, y: f64) {
     app.run("path.set", json!({"name": name, "path": {"subpaths": [{"closed": false, "knots": [[10.0, y], [90.0, y]]}]}})).unwrap();
 }
 
-fn path(app: &PhotocraftApp, name: &str) -> Path {
+fn path(app: &LienzoApp, name: &str) -> Path {
     let doc = &app.session.active().unwrap().doc;
     if name == "work" { doc.work_path.clone().unwrap() } else { doc.paths.iter().find(|p| p.name == name).unwrap().path.clone() }
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn click(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x, y }, Modifiers::NONE);
 }
 
-fn draft(app: &mut PhotocraftApp) {
+fn draft(app: &mut LienzoApp) {
     click(app, 30.0, 60.0);
     click(app, 130.0, 60.0);
 }
@@ -136,7 +136,7 @@ fn captured_pen_paint_preserves_float_colour_and_alpha_after_toolbar_changes() {
         vector_ui::pen_commit(&mut app, closed);
         let st = app.session.active().unwrap();
         let LayerContent::Shape(shape) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("expected Pen shape") };
-        let paint = |c: [f32; 4]| photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(c[0], c[1], c[2], c[3]));
+        let paint = |c: [f32; 4]| lienzo_doc::Fill::Solid(lienzo_doc::Color::rgba(c[0], c[1], c[2], c[3]));
         assert_eq!(shape.fill, closed.then(|| paint(foreground)));
         assert_eq!(shape.stroke.as_ref().unwrap().paint, paint(if closed { background } else { foreground }));
     }

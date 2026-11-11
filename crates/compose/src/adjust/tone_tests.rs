@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 fn ramp() -> Buffer {
     let rect = Rect::new(0, 0, 8, 8);
@@ -739,7 +739,7 @@ fn in_cmyk(adj: &Adjustment, c: [f32; 3]) -> [f32; 3] {
 
 #[test]
 fn cmyk_invert_posterize_and_threshold_work_on_the_inks() {
-    use photocraft_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
+    use lienzo_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
     // Paper inverts to all four inks at 100%, not to RGB black (photoshop corpus cmyk8 invert.psd).
     assert!(near(in_cmyk(&Adjustment::Invert, [1.0; 3]), cmyk_to_rgb([1.0; 4]), 2e-3));
     let red = [0.9, 0.2, 0.1];
@@ -780,7 +780,7 @@ fn cmyk_threshold_compares_the_inks_plain_luma() {
 
 #[test]
 fn cmyk_brightness_contrast_curves_each_ink_from_paper() {
-    use photocraft_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
+    use lienzo_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
     // The tone curve runs on each ink's stored value, 1 - ink (photoshop corpus cmyk8
     // brightness-contrast.psd and -legacy.psd): raising brightness takes ink away, and paper
     // and solid ink stay put.

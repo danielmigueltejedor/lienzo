@@ -4,8 +4,8 @@
 //! leave boards alone (the reference application's Image > Crop does nothing in an artboard
 //! document and its Trim keeps the board's size).
 
-use photocraft_doc::{Artboard, ArtboardBackground, ColorMode, Document, Group, Layer, LayerContent, Rect, SampleType, Size};
-use photocraft_engine::Session;
+use lienzo_doc::{Artboard, ArtboardBackground, ColorMode, Document, Group, Layer, LayerContent, Rect, SampleType, Size};
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn board_layer(board: Artboard, children: Vec<Layer>) -> Layer {
@@ -82,7 +82,7 @@ fn selection_crop_and_trim_leave_the_canvas_artboard_alone() {
     let mut doc = Document::new("Trim", Size::new(100, 80), ColorMode::Rgb, SampleType::U8);
     let mut board = Artboard::new(doc.bounds());
     board.background = ArtboardBackground::Transparent;
-    let mut surface = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let mut surface = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
     surface.write_region(Rect::new(20, 10, 80, 50), &[1.0, 0.0, 0.0, 1.0].repeat(60 * 40));
     doc.layers.push(board_layer(board, vec![Layer::new("Paint", LayerContent::Raster(surface))]));
     let mut s = Session::new();

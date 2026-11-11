@@ -1,6 +1,6 @@
-use super::{PhotocraftApp, type_tool};
+use super::{LienzoApp, type_tool};
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Install the callback-mode markers in an app creator, before the first `run_ui` on this
     /// Context (and again through [`Self::setup_context`] when a host replaces its Context).
     /// Installing while a pass is already running cannot mark that pass; it only arms the next.

@@ -10,12 +10,12 @@
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "corpus")]
-use photocraft_doc::Layer;
-use photocraft_doc::LayerContent;
+use lienzo_doc::Layer;
+use lienzo_doc::LayerContent;
 #[cfg(feature = "corpus")]
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 #[cfg(feature = "corpus")]
-use photocraft_raster::Surface;
+use lienzo_raster::Surface;
 
 #[cfg(feature = "corpus")]
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -56,7 +56,7 @@ fn corpus_text_layers() {
     let mut files = Vec::new();
     collect(&root, &mut files);
     files.sort();
-    let mut engine = photocraft_text::TextEngine::with_system_fonts();
+    let mut engine = lienzo_text::TextEngine::with_system_fonts();
     let (mut n, mut good_geometry) = (0, 0);
     for f in files {
         let bytes = std::fs::read(&f).unwrap();
@@ -64,13 +64,13 @@ fn corpus_text_layers() {
             continue;
         }
         let name = f.file_name().unwrap().to_string_lossy().to_string();
-        let Ok(imp) = photocraft_io::import(&name, &bytes) else {
+        let Ok(imp) = lienzo_io::import(&name, &bytes) else {
             continue;
         };
         let doc = imp.document;
         // The document's Txt2 (kept verbatim on export) carries what EngineData can't, e.g.
         // optical kerning; re-reads apply it like an import does.
-        let txt2 = doc.metadata.psd_global_blocks.iter().find(|b| &b.1 == b"Txt2").and_then(|b| photocraft_text::psd::parse_txt2(&b.2));
+        let txt2 = doc.metadata.psd_global_blocks.iter().find(|b| &b.1 == b"Txt2").and_then(|b| lienzo_text::psd::parse_txt2(&b.2));
         let mut all = Vec::new();
         walk(&doc.layers, &mut all);
         for l in all {
@@ -84,10 +84,10 @@ fn corpus_text_layers() {
             let st = &t.runs[0].style;
             assert!(st.size_pt > 0.0 && st.postscript_name.is_some(), "{name}/{}: {st:?}", l.name);
             // Round trip of the model through our own TySh writer.
-            let rebuilt = photocraft_text::psd::build_tysh(t, doc.resolution_dpi, None);
-            let mut back = photocraft_text::psd::text_layer_from_tysh(&rebuilt, doc.resolution_dpi).unwrap();
+            let rebuilt = lienzo_text::psd::build_tysh(t, doc.resolution_dpi, None);
+            let mut back = lienzo_text::psd::text_layer_from_tysh(&rebuilt, doc.resolution_dpi).unwrap();
             if let Some(txt2) = &txt2 {
-                photocraft_text::psd::apply_txt2(&mut back, &rebuilt, txt2);
+                lienzo_text::psd::apply_txt2(&mut back, &rebuilt, txt2);
             }
             assert_eq!(back.text, t.text);
             assert_eq!(back.char_runs(), t.char_runs(), "{name}/{}", l.name);
@@ -134,8 +134,8 @@ fn corpus_text_layers() {
 fn corpus_tysh_lossless() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/psd/ag-psd/read-write/text/src.psd");
     let bytes = std::fs::read(&root).unwrap_or_else(|e| panic!("{}: {e}: run `cargo xtask corpus --all`", root.display()));
-    let doc = photocraft_io::import("src.psd", &bytes).unwrap().document;
-    let out = photocraft_io::export(&doc, "out.psd", &Default::default()).unwrap().bytes;
+    let doc = lienzo_io::import("src.psd", &bytes).unwrap().document;
+    let out = lienzo_io::export(&doc, "out.psd", &Default::default()).unwrap().bytes;
     let find = |b: &[u8]| {
         let i = b.windows(8).position(|w| w == b"8BIMTySh").unwrap();
         let len = u32::from_be_bytes(b[i + 8..i + 12].try_into().unwrap()) as usize;
@@ -154,14 +154,14 @@ fn corpus_photoshop_txt2_survives_an_unedited_save() {
     let mut files = Vec::new();
     collect(&root, &mut files);
     files.sort();
-    let txt2 = |doc: &photocraft_doc::Document| doc.metadata.psd_global_blocks.iter().find(|b| &b.1 == b"Txt2").map(|b| b.2.clone());
+    let txt2 = |doc: &lienzo_doc::Document| doc.metadata.psd_global_blocks.iter().find(|b| &b.1 == b"Txt2").map(|b| b.2.clone());
     let mut checked = 0;
     for f in &files {
         let name = f.file_name().unwrap().to_string_lossy().to_string();
-        let doc = photocraft_io::import(&name, &std::fs::read(f).unwrap()).unwrap().document;
+        let doc = lienzo_io::import(&name, &std::fs::read(f).unwrap()).unwrap().document;
         let Some(before) = txt2(&doc) else { continue };
-        let out = photocraft_io::export(&doc, &name, &Default::default()).unwrap().bytes;
-        let back = photocraft_io::import(&name, &out).unwrap().document;
+        let out = lienzo_io::export(&doc, &name, &Default::default()).unwrap().bytes;
+        let back = lienzo_io::import(&name, &out).unwrap().document;
         assert!(txt2(&back) == Some(before), "{name}: Txt2 changed on an unedited save");
         checked += 1;
     }
@@ -175,8 +175,8 @@ fn corpus_photoshop_txt2_survives_an_unedited_save() {
 #[cfg(feature = "corpus")]
 #[test]
 fn corpus_photoshop_path_text_opens_on_its_path() {
-    use photocraft_doc::text::TextShape;
-    use photocraft_geom::Point;
+    use lienzo_doc::text::TextShape;
+    use lienzo_geom::Point;
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/photoshop/text");
     let k = 0.5522847498 * 96.0;
     let cases: [(&str, bool, Vec<[f64; 2]>); 2] = [
@@ -184,18 +184,18 @@ fn corpus_photoshop_path_text_opens_on_its_path() {
         ("path-circle.psd", true, vec![[128.0, 224.0], [32.0, 128.0], [128.0, 32.0], [224.0, 128.0]]),
         ("path-wave-open.psd", false, vec![[16.0, 100.0], [160.0, 80.0], [304.0, 60.0]]),
     ];
-    let mut engine = photocraft_text::TextEngine::with_system_fonts();
+    let mut engine = lienzo_text::TextEngine::with_system_fonts();
     for (file, closed, anchors) in cases {
         let f = root.join(file);
         let bytes = std::fs::read(&f).unwrap_or_else(|e| panic!("{}: {e}: run `cargo xtask corpus --photoshop`", f.display()));
-        let imp = photocraft_io::import(file, &bytes).unwrap();
+        let imp = lienzo_io::import(file, &bytes).unwrap();
         assert!(!imp.warnings.iter().any(|w| w.contains("type path")), "{file}: {:?}", imp.warnings);
         let doc = imp.document;
         let mut all = Vec::new();
         walk(&doc.layers, &mut all);
         let layer = all.iter().find(|l| matches!(l.content, LayerContent::Text(_))).unwrap();
         let LayerContent::Text(t) = &layer.content else { unreachable!() };
-        let doc_anchors = |t: &photocraft_doc::TextLayer| -> Vec<Point> {
+        let doc_anchors = |t: &lienzo_doc::TextLayer| -> Vec<Point> {
             let TextShape::Path { path, start, flip, .. } = &t.shape else { panic!("{file}: not path text: {:?}", t.shape) };
             assert_eq!((path.closed, *start, *flip), (closed, 0.0, false), "{file}");
             path.knots.iter().map(|k| t.transform.apply(k.anchor)).collect()
@@ -253,13 +253,13 @@ fn corpus_photoshop_path_text_opens_on_its_path() {
             t.sync_summary();
             if let TextShape::Path { path, .. } = &mut t.shape {
                 for k in &mut path.knots {
-                    *k = k.transform(&photocraft_geom::Affine::translate(10.0, 0.0));
+                    *k = k.transform(&lienzo_geom::Affine::translate(10.0, 0.0));
                 }
             }
-            t.psd_raw = Some(std::sync::Arc::new(photocraft_text::psd::build_tysh(t, edited.resolution_dpi, None)));
+            t.psd_raw = Some(std::sync::Arc::new(lienzo_text::psd::build_tysh(t, edited.resolution_dpi, None)));
         }
-        let out = photocraft_io::export(&edited, file, &Default::default()).unwrap().bytes;
-        let back = photocraft_io::import(file, &out).unwrap().document;
+        let out = lienzo_io::export(&edited, file, &Default::default()).unwrap().bytes;
+        let back = lienzo_io::import(file, &out).unwrap().document;
         let mut all = Vec::new();
         walk(&back.layers, &mut all);
         let LayerContent::Text(bt) = &all.iter().find(|l| matches!(l.content, LayerContent::Text(_))).unwrap().content else { unreachable!() };
@@ -270,13 +270,13 @@ fn corpus_photoshop_path_text_opens_on_its_path() {
     }
 }
 
-/// A text layer created in PhotoCraft (no PSD data) exports as an editable type layer and
+/// A text layer created in Lienzo (no PSD data) exports as an editable type layer and
 /// imports back with the same model.
 #[test]
 fn created_text_layer_roundtrips_through_psd() {
-    use photocraft_color::{Color, ColorMode, SampleType};
-    use photocraft_doc::text::{CharStyle, ParagraphRun, ParagraphStyle, TextAlign, TextRun, TextShape};
-    use photocraft_doc::{Document, Size, TextLayer};
+    use lienzo_color::{Color, ColorMode, SampleType};
+    use lienzo_doc::text::{CharStyle, ParagraphRun, ParagraphStyle, TextAlign, TextRun, TextShape};
+    use lienzo_doc::{Document, Size, TextLayer};
     let mut doc = Document::new("t", Size::new(120, 80), ColorMode::Rgb, SampleType::U8);
     doc.resolution_dpi = 144.0;
     let a = CharStyle { font_family: "Inter".into(), size_pt: 10.0, color: Color::rgb(0.2, 0.4, 0.6), ..Default::default() };
@@ -289,17 +289,17 @@ fn created_text_layer_roundtrips_through_psd() {
             ParagraphRun { len: 5, style: ParagraphStyle { align: TextAlign::JustifyAll, ..Default::default() } },
         ],
         shape: TextShape::Box { x: 0.0, y: 0.0, width: 100.0, height: 60.0 },
-        transform: photocraft_geom::Affine::translate(8.0, 6.0),
+        transform: lienzo_geom::Affine::translate(8.0, 6.0),
         ..Default::default()
     };
     t.sync_summary();
-    photocraft_text::TextEngine::new().render_layer(&mut t, doc.resolution_dpi, doc.pixel_format());
-    doc.layers.push(photocraft_doc::Layer::new("t", LayerContent::Text(t.clone())));
-    let out = photocraft_io::export(&doc, "t.psd", &Default::default()).unwrap();
+    lienzo_text::TextEngine::new().render_layer(&mut t, doc.resolution_dpi, doc.pixel_format());
+    doc.layers.push(lienzo_doc::Layer::new("t", LayerContent::Text(t.clone())));
+    let out = lienzo_io::export(&doc, "t.psd", &Default::default()).unwrap();
     assert!(!out.warnings.iter().any(|w| w.contains("text layer")), "{:?}", out.warnings);
-    let back = photocraft_io::import("t.psd", &out.bytes).unwrap().document;
+    let back = lienzo_io::import("t.psd", &out.bytes).unwrap().document;
     let LayerContent::Text(bt) = &back.layers[0].content else { panic!("not text") };
-    let strip = |v: Vec<photocraft_doc::text::TextRun>| {
+    let strip = |v: Vec<lienzo_doc::text::TextRun>| {
         v.into_iter()
             .map(|mut r| {
                 r.style.postscript_name = None;
@@ -323,18 +323,18 @@ fn created_text_layer_roundtrips_through_psd() {
 #[cfg(feature = "corpus")]
 #[test]
 fn corpus_text_psd_legacy_objects_are_edited_in_place() {
-    use photocraft_text::engine_data::Value as E;
+    use lienzo_text::engine_data::Value as E;
 
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/psd-tools/text.psd");
     assert!(path.is_file(), "{} is missing: run `cargo xtask corpus --all`", path.display());
     let bytes = std::fs::read(&path).unwrap();
-    let doc = photocraft_io::import("text.psd", &bytes).unwrap().document;
+    let doc = lienzo_io::import("text.psd", &bytes).unwrap().document;
     let txt2 = doc.metadata.psd_global_blocks.iter().find(|b| &b.1 == b"Txt2").map(|b| b.2.clone()).expect("text.psd has a Txt2 block");
     let mut all = Vec::new();
     walk(&doc.layers, &mut all);
     let layer = all.iter().find_map(|l| if let LayerContent::Text(t) = &l.content { Some(t.clone()) } else { None }).expect("a type layer");
 
-    let before = photocraft_text::psd::parse_txt2(&txt2).expect("the file's Txt2 parses");
+    let before = lienzo_text::psd::parse_txt2(&txt2).expect("the file's Txt2 parses");
     let legacy = |block: &E| block.path(&["DocumentObjects", "TextObjects"]).and_then(E::as_array).and_then(<[E]>::first).cloned().expect("the legacy object");
     let features = |entry: &E| {
         entry
@@ -347,7 +347,7 @@ fn corpus_text_psd_legacy_objects_are_edited_in_place() {
     let items = |value: &E| if let E::Dict(items) = value { items.clone() } else { Vec::new() };
 
     // Unedited: the legacy object and the font list are as the file has them.
-    let unedited = photocraft_text::psd::parse_txt2(&photocraft_text::psd::build_txt2_at(&[(0, &layer)], Some(&txt2), doc.resolution_dpi)).unwrap();
+    let unedited = lienzo_text::psd::parse_txt2(&lienzo_text::psd::build_txt2_at(&[(0, &layer)], Some(&txt2), doc.resolution_dpi)).unwrap();
     assert!(legacy(&unedited) == legacy(&before), "an unedited layer leaves the legacy text object alone");
     assert!(unedited.path(&["DocumentResources", "FontSet"]) == before.path(&["DocumentResources", "FontSet"]), "and the font list it indexes");
 
@@ -356,7 +356,7 @@ fn corpus_text_psd_legacy_objects_are_edited_in_place() {
     for run in &mut bigger.runs {
         run.style.size_pt += 7.0;
     }
-    let edited = photocraft_text::psd::parse_txt2(&photocraft_text::psd::build_txt2_at(&[(0, &bigger)], Some(&txt2), doc.resolution_dpi)).unwrap();
+    let edited = lienzo_text::psd::parse_txt2(&lienzo_text::psd::build_txt2_at(&[(0, &bigger)], Some(&txt2), doc.resolution_dpi)).unwrap();
     let (was, now) = (features(&legacy(&before)).expect("features"), features(&legacy(&edited)).expect("features"));
     let size = |f: &E| f.get("FontSize").and_then(E::as_f64).expect("FontSize");
     assert!((size(&now) - size(&was) - 7.0).abs() < 1e-6, "the legacy size follows the edit: {} -> {}", size(&was), size(&now));

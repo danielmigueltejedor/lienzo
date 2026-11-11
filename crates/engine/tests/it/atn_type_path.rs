@@ -1,11 +1,11 @@
 //! Recorded Type > Create Work Path preserves its descriptor and uses native glyph outlines.
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::{
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_engine::{
     Session,
     actions_cmds::Action,
     atn_cmds::{export, import},
 };
-use photocraft_psd::{
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D},
 };
@@ -30,7 +30,7 @@ fn item(d: Descriptor) -> AtnItem {
 }
 
 /// Exercise the public byte importer rather than invoking the converter directly.
-fn load(item: AtnItem) -> photocraft_engine::atn_cmds::Imported {
+fn load(item: AtnItem) -> lienzo_engine::atn_cmds::Imported {
     let bytes = atn::write(&AtnFile {
         name: UnicodeString::new_nul("Paths"),
         actions: vec![AtnAction { name: UnicodeString::new_nul("Path"), items: vec![item], ..Default::default() }],

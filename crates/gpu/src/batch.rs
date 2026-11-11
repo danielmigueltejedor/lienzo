@@ -125,7 +125,7 @@ pub(crate) fn batch_runs(plan: &Plan<'_>) -> Vec<usize> {
         })
         .collect();
     let lead = |p: &plan::Pass<'_>| p.kernel == Kernel::LayerBlend && p.clip.is_none() && !p.gradient;
-    let extra = |p: &plan::Pass<'_>| lead(p) && p.mask.is_none() && p.flags & plan::F_TEXT_GAMMA == 0 && p.mode != photocraft_color::BlendMode::Dissolve;
+    let extra = |p: &plan::Pass<'_>| lead(p) && p.mask.is_none() && p.flags & plan::F_TEXT_GAMMA == 0 && p.mode != lienzo_color::BlendMode::Dissolve;
     (0..n)
         .map(|i| {
             let Some(first) = passes.get(i).filter(|p| lead(p)) else { return 1 };
@@ -156,7 +156,7 @@ pub(crate) fn run_starts(runs: &[usize]) -> Vec<bool> {
 /// The pipeline that draws `run` (passes `batch_runs` joined): `fs_layerbatch_normal` when every
 /// layer blends Normal without text gamma outside Lab documents, else `fs_layerbatch`.
 pub(crate) fn batch_kernel(run: &[plan::Pass<'_>]) -> Kernel {
-    let normal = |p: &plan::Pass<'_>| p.mode == photocraft_color::BlendMode::Normal && p.flags & (plan::F_TEXT_GAMMA | plan::F_LAB) == 0;
+    let normal = |p: &plan::Pass<'_>| p.mode == lienzo_color::BlendMode::Normal && p.flags & (plan::F_TEXT_GAMMA | plan::F_LAB) == 0;
     if run.iter().all(normal) { Kernel::LayerBatchNormal } else { Kernel::LayerBatch }
 }
 

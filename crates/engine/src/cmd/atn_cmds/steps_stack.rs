@@ -1,6 +1,6 @@
 //! Recorded Smart Object Stack Modes use the existing native mode commands.
 
-use photocraft_doc::StackMode;
+use lienzo_doc::StackMode;
 
 use super::descriptors::{class, desc, jstr, text};
 use super::fields::{Mapped, step};
@@ -55,13 +55,13 @@ fn descriptor(code: &str, mode: StackMode) -> Descriptor {
 fn params(d: &Descriptor, canonical: &Descriptor) -> Value {
     let mut p = json!({});
     if d != canonical {
-        p[SOURCE] = photocraft_paint::tile::b64_encode(&d.to_bytes()).into();
+        p[SOURCE] = lienzo_paint::tile::b64_encode(&d.to_bytes()).into();
     }
     p
 }
 
 fn original(p: &Value) -> Option<Descriptor> {
-    Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()
+    Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()
 }
 
 /// The descriptorless form reaches the mapper as a default empty `null` descriptor.
@@ -119,7 +119,7 @@ pub(super) fn remember_item(item: &AtnItem, steps: &mut [(String, Value)]) {
         && id.as_str() == NONE
         && let Some(d) = &item.descriptor
     {
-        p.insert(SOURCE.into(), photocraft_paint::tile::b64_encode(&d.to_bytes()).into());
+        p.insert(SOURCE.into(), lienzo_paint::tile::b64_encode(&d.to_bytes()).into());
     }
 }
 

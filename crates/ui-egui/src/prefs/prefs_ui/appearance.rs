@@ -1,9 +1,9 @@
 use super::dialogs::open_preferences;
 use super::fields::{choice_label, color_of, preference_matches};
-use super::{AppearanceMode, Color32, DarkTheme, LightTheme, Map, PhotocraftApp, RichText, SavedTheme, Sense, ThemeKind, Tokens, Value, json, prefs, vec2};
+use super::{AppearanceMode, Color32, DarkTheme, LienzoApp, LightTheme, Map, RichText, SavedTheme, Sense, ThemeKind, Tokens, Value, json, prefs, vec2};
 
 /// The GPU canvas colours from Preferences › Transparency & Gamut.
-pub fn canvas_style(app: &PhotocraftApp) -> crate::gpu_canvas::CanvasStyle {
+pub fn canvas_style(app: &LienzoApp) -> crate::gpu_canvas::CanvasStyle {
     let t = &app.session.prefs().transparency_and_gamut;
     let [l, d] = t.colors();
     let f = |c: [u8; 3]| c.map(|v| v as f32 / 255.0);
@@ -18,7 +18,7 @@ pub fn canvas_style(app: &PhotocraftApp) -> crate::gpu_canvas::CanvasStyle {
 }
 
 /// Pasteboard colour from Preferences › Interface (`None` = the theme's default canvas).
-pub fn pasteboard_color(app: &PhotocraftApp) -> Option<Color32> {
+pub fn pasteboard_color(app: &LienzoApp) -> Option<Color32> {
     use prefs::CanvasColor;
     let i = &app.session.prefs().interface;
     Some(match i.canvas_color {
@@ -60,7 +60,7 @@ pub(super) fn selected_theme(interface: &prefs::Interface, system: Option<egui::
     }
 }
 
-pub(crate) fn cycle_appearance(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn cycle_appearance(app: &mut LienzoApp, ctx: &egui::Context) {
     let next = match app.session.prefs().interface.appearance_mode {
         AppearanceMode::Auto => AppearanceMode::Light,
         AppearanceMode::Light => AppearanceMode::Dark,
@@ -83,7 +83,7 @@ const BRIGHTNESSES: [ThemeKind; 4] = [ThemeKind::Pro, ThemeKind::ProMedium, Them
 /// Photoshop's four brightnesses from the theme on screen, stopping at either end, as in
 /// Photoshop. Another theme steps from the nearest brightness: Medium Gray for a dark one, Light
 /// Gray for a light one. The choice is saved like picking it in Preferences › Interface.
-pub(crate) fn step_brightness(app: &mut PhotocraftApp, ctx: &egui::Context, lighter: bool) -> Result<(), String> {
+pub(crate) fn step_brightness(app: &mut LienzoApp, ctx: &egui::Context, lighter: bool) -> Result<(), String> {
     let current = app.ui.theme;
     let at = BRIGHTNESSES.iter().position(|k| *k == current).unwrap_or(if crate::theme::Tokens::for_kind(current).dark() { 1 } else { 2 });
     let next = if lighter { (at + 1).min(BRIGHTNESSES.len() - 1) } else { at.saturating_sub(1) };
@@ -124,7 +124,7 @@ pub(super) fn favorite_theme_groups(favorites: &[SavedTheme]) -> (Vec<ThemeKind>
 }
 
 /// Right-click menu on the top-right appearance button. A plain click still cycles modes.
-pub(crate) fn appearance_context_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(crate) fn appearance_context_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     if ui.button(tl!("Appearance Settings…")).clicked() {
         open_preferences(app, "interface");
         ui.close();
@@ -151,7 +151,7 @@ pub(crate) fn appearance_context_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui
     }
 }
 
-pub(super) fn system_theme(app: &PhotocraftApp, ctx: &egui::Context) -> Option<egui::Theme> {
+pub(super) fn system_theme(app: &LienzoApp, ctx: &egui::Context) -> Option<egui::Theme> {
     app.services.system_theme.as_ref().and_then(|read| read(ctx)).or_else(|| ctx.system_theme())
 }
 
@@ -167,7 +167,7 @@ pub(super) fn display_scale(pref: prefs::UiScale, native: Option<f32>) -> f32 {
     }
 }
 
-pub(super) fn sync_display_scale(app: &PhotocraftApp, ctx: &egui::Context) {
+pub(super) fn sync_display_scale(app: &LienzoApp, ctx: &egui::Context) {
     let native = ctx.native_pixels_per_point();
     let native_scale = native.filter(|v| v.is_finite() && *v > 0.0).unwrap_or(1.0);
     let scale = display_scale(app.session.prefs().interface.ui_scale, native);
@@ -177,7 +177,7 @@ pub(super) fn sync_display_scale(app: &PhotocraftApp, ctx: &egui::Context) {
 /// Interface › Show Tooltips and Tools › Show Tooltips (either one off hides them): egui never
 /// shows a tooltip whose delay is infinite. Re-checked every frame because a theme change
 /// rebuilds the style; that's one style read, and a write only when it differs.
-pub(super) fn sync_tooltips(app: &PhotocraftApp, ctx: &egui::Context) {
+pub(super) fn sync_tooltips(app: &LienzoApp, ctx: &egui::Context) {
     let p = app.session.prefs();
     let delay = if p.interface.show_tooltips && p.tools.show_tooltips { crate::theme::TOOLTIP_DELAY } else { f32::INFINITY };
     if ctx.global_style().interaction.tooltip_delay != delay {
@@ -186,7 +186,7 @@ pub(super) fn sync_tooltips(app: &PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Resolve the saved appearance mode without changing it or either theme slot.
-pub(crate) fn sync_appearance(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn sync_appearance(app: &mut LienzoApp, ctx: &egui::Context) {
     // A restored or embedding-supplied pin must not suppress native appearance events.
     ctx.set_theme(egui::ThemePreference::System);
     // The native service also covers Wayland sessions where winit has no system theme.

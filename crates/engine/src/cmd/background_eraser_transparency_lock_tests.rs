@@ -57,7 +57,7 @@ fn a_drag_and_the_live_preview_erase_a_transparency_locked_layer_too() {
     let all = [[8.0, 20.0], [32.0, 20.0], [56.0, 20.0]];
     let mut live = live_background_eraser(&s, &opts(&all[..1])).unwrap();
     for q in &all[1..] {
-        live.push(&[photocraft_paint::StrokePoint::new(q[0], q[1], 1.0)]).unwrap();
+        live.push(&[lienzo_paint::StrokePoint::new(q[0], q[1], 1.0)]).unwrap();
     }
     let id = s.active().unwrap().active_layer.unwrap();
     let shown = live.doc.layer(id).unwrap().surface().unwrap().clone();
@@ -87,7 +87,7 @@ fn with_a_colour_channel_target_the_preview_matches_the_commit_on_a_locked_layer
         let all = [[8.0, 9.0], [32.0, 10.0], [56.0, 11.0]];
         let mut live = live_background_eraser(&s, &opts(&all[..1])).unwrap();
         for q in &all[1..] {
-            live.push(&[photocraft_paint::StrokePoint::new(q[0], q[1], 1.0)]).unwrap();
+            live.push(&[lienzo_paint::StrokePoint::new(q[0], q[1], 1.0)]).unwrap();
         }
         let id = s.active().unwrap().active_layer.unwrap();
         let shown = live.doc.layer(id).unwrap().surface().unwrap().clone();

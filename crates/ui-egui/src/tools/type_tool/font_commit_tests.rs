@@ -1,14 +1,14 @@
 //! Selected-range font acceptance, caret typing styles and focused global commit.
-use crate::{PhotocraftApp, Services};
+use crate::{LienzoApp, Services};
 use egui::{Key, Modifiers, accesskit::Role, vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_doc::{Document, LayerContent, LayerId};
+use lienzo_doc::{Document, LayerContent, LayerId};
 use serde_json::{Value, json};
 
 const FONTS: [&str; 2] = ["Inter", "JetBrains Mono"];
 
 struct Probe {
-    app: PhotocraftApp,
+    app: LienzoApp,
     character: bool,
 }
 
@@ -28,7 +28,7 @@ impl eframe::App for Probe {
     }
 }
 
-fn layer(doc: &Document, id: LayerId) -> &photocraft_doc::TextLayer {
+fn layer(doc: &Document, id: LayerId) -> &lienzo_doc::TextLayer {
     let LayerContent::Text(t) = &doc.layer(id).unwrap().content else { panic!("text layer") };
     t
 }
@@ -75,9 +75,9 @@ fn fixture_renderer(new: bool, pattern: usize, character: bool, content: &str, g
     let builder = Harness::builder().with_size(vec2(1100.0, 1000.0)).with_pixels_per_point(scale).with_max_steps(64);
     let builder = if gpu { builder.wgpu() } else { builder };
     let mut h = builder.build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
-        app.session.edit_prefs(|p| p.type_.font_preview = photocraft_engine::prefs::FontPreview::Off);
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
+        app.session.edit_prefs(|p| p.type_.font_preview = lienzo_engine::prefs::FontPreview::Off);
         Probe { app, character }
     });
     let app = &mut h.state_mut().app;
@@ -354,7 +354,7 @@ fn returning_focus_to_the_same_canvas_caret_keeps_the_chosen_typing_font() {
     choose(&mut h, FONTS[1], "enter");
     let (layout, aff, text) = super::layout(&mut h.state_mut().app, id).unwrap();
     let (x, top, bottom) = layout.caret(text.len());
-    let p = aff.apply(photocraft_geom::Point::new(f64::from(x) - 0.1, f64::from((top + bottom) * 0.5)));
+    let p = aff.apply(lienzo_geom::Point::new(f64::from(x) - 0.1, f64::from((top + bottom) * 0.5)));
     assert!(super::pointer_down(&mut h.state_mut().app, p.x, p.y, Modifiers::NONE));
     super::pointer_up(&mut h.state_mut().app, [p.x, p.y], [p.x, p.y]);
     assert_eq!(h.state().app.ui.text_edit.as_ref().unwrap().caret, 6);
@@ -494,7 +494,7 @@ fn caret_font_insertion_preserves_variable_axes_and_style_changes_can_clear_weig
     h.run();
     choose(&mut h, FONTS[1], "enter");
     super::insert(&mut h.state_mut().app, "X");
-    let variations = |app: &PhotocraftApp, at: usize| {
+    let variations = |app: &LienzoApp, at: usize| {
         let mut offset = 0;
         layer(&app.session.active().unwrap().doc, id)
             .char_runs()
@@ -542,8 +542,8 @@ fn caret_font_and_face_persist_across_more_font_choices_and_paste() {
     assert_eq!(saved(&h, id), applied);
     for name in ["probe.pcraft", "probe.psd"] {
         let doc = h.state().app.session.active().unwrap().doc.clone();
-        let out = photocraft_io::export(&doc, name, &Default::default()).unwrap();
-        let back = photocraft_io::import(name, &out.bytes).unwrap().document;
+        let out = lienzo_io::export(&doc, name, &Default::default()).unwrap();
+        let back = lienzo_io::import(name, &out.bytes).unwrap().document;
         let imported_id = back.walk().into_iter().find_map(|(_, _, l)| matches!(l.content, LayerContent::Text(_)).then_some(l.id)).unwrap();
         assert_eq!(families(&styles(&back, imported_id)), families(&applied));
     }
@@ -572,7 +572,7 @@ fn an_existing_empty_layer_keeps_its_font_when_committed() {
 #[test]
 fn font_commit_gpu_snapshots() {
     let Some(path) = std::env::var_os("FONT_COMMIT_VISUALS").map(std::path::PathBuf::from) else { return };
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     std::fs::create_dir_all(&path).unwrap();
     for character in [false, true] {
         for scale in [1.0, 2.0] {

@@ -7,7 +7,7 @@ use super::*;
 use crate::jobs::{JobEvent, JobId, JobOutcome, Started};
 
 fn tmp(name: &str) -> String {
-    let d = std::env::temp_dir().join(format!("photocraft-place-job-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-place-job-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d.to_string_lossy().into_owned()
@@ -22,8 +22,8 @@ fn session(w: u32, h: u32, depth: u32) -> Session {
 /// A small RGB gradient PNG, so a wrong pixel anywhere shows.
 fn gradient_png(w: u32, h: u32) -> Vec<u8> {
     let px: Vec<u8> = (0..h).flat_map(|y| (0..w).flat_map(move |x| [(x * 255 / w) as u8, (y * 255 / h) as u8, ((x + y) % 256) as u8])).collect();
-    let img = photocraft_codecs::Image::from_u8(w, h, photocraft_codecs::ChannelLayout::Rgb, px).unwrap();
-    photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+    let img = lienzo_codecs::Image::from_u8(w, h, lienzo_codecs::ChannelLayout::Rgb, px).unwrap();
+    lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap()
 }
 
 fn job(r: Started) -> JobId {
@@ -53,7 +53,7 @@ fn layer_pixels(s: &Session) -> Vec<f32> {
 }
 
 fn canvas_pixels(s: &Session) -> Vec<[f32; 4]> {
-    photocraft_compose::render(&s.active().unwrap().doc, s.active().unwrap().doc.bounds()).px.clone()
+    lienzo_compose::render(&s.active().unwrap().doc, s.active().unwrap().doc.bounds()).px.clone()
 }
 
 fn steps(s: &Session) -> usize {
@@ -243,8 +243,8 @@ fn a_place_job_reads_its_file_on_the_worker() {
 /// place gave before it ran as a job: bad params naming the canvas.
 #[test]
 fn a_canvas_too_large_to_flatten_is_refused_as_before() {
-    let huge = Document::new("huge", photocraft_doc::Size::new(40_000, 30_000), ColorMode::Rgb, photocraft_color::SampleType::U8);
-    let bytes = photocraft_format::save_to_bytes(&huge, &Default::default()).unwrap();
+    let huge = Document::new("huge", lienzo_doc::Size::new(40_000, 30_000), ColorMode::Rgb, lienzo_color::SampleType::U8);
+    let bytes = lienzo_format::save_to_bytes(&huge, &Default::default()).unwrap();
     let mut s = session(100, 100, 8);
     let before = steps(&s);
     match place_bytes(&mut s, "huge.pcraft", bytes.clone(), None, &json!({})) {
@@ -265,12 +265,11 @@ fn a_canvas_too_large_to_flatten_is_refused_as_before() {
 
 /// A pseudo-random PNG of `layout` and `sample`, so a wrong pixel anywhere shows and the file
 /// is big enough to take many rows.
-fn noise_png(w: u32, h: u32, layout: photocraft_codecs::ChannelLayout, sample: photocraft_codecs::SampleType, interlaced: bool) -> Vec<u8> {
+fn noise_png(w: u32, h: u32, layout: lienzo_codecs::ChannelLayout, sample: lienzo_codecs::SampleType, interlaced: bool) -> Vec<u8> {
     let len = w as usize * h as usize * layout.channels() * sample.bytes();
     let data: Vec<u8> = (0..len).map(|i| ((i.wrapping_mul(2_654_435_761) >> 13) ^ (i / 97)) as u8).collect();
-    let img = photocraft_codecs::Image::from_raw(w, h, layout, sample, data).unwrap();
-    photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions { png_interlaced: interlaced, ..Default::default() })
-        .unwrap()
+    let img = lienzo_codecs::Image::from_raw(w, h, layout, sample, data).unwrap();
+    lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &lienzo_codecs::EncodeOptions { png_interlaced: interlaced, ..Default::default() }).unwrap()
 }
 
 /// A cooperative session whose polls each do one unit of work, so the polls a place needs do not
@@ -297,7 +296,7 @@ fn poll_to_end(s: &mut Session, id: JobId) -> (JobEvent, usize) {
 /// reduced to fit, left alone and enlarged.
 #[test]
 fn a_cooperative_place_equals_the_inline_place() {
-    use photocraft_codecs::{ChannelLayout as L, SampleType as T};
+    use lienzo_codecs::{ChannelLayout as L, SampleType as T};
     let dir = tmp("cooperative");
     let sources = [
         ("rgb8.png", noise_png(320, 300, L::Rgb, T::U8, false)),
@@ -460,7 +459,7 @@ fn cancelling_a_cooperative_place_between_polls_leaves_the_document_unchanged() 
 /// the document untouched; the rows before the damage are decoded first.
 #[test]
 fn a_cooperative_place_of_a_damaged_png_fails_cleanly() {
-    use photocraft_codecs::{ChannelLayout as L, SampleType as T};
+    use lienzo_codecs::{ChannelLayout as L, SampleType as T};
     let good = noise_png(320, 300, L::Rgb, T::U8, false);
     let mut flipped = good.clone();
     let mid = flipped.len() / 2;
@@ -495,8 +494,8 @@ fn a_cooperative_place_of_a_damaged_png_fails_cleanly() {
 #[test]
 fn a_banded_flatten_equals_flattened_checked() {
     use super::place_steps::Flatten;
-    use photocraft_codecs::{ChannelLayout as L, SampleType as T};
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_codecs::{ChannelLayout as L, SampleType as T};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
     // Wide enough for two bands across, and several tile rows.
     let sources = [
         noise_png(2100, 600, L::Gray, T::U8, false),
@@ -512,7 +511,7 @@ fn a_banded_flatten_equals_flattened_checked() {
         PixelFormat::new(ColorMode::Grayscale, SampleType::U16, true),
     ];
     for bytes in &sources {
-        let doc = photocraft_io::import("src.png", bytes).unwrap().document;
+        let doc = lienzo_io::import("src.png", bytes).unwrap().document;
         for fmt in formats {
             let expected = flattened_checked(&doc, fmt, "file.placeEmbedded").unwrap();
             let mut flatten = Flatten::new(doc.clone(), true, fmt, "file.placeEmbedded").unwrap();
@@ -538,8 +537,8 @@ fn a_banded_flatten_of_a_palette_image_equals_flattened_checked() {
     use super::place_steps::Flatten;
     let pal = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [9, 9, 9]];
     let idx: Vec<u8> = (0..300 * 600).map(|i| ((i / 7 + i / 300) % 4) as u8).collect();
-    let png = photocraft_codecs::encode_png_indexed(300, 600, &idx, &pal, Some(3), None, None).unwrap();
-    let doc = photocraft_io::import("p.png", &png).unwrap().document;
+    let png = lienzo_codecs::encode_png_indexed(300, 600, &idx, &pal, Some(3), None, None).unwrap();
+    let doc = lienzo_io::import("p.png", &png).unwrap().document;
     assert!(doc.color_table.is_some());
     let fmt = doc.pixel_format();
     let expected = flattened_checked(&doc, fmt, "file.placeEmbedded").unwrap();
@@ -556,7 +555,7 @@ fn a_banded_flatten_of_a_palette_image_equals_flattened_checked() {
 #[test]
 fn a_banded_flatten_keeps_the_size_limit() {
     use super::place_steps::Flatten;
-    let doc = Document::new("huge", photocraft_geom::Size::new(40_000, 40_000), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let doc = Document::new("huge", lienzo_geom::Size::new(40_000, 40_000), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let fmt = doc.pixel_format();
     assert!(Flatten::new(doc, true, fmt, "file.placeEmbedded").is_err());
 }
@@ -565,7 +564,7 @@ fn a_banded_flatten_keeps_the_size_limit() {
 #[test]
 fn the_flatten_size_error_names_the_place_command() {
     use super::place_steps::Flatten;
-    let huge = || Document::new("huge", photocraft_geom::Size::new(40_000, 40_000), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let huge = || Document::new("huge", lienzo_geom::Size::new(40_000, 40_000), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let fmt = huge().pixel_format();
     for command in ["file.placeEmbedded", "file.placeLinked"] {
         match Flatten::new(huge(), true, fmt, command) {
@@ -574,7 +573,7 @@ fn the_flatten_size_error_names_the_place_command() {
         }
     }
     // Through a whole place: a linked one reports file.placeLinked.
-    let bytes = photocraft_format::save_to_bytes(&huge(), &Default::default()).unwrap();
+    let bytes = lienzo_format::save_to_bytes(&huge(), &Default::default()).unwrap();
     let mut s = session(100, 100, 8);
     s.set_cooperative_jobs(true);
     s.set_job_step_budget(Duration::ZERO);

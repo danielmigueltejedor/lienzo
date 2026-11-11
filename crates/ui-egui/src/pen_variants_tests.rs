@@ -2,25 +2,25 @@
 //! the Pen does.
 
 use egui::Modifiers;
-use photocraft_doc::{LayerContent, Path};
+use lienzo_doc::{LayerContent, Path};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 300, "height": 200})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn work_path(app: &PhotocraftApp) -> Path {
+fn work_path(app: &LienzoApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().expect("a work path")
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn click(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x, y }, Modifiers::NONE);
 }
@@ -105,7 +105,7 @@ fn curvature_pen_clicks_make_a_smooth_path_through_every_point() {
     assert!(sp.knots[0].smooth && sp.knots[2].smooth);
 }
 
-fn ev(app: &mut PhotocraftApp, kind: &str, x: f64, y: f64, mods: Modifiers) {
+fn ev(app: &mut LienzoApp, kind: &str, x: f64, y: f64, mods: Modifiers) {
     let e = match kind {
         "down" => ToolEvent::Down { x, y, pressure: 1.0 },
         "up" => ToolEvent::Up { x, y },
@@ -176,10 +176,10 @@ fn new_pens_with_command_edit_paths_as_direct_selection() {
 #[test]
 fn the_pen_carries_on_an_open_path_from_either_end() {
     let mut app = app(Tool::Pen);
-    let anchors = |app: &PhotocraftApp| -> Vec<Vec<[f64; 2]>> {
+    let anchors = |app: &LienzoApp| -> Vec<Vec<[f64; 2]>> {
         work_path(app).subpaths.iter().map(|s| s.knots.iter().map(|k| [k.anchor.x, k.anchor.y]).collect()).collect()
     };
-    let steps = |app: &PhotocraftApp| app.session.active().unwrap().history.past_len();
+    let steps = |app: &LienzoApp| app.session.active().unwrap().history.past_len();
     click(&mut app, 20.0, 20.0);
     click(&mut app, 80.0, 20.0);
     crate::vector_ui::pen_commit(&mut app, false);
@@ -226,7 +226,7 @@ fn the_curvature_pen_carries_on_an_open_path() {
     crate::vector_ui::pen_commit(&mut app, false);
     let before = work_path(&app).subpaths[0].knots.clone();
     assert_ne!(before[1].out_ctrl, before[1].anchor, "the middle anchor has handles");
-    let steps = |app: &PhotocraftApp| app.session.active().unwrap().history.past_len();
+    let steps = |app: &LienzoApp| app.session.active().unwrap().history.past_len();
     let at = steps(&app);
     app.ui.tool = Tool::CurvaturePen;
     click(&mut app, 80.0, 80.0);
@@ -259,7 +259,7 @@ fn the_curvature_pen_carries_on_an_open_path() {
 }
 
 /// The work path set to `subpaths`, in one step.
-fn set_work_path(app: &mut PhotocraftApp, subpaths: Vec<photocraft_doc::vector::Subpath>) {
+fn set_work_path(app: &mut LienzoApp, subpaths: Vec<lienzo_doc::vector::Subpath>) {
     app.session
         .edit("path", |doc, _| {
             doc.work_path = Some(Path::new(subpaths));
@@ -269,7 +269,7 @@ fn set_work_path(app: &mut PhotocraftApp, subpaths: Vec<photocraft_doc::vector::
 }
 
 /// Direct Selection's selection: anchor `[subpath, knot]` of `target`, alone.
-fn select_anchor(app: &mut PhotocraftApp, target: crate::direct_select::PathRef, anchor: [usize; 2]) {
+fn select_anchor(app: &mut LienzoApp, target: crate::direct_select::PathRef, anchor: [usize; 2]) {
     app.ui.direct_selection.target = Some(target);
     app.ui.direct_selection.anchors = vec![anchor];
     // Made now, on this document: not a stale selection the next press drops.
@@ -280,7 +280,7 @@ fn select_anchor(app: &mut PhotocraftApp, target: crate::direct_select::PathRef,
 /// the one whose endpoint is selected, not the first one ending there.
 #[test]
 fn the_curvature_pen_carries_on_the_selected_subpath_of_two_that_end_together() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut app = app(Tool::CurvaturePen);
     set_work_path(&mut app, vec![Subpath::polyline(&[(20.0, 20.0), (80.0, 80.0)]), Subpath::polyline(&[(200.0, 20.0), (80.0, 80.0)])]);
     select_anchor(&mut app, crate::direct_select::PathRef::Work, [1, 1]);
@@ -330,8 +330,8 @@ fn a_carried_on_endpoint_starts_a_new_curvature_run() {
 /// knot's handles swapped, and that endpoint keeps the handle it had towards the path.
 #[test]
 fn a_curved_path_carries_on_from_its_first_endpoint_with_its_handles_swapped() {
-    use photocraft_doc::vector::{Knot, Subpath};
-    use photocraft_geom::Point;
+    use lienzo_doc::vector::{Knot, Subpath};
+    use lienzo_geom::Point;
     let mut app = app(Tool::CurvaturePen);
     let start = Knot::smooth(Point::new(20.0, 20.0), Point::new(10.0, 30.0), Point::new(30.0, 10.0));
     let middle = Knot::smooth(Point::new(50.0, 60.0), Point::new(40.0, 50.0), Point::new(60.0, 70.0));
@@ -350,7 +350,7 @@ fn a_curved_path_carries_on_from_its_first_endpoint_with_its_handles_swapped() {
 /// carries on from) changes nothing: those knots keep their handles.
 #[test]
 fn toggling_a_carried_knot_changes_nothing() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut app = app(Tool::CurvaturePen);
     set_work_path(&mut app, vec![Subpath::polyline(&[(20.0, 20.0), (80.0, 20.0), (80.0, 80.0)])]);
     select_anchor(&mut app, crate::direct_select::PathRef::Work, [0, 2]);
@@ -365,7 +365,7 @@ fn toggling_a_carried_knot_changes_nothing() {
 /// press starts a new path rather than carrying on the work path from there.
 #[test]
 fn an_endpoint_on_another_path_than_the_pen_draws_on_starts_a_new_one() {
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::vector::Subpath;
     let mut app = app(Tool::Pen);
     app.ui.tool_options.vector_mode = "shape".into();
     click(&mut app, 20.0, 20.0);
@@ -398,7 +398,7 @@ fn a_resumed_subpath_keeps_its_operation_and_a_stale_draft_adds_a_new_one() {
     crate::vector_ui::pen_commit(&mut app, false);
     let work = work_path(&app);
     assert_eq!((work.subpaths.len(), work.subpaths[0].knots.len()), (1, 3));
-    assert_eq!(work.subpaths[0].op, photocraft_doc::vector::PathOp::Subtract, "the operation is kept");
+    assert_eq!(work.subpaths[0].op, lienzo_doc::vector::PathOp::Subtract, "the operation is kept");
     // Replacing the source invalidates the draft; neither explicit commit nor a frame retries it.
     click(&mut app, 20.0, 20.0);
     click(&mut app, 20.0, 80.0);
@@ -502,8 +502,8 @@ fn the_pen_does_not_carry_on_a_work_path_hidden_by_make_selection() {
 fn shape_mode_carries_on_the_selected_shapes_open_path() {
     let mut app = app(Tool::Pen);
     app.ui.tool_options.vector_mode = "shape".into();
-    let layers = |app: &PhotocraftApp| app.session.active().unwrap().doc.layers.len();
-    let shape = |app: &PhotocraftApp| {
+    let layers = |app: &LienzoApp| app.session.active().unwrap().doc.layers.len();
+    let shape = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
             LayerContent::Shape(sh) => {
@@ -512,7 +512,7 @@ fn shape_mode_carries_on_the_selected_shapes_open_path() {
             other => panic!("not a shape layer: {other:?}"),
         }
     };
-    let steps = |app: &PhotocraftApp| app.session.active().unwrap().history.past_len();
+    let steps = |app: &LienzoApp| app.session.active().unwrap().history.past_len();
     click(&mut app, 20.0, 20.0);
     click(&mut app, 80.0, 20.0);
     crate::vector_ui::pen_commit(&mut app, false);
@@ -545,7 +545,7 @@ fn a_targeted_vector_mask_carries_on_its_open_path() {
     let open = json!({"subpaths": [{"closed": false, "knots": [{"anchor": [20.0, 20.0]}, {"anchor": [80.0, 20.0]}]}]});
     app.run("layer.vectorMask.add", json!({"layer": id.0, "path": open})).unwrap();
     app.ui.vector_mask_target = true;
-    let mask = |app: &PhotocraftApp| {
+    let mask = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         let p = &st.doc.layer(id).unwrap().vector_mask.as_ref().unwrap().path;
         p.subpaths.iter().map(|s| s.knots.len()).collect::<Vec<_>>()
@@ -570,7 +570,7 @@ fn a_press_in_reach_of_both_ends_carries_the_nearer_one_on_and_does_not_close() 
         click(&mut app, x, y);
     }
     crate::vector_ui::pen_commit(&mut app, false);
-    let ends = |app: &PhotocraftApp| {
+    let ends = |app: &LienzoApp| {
         let pen = app.ui.pen.as_ref().expect("a resumed draft");
         assert!(pen.resumes.is_some(), "{pen:?}");
         pen.knots.last().map(|k| k[0])

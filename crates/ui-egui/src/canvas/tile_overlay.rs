@@ -19,12 +19,12 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use egui::{Align2, Color32, FontId, Painter, Shape, Stroke};
-use photocraft_geom::{Rect as DRect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use lienzo_geom::{Rect as DRect, TILE_SIZE, TileCoord};
+use lienzo_raster::{Surface, Tile};
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 
 /// Outline and fill of a tile whose pixels appear nowhere else in the layer.
@@ -137,7 +137,7 @@ fn quad(xf: &ViewXform, r: DRect) -> [egui::Pos2; 4] {
 }
 
 /// Draw the active layer's tiles of document `idx`. `visible` is the document area in view.
-pub fn paint(app: &PhotocraftApp, ctx: &egui::Context, painter: &Painter, xf: &ViewXform, idx: usize, visible: DRect) {
+pub fn paint(app: &LienzoApp, ctx: &egui::Context, painter: &Painter, xf: &ViewXform, idx: usize, visible: DRect) {
     let Some(st) = app.session.documents().get(idx) else { return };
     let Some(surface) = st.active_layer.and_then(|id| st.doc.layer(id)).and_then(|l| l.surface()) else { return };
     let revision = st.revision;
@@ -195,7 +195,7 @@ pub fn paint(app: &PhotocraftApp, ctx: &egui::Context, painter: &Painter, xf: &V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
+    use lienzo_color::PixelFormat;
 
     /// The document rect of tile cell (tx, ty).
     fn cell(tx: i32, ty: i32) -> DRect {
@@ -258,7 +258,7 @@ mod tests {
         }
     }
 
-    /// `cargo test --release -p photocraft-ui-egui --lib tile_grouping_36mp -- --ignored --nocapture`
+    /// `cargo test --release -p lienzo-ui-egui --lib tile_grouping_36mp -- --ignored --nocapture`
     #[test]
     #[ignore = "benchmark"]
     fn tile_grouping_36mp() {

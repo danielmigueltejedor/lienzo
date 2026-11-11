@@ -1,7 +1,7 @@
-//! PhotoCraft's first UI shell, built on egui/eframe.
+//! Lienzo's first UI shell, built on egui/eframe.
 //!
 //! This crate is deliberately thin. Every action goes through
-//! [`photocraft_engine::Session::execute`], and all UI state lives in [`state::UiState`] (plain
+//! [`lienzo_engine::Session::execute`], and all UI state lives in [`state::UiState`] (plain
 //! data). The [`control`] module exposes both to automation, so agents can drive and inspect every
 //! part of the interface.
 #![forbid(unsafe_code)]
@@ -9,11 +9,11 @@
 #![recursion_limit = "256"]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-/// PhotoCraft as craft-update knows it, with its 128 px icon and accent colour: the update
+/// Lienzo as craft-update knows it, with its 128 px icon and accent colour: the update
 /// prompt shows both, and an AppImage's menu entry gets the icon.
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
-    icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.photocraft.png")),
+    icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/dev.danielmiguelt.Lienzo.png")),
     accent: Some([0x2f, 0x7b, 0xf5]),
     ..craft_update::suite::PHOTOCRAFT
 };
@@ -66,8 +66,8 @@ pub mod work_area;
 use std::collections::HashMap;
 use std::sync::mpsc::{Receiver, Sender};
 
-use photocraft_doc::{DocId, Document};
-use photocraft_engine::Session;
+use lienzo_doc::{DocId, Document};
+use lienzo_engine::Session;
 use serde_json::{Value, json};
 
 pub use control::{ControlRequest, ControlResponse};
@@ -348,7 +348,7 @@ pub use widgets::tone;
 /// The Info panel's cached sample: pixel x, y, document revision and Eyedropper Sample Size.
 type InfoSampleKey = (i32, i32, u64, u32);
 
-pub struct PhotocraftApp {
+pub struct LienzoApp {
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -442,7 +442,7 @@ pub struct PhotocraftApp {
     /// tool) and the engine's active-layer change count right after that pick
     /// (`Session::active_layer_changes`). The Layers panel's reveal reads it when it next draws, and
     /// accepts it only if nothing changed the active layer since, however long ago (`layer_reveal`, #11381).
-    pub(crate) move_pick: Option<(photocraft_doc::LayerId, u64)>,
+    pub(crate) move_pick: Option<(lienzo_doc::LayerId, u64)>,
     /// The next tool `Down` is an Alt+right-drag that resizes the brush (#297). `tool_event`
     /// takes it on every event, so a press another handler consumes can't leave it set.
     pub(crate) brush_resize_armed: bool,
@@ -466,7 +466,7 @@ pub struct PhotocraftApp {
     /// Control replies waiting for queued synthetic input to be processed.
     input_waiters: Vec<Sender<ControlResponse>>,
     /// Live (uncommitted) adjustment edit shown on canvas while a slider is dragged.
-    pub live_adjust: Option<(photocraft_doc::LayerId, Value)>,
+    pub live_adjust: Option<(lienzo_doc::LayerId, Value)>,
     /// Frames rendered (for tests and the status bar).
     pub frame: u64,
     /// The pointer rested on the notice stack last frame. Used to give a fresh auto-hide delay in
@@ -516,10 +516,10 @@ pub struct PhotocraftApp {
     path_document: Option<(DocId, u64, std::sync::Weak<Document>)>,
     pub fps: f32,
     pub(crate) last_frame_time: f64,
-    thumbs: HashMap<(photocraft_doc::LayerId, u8), (u64, egui::TextureHandle)>,
+    thumbs: HashMap<(lienzo_doc::LayerId, u8), (u64, egui::TextureHandle)>,
     /// The document area each layer thumbnail in `thumbs` frames (the canvas, or the layer's
     /// bounds with Clip Thumbnails to Layer Bounds; #4281).
-    thumb_frames: HashMap<photocraft_doc::LayerId, photocraft_geom::Rect>,
+    thumb_frames: HashMap<lienzo_doc::LayerId, lienzo_geom::Rect>,
     /// History snapshot thumbnails by (document, snapshot id), each with the snapshot document it
     /// shows (`snapshot_thumb`, #2966): made once, and again only when that is a different one (a
     /// preserved-ID reopen, or the first snapshot refreshed for a served font, #6087).
@@ -527,7 +527,7 @@ pub struct PhotocraftApp {
     /// Snapshots whose live layer/mask keys were last used to prune thumbnail handles.
     thumb_documents: Vec<(DocId, std::sync::Weak<Document>)>,
     /// Content bounds cached per (key, revision): scanning a 36 MP layer every frame cost ~77 ms.
-    bounds_cache: HashMap<u64, (u64, photocraft_geom::Rect)>,
+    bounds_cache: HashMap<u64, (u64, lienzo_geom::Rect)>,
     /// Downsampled proxy of the active document for live previews: (doc, revision, k, proxy).
     pub(crate) proxy: Option<(DocId, u64, u32, std::sync::Arc<Document>)>,
     /// Key of the preview currently uploaded to the GPU (doc, params hash).
@@ -540,7 +540,7 @@ pub struct PhotocraftApp {
     #[cfg(not(target_arch = "wasm32"))]
     filter_preview_worker: crate::dialogs::filter_preview_worker::Worker,
     /// Full CPU canvas redraws running in the background, by document (#4024).
-    pub(crate) redraws: std::collections::HashMap<photocraft_doc::DocId, background_redraw::Redraw>,
+    pub(crate) redraws: std::collections::HashMap<lienzo_doc::DocId, background_redraw::Redraw>,
     /// The last finished background redraws, for going back to a state drawn a moment ago (#6528).
     pub(crate) kept: background_redraw::KeptComposites,
     /// Select › Color Range dialog preview (proxy document + mask / image textures).
@@ -582,7 +582,7 @@ pub struct PhotocraftApp {
     /// ([`actions::RESUME`]): what to play next and the automation gate it paused under.
     pub(crate) paused_playbacks: actions::PausedPlaybacks,
     /// Levels/Curves histogram cache: (document, adjustment layer, revision it is valid for).
-    pub(crate) tone_hist: Option<(DocId, photocraft_doc::LayerId, u64, std::sync::Arc<tone::Histograms>)>,
+    pub(crate) tone_hist: Option<(DocId, lienzo_doc::LayerId, u64, std::sync::Arc<tone::Histograms>)>,
     /// Histogram panel: the document's histogram (`histogram_panel`).
     pub(crate) doc_hist: Option<histogram_panel::PanelHist>,
     /// Histogram panel: the histogram of the adjustment previewing on the canvas.
@@ -654,9 +654,9 @@ pub struct PhotocraftApp {
     /// Pointer position over the canvas (document px), for the Info panel and status bar.
     pub(crate) hover_doc: Option<[f64; 2]>,
     /// Layer hovered in the Layers panel, outlined on the canvas.
-    pub(crate) hover_layer: Option<photocraft_doc::LayerId>,
+    pub(crate) hover_layer: Option<lienzo_doc::LayerId>,
     /// Layer hovered on the canvas, highlighted in the Layers panel.
-    pub(crate) canvas_hover_layer: Option<photocraft_doc::LayerId>,
+    pub(crate) canvas_hover_layer: Option<lienzo_doc::LayerId>,
     pub(crate) clone_preview: Option<crate::canvas::ClonePreviewCache>,
     /// Info panel sample cache: ((x, y, revision, Sample Size), composite RGBA).
     info_sample: Option<(InfoSampleKey, [f32; 4])>,
@@ -669,7 +669,7 @@ pub struct PhotocraftApp {
     /// Perspective Crop tool gesture and clicked corners (see `perspective_crop_ui`).
     pub(crate) pcrop: perspective_crop_ui::PerspectiveCrop,
     /// Type tool layout cache: ((doc, revision, layer), layout).
-    pub(crate) type_layout: Option<((u64, u64, u64), std::sync::Arc<photocraft_text::TextLayout>)>,
+    pub(crate) type_layout: Option<((u64, u64, u64), std::sync::Arc<lienzo_text::TextLayout>)>,
     /// Type tool: (layer, clicks in the current run) for word / line / paragraph / all selection.
     pub(crate) type_clicks: Option<(u64, u32)>,
     pub(crate) type_transform_preview: Option<type_transform::Preview>,
@@ -691,7 +691,7 @@ pub struct PhotocraftApp {
     gpu: Option<gpu_canvas::GpuCanvas>,
     /// The device the window itself draws with, and its health flag: the GPU canvas's, or one
     /// watched for the CPU canvas (see `gpu_status::check_window`).
-    window_device: Option<(eframe::wgpu::Device, photocraft_gpu::DeviceHealth)>,
+    window_device: Option<(eframe::wgpu::Device, lienzo_gpu::DeviceHealth)>,
     /// That device was lost: frames draw nothing and the app closes once its work is saved (#3438).
     window_lost: bool,
     /// When (in `egui::InputState::time`) to try saving unsaved work for recovery again after a
@@ -701,14 +701,14 @@ pub struct PhotocraftApp {
     /// build a new one on the same device (see `gpu_status::choose_recovery`, #6577).
     gpu_render_state: Option<eframe::egui_wgpu::RenderState>,
     /// Why the GPU canvas was dropped (see `gpu_status::fall_back`).
-    gpu_fault: Option<photocraft_gpu::Fault>,
+    gpu_fault: Option<lienzo_gpu::Fault>,
     /// Out-of-memory errors this session after which the GPU canvas was rebuilt by itself (#6564).
     gpu_oom_retries: u32,
     /// Run once the first frames have rendered (see [`Self::on_started`]).
     started: Option<gpu_status::StartedHook>,
     /// Frame and canvas-upload timings (exposed via `ui.inspect`).
     pub perf: gpu_canvas::Perf,
-    /// Per-frame stroke timings for latency reports (`PHOTOCRAFT_STROKE_TRACE`, see `stroke_trace`).
+    /// Per-frame stroke timings for latency reports (`LIENZO_STROKE_TRACE`, see `stroke_trace`).
     pub stroke_trace: stroke_trace::StrokeTrace,
     /// Why each document's view is drawn on the CPU, and the history of changes (`render_path`).
     pub render_path: render_path::RenderPath,
@@ -727,10 +727,10 @@ pub struct PhotocraftApp {
     pub(crate) tiff_remembered: tiff_options_ui::Remembered,
     /// Where each document was last saved or exported to through a dialog (#1826): its next Save
     /// As or export dialog starts there rather than beside the document. Session-only.
-    pub(crate) save_dirs: HashMap<photocraft_doc::DocId, std::path::PathBuf>,
+    pub(crate) save_dirs: HashMap<lienzo_doc::DocId, std::path::PathBuf>,
     /// Each document's own file as it was when the document was opened from it or saved to it
     /// (see [`FileStamp`]).
-    pub(crate) disk_stamps: HashMap<photocraft_doc::DocId, (String, FileStamp)>,
+    pub(crate) disk_stamps: HashMap<lienzo_doc::DocId, (String, FileStamp)>,
     /// A save to an RGB Targa parked behind the Targa Options prompt (see `targa_options_ui`).
     pub(crate) targa_options: Option<targa_options_ui::Prompt>,
     /// A save to a JPEG parked behind the JPEG Options prompt (see `jpeg_options_ui`).

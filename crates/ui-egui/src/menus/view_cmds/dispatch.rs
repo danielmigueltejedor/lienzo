@@ -1,7 +1,7 @@
 use super::arrange::{arrange, fit_layers};
 use super::dialogs::front;
 use super::options::{panel_state, panel_tab, pixel_aspect_ratio, screen_mode_commands, show_slot, snap_slot, was_maximized_id};
-use super::{FONT_PREVIEW, LANGUAGE, LAYOUTS, PIXEL_ASPECTS, PhotocraftApp, SCREEN_MODES, Show, SnapTo, Value, json};
+use super::{FONT_PREVIEW, LANGUAGE, LAYOUTS, LienzoApp, PIXEL_ASPECTS, SCREEN_MODES, Show, SnapTo, Value, json};
 
 /// Ids handled here (live menu items).
 pub fn handles(id: &str) -> bool {
@@ -71,12 +71,12 @@ pub fn handles(id: &str) -> bool {
     )
 }
 
-pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn is_enabled(app: &LienzoApp, id: &str) -> Option<bool> {
     is_enabled_with_engine(app, id, || app.session.is_enabled(id))
 }
 
 /// Keep picker enablement testable with the engine's native filesystem check disabled.
-pub(super) fn is_enabled_with_engine(app: &PhotocraftApp, id: &str, engine_enabled: impl FnOnce() -> bool) -> Option<bool> {
+pub(super) fn is_enabled_with_engine(app: &LienzoApp, id: &str, engine_enabled: impl FnOnce() -> bool) -> Option<bool> {
     if !handles(id) && !wraps(id) {
         return None;
     }
@@ -112,13 +112,13 @@ pub(super) fn is_enabled_with_engine(app: &PhotocraftApp, id: &str, engine_enabl
 
 /// A full screen mode with no document left (the last one closed) goes back to Standard Screen
 /// Mode, rather than showing the start screen on the full screen pasteboard (#9349).
-pub fn leave_full_screen_without_document(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn leave_full_screen_without_document(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.ui.view.screen_mode != "standard" && app.session.documents().is_empty() {
         let _ = crate::menus::invoke(app, ctx, "view.screenMode.standard", json!({}));
     }
 }
 
-pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &LienzoApp, id: &str) -> Option<bool> {
     let o = &app.ui.view;
     if let Some(k) = id.strip_prefix("view.show.") {
         let mut s = o.show;
@@ -178,21 +178,21 @@ pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
 /// options bar and Properties show: the one being edited, else the active or a selected type layer.
 /// Anti-aliasing and orientation stay check items (`Some(false)`) without a type layer: a native
 /// menu can't change an item's kind in place.
-fn type_checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+fn type_checked(app: &LienzoApp, id: &str) -> Option<bool> {
     let t = crate::type_tool::target_text(app);
     if let Some(k) = id.strip_prefix("type.antiAlias.") {
-        return Some(t.is_some_and(|t| photocraft_engine::type_extra_cmds::aa_name(t.antialias) == k));
+        return Some(t.is_some_and(|t| lienzo_engine::type_extra_cmds::aa_name(t.antialias) == k));
     }
     if let Some(k) = id.strip_prefix("type.orientation.") {
-        return Some(t.is_some_and(|t| (t.orientation == photocraft_doc::text::Orientation::Vertical) == (k == "vertical")));
+        return Some(t.is_some_and(|t| (t.orientation == lienzo_doc::text::Orientation::Vertical) == (k == "vertical")));
     }
     let t = t?;
     // The style where the menu reads: the selection start while editing a range (as the Character
     // panel shows it), else the layer's first run.
     let start = crate::type_tool::target(app).and_then(|(_, range)| range).map_or(0, |r| r[0]);
     if let Some(key) = id.strip_prefix("type.openType.numerals.") {
-        let want = photocraft_engine::type_extra_cmds::NumeralsStyle::from_id(key)?;
-        return Some(photocraft_engine::type_extra_cmds::numerals_style_at(t, start) == Some(want));
+        let want = lienzo_engine::type_extra_cmds::NumeralsStyle::from_id(key)?;
+        return Some(lienzo_engine::type_extra_cmds::numerals_style_at(t, start) == Some(want));
     }
     let tag = match id.strip_prefix("type.openType.")? {
         "standardLigatures" => "liga",
@@ -207,7 +207,7 @@ fn type_checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
         "fractions" => "frac",
         set => stylistic_set_tag(set.strip_prefix("stylisticSets.set")?)?,
     };
-    Some(photocraft_engine::type_extra_cmds::feature_on_at(t, start, tag))
+    Some(lienzo_engine::type_extra_cmds::feature_on_at(t, start, tag))
 }
 
 /// `ss01`..`ss20` for the digits of a Stylistic Sets item id (`1`..`20`, no leading zeros).
@@ -215,7 +215,7 @@ fn stylistic_set_tag(n: &str) -> Option<&'static str> {
     if n.starts_with('0') || !n.bytes().all(|b| b.is_ascii_digit()) {
         return None;
     }
-    photocraft_engine::type_extra_cmds::STYLISTIC_SET_TAGS.get(n.parse::<usize>().ok()?.checked_sub(1)?).copied()
+    lienzo_engine::type_extra_cmds::STYLISTIC_SET_TAGS.get(n.parse::<usize>().ok()?.checked_sub(1)?).copied()
 }
 
 /// Engine commands that get a dialog or file picker here when invoked without parameters.
@@ -269,7 +269,7 @@ pub(super) fn no_params(p: &Value) -> bool {
 
 /// Run a View/Window/Type shell command, or front an engine command with its dialog. `None` when
 /// `id` isn't ours.
-pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn invoke(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if wraps(id) {
         return front(app, ctx, id, params);
     }
@@ -283,7 +283,7 @@ fn flag_param(p: &Value, cur: bool) -> bool {
     p.get("on").and_then(Value::as_bool).unwrap_or(!cur)
 }
 
-fn run(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, p: &Value) -> Result<Value, String> {
+fn run(app: &mut LienzoApp, ctx: &egui::Context, id: &str, p: &Value) -> Result<Value, String> {
     if let Some((panel, tab)) = panel_tab(app, id) {
         let group = crate::dock::Group::from_key(panel);
         let collapsed = group.is_some_and(|g| app.ui.dock.is_collapsed(g));

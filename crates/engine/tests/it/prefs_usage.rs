@@ -17,7 +17,7 @@
 //! The `impl Session` blocks of `prefs.rs` (e.g. `apply_prefs`) are engine code, not the model,
 //! so they are scanned like any other source, as the scorecard's prefs audit does.
 
-use photocraft_engine::prefs::{HIDDEN_UNTIL_IMPLEMENTED, Preferences};
+use lienzo_engine::prefs::{HIDDEN_UNTIL_IMPLEMENTED, Preferences};
 use std::path::{Path, PathBuf};
 
 fn snake(camel: &str) -> String {

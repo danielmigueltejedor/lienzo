@@ -1,9 +1,9 @@
 use super::*;
 use crate::file_dialog::{self, FileDialogAnswer, FileDialogRequest};
 use crate::{Services, menus, notices};
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::Document;
-use photocraft_geom::Size;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::Document;
+use lienzo_geom::Size;
 use serde_json::json;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,14 +11,14 @@ use std::rc::Rc;
 /// Writes recorded by the fake writer: (path, bytes).
 type Written = Rc<RefCell<Vec<(String, Vec<u8>)>>>;
 
-/// An app whose importer names the document after the file (like `photocraft-io`) and reports a
+/// An app whose importer names the document after the file (like `lienzo-io`) and reports a
 /// warning for names containing "warn", and fails for bytes "bad"; the exporter warns for ".png"
 /// and the writer records what it wrote. Its file dialogs answer with `answers`, in order.
-fn app_with(answers: Vec<Option<FileDialogAnswer>>) -> (PhotocraftApp, Written) {
+fn app_with(answers: Vec<Option<FileDialogAnswer>>) -> (LienzoApp, Written) {
     let written: Written = Rc::default();
     let w = written.clone();
     let services = Services {
-        import: Some(Box::new(|name: &str, bytes: &[u8], _opts: &photocraft_io::ImportOptions| {
+        import: Some(Box::new(|name: &str, bytes: &[u8], _opts: &lienzo_io::ImportOptions| {
             if bytes == b"bad" {
                 return Err("not an image".into());
             }
@@ -36,17 +36,17 @@ fn app_with(answers: Vec<Option<FileDialogAnswer>>) -> (PhotocraftApp, Written) 
         })),
         ..Default::default()
     };
-    (PhotocraftApp::new(photocraft_engine::Session::new(), services), written)
+    (LienzoApp::new(lienzo_engine::Session::new(), services), written)
 }
 
 /// The end of a frame: the dialog asked for is shown, and its answer acted on.
-fn answer(app: &mut PhotocraftApp) {
+fn answer(app: &mut LienzoApp) {
     app.poll_file_dialog(&egui::Context::default(), None);
 }
 
 /// Files named `names` (holding `bytes`) in a fresh directory for `tag`: (directory, paths).
 fn files(tag: &str, names: &[&str], bytes: &[u8]) -> (std::path::PathBuf, Vec<String>) {
-    let dir = std::env::temp_dir().join(format!("photocraft-file-open-{tag}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-file-open-{tag}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let paths = names
         .iter()
@@ -289,7 +289,7 @@ fn open_failures_are_errors_and_leave_no_document() {
 
 #[test]
 fn a_picked_file_that_cannot_be_read_is_reported_like_any_open_failure() {
-    let missing = std::env::temp_dir().join("photocraft-missing-dir").join("big.psb").to_string_lossy().into_owned();
+    let missing = std::env::temp_dir().join("lienzo-missing-dir").join("big.psb").to_string_lossy().into_owned();
     let picked = || Some(FileDialogAnswer::Paths(vec![missing.clone()]));
     let (mut app, _) = app_with(vec![picked(), picked(), None]);
     app.open_dialog_file().unwrap();
@@ -312,7 +312,7 @@ fn a_picked_file_that_cannot_be_read_is_reported_like_any_open_failure() {
 #[test]
 fn open_paths_reports_each_failure_without_panicking() {
     let (mut app, _) = app_with(Vec::new());
-    let missing = std::env::temp_dir().join("photocraft-definitely-missing-file.psd").to_string_lossy().to_string();
+    let missing = std::env::temp_dir().join("lienzo-definitely-missing-file.psd").to_string_lossy().to_string();
     let dir = std::env::temp_dir().to_string_lossy().to_string();
     let n = app.open_paths(&[missing, String::new(), dir, "\u{0}".into()]);
     assert_eq!(n, 0);
@@ -326,7 +326,7 @@ fn open_paths_reports_each_failure_without_panicking() {
 
 #[test]
 fn os_open_events_open_files_with_paths() {
-    let dir = std::env::temp_dir().join(format!("photocraft-os-open-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-os-open-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let a = dir.join("a.psd");
     let b = dir.join("b.png");
@@ -395,14 +395,14 @@ fn dropped(path: impl Into<std::path::PathBuf>, bytes: Result<Vec<u8>, String>) 
     std::sync::Arc::new(FakeDrop(path.into(), bytes))
 }
 
-fn doc_names(app: &PhotocraftApp) -> Vec<String> {
+fn doc_names(app: &LienzoApp) -> Vec<String> {
     app.session.documents().iter().map(|d| d.doc.name.clone()).collect()
 }
 
 #[test]
 fn dropped_files_open_with_path_and_recent() {
     let (mut app, _) = app_with(Vec::new());
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let abs = dir.join("dropped.psd");
     std::fs::write(&abs, b"x").unwrap();
@@ -433,24 +433,24 @@ fn dropped_files_open_with_path_and_recent() {
 
 /// PNG bytes of a white `w`×`h` image.
 fn png_bytes(w: u32, h: u32) -> Vec<u8> {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": w, "height": h, "background": "white"})).unwrap();
-    photocraft_io::export(&s.active().unwrap().doc, "p.png", &Default::default()).unwrap().bytes
+    lienzo_io::export(&s.active().unwrap().doc, "p.png", &Default::default()).unwrap().bytes
 }
 
 /// An app with one open document whose canvas showed at (100, 50)–(700, 550) last frame.
-fn app_with_canvas() -> PhotocraftApp {
+fn app_with_canvas() -> LienzoApp {
     let (mut app, _) = app_with(Vec::new());
     app.open_bytes("canvas.psd", b"x").unwrap();
     app.drop_canvas_rect = Some(egui::Rect::from_min_max(egui::pos2(100.0, 50.0), egui::pos2(700.0, 550.0)));
     app
 }
 
-fn layer_count(app: &PhotocraftApp) -> usize {
+fn layer_count(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
-fn history_steps(app: &PhotocraftApp) -> usize {
+fn history_steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -458,7 +458,7 @@ fn history_steps(app: &PhotocraftApp) -> usize {
 /// Transform; the next is placed once the previous transform is committed or cancelled.
 #[test]
 fn files_dropped_onto_the_canvas_are_placed_in_free_transform_one_by_one() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-place-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-place-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let abs = dir.join("photo.png");
     std::fs::write(&abs, png_bytes(200, 100)).unwrap();
@@ -498,7 +498,7 @@ fn files_dropped_onto_the_canvas_are_placed_in_free_transform_one_by_one() {
     let st = app.session.active().unwrap();
     let top = st.doc.layer(st.active_layer.unwrap()).unwrap();
     assert_eq!(top.name, "small");
-    assert!(matches!(top.content, photocraft_doc::LayerContent::Smart(_)));
+    assert!(matches!(top.content, lienzo_doc::LayerContent::Smart(_)));
     // Esc takes the place back, leaving nothing to redo.
     crate::transform_tool::cancel(&mut app);
     assert_eq!((layer_count(&app), history_steps(&app)), (layers + 1, steps + 1));
@@ -511,7 +511,7 @@ fn files_dropped_onto_the_canvas_are_placed_in_free_transform_one_by_one() {
     let st = app.session.active().unwrap();
     let placed_svg = st.doc.layer(st.active_layer.unwrap()).unwrap();
     assert_eq!(placed_svg.name, "logo");
-    assert!(matches!(placed_svg.content, photocraft_doc::LayerContent::Smart(_)), "SVG drops use Place Embedded");
+    assert!(matches!(placed_svg.content, lienzo_doc::LayerContent::Smart(_)), "SVG drops use Place Embedded");
     assert!(app.ui.transform.is_some(), "SVG drop should enter Free Transform");
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -540,7 +540,7 @@ fn a_separate_drop_applies_the_open_transform_and_places_at_once() {
 }
 
 /// Apply the jobs that have finished, frame by frame, until `done` holds (or 30 s pass).
-fn tick_until(app: &mut PhotocraftApp, ctx: &egui::Context, done: impl Fn(&PhotocraftApp) -> bool) {
+fn tick_until(app: &mut LienzoApp, ctx: &egui::Context, done: impl Fn(&LienzoApp) -> bool) {
     let t = std::time::Instant::now();
     while !done(app) {
         assert!(t.elapsed() < std::time::Duration::from_secs(30), "not done after 30 s");
@@ -643,7 +643,7 @@ fn a_dropped_file_is_placed_over_several_frames_without_background_jobs() {
 /// A file dropped from a path, a damaged file and a cancel all end as they do with worker threads.
 #[test]
 fn stepped_places_from_a_path_fail_and_cancel_like_background_ones() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-place-steps-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-place-steps-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let good = dir.join("good.png");
     std::fs::write(&good, png_bytes(30, 30)).unwrap();
@@ -679,7 +679,7 @@ fn stepped_places_from_a_path_fail_and_cancel_like_background_ones() {
 /// egui's reader), making its layer once.
 #[test]
 fn a_cooperative_drop_from_a_path_completes_in_slices() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-path-slices-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-path-slices-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let good = dir.join("good.png");
     std::fs::write(&good, png_bytes(30, 30)).unwrap();
@@ -806,7 +806,7 @@ fn a_scripted_place_never_opens_free_transform() {
 }
 
 /// Frames with nothing to wait for: jobs applied and the drop queue served.
-fn idle_frames(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn idle_frames(app: &mut LienzoApp, ctx: &egui::Context) {
     for _ in 0..3 {
         crate::jobs_ui::tick(app, ctx);
         app.place_next_dropped(ctx);
@@ -815,7 +815,7 @@ fn idle_frames(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Drops two files on the canvas of document A (the app's only one) with background jobs on, starts
 /// placing the first, then opens document B, which becomes active. Returns A's id and layer count.
-fn two_drops_then_switch(app: &mut PhotocraftApp, ctx: &egui::Context) -> (photocraft_doc::DocId, usize) {
+fn two_drops_then_switch(app: &mut LienzoApp, ctx: &egui::Context) -> (lienzo_doc::DocId, usize) {
     app.background_jobs = true;
     let (a, layers) = (app.session.active().unwrap().doc.id, layer_count(app));
     app.open_dropped(ctx, vec![dropped("first.png", Ok(png_bytes(4, 4))), dropped("second.png", Ok(png_bytes(2, 2)))], Some(egui::pos2(400.0, 300.0)));
@@ -1056,7 +1056,7 @@ fn overlapping_web_drop_deliveries_keep_each_target() {
 /// drop that arrives meanwhile queues behind it.
 #[test]
 fn a_background_drop_from_a_path_is_tracked_and_later_drops_queue() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-place-job-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-place-job-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let abs = dir.join("photo.png");
     std::fs::write(&abs, png_bytes(40, 20)).unwrap();
@@ -1166,20 +1166,20 @@ fn a_drop_slot_counts_documents_not_the_tabs_shown() {
     assert_eq!(crate::canvas::TabStrip { rect: strip.rect, tabs: vec![] }.slot(10.0), 0);
 }
 
-/// #5687: files dropped from another app's window bring PhotoCraft to the front (a focus request
+/// #5687: files dropped from another app's window bring Lienzo to the front (a focus request
 /// in the frame that takes the drop), so the source window ends up behind it.
 #[test]
 fn a_drop_brings_the_window_to_the_front() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-focus-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-focus-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("photo.png");
     std::fs::write(&file, png_bytes(8, 8)).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(800.0, 600.0)).with_max_steps(8).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(photocraft_engine::Session::new(), Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(lienzo_engine::Session::new(), Services::default())
     });
     h.run_steps(2);
-    let focus = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let focus = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         h.output().viewport_output.get(&egui::ViewportId::ROOT).is_some_and(|v| v.commands.contains(&egui::ViewportCommand::Focus))
     };
     assert!(!focus(&h), "no focus request without a drop");
@@ -1193,20 +1193,20 @@ fn a_drop_brings_the_window_to_the_front() {
 /// service picks a slot; files dropped there open (in the background) at it; dropped on the canvas they're placed in Free Transform, and Esc takes the place back.
 #[test]
 fn drag_and_drop_in_the_running_app() {
-    let dir = std::env::temp_dir().join(format!("photocraft-drop-app-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-drop-app-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("photo.png");
     std::fs::write(&file, png_bytes(40, 30)).unwrap();
     let pointer = Rc::new(std::cell::Cell::new(egui::Pos2::ZERO));
     let reported = pointer.clone();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_max_steps(8).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut s = photocraft_engine::Session::new();
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut s = lienzo_engine::Session::new();
         for _ in 0..2 {
             s.execute("file.new", json!({"width": 320, "height": 240, "background": "white"})).unwrap();
         }
         let services = Services { cursor_pos: Some(Box::new(move |_: &egui::Context| Some(reported.get()))), ..Default::default() };
-        let mut app = PhotocraftApp::new(s, services);
+        let mut app = LienzoApp::new(s, services);
         app.background_jobs = true;
         app
     });
@@ -1273,8 +1273,8 @@ fn views_and_windows_stay_with_their_documents() {
             position: None,
         })
         .collect();
-    let zooms = |app: &PhotocraftApp| app.ui.views.iter().map(|v| v.zoom).collect::<Vec<_>>();
-    let windows = |app: &PhotocraftApp| app.ui.windows.iter().map(|w| (w.id, w.document)).collect::<Vec<_>>();
+    let zooms = |app: &LienzoApp| app.ui.views.iter().map(|v| v.zoom).collect::<Vec<_>>();
+    let windows = |app: &LienzoApp| app.ui.windows.iter().map(|w| (w.id, w.document)).collect::<Vec<_>>();
     assert_eq!(app.run("document.move", json!({"document": 0, "to": 3})).unwrap(), json!({"document": 3}));
     assert_eq!(doc_names(&app), ["b.psd", "c.psd", "d.psd", "a.psd"]);
     assert_eq!(zooms(&app), [2.0, 3.0, 4.0, 1.0]);
@@ -1381,13 +1381,13 @@ fn natural_order_counts_numbers_by_value() {
 #[test]
 fn open_paths_reports_in_the_interface_language_before_the_first_frame() {
     let pattern = |i: u8| {
-        let mut surface = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
-        surface.fill_rect(photocraft_geom::Rect::new(0, 0, 4, 4), &[f32::from(i) / 3.0, 0.5, 0.2, 1.0]);
-        let mut p = photocraft_doc::Pattern::new("Launch", surface, 4, 4);
+        let mut surface = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
+        surface.fill_rect(lienzo_geom::Rect::new(0, 0, 4, 4), &[f32::from(i) / 3.0, 0.5, 0.2, 1.0]);
+        let mut p = lienzo_doc::Pattern::new("Launch", surface, 4, 4);
         p.id = format!("6f1c2c1e-0000-4000-8000-00000000000{i}");
         p
     };
-    let bytes = photocraft_io::pattern_map::write_pat(&[pattern(1), pattern(2), pattern(3)]).unwrap();
+    let bytes = lienzo_io::pattern_map::write_pat(&[pattern(1), pattern(2), pattern(3)]).unwrap();
     let (dir, paths) = files("launch-language", &["launch.pat"], &bytes);
     let (mut app, _) = app_with(Vec::new());
     app.session.edit_prefs(|p| p.interface.language = "ar".into());
@@ -1423,7 +1423,7 @@ fn open_paths_opens_a_set_in_name_order() {
 #[test]
 fn a_set_of_background_opens_keeps_its_order_however_they_finish() {
     use crate::jobs_ui::{self, OpenOrder, OpenTab};
-    use photocraft_engine::jobs::JobId;
+    use lienzo_engine::jobs::JobId;
     let (mut app, _) = app_with(Vec::new());
     app.open_bytes("existing.psd", b"x").unwrap();
     let batch = jobs_ui::begin_batch(&mut app);
@@ -1501,7 +1501,7 @@ fn export_as_is_recorded_and_replayed() {
         write: Some(Box::new(|_: &str, _: &[u8]| Ok(()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 40, "height": 20})).unwrap();
     app.run("actions.record", json!({})).unwrap();
@@ -1551,7 +1551,7 @@ fn saving_a_new_document_lists_it_in_recent_files() {
 #[test]
 fn opening_type_in_a_missing_font_warns() {
     fn doc_with_type(font: Option<&str>) -> Document {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 40, "height": 20})).unwrap();
         let mut p = json!({"text": "Hi", "x": 2, "y": 12, "size": 10});
         if let Some(f) = font {
@@ -1565,7 +1565,7 @@ fn opening_type_in_a_missing_font_warns() {
     let (with_missing, installed) = (doc_with_type(Some(MISSING)), doc_with_type(None));
     let already = warning.clone();
     let services = Services {
-        import: Some(Box::new(move |name: &str, _bytes: &[u8], _opts: &photocraft_io::ImportOptions| {
+        import: Some(Box::new(move |name: &str, _bytes: &[u8], _opts: &lienzo_io::ImportOptions| {
             Ok(match name {
                 "installed.psd" => (installed.clone(), Vec::new()),
                 "warned.psd" => (with_missing.clone(), vec![already.clone()]),
@@ -1574,7 +1574,7 @@ fn opening_type_in_a_missing_font_warns() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let warnings = app.open_bytes("poster.psd", b"x").unwrap();
     assert_eq!(warnings, vec![warning.clone()]);
     assert!(app.ui.status.contains(MISSING), "{}", app.ui.status);

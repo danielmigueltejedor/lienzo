@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DockTabs, Panels};
 
 /// A dock panel group (one tab strip).
@@ -296,7 +296,7 @@ impl DockLayout {
 
 /// Show `g` and expand it (Window › <panel>, the icon rail): a panel asked for is always
 /// brought back, whatever state it was left in (#129).
-pub fn reveal(app: &mut PhotocraftApp, g: Group) {
+pub fn reveal(app: &mut LienzoApp, g: Group) {
     *g.shown_mut(&mut app.ui.panels) = true;
     let selected = *g.tab_mut(&mut app.ui.dock_tabs);
     let pro = app.ui.theme.is_pro();
@@ -308,7 +308,7 @@ pub fn reveal(app: &mut PhotocraftApp, g: Group) {
 /// collapsed to its tab strip. A docked group is never hidden from the rail (it used to
 /// toggle visibility, so one stray click made a panel vanish: #129); `docked` is false for
 /// Studio's floating Properties card, which the rail shows and hides.
-pub fn rail_click(app: &mut PhotocraftApp, g: Group, docked: bool) {
+pub fn rail_click(app: &mut LienzoApp, g: Group, docked: bool) {
     if !g.shown(&app.ui.panels) {
         reveal(app, g);
     } else if !docked {
@@ -321,7 +321,7 @@ pub fn rail_click(app: &mut PhotocraftApp, g: Group, docked: bool) {
 
 /// A tab strip's Close: hide `tab` of `g`, and the group with its last tab. When the selected
 /// tab closes, the next one on the strip (or the previous one, for the last) is selected.
-pub(crate) fn close_tab(app: &mut PhotocraftApp, g: Group, tab: usize, pro: bool) {
+pub(crate) fn close_tab(app: &mut LienzoApp, g: Group, tab: usize, pro: bool) {
     let shown_before = app.ui.dock.visible_tabs(g, pro);
     app.ui.dock.hide_tab(g, tab, pro);
     let remaining = app.ui.dock.visible_tabs(g, pro);
@@ -338,7 +338,7 @@ pub(crate) fn close_tab(app: &mut PhotocraftApp, g: Group, tab: usize, pro: bool
 }
 
 /// What `prefs.panelLayout` holds: the live layout and open panels.
-pub(crate) fn snapshot(app: &PhotocraftApp) -> Value {
+pub(crate) fn snapshot(app: &LienzoApp) -> Value {
     let mut layout = json!({"workspace": app.ui.workspace, "panels": app.ui.panels, "dockTabs": app.ui.dock_tabs, "dock": app.ui.dock, "timelineOpen": app.ui.timeline.open, "docking": app.ui.docking, "dockingReturns": app.ui.docking_returns, "dockingCollapsed": app.ui.docking_collapsed});
     keep_newer(app, &mut layout);
     layout
@@ -346,7 +346,7 @@ pub(crate) fn snapshot(app: &PhotocraftApp) -> Value {
 
 /// A saved layout's workspace from a newer version stays as saved while the default layout
 /// shows in its place (craft-ui: keep it on disk, don't overwrite it).
-pub(crate) fn keep_newer(app: &PhotocraftApp, layout: &mut Value) {
+pub(crate) fn keep_newer(app: &LienzoApp, layout: &mut Value) {
     if let (None, Some(kept), Some(layout)) = (&app.ui.docking, &app.ui.docking_kept, layout.as_object_mut()) {
         layout.extend(kept.clone());
     }
@@ -354,7 +354,7 @@ pub(crate) fn keep_newer(app: &PhotocraftApp, layout: &mut Value) {
 
 /// Writes the current panels/layout snapshot now, for a discrete change such as the toolbar side,
 /// whether or not the dock was drawn this frame. Only while Remember Workspace Changes is on.
-pub(crate) fn persist_panels(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn persist_panels(app: &mut LienzoApp, ctx: &egui::Context) {
     if !app.session.prefs().workspace.remember_workspace_changes {
         return;
     }
@@ -372,7 +372,7 @@ pub(crate) fn persist_panels(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// Remember the layout in the preferences once the user lets go of the mouse (Workspace ›
 /// Remember Workspace Changes), and once panel windows the OS moves or resizes keep still. Cheap:
 /// a small JSON compare per frame.
-pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn persist(app: &mut LienzoApp, ctx: &egui::Context) {
     // Once the layout changes, the newer workspace is replaced.
     if app.ui.docking.is_some() {
         app.ui.docking_kept = None;
@@ -394,7 +394,7 @@ pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// title bar or edges changes the place each frame with no button down in any of the app's
 /// windows. The answer is cached for the frame so the dock pass and `persist_panels` agree even
 /// though only the first call can observe the change.
-fn native_moved(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
+fn native_moved(app: &LienzoApp, ctx: &egui::Context) -> bool {
     let places: Vec<(u64, [f32; 4])> =
         app.ui.docking.iter().flat_map(|workspace| workspace.layout.floating.iter().filter_map(|window| Some((window.id, window.native?)))).collect();
     let places_id = egui::Id::unique("dock-native-places");
@@ -420,7 +420,7 @@ fn native_moved(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// Writes the panels/layout snapshot if it changed.
-fn persist_panels_now(app: &mut PhotocraftApp) {
+fn persist_panels_now(app: &mut LienzoApp) {
     let now = snapshot(app);
     if app.session.prefs().panel_layout != now {
         app.session.prefs.edit(|p| p.panel_layout = now);
@@ -429,7 +429,7 @@ fn persist_panels_now(app: &mut PhotocraftApp) {
 
 /// True while a persistence pass must not record geometry: an in-progress dock-edge drag, a
 /// pointer button down, or a native panel window that moved this frame.
-fn panels_moving(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
+fn panels_moving(app: &LienzoApp, ctx: &egui::Context) -> bool {
     crate::panels::dock_edge_drag_active(ctx) || ctx.input(|i| i.pointer.any_down()) || native_moved(app, ctx)
 }
 
@@ -452,7 +452,7 @@ fn set_panels_pending(ctx: &egui::Context, pending: bool) {
 
 /// Retries a toolbar-side save that was deferred while geometry was moving; called every frame so
 /// the save happens once the geometry is stable even when the dock and toolbar were not drawn.
-pub(crate) fn persist_pending(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn persist_pending(app: &mut LienzoApp, ctx: &egui::Context) {
     // If the dock-edge layout stopped rendering (Shift+Tab hides the dock mid-drag), its stored
     // drag start cannot be cleared by the panel; drop it so deferred saves can resume.
     let rendered = ctx.data(|data| data.get_temp::<u64>(egui::Id::unique("dock-edge-rendered-frame")));
@@ -475,7 +475,7 @@ pub(crate) fn persist_pending(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Restore the remembered layout at launch. Unreadable parts keep their defaults.
-pub fn restore(app: &mut PhotocraftApp) {
+pub fn restore(app: &mut LienzoApp) {
     if !app.session.prefs().workspace.remember_workspace_changes {
         return;
     }
@@ -499,7 +499,7 @@ pub fn restore(app: &mut PhotocraftApp) {
 /// layout saved by a different craft-ui revision no longer deserializes, it is dropped and the
 /// legacy layout is rebuilt (the split/tab arrangement resets). Panel widths are a separate
 /// `egui::PanelState` migration and still carry over.
-pub fn apply(app: &mut PhotocraftApp, v: &Value) {
+pub fn apply(app: &mut LienzoApp, v: &Value) {
     app.ui.docking_reveal = None;
     app.ui.docking_generation = app.ui.docking_generation.wrapping_add(1);
     (app.ui.docking, app.ui.docking_returns) = crate::panel_docking::load(v).map_or((None, Default::default()), |(w, r)| (Some(w), r));

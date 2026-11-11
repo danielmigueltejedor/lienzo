@@ -11,14 +11,14 @@
 //! These tests render a committed rectangular selection with the real app offscreen on wgpu and
 //! read the pixels along each edge. They skip when no GPU adapter exists.
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::canvas::ViewXform;
-use photocraft_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::canvas::ViewXform;
+use lienzo_ui_egui::control::{ControlRequest, handle};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// A rendered frame: RGBA8, physical pixels.
 struct Image {
@@ -48,8 +48,8 @@ fn harness(ppp: f32) -> Option<Harness> {
     let built = std::panic::catch_unwind(move || {
         egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 640.0)).with_pixels_per_point(ppp).with_max_steps(64).wgpu().build_eframe(move |cc| {
             started_in.store(true, Ordering::SeqCst);
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -135,7 +135,7 @@ fn scan(img: &Image, a: (i64, i64), b: (i64, i64)) -> Edge {
 /// The line is `w` px thick on every edge, crisp, with dashes of 4·w px.
 #[test]
 fn every_edge_is_equally_thick_at_any_display_scale() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     for ppp in [1.0f32, 1.25, 1.5, 2.0] {
         let Some(mut h) = harness(ppp) else { return };
         h.run_steps(4);
@@ -190,7 +190,7 @@ fn every_edge_is_equally_thick_at_any_display_scale() {
 /// On black the white dashes show, between black ones.
 #[test]
 fn the_ants_alternate_black_and_white() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness(1.0) else { return };
     h.run_steps(4);
     let r = [100, 60, 200, 240];

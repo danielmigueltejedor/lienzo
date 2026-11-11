@@ -15,11 +15,11 @@
 //! triangles (measured on a dot grid: 0.1 px mean). So the mesh is imported as the
 //! `layer.smartObjects.puppetWarp` filter's `mesh`, which is drawn as it is while the pins are
 //! unchanged, and the whole item is kept as a template ([`TEMPLATE_KEY`]) to write back. Pins
-//! alone feed PhotoCraft's own solver once they are edited; the mode, density and rotation
+//! alone feed Lienzo's own solver once they are edited; the mode, density and rotation
 //! settings aren't mapped (their stored values aren't identified), so those stay at defaults.
 
-use photocraft_doc::SmartFilter;
-use photocraft_psd::descriptor::{Descriptor, Value};
+use lienzo_doc::SmartFilter;
+use lienzo_psd::descriptor::{Descriptor, Value};
 use serde_json::{Value as J, json};
 
 use super::{blend_options, from_hex, get_desc, set, to_hex};
@@ -123,7 +123,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
     let mut params = settings(f)?;
     // Neutral blending in the template: the model's own fields replace it on export.
     let mut template = item.clone();
-    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
     set(&mut template, "blendOptions", blend_options(&neutral));
     set(&mut template, "enab", Value::Boolean(true));
     params.as_object_mut()?.insert(TEMPLATE_KEY.into(), json!(to_hex(&template.to_bytes())));
@@ -132,7 +132,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
 
 /// The template item of `params`, checked to be a Puppet Warp filter.
 fn template(params: &J) -> Result<Descriptor, String> {
-    let raw = params.get(TEMPLATE_KEY).and_then(J::as_str).ok_or("a Puppet Warp made in PhotoCraft is not written to PSD")?;
+    let raw = params.get(TEMPLATE_KEY).and_then(J::as_str).ok_or("a Puppet Warp made in Lienzo is not written to PSD")?;
     let bytes = from_hex(raw).ok_or("the Puppet Warp PSD data is not valid hex")?;
     let item = Descriptor::from_bytes(&bytes).map_err(|e| format!("the Puppet Warp PSD data is unreadable ({e})"))?;
     if !item.class_id.is("filterFX") || !get_desc(&item, "Fltr").is_some_and(|f| f.class_id.is(CLASS)) {
@@ -146,11 +146,11 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
     let item = template(params)?;
     let imported = get_desc(&item, "Fltr").and_then(settings).ok_or("the Puppet Warp PSD data has no readable mesh")?;
     if params.get("pins") != imported.get("pins") {
-        return Err("Puppet Warp pins moved in PhotoCraft are not written to PSD".into());
+        return Err("Puppet Warp pins moved in Lienzo are not written to PSD".into());
     }
     // Imported params set no solver settings, so a set one is an edit the template doesn't hold.
     if let Some(k) = ["mode", "density", "expansion"].into_iter().find(|k| params.get(*k).is_some()) {
-        return Err(format!("the Puppet Warp `{k}` set in PhotoCraft is not written to PSD"));
+        return Err(format!("the Puppet Warp `{k}` set in Lienzo is not written to PSD"));
     }
     Ok(item)
 }
@@ -159,7 +159,7 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
 mod tests {
     use super::*;
     use crate::smart_map::{UNSUPPORTED_FILTER, filter_from_item, item_for_filter, parse_sold};
-    use photocraft_psd::descriptor::{UnicodeString, VersionedDescriptor};
+    use lienzo_psd::descriptor::{UnicodeString, VersionedDescriptor};
 
     const QUAD: [f64; 8] = [10.0, 20.0, 110.0, 22.0, 108.0, 220.0, 12.0, 218.0];
 
@@ -198,7 +198,7 @@ mod tests {
         for i in 0..4 {
             f = f.with(&format!("PuX{i}"), Value::Double(QUAD[2 * i])).with(&format!("PuY{i}"), Value::Double(QUAD[2 * i + 1]));
         }
-        let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+        let neutral = SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
         Descriptor::new("filterFX")
             .with("Nm  ", Value::Text(UnicodeString::new_nul("Puppet Warp")))
             .with("blendOptions", blend_options(&neutral))
@@ -239,16 +239,16 @@ mod tests {
         }
         // The import records the placement the mesh was solved for; the item written back is
         // unchanged by it.
-        let mut sm = photocraft_doc::SmartObject::new(
-            photocraft_doc::SmartSource::Linked { path: String::new() },
-            photocraft_geom::Affine { m: [1.0, 0.0, 0.0, 1.0, 3.0, 4.0] },
+        let mut sm = lienzo_doc::SmartObject::new(
+            lienzo_doc::SmartSource::Linked { path: String::new() },
+            lienzo_geom::Affine { m: [1.0, 0.0, 0.0, 1.0, 3.0, 4.0] },
             None,
         );
         sm.smart_filters.push(f.clone());
         crate::smart_map::pin_puppet_meshes(&mut sm);
         assert_eq!(sm.smart_filters[0].params["mesh"]["placement"], sm.placement_json());
         assert_eq!(item_for_filter(&sm.smart_filters[0]).unwrap(), src);
-        // A Puppet Warp made in PhotoCraft has no template: not written, as before.
+        // A Puppet Warp made in Lienzo has no template: not written, as before.
         let own = SmartFilter { params: json!({"pins": f.params["pins"]}), ..f };
         assert!(item_for_filter(&own).is_err());
     }

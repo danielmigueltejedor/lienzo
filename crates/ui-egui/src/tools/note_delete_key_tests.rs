@@ -4,19 +4,19 @@
 use super::*;
 
 /// A document with a second layer and one note, the Note tool on and the note selected.
-fn app() -> PhotocraftApp {
-    let mut s = photocraft_engine::Session::new();
+fn app() -> LienzoApp {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Ink"})).unwrap();
     s.execute("notes.add", json!({"x": 10, "y": 12, "text": "fix this"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.ui.tool = Tool::Note;
     app.ui.analysis.note_selected = Some(0);
     app
 }
 
 /// A key through the app's shortcut handling, as the canvas gets it.
-fn press(app: &mut PhotocraftApp, key: egui::Key) {
+fn press(app: &mut LienzoApp, key: egui::Key) {
     let ctx = egui::Context::default();
     let m = egui::Modifiers::NONE;
     let raw = egui::RawInput {
@@ -28,15 +28,15 @@ fn press(app: &mut PhotocraftApp, key: egui::Key) {
     ctx.end_pass().textures_delta.clear();
 }
 
-fn layers(app: &PhotocraftApp) -> usize {
+fn layers(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
-fn notes(app: &PhotocraftApp) -> usize {
+fn notes(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.notes.len()
 }
 
-fn alert(app: &PhotocraftApp) -> Option<u64> {
+fn alert(app: &LienzoApp) -> Option<u64> {
     app.ui.dialogs.iter().find(|d| owns_delete_note(&d.fields)).map(|d| d.id)
 }
 

@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
 fn session() -> Session {
@@ -70,7 +70,7 @@ fn scrub_keeps_content_a_raster() {
 fn write_png(path: &str, w: u32, h: u32, color: &str) {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": w, "height": h, "background": color})).unwrap();
-    let bytes = photocraft_io::export(&s.active().unwrap().doc, "png", &photocraft_io::ExportOptions::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&s.active().unwrap().doc, "png", &lienzo_io::ExportOptions::default()).unwrap().bytes;
     std::fs::write(path, bytes).unwrap();
 }
 
@@ -113,15 +113,14 @@ fn write_tiff(path: &str, pages: &[(u32, u32, u8, u32)]) {
 /// A real layered TIFF from the exporter: two 8×6 raster layers and Photoshop layer data in tag
 /// 37724, in one full-resolution page.
 fn layered_tiff_bytes() -> Vec<u8> {
-    let mut doc = Document::new("layered", photocraft_geom::Size::new(8, 6), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut doc = Document::new("layered", lienzo_geom::Size::new(8, 6), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     let fmt = doc.pixel_format();
     for name in ["bottom", "top"] {
         let mut surface = Surface::new(fmt);
-        surface.write_interleaved(photocraft_geom::Rect::new(0, 0, 8, 6), &vec![96u8; 8 * 6 * fmt.bytes_per_pixel()]);
+        surface.write_interleaved(lienzo_geom::Rect::new(0, 0, 8, 6), &vec![96u8; 8 * 6 * fmt.bytes_per_pixel()]);
         doc.layers.push(Layer::new(name, LayerContent::Raster(surface)));
     }
-    let bytes =
-        photocraft_io::export(&doc, "layered.tif", &photocraft_io::ExportOptions { tiff_layers: true, ..Default::default() }).expect("a layered TIFF").bytes;
+    let bytes = lienzo_io::export(&doc, "layered.tif", &lienzo_io::ExportOptions { tiff_layers: true, ..Default::default() }).expect("a layered TIFF").bytes;
     assert_eq!(bytes.get(0..2), Some(&b"II"[..]), "the TIFF exporter writes little-endian files here");
     assert_eq!(u16::from_le_bytes([bytes[2], bytes[3]]), 42, "a classic TIFF");
     bytes
@@ -166,7 +165,7 @@ fn video_frames_to_layers_takes_every_tiff_page() {
         let surf = l.surface().unwrap();
         let b = surf.content_bounds();
         assert_eq!((b.width(), b.height()), (w, h), "{name}");
-        let px = surf.read_region(photocraft_geom::Rect::new(b.x0, b.y0, b.x0 + 1, b.y0 + 1));
+        let px = surf.read_region(lienzo_geom::Rect::new(b.x0, b.y0, b.x0 + 1, b.y0 + 1));
         assert!((px[0] * 255.0 - level).abs() < 0.6 && px[3] == 1.0, "{name}: {px:?}");
     }
     let single = format!("{dir}/single.tif");
@@ -204,7 +203,7 @@ fn tiff_page_errors_keep_memory_refusals_typed_and_other_context() {
     let display = std::path::Path::new("/tmp/footage/pages.tif");
     let name = "/tmp/footage/pages.tif";
 
-    let refusal = photocraft_io::IoError::PsdApprovalRequired { required: 9_000, soft_limit: 8_000, hard_limit: 16_000, available_ram: Some(4_000) };
+    let refusal = lienzo_io::IoError::PsdApprovalRequired { required: 9_000, soft_limit: 8_000, hard_limit: 16_000, available_ram: Some(4_000) };
     match tiff_page_error(display, name, 1, refusal) {
         EngineError::PsdApprovalRequired { name: named, required, soft_limit, hard_limit, available_ram } => {
             assert_eq!(named, name);
@@ -213,7 +212,7 @@ fn tiff_page_errors_keep_memory_refusals_typed_and_other_context() {
         other => panic!("page 2 approval refusal lost its fields: {other:?}"),
     }
 
-    let hard = photocraft_io::IoError::PsdImportBudget { required: 9_000, limit: 8_000, free_memory: None };
+    let hard = lienzo_io::IoError::PsdImportBudget { required: 9_000, limit: 8_000, free_memory: None };
     match tiff_page_error(display, name, 2, hard) {
         EngineError::PsdHardBudget { name: named, required, limit, .. } => {
             assert_eq!(named, name);
@@ -222,7 +221,7 @@ fn tiff_page_errors_keep_memory_refusals_typed_and_other_context() {
         other => panic!("page 3 hard refusal lost its fields: {other:?}"),
     }
 
-    let broken = photocraft_io::IoError::Unsupported("corrupt page".into());
+    let broken = lienzo_io::IoError::Unsupported("corrupt page".into());
     let err = tiff_page_error(display, name, 0, broken);
     assert!(matches!(err, EngineError::Other(_)), "{err:?}");
     let msg = err.to_string();
@@ -265,7 +264,7 @@ fn video_frames_to_layers_enforces_the_footage_limit_on_every_tiff_page() {
     let path = format!("{dir}/pages.tif");
     let mut s = session();
     let fmt = s.active().unwrap().doc.pixel_format();
-    let tile = u64::from(photocraft_geom::TILE_SIZE.unsigned_abs()).pow(2) * fmt.bytes_per_pixel() as u64;
+    let tile = u64::from(lienzo_geom::TILE_SIZE.unsigned_abs()).pow(2) * fmt.bytes_per_pixel() as u64;
     let budget = 1u64 << 20;
     assert!(tile < budget, "one page must fit in the lowered budget");
     // One more page than fits in the budget: only the accumulation can refuse it.
@@ -395,7 +394,7 @@ fn animated_gif_keeps_transparency() {
     // Each frame has a transparent index and is cleared before the next (disposal 2).
     let packed: Vec<u8> = gif.windows(4).filter(|w| w[..3] == [0x21, 0xF9, 0x04]).map(|w| w[3]).collect();
     assert_eq!(packed, [0x09, 0x09]);
-    let px = photocraft_compose::flatten(&photocraft_io::import("t.gif", &gif).unwrap().document).into_px();
+    let px = lienzo_compose::flatten(&lienzo_io::import("t.gif", &gif).unwrap().document).into_px();
     assert_eq!(px[0][3], 0.0, "the corner stays transparent");
     assert_eq!(px[3 * 8 + 3], [1.0, 0.0, 0.0, 1.0], "the square stays red");
 }
@@ -494,7 +493,7 @@ fn edits_to_a_frame_survive_scrubbing_and_render() {
     s.execute("file.export.renderVideo", json!({"dir": out, "format": "png"})).unwrap();
     let stem = s.active().unwrap().doc.name.rsplit_once('.').map_or(s.active().unwrap().doc.name.clone(), |(a, _)| a.to_string());
     let f1 = std::fs::read(format!("{out}/{stem}_0001.png")).unwrap();
-    let doc = photocraft_io::import("f1.png", &f1).unwrap().document;
+    let doc = lienzo_io::import("f1.png", &f1).unwrap().document;
     let flat = crate::file_cmds::flattened(&doc, doc.pixel_format());
     let q = flat.pixel(2, 2);
     assert!(q[2] > 0.99 && q[0] < 0.01, "rendered frame 1 is blue: {q:?}");
@@ -550,8 +549,8 @@ fn tga_sequence_frames_keep_their_transparency() {
     write_tga(&format!("{dir}/f02.tga"));
     let frames = load_frames(
         &dir,
-        photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8, true),
-        &photocraft_io::ImportOptions::default(),
+        lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8, true),
+        &lienzo_io::ImportOptions::default(),
     )
     .unwrap()
     .frames;
@@ -567,7 +566,7 @@ fn tga_sequence_frames_keep_their_transparency() {
 
 /// An animated GIF of solid `w`x`h` frames: one `(colour, delay in centiseconds)` each.
 fn write_gif(path: &str, w: u32, h: u32, frames: &[([u8; 3], u16)]) {
-    use photocraft_codecs::web::{GifFrame, encode_gif_animated};
+    use lienzo_codecs::web::{GifFrame, encode_gif_animated};
     let list: Vec<GifFrame> =
         frames.iter().map(|&(c, delay_cs)| GifFrame { indices: vec![0; (w * h) as usize], palette: vec![c], transparent: None, delay_cs }).collect();
     std::fs::write(path, encode_gif_animated(w, h, &list, true).unwrap()).unwrap();
@@ -666,7 +665,7 @@ fn video_frames_to_layers_takes_every_gif_frame() {
 /// An animated WebP of solid `w`x`h` frames: one `(colour, duration in ms)` each, every frame a
 /// lossless still in an ANMF chunk.
 fn write_webp(path: &str, w: u32, h: u32, frames: &[([u8; 3], u32)]) {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, encode};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image, encode};
     let chunk = |id: &[u8; 4], data: &[u8]| {
         let mut c = id.to_vec();
         c.extend_from_slice(&(data.len() as u32).to_le_bytes());
@@ -726,8 +725,8 @@ fn video_frames_to_layers_takes_every_webp_frame() {
 fn a_still_webp_is_one_frame_at_the_default_30_fps() {
     let dir = tmpdir("webpin-still");
     let path = format!("{dir}/still.webp");
-    let img = photocraft_codecs::Image::from_u8(8, 8, photocraft_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(64)).unwrap();
-    std::fs::write(&path, photocraft_codecs::encode(&img, photocraft_codecs::Format::WebP, &Default::default()).unwrap()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(8, 8, lienzo_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(64)).unwrap();
+    std::fs::write(&path, lienzo_codecs::encode(&img, lienzo_codecs::Format::WebP, &Default::default()).unwrap()).unwrap();
     let mut s = session();
     let r = s.execute("layer.videoLayers.newVideoLayerFromFile", json!({"path": path})).unwrap();
     assert_eq!(r["frames"], 1);

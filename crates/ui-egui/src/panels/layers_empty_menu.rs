@@ -4,7 +4,7 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::LayerThumbnailSize;
 
 /// The four sizes, in menu order.
@@ -19,7 +19,7 @@ pub(super) fn sizes() -> [(LayerThumbnailSize, &'static str); 4] {
 
 /// The layer thumbnail's menu: Select Pixels loads the layer's transparency as the selection,
 /// as a ⌘-click on the thumbnail does, then the thumbnail settings.
-pub(super) fn show_thumbnail(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: u64, actions: &mut Vec<(String, serde_json::Value)>) {
+pub(super) fn show_thumbnail(app: &mut LienzoApp, ui: &mut egui::Ui, layer: u64, actions: &mut Vec<(String, serde_json::Value)>) {
     if ui.button(tl!("Select Pixels")).clicked() {
         actions.push(("select.loadSelection".into(), json!({"channel": "transparency", "layer": layer, "operation": "new"})));
         ui.close();
@@ -28,7 +28,7 @@ pub(super) fn show_thumbnail(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: 
     show(app, ui);
 }
 
-pub(super) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn show(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let current = app.ui.layers_panel_options.thumbnail_size;
     for (size, label) in sizes() {
         let mut on = current == size;

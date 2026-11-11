@@ -62,7 +62,7 @@ fn params(d: &Descriptor) -> Value {
 
 /// Sample the filled contour, its hole and the untouched exterior independently.
 fn check_area(path: &Path) {
-    let pixels = photocraft_vector::fill_rasterizer(path, photocraft_vector::DEFAULT_TOLERANCE).render(photocraft_geom::Rect::new(0, 0, 400, 300));
+    let pixels = lienzo_vector::fill_rasterizer(path, lienzo_vector::DEFAULT_TOLERANCE).render(lienzo_geom::Rect::new(0, 0, 400, 300));
     for (x, y, expected) in [(100, 185, 1.0), (200, 185, 0.0), (10, 20, 0.0)] {
         assert_eq!(pixels[y * 400 + x], expected, "sample {x},{y}");
     }

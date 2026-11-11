@@ -1,15 +1,15 @@
 use super::*;
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use serde_json::json;
 
-fn app_with(params: Value) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(params: Value) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", params).unwrap();
     app
 }
 
 /// One panel frame through a minimal egui pass.
-fn frame(app: &mut PhotocraftApp) {
+fn frame(app: &mut LienzoApp) {
     let ctx = egui::Context::default();
     ctx.begin_pass(Default::default());
     let mut ui =
@@ -21,7 +21,7 @@ fn frame(app: &mut PhotocraftApp) {
 /// Frames until the panel shows the histogram it wants (the throttle skipped), or panics after
 /// 60 s: an uncached count of the 18 MP document below takes seconds in a debug build on a loaded
 /// CI runner, and the loop returns as soon as the histogram lands.
-fn settle(app: &mut PhotocraftApp) {
+fn settle(app: &mut LienzoApp) {
     let t0 = std::time::Instant::now();
     loop {
         for e in [app.doc_hist.as_mut(), app.doc_hist_preview.as_mut()].into_iter().flatten() {
@@ -37,7 +37,7 @@ fn settle(app: &mut PhotocraftApp) {
     }
 }
 
-fn ui_set(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> Value {
+fn ui_set(app: &mut LienzoApp, ctx: &egui::Context, params: Value) -> Value {
     let (req, _rx) = crate::control::ControlRequest::new("ui.set", params);
     match crate::control::handle(app, ctx, &req) {
         crate::control::Outcome::Done(v) => v,
@@ -45,7 +45,7 @@ fn ui_set(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> Value 
     }
 }
 
-fn inspect_stats(app: &PhotocraftApp) -> Value {
+fn inspect_stats(app: &LienzoApp) -> Value {
     inspect(app)["stats"].clone()
 }
 
@@ -223,7 +223,7 @@ fn views_keep_the_channel_and_the_menu_toggles_options() {
     use egui_kittest::kittest::Queryable;
     let mut app = app_with(json!({"width": 16, "height": 16}));
     app.ui.histogram_panel.channel = HistChannel::Green;
-    let mut h = Harness::builder().with_size(vec2(260.0, 320.0)).build_ui_state(|ui, app: &mut PhotocraftApp| panel_menu(app, ui), app);
+    let mut h = Harness::builder().with_size(vec2(260.0, 320.0)).build_ui_state(|ui, app: &mut LienzoApp| panel_menu(app, ui), app);
     h.run_steps(2);
     h.get_by_label("All Channels View").click();
     h.run_steps(2);
@@ -236,7 +236,7 @@ fn views_keep_the_channel_and_the_menu_toggles_options() {
     h.run_steps(2);
     assert!(!h.state().ui.histogram_panel.show_statistics);
     // Kept with the preferences.
-    let mut again = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut again = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let saved = h.state().session.prefs().dialogs.get(OPTIONS_PREF).cloned().unwrap();
     again.session.prefs.edit(|p| {
         p.dialogs.insert(OPTIONS_PREF.into(), saved);
@@ -329,7 +329,7 @@ fn colors_overlay_is_a_continuous_outline_not_steps() {
 
 /// A white Background under a black layer, with the Background selected: the entire image is
 /// black, the selected layer white.
-fn black_over_white_background_selected() -> PhotocraftApp {
+fn black_over_white_background_selected() -> LienzoApp {
     let mut app = app_with(json!({"width": 32, "height": 32}));
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#000000"})).unwrap();

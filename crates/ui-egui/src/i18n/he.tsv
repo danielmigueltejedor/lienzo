@@ -12,7 +12,7 @@
 # Clean-room: every entry was written from the plain meaning of the English label using ordinary
 # modern Hebrew computing and photo-editing vocabulary (שכבה, מברשת, בחירה, קנבס, מסכה, ערוץ …). No
 # proprietary localisation resource, string table or product UI was consulted or copied. Product and
-# technology names (PhotoCraft, ArtCraft, OpenType, CMYK, Lab, GPU …) and key names stay in Latin
+# technology names (Lienzo, ArtCraft, OpenType, CMYK, Lab, GPU …) and key names stay in Latin
 # letters; the trailing "…" of dialog commands is kept. Plural rule: Hebrew distinguishes one/two/
 # many/other in formal grammar, but everyday Hebrew software UI collapses this to a simple
 # singular/plural (one|other, `plural_one_other`), the same simplification Farsi and English use
@@ -801,9 +801,9 @@
 	Timeline	ציר זמן
 	Tool Presets	ערכות כלים קבועות מראש
 	Tools	כלים
-	About PhotoCraft	אודות PhotoCraft
-	PhotoCraft Website	אתר PhotoCraft
-	PhotoCraft on GitHub	PhotoCraft ב-GitHub
+	About Lienzo	אודות Lienzo
+	Lienzo Website	אתר Lienzo
+	Lienzo on GitHub	Lienzo ב-GitHub
 	ArtCraft Website	אתר ArtCraft
 	Join the ArtCraft Discord…	הצטרף לדיסקורד של ArtCraft…
 	Report an Issue…	דווח על תקלה…
@@ -860,7 +860,7 @@
 	All Caps	אותיות רישיות
 	All Slices	כל הפרוסות
 	All User Slices	כל פרוסות המשתמש
-	All shortcuts reset to PhotoCraft defaults.	כל הקיצורים אופסו לברירת המחדל של PhotoCraft.
+	All shortcuts reset to Lienzo defaults.	כל הקיצורים אופסו לברירת המחדל של Lienzo.
 	Alt	Alt
 	Always use pressure for opacity	השתמש בלחיצה לקביעת אטימות בכל פעם
 	Always use pressure for size	השתמש בלחיצה לקביעת גודל בכל פעם
@@ -1110,8 +1110,8 @@
 	Drop an image or PSD anywhere to open it.	שחרר תמונה או PSD בכל מקום כדי לפתוח אותה.
 	Native file drag-and-drop is unavailable	גרירה ושחרור טבעיים של קבצים אינם זמינים
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	גרירה ושחרור טבעיים של קבצים עדיין לא נתמכים ב-Wayland. השתמש בקובץ › פתח, או העתק את התמונה במנהל הקבצים שלך והדבק אותה עם {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	כדי לשחרר קבצים, הפעל את PhotoCraft תחת XWayland: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	או הגדר העדפות › ביצועים › שרת תצוגה ב-Linux ל-X11: PhotoCraft יופעל אז תמיד תחת XWayland.
+	To drop files, start Lienzo under XWayland: `{command}`	כדי לשחרר קבצים, הפעל את Lienzo תחת XWayland: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	או הגדר העדפות › ביצועים › שרת תצוגה ב-Linux ל-X11: Lienzo יופעל אז תמיד תחת XWayland.
 	Edit › Paste	עריכה › הדבק
 	Duplicate Layers…	שכפל שכבות…
 	Duplicate style	שכפל סגנון
@@ -1361,9 +1361,9 @@
 	Perspective Warp is not active	עיוות פרספקטיבה אינו פעיל
 	Perspective Warp: draw planes along the image's perspective, then switch to Warp	עיוות פרספקטיבה: צייר מישורים לאורך הפרספקטיבה של התמונה, ולאחר מכן עבור לעיוות
 	Photo Filter	מסנן תמונה
-	PhotoCraft	PhotoCraft
-	PhotoCraft Manages Colors	PhotoCraft מנהל צבעים
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — עורך תמונות קוד-פתוח וטבעי, שנכתב ב-Rust.
+	Lienzo	Lienzo
+	Lienzo Manages Colors	Lienzo מנהל צבעים
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — עורך תמונות קוד-פתוח וטבעי, שנכתב ב-Rust.
 	Pin Depth:	עומק סיכה:
 	Pixel Length:	אורך פיקסלים:
 	Pixels/Centimeter	פיקסלים/סנטימטר
@@ -1439,11 +1439,11 @@
 	Import Shortcuts…	ייבוא קיצורים…
 	Load a keyboard shortcut set saved as .kys	טען ערכת קיצורי מקלדת שנשמרה כ-‎.kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	יובאו {n} קיצורים מתוך {file}. לחץ על אישור כדי לשמור אותם.
-	{n} commands are not in PhotoCraft.	{n} פקודות אינן קיימות ב-PhotoCraft.
+	{n} commands are not in Lienzo.	{n} פקודות אינן קיימות ב-Lienzo.
 	Keyboard shortcuts imported	קיצורי המקלדת יובאו
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	ערכת קיצורי המקלדת שלך {set} נמצאת בשימוש כאן: {n} קיצורים שונים מברירת המחדל. עריכה › קיצורי מקלדת מציג אותם; אפס הכול לברירת המחדל מבטל זאת.
 	Import keyboard shortcuts?	לייבא קיצורי מקלדת?
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft מצא את ערכת קיצורי המקלדת שלך {set} מעורך תמונות אחר במחשב זה: {n} מהקיצורים שלה שונים מאלה של PhotoCraft. לייבא אותה?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo מצא את ערכת קיצורי המקלדת שלך {set} מעורך תמונות אחר במחשב זה: {n} מהקיצורים שלה שונים מאלה של Lienzo. לייבא אותה?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	עריכה › קיצורי מקלדת › אפס הכול לברירת המחדל מבטל ייבוא.
 	Don't Import	אל תייבא
 	The keyboard shortcut set was not imported: {error}	ערכת קיצורי המקלדת לא יובאה: {error}
@@ -1669,7 +1669,7 @@
 	Current Tool	הכלי הנוכחי
 	Custom Shape Tool	כלי צורה מותאמת אישית
 	Cyans	ציאנים
-	Default PhotoCraft Size	גודל ברירת מחדל של PhotoCraft
+	Default Lienzo Size	גודל ברירת מחדל של Lienzo
 	Delete Workspace	מחק סביבת עבודה
 	Diamond	יהלום
 	Dimensions:	מידות:
@@ -1780,7 +1780,7 @@
 	Pen Tool	כלי קולמוס
 	Convert Point Tool	כלי המרת נקודה
 	Photo	תמונה
-	PhotoCraft website	אתר PhotoCraft
+	Lienzo website	אתר Lienzo
 	Picas	פיקות (Picas)
 	Pillow Emboss	תבליט כרית
 	Pixel Replacement	החלפת פיקסלים
@@ -2111,7 +2111,7 @@
 	System Info	פרטי מערכת
 	More panels	פאנלים נוספים
 	More documents	מסמכים נוספים
-	These settings aren't available in PhotoCraft yet.	הגדרות אלה אינן זמינות עדיין ב-PhotoCraft.
+	These settings aren't available in Lienzo yet.	הגדרות אלה אינן זמינות עדיין ב-Lienzo.
 	Graphics	גרפיקה
 	Reset GPU Backend	אפס מנגנון GPU (Backend)
 	Applies at next launch.	חל בהפעלה הבאה.
@@ -2324,7 +2324,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	אוטומטי משתמש באצת GPU כשהיא זמינה ועובר לעיבוד CPU במקרה של שגיאות.
 	Switched to CPU rendering	הוחלף לעיבוד CPU
 	GPU acceleration could not continue. Your documents are unchanged.	האצת ה-GPU לא יכלה להמשיך. המסמכים שלך לא השתנו.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft משתמש במרכיב התמונה של ה-CPU. החלון עדיין עשוי להשתמש במאיץ הגרפי שלך.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo משתמש במרכיב התמונה של ה-CPU. החלון עדיין עשוי להשתמש במאיץ הגרפי שלך.
 	Retry GPU requires a restart. Save your work first.	ניסיון חזרה ל-GPU מחייב הפעלה מחדש. שמור את העבודה שלך קודם.
 	Retry GPU tries the graphics processor again now.	ניסיון חזרה ל-GPU מנסה את המעבד הגרפי מחדש כעת.
 	GPU acceleration resumed.	האצת ה-GPU התחדשה.
@@ -2544,7 +2544,7 @@ fontWeight	Italic	נטוי
 	Color to Alpha…	צבע לאלפא…
 	Transparency Threshold	סף שקיפות
 	Opacity Threshold	סף אטימות
-	PhotoCraft — Screen Color Picker	PhotoCraft — בוחר צבעים מהמסך
+	Lienzo — Screen Color Picker	Lienzo — בוחר צבעים מהמסך
 	Rasterize svg groups deeper than	רסטר קבוצות SVG עמוקות יותר מ
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 מכבה את הסף הזה; קבוצות SVG מקוננות עמוק מ-100 רמות מרוסטרות תמיד.
 	Rule of Thirds	חלוקה לשלישים
@@ -3330,7 +3330,7 @@ layerLabel	No Color	בלי צבע
 	Restart Required	נדרשת הפעלה מחדש
 	Restart	הפעל מחדש
 	Quit	צא
-	Quit PhotoCraft	צא מ-PhotoCraft
+	Quit Lienzo	צא מ-Lienzo
 	Close Window	סגור חלון
 	New Window	חלון חדש
 	Open Image	פתח תמונה
@@ -3823,7 +3823,7 @@ layerLabel	No Color	בלי צבע
 	Mezzotint	מצו-טינטו
 	Mosaic	פסיפס
 	Motion Blur	טשטוש תנועה
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	גרירה ושחרור טבעיים של קבצים עדיין לא נתמכים ב-Wayland. השתמש בקובץ › פתח, או הפעל את PhotoCraft תחת XWayland עם `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	גרירה ושחרור טבעיים של קבצים עדיין לא נתמכים ב-Wayland. השתמש בקובץ › פתח, או הפעל את Lienzo תחת XWayland עם `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	זוהר ניאון
 	New Guide Layout	פריסת קווים מנחים חדשה
 	New Video Layer from File	שכבת וידאו חדשה מקובץ
@@ -3995,9 +3995,9 @@ layerLabel	No Color	בלי צבע
 	Saved {path}; image assets: {n} in {dir}	{path} נשמר; נכסי תמונה: {n} ב-{dir}
 	{message} (notes: {n}; {warning})	{message} ‏(הערות: {n}; {warning})
 	Preferences can't be saved	לא ניתן לשמור את ההעדפות
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft ממשיך לנסות; עד שהשמירה תצליח, שינויי ההעדפות יאבדו בסגירה.
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo ממשיך לנסות; עד שהשמירה תצליח, שינויי ההעדפות יאבדו בסגירה.
 	GPU retry scheduled	ניסיון חזרה ל-GPU מתוזמן
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	שמור את העבודה שלך והפעל את PhotoCraft מחדש כדי לנסות שוב את האצת ה-GPU. עיבוד ה-CPU ימשיך לפעול להפעלה זו.
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	שמור את העבודה שלך והפעל את Lienzo מחדש כדי לנסות שוב את האצת ה-GPU. עיבוד ה-CPU ימשיך לפעול להפעלה זו.
 	GPU device was lost; using the CPU renderer.	מכשיר ה-GPU אבד; משתמש במעבד ה-CPU.
 	GPU error; using the CPU renderer.	שגיאת GPU; משתמש במעבד ה-CPU.
 	Couldn't open {name}: {error}	לא ניתן היה לפתוח את {name}: {error}
@@ -4109,7 +4109,7 @@ navigator	Zoom	תקריב
 	{name} (Photoshop)	{name} ‏(Photoshop)
 	{message} ({note})	{message} ‏({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	נטענה {n} פעולה מתוך {file}|נטענו {n} פעולות מתוך {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	ל-{n} שלב אין עדיין מקביל ב-PhotoCraft|ל-{n} שלבים אין עדיין מקביל ב-PhotoCraft
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	ל-{n} שלב אין עדיין מקביל ב-Lienzo|ל-{n} שלבים אין עדיין מקביל ב-Lienzo
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	נשמרה {n} פעולה אל {file}|נשמרו {n} פעולות אל {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} שלב בלי מקביל ב-Photoshop הושמט|{n} שלבים בלי מקביל ב-Photoshop הושמטו
 	Starting serial	מספר סידורי התחלתי
@@ -4170,17 +4170,17 @@ navigator	Zoom	תקריב
 	Kept {name}: written by another application	{name} נשמר ללא שינוי: נכתב על ידי יישום אחר
 	Shadow Tint	טינט צל
 	Check for Updates…	בדוק עדכונים…
-	PhotoCraft Updates	עדכוני PhotoCraft
+	Lienzo Updates	עדכוני Lienzo
 	Checking for updates…	בודק עדכונים…
 	Open the release page to choose an installer for your system.	פתח את עמוד הגרסה כדי לבחור מתקין למערכת שלך.
 	Open Download Page	פתח עמוד הורדה
-	PhotoCraft is up to date.	PhotoCraft מעודכן.
+	Lienzo is up to date.	Lienzo מעודכן.
 	Could not check for updates.	לא ניתן היה לבדוק עדכונים.
 	Updates have not been checked yet.	העדכונים לא נבדקו עדיין.
 	Check Again	בדוק שוב
 	Automatically Check for Updates	בדוק עדכונים אוטומטית
 	Installed version: {version}	גרסה מותקנת: {version}
-	PhotoCraft {version} is available.	PhotoCraft {version} זמין.
+	Lienzo {version} is available.	Lienzo {version} זמין.
 	Paints from the History panel's source state	צובע מהמצב המקור של פאנל ההיסטוריה
 	Sets the source for the history brush	מגדיר את המקור למברשת ההיסטוריה
 	Highlight Mode	מצב הדגשה
@@ -4208,12 +4208,12 @@ navigator	Zoom	תקריב
 	Bicubic Smoother	דו-מעוקב חלק יותר
 	Bicubic Sharper	דו-מעוקב חד יותר
 	Pasting from other apps is unavailable	הדבקה מיישומים אחרים אינה זמינה
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft לא יכול להגיע ללוח הגזירים של המערכת בהפעלה זו. ב-Wayland, ארגז חול של Flatpak מסתיר את הפרוטוקול שבאמצעותו נקראות תמונות מיישומים אחרים.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	כדי להדביק מיישומים אחרים, הפעל את PhotoCraft תחת XWayland: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	אין מה להדביק: PhotoCraft לא יכול לקרוא את לוח הגזירים של המערכת כאן
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo לא יכול להגיע ללוח הגזירים של המערכת בהפעלה זו. ב-Wayland, ארגז חול של Flatpak מסתיר את הפרוטוקול שבאמצעותו נקראות תמונות מיישומים אחרים.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	כדי להדביק מיישומים אחרים, הפעל את Lienzo תחת XWayland: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	אין מה להדביק: Lienzo לא יכול לקרוא את לוח הגזירים של המערכת כאן
 	Delete this set	מחק קבוצה זו
 	New Set…	קבוצה חדשה…
-	PhotoCraft Defaults	ברירות המחדל של PhotoCraft
+	Lienzo Defaults	ברירות המחדל של Lienzo
 	Save a list of these shortcuts as a web page	שמור רשימה של קיצורים אלה כעמוד אינטרנט
 	Save the changes to this set	שמור את השינויים בקבוצה זו
 	Save these shortcuts as a .kys file	שמור קיצורים אלה כקובץ ‎.kys

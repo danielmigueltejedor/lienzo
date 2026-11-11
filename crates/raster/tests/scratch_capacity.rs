@@ -2,7 +2,7 @@
 //!
 //! One test function: the spill manager is process-wide, so its steps must not interleave.
 
-use photocraft_raster::spill;
+use lienzo_raster::spill;
 
 /// The room, once no query is outstanding. A query that outlives its 2 s wait on a slow machine
 /// counts as no answer, and its late answer would change the status between two reads, so ask again
@@ -25,7 +25,7 @@ fn answered_capacity() -> Option<u64> {
 
 #[test]
 fn scratch_capacity_follows_spilling_the_size_limit_and_pauses() {
-    let root = std::env::temp_dir().join(format!("photocraft-scratch-capacity-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("lienzo-scratch-capacity-{}", std::process::id()));
     let dir = root.join("scratch");
 
     // Spilling off: nothing to promise.

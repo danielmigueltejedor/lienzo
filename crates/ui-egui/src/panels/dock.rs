@@ -3,13 +3,13 @@ use super::info::info_panel;
 use super::layers::{channels, layers};
 use super::navigator::navigator;
 use super::properties::{adjustments_grid, properties_body};
-use super::{PhotocraftApp, Stroke, Tokens, icons, pos2};
+use super::{LienzoApp, Stroke, Tokens, icons, pos2};
 
 // ----------------------------------------------------------------------------- dock
 
 /// The panels and the canvas in the space left by the menus, bars and toolbar: craft-ui's
 /// docking layout, with the icon rail at the window's end edge in the Studio themes.
-pub fn dock_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn dock_area(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     if app.ui.panels.rail && !t.pro {
         rail(app, ui, &t);
@@ -22,7 +22,7 @@ pub fn dock_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 /// The dock and its icon rail as one right panel, for the layout with the toolbox between the
 /// canvas and the dock. The canvas is drawn separately afterwards. Keeping the rail inside this
 /// panel means the toolbox cannot cover it when it is one column wide.
-pub fn dock_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn dock_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // Lets the frame tick expire a drag start if this panel stops rendering (dock hidden).
     let frame = ui.ctx().cumulative_frame_nr();
     ui.ctx().data_mut(|data| data.insert_temp(egui::Id::unique("dock-edge-rendered-frame"), frame));
@@ -220,7 +220,7 @@ pub(crate) fn dock_panel_rect(ctx: &egui::Context) -> egui::Rect {
 
 /// The docking layout's protected canvas panel: the document area, with the icon rail on its end
 /// side, beside the dock, in the Pro themes.
-pub(crate) fn canvas_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(crate) fn canvas_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let backdrop = if app.ui.view.hides_chrome() { egui::Color32::BLACK } else { crate::prefs_ui::pasteboard_color(app).unwrap_or(t.canvas) };
     if app.ui.panels.rail && t.pro {
@@ -235,7 +235,7 @@ fn rail_widths(pro: bool) -> (f32, f32) {
 }
 
 /// Narrow icon rail, unless an embedding app hides it: shows, expands or collapses panel groups.
-fn rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
+fn rail(app: &mut LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     let (rw, _) = rail_widths(t.pro);
     crate::direction::end_panel("rail")
         .resizable(false)
@@ -245,7 +245,7 @@ fn rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
 }
 
 /// The rail's buttons, without the panel that normally holds them.
-fn rail_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
+fn rail_body(app: &mut LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     let customized = app.ui.docking.is_some();
     let p = app.ui.panels.clone();
     let (_, rb) = rail_widths(t.pro);
@@ -305,7 +305,7 @@ pub fn request_dock_width(ctx: &egui::Context, w: f32) {
 }
 
 /// One dock group's tab content; `panel_docking` bounds it and scrolls it when it's taller.
-pub(crate) fn dock_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, group: crate::dock::Group, tab: usize) {
+pub(crate) fn dock_body(app: &mut LienzoApp, ui: &mut egui::Ui, group: crate::dock::Group, tab: usize) {
     use crate::dock::Group;
     let pro = Tokens::get(ui.ctx()).pro;
     match (group, tab) {

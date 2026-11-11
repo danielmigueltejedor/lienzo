@@ -73,7 +73,7 @@ fn fractional_zoom_rotation_and_invalid_scales_preserve_the_camera() {
 
 #[test]
 fn active_transform_uses_the_same_alignment_without_changing_saved_pan() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", serde_json::json!({"width": 3000, "height": 2000})).unwrap();
     app.sync_views();
     for ppp in [1.0, 1.25, 1.5, 2.0] {
@@ -91,7 +91,7 @@ fn active_transform_uses_the_same_alignment_without_changing_saved_pan() {
 #[test]
 fn cpu_canvas_paints_its_image_on_physical_pixel_edges() {
     for ppp in [1.0, 1.25, 2.0] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", serde_json::json!({"width": 64, "height": 64, "background": "white"})).unwrap();
         app.sync_views();
         app.ppp = ppp;
@@ -127,7 +127,7 @@ fn cpu_canvas_paints_its_image_on_physical_pixel_edges() {
 
 #[test]
 fn crop_image_movement_keeps_its_continuous_camera_mapping() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.tool = Tool::Crop;
     let xf = xform(1.0, [523.0, 471.0]);
     assert_eq!(xf.pixel_aligned_for(&app, 1.0).center, xf.center);
@@ -137,7 +137,7 @@ fn crop_image_movement_keeps_its_continuous_camera_mapping() {
 
 #[test]
 fn animated_active_transform_aligns_the_display_camera_and_preserves_target_pan() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", serde_json::json!({"width": 3000, "height": 2000})).unwrap();
     app.run("prefs.set", serde_json::json!({"values": {"general.animatedZoom": true}})).unwrap();
     app.sync_views();

@@ -1,5 +1,5 @@
 //! Frozen scalar sharpen from main, used as an exact-output oracle.
-use photocraft_algo::retouch::{local_blur, local_sharpen};
+use lienzo_algo::retouch::{local_blur, local_sharpen};
 
 #[test]
 fn matches_scalar_sharpen_bit_for_bit_across_layouts_edges_and_hdr() {

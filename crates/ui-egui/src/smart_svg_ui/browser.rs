@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// No external editor sessions exist in the browser.
 #[derive(Default)]
@@ -16,12 +16,12 @@ impl State {
 }
 
 /// Leave every command to normal dispatch, so Edit Contents uses the internal editor.
-pub(crate) fn intercept(_app: &mut PhotocraftApp, _id: &str, _params: &Value) -> Option<Result<Value, String>> {
+pub(crate) fn intercept(_app: &mut LienzoApp, _id: &str, _params: &Value) -> Option<Result<Value, String>> {
     None
 }
 
 /// No sessions to poll.
-pub(crate) fn poll(_app: &mut PhotocraftApp, _ctx: &egui::Context) {}
+pub(crate) fn poll(_app: &mut LienzoApp, _ctx: &egui::Context) {}
 
 /// No dialog to draw.
-pub(crate) fn show(_app: &mut PhotocraftApp, _ctx: &egui::Context) {}
+pub(crate) fn show(_app: &mut LienzoApp, _ctx: &egui::Context) {}

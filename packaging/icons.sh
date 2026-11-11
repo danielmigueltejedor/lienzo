@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate every app icon from assets/app-icon/photocraft.svg (the canonical master).
+# Regenerate every app icon from assets/app-icon/lienzo.svg (the canonical master).
 #
 # Needs: resvg (brew install resvg / cargo install resvg). On macOS, iconutil also writes the
 # .icns. The outputs are committed, so packaging never needs these tools.
@@ -8,7 +8,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="$ROOT/assets/app-icon"
-SVG="$DIR/photocraft.svg"
+SVG="$DIR/lienzo.svg"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -23,16 +23,16 @@ sed 's/viewBox="0 0 512 512"/viewBox="-62 -62 636 636"/' "$SVG" >"$MAC"
 
 render() { resvg -w "$2" -h "$2" "$1" "$3" </dev/null; }
 
-render "$MAC" 1024 "$DIR/photocraft-1024.png"
+render "$MAC" 1024 "$DIR/lienzo-1024.png"
 
 # Linux hicolor theme.
 for s in 16 24 32 48 64 128 256 512; do
   mkdir -p "$DIR/hicolor/${s}x${s}/apps"
-  render "$SVG" "$s" "$DIR/hicolor/${s}x${s}/apps/ai.storyteller.photocraft.png"
+  render "$SVG" "$s" "$DIR/hicolor/${s}x${s}/apps/dev.danielmiguelt.Lienzo.png"
 done
 mkdir -p "$DIR/hicolor/scalable/apps"
-# The lighter trace (photocraft-small.svg) keeps the scalable theme icon cheap to render.
-cp "$DIR/photocraft-small.svg" "$DIR/hicolor/scalable/apps/ai.storyteller.photocraft.svg"
+# The lighter trace (lienzo-small.svg) keeps the scalable theme icon cheap to render.
+cp "$DIR/lienzo-small.svg" "$DIR/hicolor/scalable/apps/dev.danielmiguelt.Lienzo.svg"
 
 # Windows .ico.
 ICO_PNGS=()
@@ -40,18 +40,18 @@ for s in 16 20 24 32 40 48 64 128 256; do
   render "$SVG" "$s" "$TMP/ico-$s.png"
   ICO_PNGS+=("$TMP/ico-$s.png")
 done
-(cd "$ROOT" && cargo run -q -p xtask -- ico "$DIR/photocraft.ico" "${ICO_PNGS[@]}")
+(cd "$ROOT" && cargo run -q -p xtask -- ico "$DIR/lienzo.ico" "${ICO_PNGS[@]}")
 
 # macOS .icns.
 if command -v iconutil >/dev/null; then
-  SET="$TMP/photocraft.iconset"
+  SET="$TMP/lienzo.iconset"
   mkdir -p "$SET"
   for s in 16 32 128 256 512; do
     render "$MAC" "$s" "$SET/icon_${s}x${s}.png"
     render "$MAC" $((s * 2)) "$SET/icon_${s}x${s}@2x.png"
   done
-  iconutil -c icns -o "$DIR/photocraft.icns" "$SET"
+  iconutil -c icns -o "$DIR/lienzo.icns" "$SET"
 else
-  echo "warning: iconutil not found (macOS only); photocraft.icns not regenerated" >&2
+  echo "warning: iconutil not found (macOS only); lienzo.icns not regenerated" >&2
 fi
 echo "icons written to $DIR"

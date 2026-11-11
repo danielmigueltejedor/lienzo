@@ -3,7 +3,7 @@
 //! operations move the centre with its pixel.
 
 use super::*;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 /// An 800 × 600 white document, as in the issue's measurement.
 fn session() -> Session {
@@ -56,8 +56,8 @@ fn the_readout_reads_the_pixel_the_centre_is_on() {
     // Pixel 199,149 red, its lower-right neighbour 200,150 blue.
     s.edit("paint", |doc, _| {
         let surf = doc.layers[0].surface_mut().unwrap();
-        let red = photocraft_raster::from_rgba(&surf.format(), [1.0, 0.0, 0.0, 1.0]);
-        let blue = photocraft_raster::from_rgba(&surf.format(), [0.0, 0.0, 1.0, 1.0]);
+        let red = lienzo_raster::from_rgba(&surf.format(), [1.0, 0.0, 0.0, 1.0]);
+        let blue = lienzo_raster::from_rgba(&surf.format(), [0.0, 0.0, 1.0, 1.0]);
         surf.fill_rect(Rect::new(199, 149, 200, 150), &red);
         surf.fill_rect(Rect::new(200, 150, 201, 151), &blue);
         Ok(())

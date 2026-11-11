@@ -14,10 +14,10 @@
 //! Scripts skip the prompt by passing any of `tiffCompression`, `tiffTransparency`,
 //! `tiffPyramid` or `tiffLayers`. The answer is remembered for the next TIFF save of the session.
 
-use photocraft_codecs::TiffCompression;
+use lienzo_codecs::TiffCompression;
 use serde_json::Value;
 
-use crate::{ExportSettings, PhotocraftApp};
+use crate::{ExportSettings, LienzoApp};
 
 /// A TIFF Options answer, from the prompt or from a command's params.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -69,7 +69,7 @@ pub fn compression_name(c: TiffCompression) -> &'static str {
 /// `tiffPyramid`, `tiffLayers`), which skip the prompt. None given: `None`. A bad value is an
 /// error, as in the engine's saves.
 pub fn choice_param(params: &Value, cmd: &str) -> Result<Option<TiffChoice>, String> {
-    use photocraft_engine::file_cmds::{tiff_bool_param, tiff_compression_param};
+    use lienzo_engine::file_cmds::{tiff_bool_param, tiff_compression_param};
     let compression = tiff_compression_param(params, cmd).map_err(|e| e.to_string())?;
     let transparency = tiff_bool_param(params, "tiffTransparency", cmd).map_err(|e| e.to_string())?;
     let pyramid = tiff_bool_param(params, "tiffPyramid", cmd).map_err(|e| e.to_string())?;
@@ -92,7 +92,7 @@ pub struct Remembered {
 /// A save waiting on the TIFF Options answer.
 pub struct Prompt {
     /// The document that requested the save, even if tabs change while this is open.
-    doc: photocraft_doc::DocId,
+    doc: lienzo_doc::DocId,
     /// Where the document goes.
     pub path: String,
     pub compression: TiffCompression,
@@ -122,19 +122,19 @@ pub fn is_tiff_path(path: &str) -> bool {
 }
 
 /// Whether saving the active document to `path` asks for TIFF Options: any TIFF.
-pub fn wants_prompt(app: &PhotocraftApp, path: &str) -> bool {
+pub fn wants_prompt(app: &LienzoApp, path: &str) -> bool {
     is_tiff_path(path) && app.session.active().is_some()
 }
 
 /// Parks the save of the active document to `path` behind the prompt. A prompt already waiting
 /// is never replaced.
-pub fn park(app: &mut PhotocraftApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
+pub fn park(app: &mut LienzoApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
     if app.save_options_open() {
         return Err(crate::SAVE_OPTIONS_OPEN.into());
     }
     let doc = app.active_doc_id()?;
     let st = app.session.active().ok_or("no document")?;
-    let layered = photocraft_engine::file_cmds::tiff_would_write_layers(&st.doc);
+    let layered = lienzo_engine::file_cmds::tiff_would_write_layers(&st.doc);
     let has_transparency = st.doc.background().is_none();
     // Starts where an unset Save Transparency writes: kept unless there are alpha or spot channels.
     let transparency = st.doc.channels.is_empty() && st.doc.quick_mask.is_none();
@@ -157,7 +157,7 @@ pub fn park(app: &mut PhotocraftApp, path: String, copy: bool, record: &'static 
     Ok(())
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = &mut app.tiff_options else { return };
     let (mut ok, mut cancel) = (false, false);
     let modal = egui::Modal::new(egui::Id::unique("tiff-options")).show(ctx, |ui| {
@@ -214,7 +214,7 @@ pub fn choice(p: &Prompt) -> TiffChoice {
 }
 
 /// OK: writes the waiting save with the prompt's answer, and journals it.
-pub fn confirm(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn confirm(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = app.tiff_options.take() else { return };
     if p.layer_note && p.dont_ask_again && !p.discard_layers {
         app.session.edit_prefs(|prefs| prefs.file_handling.ask_before_saving_layered_tiff = false);

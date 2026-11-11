@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::{SmartFilter, SmartObject};
+use lienzo_doc::{SmartFilter, SmartObject};
 
 /// A document reopened with the same id is a different allocation, so a dialog opened on the old one cannot edit it.
 #[test]
@@ -28,7 +28,7 @@ fn tiny_images_keep_a_usable_preview_viewport() {
     fields.insert("__imageSize".into(), json!([8, 8]));
     fields.insert("__zoom".into(), json!(100));
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     let input = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(480.0, 480.0))), ..Default::default() };
     ctx.run_ui(input, |ui| {
         let start = ui.cursor().top();
@@ -40,7 +40,7 @@ fn tiny_images_keep_a_usable_preview_viewport() {
 }
 
 /// Run `body` for one frame and return every string it painted.
-fn painted_text(app: &mut PhotocraftApp, fields: &mut Map<String, Value>) -> Vec<String> {
+fn painted_text(app: &mut LienzoApp, fields: &mut Map<String, Value>) -> Vec<String> {
     /// Gather the text of `shape`, descending into nested shape groups.
     fn collect(shape: &egui::Shape, out: &mut Vec<String>) {
         match shape {
@@ -50,7 +50,7 @@ fn painted_text(app: &mut PhotocraftApp, fields: &mut Map<String, Value>) -> Vec
         }
     }
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     let input = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(480.0, 640.0))), ..Default::default() };
     let mut output = ctx.run_ui(input, |ui| super::body(app, ui, fields));
     output.textures_delta.clear();
@@ -78,8 +78,8 @@ fn only_dissolve_shows_the_approximation_note_near_the_mode_control() {
 }
 
 /// A document with one Smart Object holding Box Blur and Smart Sharpen, wrapped in an app that renders on the calling thread.
-pub(crate) fn app(depth: u32, mode: &str) -> (PhotocraftApp, LayerId) {
-    let mut s = photocraft_engine::Session::new();
+pub(crate) fn app(depth: u32, mode: &str) -> (LienzoApp, LayerId) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48, "depth": depth, "mode": mode})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Smart Object"})).unwrap();
     s.execute("edit.fill", json!({"contents": "color", "color": "#305080"})).unwrap();
@@ -90,19 +90,19 @@ pub(crate) fn app(depth: u32, mode: &str) -> (PhotocraftApp, LayerId) {
     let layer = s.active().unwrap().active_layer.unwrap();
     s.execute("filter.blur.boxBlur", json!({"radius": 4})).unwrap();
     s.execute("filter.sharpen.smartSharpen", json!({"amount": 125, "radius": 2})).unwrap();
-    let mut app = PhotocraftApp::new(s, Default::default());
+    let mut app = LienzoApp::new(s, Default::default());
     app.background_jobs = false;
     (app, layer)
 }
 
 /// The Smart Object content of `layer` in the active document.
-pub(crate) fn smart(app: &PhotocraftApp, layer: LayerId) -> &SmartObject {
+pub(crate) fn smart(app: &LienzoApp, layer: LayerId) -> &SmartObject {
     let LayerContent::Smart(sm) = &app.session.active().unwrap().doc.layer(layer).unwrap().content else { panic!("smart") };
     sm
 }
 
 /// A copy of the Smart Object's filters, for comparing before and after an edit.
-fn filters(app: &PhotocraftApp, layer: LayerId) -> Vec<SmartFilter> {
+fn filters(app: &LienzoApp, layer: LayerId) -> Vec<SmartFilter> {
     smart(app, layer).smart_filters.clone()
 }
 
@@ -113,7 +113,7 @@ fn blending_edits_one_filter_with_percent_opacity_and_undo_redo() {
         for mode in ["rgb", "gray"] {
             let (mut app, layer) = app(depth, mode);
             let original = filters(&app, layer);
-            let source = photocraft_engine::smart_cmds::contents_of(&app.session.active().unwrap().doc, layer).unwrap();
+            let source = lienzo_engine::smart_cmds::contents_of(&app.session.active().unwrap().doc, layer).unwrap();
             for opacity in [0.0, 1.0, 50.0, 100.0] {
                 for blend in ["Normal", "Multiply", "Screen", "Luminosity"] {
                     let steps = app.session.active().unwrap().history.past_len();
@@ -131,7 +131,7 @@ fn blending_edits_one_filter_with_percent_opacity_and_undo_redo() {
                     assert!((changed[0].opacity - opacity as f32 / 100.0).abs() < 1e-6);
                     assert_eq!(changed[0].blend.label(), blend);
                     assert_eq!(serde_json::to_value(&changed[1]).unwrap(), serde_json::to_value(&original[1]).unwrap());
-                    assert_eq!(photocraft_engine::smart_cmds::contents_of(&app.session.active().unwrap().doc, layer).unwrap(), source);
+                    assert_eq!(lienzo_engine::smart_cmds::contents_of(&app.session.active().unwrap().doc, layer).unwrap(), source);
                     assert_eq!(app.session.active().unwrap().doc.layer(layer).unwrap().blend, BlendMode::Normal);
                     assert_eq!(
                         smart(&app, layer).cache.as_ref().unwrap().read_region(before.bounds()),
@@ -200,8 +200,8 @@ fn reduced_preview_scales_placement_stack_and_mask_without_adding_filters() {
     let st = app.session.active_mut().unwrap();
     let doc = Arc::make_mut(&mut st.doc);
     let LayerContent::Smart(sm) = &mut doc.layer_mut(layer).unwrap().content else { panic!() };
-    let mut mask = photocraft_doc::LayerMask::reveal_all();
-    mask.surface.fill_rect(photocraft_geom::Rect::new(32, 0, 64, 48), &[0.0]);
+    let mut mask = lienzo_doc::LayerMask::reveal_all();
+    mask.surface.fill_rect(lienzo_geom::Rect::new(32, 0, 64, 48), &[0.0]);
     sm.filter_mask = Some(mask);
     let id = open(&mut app, layer, 0).unwrap();
     app.ui.dialog_mut(id).unwrap().fields.insert("opacity".into(), json!(50));
@@ -229,7 +229,7 @@ fn native_save_preserves_edited_blending_and_existing_invert() {
     app.ui.dialog_mut(id).unwrap().fields.insert("opacity".into(), json!(1));
     crate::dialogs::confirm(&mut app, id).unwrap();
     let doc = &app.session.active().unwrap().doc;
-    let loaded = photocraft_format::load_from_bytes(&photocraft_format::save_to_bytes(doc, &Default::default()).unwrap()).unwrap();
+    let loaded = lienzo_format::load_from_bytes(&lienzo_format::save_to_bytes(doc, &Default::default()).unwrap()).unwrap();
     let LayerContent::Smart(sm) = &loaded.layers.last().unwrap().content else { panic!() };
     assert_eq!(serde_json::to_value(&sm.smart_filters).unwrap(), serde_json::to_value(filters(&app, layer)).unwrap());
 }
@@ -274,7 +274,7 @@ fn blending_does_not_follow_layer_selection_or_the_layer_mask_target() {
 #[test]
 fn invert_blending_keeps_transparency_at_every_depth() {
     for depth in [8, 16, 32] {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width":8,"height":8,"depth":depth})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         s.edit("synthetic translucent pixels", |doc, active| {
@@ -287,7 +287,7 @@ fn invert_blending_keeps_transparency_at_every_depth() {
         let layer = s.active().unwrap().active_layer.unwrap();
         let before = s.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().pixel(3, 3);
         s.execute("image.adjustments.invert", json!({})).unwrap();
-        let mut app = PhotocraftApp::new(s, Default::default());
+        let mut app = LienzoApp::new(s, Default::default());
         app.background_jobs = false;
         let id = open(&mut app, layer, 0).unwrap();
         app.ui.dialog_mut(id).unwrap().fields.insert("opacity".into(), json!(1));

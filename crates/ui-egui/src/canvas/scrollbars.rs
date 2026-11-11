@@ -77,7 +77,7 @@ impl Span {
 ///
 /// #1718 measured Photoshop 25.4 leaving a smaller image where zooming put it. Two reports of
 /// Photoshop itself say it stays centred with Overscroll off, which is what turning Overscroll off
-/// is asked for, so PhotoCraft centres it; Overscroll on keeps the free view.
+/// is asked for, so Lienzo centres it; Overscroll on keeps the free view.
 pub fn clamp_axis(center: f32, len: f32, size: f32, zoom: f32) -> f32 {
     if !(zoom.is_finite() && zoom > 0.0 && len.is_finite() && len > 0.0 && size.is_finite() && size > 0.0) {
         return center;
@@ -387,15 +387,15 @@ mod tests {
         use serde_json::json;
 
         use super::super::*;
-        use crate::PhotocraftApp;
+        use crate::LienzoApp;
 
-        fn harness(overscroll: bool) -> Harness<'static, PhotocraftApp> {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        fn harness(overscroll: bool) -> Harness<'static, LienzoApp> {
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 2000, "height": 1500})).unwrap();
             app.run("prefs.set", json!({"path": "tools.overscroll", "value": overscroll})).unwrap();
             app.sync_views();
             let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-                |ui, app: &mut PhotocraftApp| {
+                |ui, app: &mut LienzoApp| {
                     let ctx = ui.ctx().clone();
                     if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                         return;
@@ -404,16 +404,16 @@ mod tests {
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
             h.run_steps(4);
             h
         }
 
-        fn view(h: &Harness<'static, PhotocraftApp>) -> View {
+        fn view(h: &Harness<'static, LienzoApp>) -> View {
             h.state().ui.views[0].clone()
         }
 
-        fn set_view(h: &mut Harness<'static, PhotocraftApp>, zoom: f32, center: [f32; 2]) {
+        fn set_view(h: &mut Harness<'static, LienzoApp>, zoom: f32, center: [f32; 2]) {
             let v = &mut h.state_mut().ui.views[0];
             v.zoom = zoom;
             v.center = center;
@@ -421,7 +421,7 @@ mod tests {
         }
 
         /// Centre and length of the horizontal thumb, in screen points.
-        fn h_thumb(h: &Harness<'static, PhotocraftApp>) -> (Pos2, f32) {
+        fn h_thumb(h: &Harness<'static, LienzoApp>) -> (Pos2, f32) {
             let r = h.state().last_canvas_rect;
             let v = view(h);
             let s = Span::of(v.doc_size[0] as f32, v.center[0], r.width(), v.zoom).unwrap();
@@ -431,7 +431,7 @@ mod tests {
             (pos2(bar.left() + at + len / 2.0, bar.center().y), len)
         }
 
-        fn drag(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, by: f32) {
+        fn drag(h: &mut Harness<'static, LienzoApp>, p: Pos2, by: f32) {
             h.event(egui::Event::PointerMoved(p));
             h.run_steps(1);
             h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -444,7 +444,7 @@ mod tests {
             h.run_steps(2);
         }
 
-        fn click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+        fn click(h: &mut Harness<'static, LienzoApp>, p: Pos2) {
             h.event(egui::Event::PointerMoved(p));
             h.run_steps(1);
             h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });

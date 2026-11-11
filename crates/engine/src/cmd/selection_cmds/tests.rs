@@ -51,12 +51,7 @@ fn color_range_skin_tones_selects_skin_not_cream_and_refuses_detect_faces() {
 fn selection_sampling_refuses_oversized_canvases_before_reading_pixels() {
     let mut s = Session::new();
     s.add_document(
-        photocraft_doc::Document::new(
-            "large",
-            photocraft_geom::Size::new(300_000, 300_000),
-            photocraft_color::ColorMode::Rgb,
-            photocraft_color::SampleType::U8,
-        ),
+        lienzo_doc::Document::new("large", lienzo_geom::Size::new(300_000, 300_000), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8),
         None,
     );
     for all_layers in [false, true] {
@@ -96,13 +91,8 @@ fn selection_sampling_all_layers_reports_a_failed_composite_and_keeps_the_select
 #[test]
 fn modify_rejects_oversized_canvases_before_reading_the_mask() {
     let mut s = Session::new();
-    let mut doc = photocraft_doc::Document::new(
-        "large",
-        photocraft_geom::Size::new(300_000, 300_000),
-        photocraft_color::ColorMode::Rgb,
-        photocraft_color::SampleType::U8,
-    );
-    let mut selection = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut doc = lienzo_doc::Document::new("large", lienzo_geom::Size::new(300_000, 300_000), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
+    let mut selection = lienzo_raster::Surface::new(lienzo_color::PixelFormat::GRAY8);
     selection.write_pixel(0, 0, &[1.0]);
     doc.selection = Some(selection);
     s.add_document(doc, None);
@@ -238,9 +228,9 @@ fn magic_wand_contiguous_and_modes() {
 
 #[test]
 fn color_range_prepared_query_matches_the_command_at_all_depths() {
-    use photocraft_doc::{Color, ColorMode, SampleType, Size};
+    use lienzo_doc::{Color, ColorMode, SampleType, Size};
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        for profile in [None, Some(photocraft_cms::Builtin::DisplayP3.profile().to_bytes())] {
+        for profile in [None, Some(lienzo_cms::Builtin::DisplayP3.profile().to_bytes())] {
             let mut doc = Document::with_background("samples", Size::new(24, 12), ColorMode::Rgb, depth, Color::WHITE);
             doc.icc_profile = profile;
             let layer = doc.layers[0].surface_mut().unwrap();
@@ -256,7 +246,7 @@ fn color_range_prepared_query_matches_the_command_at_all_depths() {
                 clear_selection(&mut s);
                 let q = ColorRangeSamples::new(&s, &p).unwrap();
                 let doc = s.active().unwrap().doc.clone();
-                let pixels = photocraft_compose::render(&doc, doc.bounds());
+                let pixels = lienzo_compose::render(&doc, doc.bounds());
                 let preview = q.coverage(&pixels.px, 24, 1.0, [0.0, 0.0]);
                 s.execute("select.colorRange", p).unwrap();
                 let actual = current_mask(&s.active().unwrap().doc).1;
@@ -271,7 +261,7 @@ fn color_range_prepared_query_matches_the_command_at_all_depths() {
 
 #[test]
 fn color_range_prepared_query_samples_visible_layers_not_the_active_layer() {
-    use photocraft_doc::{Layer, LayerContent};
+    use lienzo_doc::{Layer, LayerContent};
     let mut s = session_colours();
     let doc = s.active().unwrap().doc.clone();
     let mut top = Layer::new("blue foreground", LayerContent::Raster(doc.layers[0].surface().unwrap().clone()));
@@ -841,7 +831,7 @@ fn windowed_tool_feather_matches_full_canvas() {
                     let input = if tool == "lasso" {
                         sel::polygon(&pts, area, aa)
                     } else {
-                        let mut shape = Surface::new(photocraft_color::PixelFormat::GRAY8);
+                        let mut shape = Surface::new(lienzo_color::PixelFormat::GRAY8);
                         if tool == "ellipse" {
                             shape = sel::ellipse_surface(r, area, aa);
                         } else {
@@ -856,7 +846,7 @@ fn windowed_tool_feather_matches_full_canvas() {
                             s.execute("file.new", json!({"width": area.width(), "height": area.height()})).unwrap();
                             if has_old {
                                 s.edit("soft selection", |doc, _| {
-                                    let mut old = Surface::new(photocraft_color::PixelFormat::GRAY8);
+                                    let mut old = Surface::new(lienzo_color::PixelFormat::GRAY8);
                                     old.fill_rect(Rect::new(3, 4, 180, 150), &[0.6]);
                                     old.fill_rect(Rect::new(70, 60, 90, 80), &[1.0]);
                                     doc.selection = Some(old);

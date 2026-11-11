@@ -1,7 +1,7 @@
 //! Behavioural checks for switching languages in a running shell.
 
 use super::*;
-use crate::{PhotocraftApp, Services};
+use crate::{LienzoApp, Services};
 use serde_json::json;
 
 /// The File menu's title as the menu bar draws it in `lang`: the translation, plus the English
@@ -118,10 +118,10 @@ fn azerbaijani_preferences_draw_terms_and_glyphs() {
 fn ukrainian_native_app_menu_keeps_product_and_language_names() {
     with_language(Lang::EN, || {
         let h = harness();
-        let layout = crate::native_menu::photocraft_layout(&crate::menus::menu_items(h.state()), lang("uk"), "uk");
+        let layout = crate::native_menu::lienzo_layout(&crate::menus::menu_items(h.state()), lang("uk"), "uk");
         for (id, template) in [("help.about", "About {app}"), (crate::native_menu::HIDE, "Hide {app}"), ("file.exit", "Quit {app}")] {
-            let label = fmt(tr(lang("uk"), template), &[("app", "PhotoCraft")]);
-            assert!(label.contains("PhotoCraft"), "{id}: {label}");
+            let label = fmt(tr(lang("uk"), template), &[("app", "Lienzo")]);
+            assert!(label.contains("Lienzo"), "{id}: {label}");
             assert_eq!(layout.bar.find(id).map(|item| item.label.as_str()), Some(label.as_str()), "{id}");
         }
         assert_eq!(layout.bar.find("app.language.uk").map(|item| (item.label.as_str(), item.checked)), Some(("Українська", Some(true))));
@@ -220,7 +220,7 @@ fn fill_dialog_draws_in_the_selected_language() {
 fn file_info_camera_data_draws_in_the_selected_language_read_only() {
     with_language(Lang::EN, || {
         let mut h = harness();
-        let exif = photocraft_algo::exif::build(&photocraft_algo::exif::CameraInfo {
+        let exif = lienzo_algo::exif::build(&lienzo_algo::exif::CameraInfo {
             make: Some("SONY".into()),
             exposure_time: Some(1.0 / 250.0),
             f_number: Some(8.0),
@@ -252,7 +252,7 @@ fn file_info_camera_data_draws_in_the_selected_language_read_only() {
 
 #[test]
 fn cjk_font_order_follows_the_selected_language() {
-    use photocraft_text::cjk::CjkScript;
+    use lienzo_text::cjk::CjkScript;
     for (code, script) in [("zh-hans", CjkScript::SimplifiedChinese), ("ja", CjkScript::Japanese), ("ko", CjkScript::Korean)] {
         with_language(lang(code), || {
             let mut fallback = crate::cjk_fonts::CjkFallback::new(crate::cjk_fonts::Sources::system());
@@ -264,7 +264,7 @@ fn cjk_font_order_follows_the_selected_language() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn korean_glyphs_remain_available_after_repeated_language_switches() {
-    use photocraft_text::cjk::{self, CjkChar, CjkScript};
+    use lienzo_text::cjk::{self, CjkChar, CjkScript};
     #[cfg(target_os = "linux")]
     assert!(crate::cjk_fonts::wait_for_fontconfig_cjk_scan(), "Fontconfig CJK lookup did not finish within 10 seconds");
     if !cjk::font_files(CjkScript::Korean).iter().any(|font| font.path.is_file()) {
@@ -291,14 +291,14 @@ fn korean_glyphs_remain_available_after_repeated_language_switches() {
     });
 }
 
-fn harness() -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn harness() -> egui_kittest::Harness<'static, LienzoApp> {
     harness_with_services(Services::default())
 }
 
-fn harness_with_services(services: Services) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn harness_with_services(services: Services) -> egui_kittest::Harness<'static, LienzoApp> {
     let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
         app.run("file.new", json!({"name": "User layer name", "width": 64, "height": 64})).expect("new document");
         app
     });
@@ -355,7 +355,7 @@ fn older_preferences_without_a_language_follow_the_system() {
             let services = Services { load_prefs: Some(Box::new(|| Some(r#"{"interface":{"uiScale":"125"}}"#.into()))), ..Default::default() };
             let h = harness_with_services(services);
             assert_eq!(h.state().session.prefs().interface.language, "auto");
-            assert_eq!(h.state().session.prefs().interface.ui_scale, photocraft_engine::prefs::UiScale::P125);
+            assert_eq!(h.state().session.prefs().interface.ui_scale, lienzo_engine::prefs::UiScale::P125);
             assert_eq!(current(), lang("fr"));
         });
     });
@@ -431,7 +431,7 @@ fn preferences_preview_does_not_commit_until_applied_and_survives_reload() {
         h.step();
         assert_eq!(current(), lang("ko"));
         let saved = h.state().session.prefs_to_json();
-        let mut restored = photocraft_engine::Session::new();
+        let mut restored = lienzo_engine::Session::new();
         restored.load_prefs_json(&saved).expect("reload preferences");
         assert_eq!(restored.prefs().interface.language, "ko");
     });
@@ -458,7 +458,7 @@ fn keyboard_shortcuts_list_commands_in_the_selected_language() {
     });
 }
 
-fn drawn_text(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> Vec<String> {
+fn drawn_text(h: &egui_kittest::Harness<'_, LienzoApp>) -> Vec<String> {
     fn collect(shape: &egui::Shape, text: &mut Vec<String>) {
         match shape {
             egui::Shape::Text(shape) => text.push(shape.galley.job.text.clone()),
@@ -485,7 +485,7 @@ fn czech_status_notices_and_navigator_draw_translated_text() {
             crate::notices::post(
                 h.state_mut(),
                 "Preferences can't be saved",
-                vec!["PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.".into()],
+                vec!["Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.".into()],
                 true,
                 None,
             );
@@ -564,7 +564,7 @@ fn arabic_labels_are_laid_out_right_to_left() {
 }
 
 /// #5159 on egui 0.37: user names are handed to egui as typed, and egui orders the words. An
-/// Arabic layer name reads from the right; the title line keeps "— PhotoCraft" at the right of a
+/// Arabic layer name reads from the right; the title line keeps "— Lienzo" at the right of a
 /// right-to-left document name.
 #[test]
 fn arabic_names_are_laid_out_right_to_left() {
@@ -575,10 +575,10 @@ fn arabic_names_are_laid_out_right_to_left() {
         let name = "لاشي مكتوب هنا";
         let galley = h.ctx.fonts_mut(|f| f.layout_no_wrap(name.to_string(), font.clone(), egui::Color32::WHITE));
         assert!(x_in(&galley, 'ل') > x_in(&galley, 'ه'), "{name}: first word at the right");
-        let title = "لاشي مكتوب.png — PhotoCraft";
+        let title = "لاشي مكتوب.png — Lienzo";
         let job = crate::panels::title_bar::title_job(title, font, egui::Color32::WHITE);
         let galley = h.ctx.fonts_mut(|f| f.layout_job(job));
         assert!(x_in(&galley, 'ل') > x_in(&galley, 'م'), "{title}: the name's first word right of its second");
-        assert!(x_in(&galley, 'P') > x_in(&galley, 'ل'), "{title}: PhotoCraft stays at the right");
+        assert!(x_in(&galley, 'P') > x_in(&galley, 'ل'), "{title}: Lienzo stays at the right");
     });
 }

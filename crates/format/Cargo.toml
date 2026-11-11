@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-format"
+name = "lienzo-format"
 description = "Native .pcraft document bundle: manifest + content-addressed zstd tiles"
 version.workspace = true
 edition.workspace = true
@@ -10,11 +10,11 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-raster = { workspace = true }
-photocraft-doc = { workspace = true }
-photocraft-codecs = { workspace = true }
+lienzo-geom = { workspace = true }
+lienzo-color = { workspace = true }
+lienzo-raster = { workspace = true }
+lienzo-doc = { workspace = true }
+lienzo-codecs = { workspace = true }
 craft-pcraft-format = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["unbounded_depth", "float_roundtrip"] }

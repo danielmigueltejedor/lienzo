@@ -1,8 +1,8 @@
 use super::*;
 use egui::{Key, Modifiers};
 
-fn opened() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn opened() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 160, "height": 100, "depth": 8})).unwrap();
     app.session.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 20})).unwrap();
     app.session.prefs.edit(|p| {
@@ -13,15 +13,15 @@ fn opened() -> PhotocraftApp {
     app
 }
 
-fn ws(app: &PhotocraftApp) -> &SelectMaskWorkspace {
+fn ws(app: &LienzoApp) -> &SelectMaskWorkspace {
     app.distort.select_mask.as_ref().unwrap()
 }
 
-fn ui_selected(app: &mut PhotocraftApp) -> u64 {
+fn ui_selected(app: &mut LienzoApp) -> u64 {
     control(app, &json!({"waitPreview": true})).unwrap()["selectedProxyPixels"].as_u64().unwrap()
 }
 
-fn press(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn press(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     let ev = egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     let input = egui::RawInput { events: vec![ev], ..Default::default() };
     ctx.run_ui(input, |ui| keys(app, ui.ctx())).textures_delta.clear();

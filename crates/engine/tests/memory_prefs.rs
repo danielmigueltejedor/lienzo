@@ -1,4 +1,4 @@
-use photocraft_engine::prefs::{Performance, Preferences};
+use lienzo_engine::prefs::{Performance, Preferences};
 use serde_json::json;
 
 #[test]

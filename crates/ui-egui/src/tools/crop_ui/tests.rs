@@ -1,16 +1,16 @@
 use super::*;
 use crate::canvas::tool_event;
-use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
 use serde_json::json;
 
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 
-fn app(depth: SampleType) -> PhotocraftApp {
+fn app(depth: SampleType) -> LienzoApp {
     let doc = Document::with_background("crop", Size::new(200, 100), ColorMode::Rgb, depth, Color::WHITE);
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.ui.tool = Tool::Crop;
     // These tests pin Classic Mode (the frame moves and turns over the image); the default
     // mode's are in `crop_mode`.
@@ -20,7 +20,7 @@ fn app(depth: SampleType) -> PhotocraftApp {
     app
 }
 
-fn drag(app: &mut PhotocraftApp, pts: &[[f64; 2]], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, pts: &[[f64; 2]], mods: Modifiers) {
     let (first, last) = (pts[0], pts[pts.len() - 1]);
     tool_event(app, ToolEvent::Down { x: first[0], y: first[1], pressure: 1.0 }, mods);
     for p in &pts[1..] {
@@ -193,15 +193,15 @@ fn reset_under_an_output_size_leaves_nothing_to_reset() {
 #[test]
 fn the_options_bar_reset_button_resets_a_changed_frame() {
     use egui_kittest::kittest::{NodeT, Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.state_mut().ui.tool = Tool::Crop;
     h.run_steps(8);
-    let button = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let button = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         h.get_by_role_and_label(egui::accesskit::Role::Button, "Reset the crop box, image rotation, and aspect ratio settings").accesskit_node().is_disabled()
     };
     assert!(button(&h), "an untouched frame has nothing to reset");
@@ -560,7 +560,7 @@ fn box_undo_and_redo_grey_out_when_their_stack_is_empty() {
 /// wait for the crop, as they do for Free Transform.
 #[test]
 fn history_jumps_wait_for_a_pending_crop() {
-    let size = |app: &PhotocraftApp| app.session.active().map(|st| (st.doc.size.width, st.doc.size.height));
+    let size = |app: &LienzoApp| app.session.active().map(|st| (st.doc.size.width, st.doc.size.height));
     let mut app = app(SampleType::U8);
     app.run("history.newSnapshot", json!({})).unwrap();
     app.run("image.canvasSize", json!({"width": 300, "height": 200})).unwrap();
@@ -685,7 +685,7 @@ fn space_on_the_canvas_moves_the_frame_not_the_view() {
     };
     a.ui.views = vec![view.clone()];
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
         },
@@ -746,7 +746,7 @@ fn a_handle_held_past_the_canvas_edge_scrolls_the_view() {
     a.crop.default_frame = false;
     a.ui.extras.rulers = false;
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
         },
@@ -802,7 +802,7 @@ fn a_press_beside_the_canvas_does_not_scroll_it_for_a_crop_drag() {
     a.crop.drag = Some(CropDrag::Resize { hx: 1, hy: 0, start: [100.0, 25.0], rect: [40.0, 10.0, 100.0, 40.0], view: None });
     // The canvas takes the left 400 points; the rest stands in for a panel.
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(400.0, 400.0));
             crate::canvas::canvas_view(app, ui, 0, rect, v, true);
@@ -850,7 +850,7 @@ fn a_held_click_at_the_canvas_edge_draws_no_frame_and_does_not_scroll() {
     // The canvas starts 100 points from the window's left, so its left edge (no scrollbar there)
     // has room past it.
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(700.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             let rect = egui::Rect::from_min_size(egui::pos2(100.0, 0.0), egui::vec2(600.0, 400.0));
             crate::canvas::canvas_view(app, ui, 0, rect, v, true);
@@ -903,9 +903,9 @@ fn a_held_click_at_the_canvas_edge_draws_no_frame_and_does_not_scroll() {
 fn a_scrollbar_drag_past_the_canvas_edge_does_not_scroll_for_a_crop_drag() {
     use egui::{Event, PointerButton, pos2};
     let doc = Document::with_background("crop", Size::new(200, 200), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
-    let mut a = PhotocraftApp::new(s, crate::Services::default());
+    let mut a = LienzoApp::new(s, crate::Services::default());
     a.ui.tool = Tool::Crop;
     a.ui.tool_options.crop_shield.classic_mode = true;
     a.ui.extras.snap = false;
@@ -917,7 +917,7 @@ fn a_scrollbar_drag_past_the_canvas_edge_does_not_scroll_for_a_crop_drag() {
     a.crop.drag = Some(CropDrag::Resize { hx: 1, hy: 0, start: [100.0, 25.0], rect: [40.0, 10.0, 100.0, 40.0], view: None });
     // The window is taller than the canvas, so the pointer can leave it below the bottom bar.
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 500.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(600.0, 400.0));
             crate::canvas::canvas_view(app, ui, 0, rect, v, true);
@@ -963,7 +963,7 @@ fn cancelling_a_turned_crop_resets_its_angle() {
 
 #[test]
 fn a_pending_crop_stays_with_its_document() {
-    let size = |app: &PhotocraftApp| app.session.active().map(|st| st.doc.size);
+    let size = |app: &LienzoApp| app.session.active().map(|st| st.doc.size);
     // File › New.
     let mut app = app(SampleType::U8);
     drag(&mut app, &[[10.0, 10.0], [50.0, 40.0]], NONE);
@@ -1325,7 +1325,7 @@ fn a_tool_switch_during_a_real_drag_commits_the_drawn_box() {
         let v = &mut a.ui.views[0];
         (v.zoom, v.center, v.fit_pending, v.doc_size, v.rotation) = (2.0, [100.0, 50.0], false, [200, 100], 0.0);
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 let v = app.ui.views[0].clone();
                 crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
             },
@@ -1457,7 +1457,7 @@ fn degenerate_and_bad_input_never_panics() {
     drag(&mut app, &[[10.0, 10.0], [30.0, 30.0]], SHIFT);
     crate::canvas::commit_crop(&mut app);
     // No document: events are swallowed quietly.
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     empty.ui.tool = Tool::Crop;
     drag(&mut empty, &[[1.0, 1.0], [9.0, 9.0]], NONE);
     assert!(empty.ui.crop_rect.is_none());
@@ -1543,7 +1543,7 @@ fn cursor_inside_the_default_frame_draws() {
 }
 
 /// One key press through the app's keyboard handling (`shortcuts::handle`).
-fn key(app: &mut PhotocraftApp, key: egui::Key, modifiers: Modifiers) {
+fn key(app: &mut LienzoApp, key: egui::Key, modifiers: Modifiers) {
     let ctx = egui::Context::default();
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
@@ -1553,7 +1553,7 @@ fn key(app: &mut PhotocraftApp, key: egui::Key, modifiers: Modifiers) {
     out.textures_delta.clear();
 }
 
-fn layer_offset(app: &PhotocraftApp) -> (i32, i32) {
+fn layer_offset(app: &LienzoApp) -> (i32, i32) {
     let st = app.session.active().unwrap();
     let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
     l.surface().map_or((0, 0), |s| (s.content_bounds().x0, s.content_bounds().y0))
@@ -1622,7 +1622,7 @@ fn arrow_keys_nudge_the_pending_frame() {
     assert!(!nudge(&mut app, 1.0, 0.0));
 }
 
-fn app_selection_bounds(app: &PhotocraftApp) -> Option<(i32, i32, i32, i32)> {
+fn app_selection_bounds(app: &LienzoApp) -> Option<(i32, i32, i32, i32)> {
     let b = app.session.active()?.doc.selection.as_ref()?.content_bounds();
     Some((b.x0, b.y0, b.x1, b.y1))
 }
@@ -1634,7 +1634,7 @@ fn x_swaps_the_frame_orientation_not_the_colours() {
     use egui::Key;
     let mut app = app(SampleType::U16);
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
-    let fg = |app: &PhotocraftApp| app.session.tools.foreground;
+    let fg = |app: &LienzoApp| app.session.tools.foreground;
     let red = fg(&app);
     app.ui.crop_rect = Some([20.0, 20.0, 100.0, 60.0]);
     app.ui.crop_angle = 25.0;
@@ -1707,7 +1707,7 @@ fn the_swap_button_turns_the_ratio_frame() {
 #[test]
 fn the_swap_button_turns_a_size_preset_frame() {
     use egui_kittest::kittest::Queryable;
-    let whr = |a: &mut PhotocraftApp| {
+    let whr = |a: &mut LienzoApp| {
         let o = &mut a.ui.tool_options;
         (o.crop_width, o.crop_height, o.crop_resolution) = ("1600 px".into(), "900 px".into(), "72".into());
     };
@@ -1758,18 +1758,18 @@ fn the_swap_button_leaves_a_square_default_frame_untouched() {
     assert!(a.crop.default_frame && !a.crop.editing, "X keeps it untouched too");
 }
 
-fn swap_button_harness(mut a: PhotocraftApp, ratio: &str, rect: [f64; 4]) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn swap_button_harness(mut a: LienzoApp, ratio: &str, rect: [f64; 4]) -> egui_kittest::Harness<'static, LienzoApp> {
     a.ui.tool_options.crop_ratio = ratio.into();
     a.ui.crop_rect = Some(rect);
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::options_bar(app, ui);
             }
         },
         a,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
     h.run_steps(4);
     h
 }
@@ -1779,7 +1779,7 @@ fn swap_button_harness(mut a: PhotocraftApp, ratio: &str, rect: [f64; 4]) -> egu
 #[test]
 fn readout_shows_the_frame_size_while_drawing_or_resizing() {
     let mut app = app(SampleType::U8);
-    let ev = |app: &mut PhotocraftApp, e: ToolEvent| tool_event(app, e, NONE);
+    let ev = |app: &mut LienzoApp, e: ToolEvent| tool_event(app, e, NONE);
     ev(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 });
     assert_eq!(sizing(&app), None, "nothing drawn yet");
     ev(&mut app, ToolEvent::Move { x: 70.4, y: 50.6, pressure: 1.0 });
@@ -1808,7 +1808,7 @@ fn readout_shows_the_frame_size_while_drawing_or_resizing() {
 }
 
 /// Esc through the real shortcut handler.
-fn press_esc(app: &mut PhotocraftApp) {
+fn press_esc(app: &mut LienzoApp) {
     let key = egui::Key::Escape;
     let input = egui::RawInput {
         focused: true,
@@ -1953,7 +1953,7 @@ fn info_panel_shows_the_pending_frame_size() {
 #[test]
 fn info_size_is_shown_in_the_ruler_unit() {
     use crate::panels::info::wh_readout;
-    use photocraft_engine::prefs::{Unit, UnitsAndRulers};
+    use lienzo_engine::prefs::{Unit, UnitsAndRulers};
     let mut app = app(SampleType::U8);
     app.ui.crop_rect = Some([0.0, 0.0, 144.0, 72.0]);
     let wh = info_size(&app).unwrap();

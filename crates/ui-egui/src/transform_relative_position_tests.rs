@@ -8,15 +8,15 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 
 const TOGGLE: &str = "Use relative positioning for reference point";
 
 /// A 200 x 120 document with a layer filled at 40,20 (60 x 40) and Free Transform open on it:
 /// the reference point starts at the box's centre, 70,40.
-fn transforming() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn transforming() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
     app.sync_views();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -27,9 +27,9 @@ fn transforming() -> PhotocraftApp {
     app
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1600.0, 200.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -37,19 +37,19 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
 /// What the X and Y fields show.
-fn shown(h: &Harness<'_, PhotocraftApp>) -> (f64, f64) {
+fn shown(h: &Harness<'_, LienzoApp>) -> (f64, f64) {
     let read = |name: &str| h.get_by_role_and_label(Role::SpinButton, name).accesskit_node().numeric_value().unwrap();
     (read("X"), read("Y"))
 }
 
 /// Types `text` into the X field and commits it with Tab, as a user does.
-fn type_x(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
+fn type_x(h: &mut Harness<'_, LienzoApp>, text: &str) {
     h.get_by_role_and_label(Role::SpinButton, "X").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -62,12 +62,12 @@ fn type_x(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
     h.run_steps(3);
 }
 
-fn click_toggle(h: &mut Harness<'_, PhotocraftApp>) {
+fn click_toggle(h: &mut Harness<'_, LienzoApp>) {
     h.get_by_label(TOGGLE).click();
     h.run_steps(3);
 }
 
-fn quad(h: &Harness<'_, PhotocraftApp>) -> [[f64; 2]; 4] {
+fn quad(h: &Harness<'_, LienzoApp>) -> [[f64; 2]; 4] {
     h.state().ui.transform.as_ref().unwrap().quad
 }
 
@@ -81,7 +81,7 @@ fn same(a: [[f64; 2]; 4], b: [[f64; 2]; 4]) -> bool {
 
 #[test]
 fn relative_positioning_is_off_by_default() {
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(!app.ui.tool_options.transform_relative_position);
     // An older preferences file without the field reads it as off.
     let o: crate::state::ToolOptions = serde_json::from_value(json!({})).unwrap();

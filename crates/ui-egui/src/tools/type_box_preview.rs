@@ -23,13 +23,13 @@ use std::panic::AssertUnwindSafe;
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::sync::{Arc, PoisonError};
 
-use photocraft_color::PixelFormat;
-use photocraft_doc::{DocId, Document, LayerContent, LayerId, TextLayer};
-use photocraft_geom::{Affine, Rect};
-use photocraft_raster::Surface;
+use lienzo_color::PixelFormat;
+use lienzo_doc::{DocId, Document, LayerContent, LayerId, TextLayer};
+use lienzo_geom::{Affine, Rect};
+use lienzo_raster::Surface;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Preview keys: `BASE + n`, one per result shown (see `canvas::display_doc`).
 const BASE: u64 = 1 << 46;
@@ -105,12 +105,12 @@ pub(crate) struct TypeBoxPreview {
 }
 
 /// Whether handle drags render in the background here.
-fn enabled(app: &PhotocraftApp) -> bool {
+fn enabled(app: &LienzoApp) -> bool {
     cfg!(not(target_arch = "wasm32")) && app.background_jobs
 }
 
 /// A handle drag of `p`'s layer is in progress.
-fn dragging(app: &PhotocraftApp, p: &TypeBoxPreview) -> bool {
+fn dragging(app: &LienzoApp, p: &TypeBoxPreview) -> bool {
     app.ui.tool.is_type() && app.ui.text_edit.as_ref().is_some_and(|e| e.layer == p.layer.0 && e.resize.is_some())
 }
 
@@ -124,7 +124,7 @@ fn text_of(doc: &Document, layer: LayerId) -> Option<&TextLayer> {
 
 /// A handle drag of text layer `layer` starts: remember the document as it is now. Does nothing
 /// when drags apply the box as they go.
-pub(crate) fn begin(app: &mut PhotocraftApp, layer: LayerId, session: String) {
+pub(crate) fn begin(app: &mut LienzoApp, layer: LayerId, session: String) {
     // A drag left over from before (its release never came) still owes its box to the document.
     flush(app);
     // The mask overlay is drawn from the document's layout, which a background drag leaves stale.
@@ -156,7 +156,7 @@ pub(crate) fn begin(app: &mut PhotocraftApp, layer: LayerId, session: String) {
 }
 
 /// End the handle-drag gesture of `layer`'s edit session, as a release does.
-fn end_gesture(app: &mut PhotocraftApp, layer: LayerId) {
+fn end_gesture(app: &mut LienzoApp, layer: LayerId) {
     if let Some(e) = app.ui.text_edit.as_mut().filter(|e| e.layer == layer.0) {
         e.resize = None;
         e.dragging = false;
@@ -167,7 +167,7 @@ fn end_gesture(app: &mut PhotocraftApp, layer: LayerId) {
 /// the preview, or the preview was stale and the drag ended with it. Returns false when no
 /// background drag is in progress for `layer` (or the box isn't a plain finite one): the caller
 /// then applies it with `type.edit`.
-pub(crate) fn want(app: &mut PhotocraftApp, layer: LayerId, boxed: [f64; 4]) -> bool {
+pub(crate) fn want(app: &mut LienzoApp, layer: LayerId, boxed: [f64; 4]) -> bool {
     let Some(p) = app.type_box_preview.as_ref() else { return false };
     let current =
         p.layer == layer && app.session.documents().iter().any(|st| st.doc.id == p.document && st.revision == p.revision && text_of(&st.doc, layer).is_some());
@@ -193,13 +193,13 @@ pub(crate) fn want(app: &mut PhotocraftApp, layer: LayerId, boxed: [f64; 4]) -> 
 
 /// The box the pointer wants while a background drag of `layer` is in progress, for the overlay.
 /// The text layout, caret and overflow mark still come from the document, which has not changed.
-pub(crate) fn wanted_box(app: &PhotocraftApp, layer: LayerId) -> Option<[f64; 4]> {
+pub(crate) fn wanted_box(app: &LienzoApp, layer: LayerId) -> Option<[f64; 4]> {
     let p = app.type_box_preview.as_ref().filter(|p| p.layer == layer && dragging(app, p))?;
     p.wanted
 }
 
 /// Start a render of the wanted box if none runs and it isn't what is shown already.
-fn spawn_if_idle(app: &mut PhotocraftApp) {
+fn spawn_if_idle(app: &mut LienzoApp) {
     let Some(p) = app.type_box_preview.as_ref() else { return };
     let Some(boxed) = p.wanted else { return };
     if p.running.is_some() || p.failed == Some(boxed) || p.shown.as_ref().is_some_and(|s| s.boxed == boxed) {
@@ -208,7 +208,7 @@ fn spawn_if_idle(app: &mut PhotocraftApp) {
     let Some(st) = app.session.documents().iter().find(|st| st.doc.id == p.document && st.revision == p.revision) else { return };
     let Some(t) = text_of(&st.doc, p.layer) else { return };
     let mut layer = t.clone();
-    photocraft_engine::type_cmds::apply_box(&mut layer, boxed);
+    lienzo_engine::type_cmds::apply_box(&mut layer, boxed);
     let (dpi, format) = (st.doc.resolution_dpi, st.doc.pixel_format());
     let (ctx, hooks) = (p.ctx.clone(), p.hooks.clone());
     let running = spawn(layer, dpi, format, boxed, ctx, hooks);
@@ -228,11 +228,11 @@ fn spawn_if_idle(app: &mut PhotocraftApp) {
 /// for the layout: the UI thread locks it every frame, and the rasterizing is most of the time.
 fn render(layer: &TextLayer, dpi: f32, format: PixelFormat) -> Surface {
     let layout = {
-        let mut engine = photocraft_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
+        let mut engine = lienzo_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
         engine.layout(layer, dpi)
     };
-    let warp = photocraft_text::render::layout_deform(&layout, layer);
-    photocraft_text::render::rasterize_warped(&layout, &layer.transform, format, layer.antialias, warp.as_ref()).surface
+    let warp = lienzo_text::render::layout_deform(&layout, layer);
+    lienzo_text::render::rasterize_warped(&layout, &layer.transform, format, layer.antialias, warp.as_ref()).surface
 }
 
 /// Starts a worker thread that renders `layer` and sends back its surface; `None` if no thread could be started.
@@ -264,7 +264,7 @@ fn spawn(layer: TextLayer, dpi: f32, format: PixelFormat, boxed: [f64; 4], ctx: 
 }
 
 /// Take a finished render, if there is one, and make its document the one shown.
-fn poll(app: &mut PhotocraftApp) {
+fn poll(app: &mut LienzoApp) {
     let Some(p) = app.type_box_preview.as_mut() else { return };
     let Some(r) = p.running.as_ref() else { return };
     let result = match r.rx.try_recv() {
@@ -280,7 +280,7 @@ fn poll(app: &mut PhotocraftApp) {
 }
 
 /// Show the session document with its layer in `boxed`, drawn as `surface`.
-fn publish(app: &mut PhotocraftApp, boxed: [f64; 4], surface: Surface) {
+fn publish(app: &mut LienzoApp, boxed: [f64; 4], surface: Surface) {
     let Some(p) = app.type_box_preview.as_ref() else { return };
     let (document, revision, layer) = (p.document, p.revision, p.layer);
     let Some(st) = app.session.documents().iter().find(|st| st.doc.id == document && st.revision == revision) else { return };
@@ -289,10 +289,10 @@ fn publish(app: &mut PhotocraftApp, boxed: [f64; 4], surface: Surface) {
     {
         let Some(l) = doc.layer_mut(layer) else { return };
         let LayerContent::Text(t) = &mut l.content else { return };
-        photocraft_engine::type_cmds::apply_box(t, boxed);
+        lienzo_engine::type_cmds::apply_box(t, boxed);
         t.cache = Some(surface);
     }
-    let doc = Arc::new(photocraft_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
+    let doc = Arc::new(lienzo_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
     let Some(p) = app.type_box_preview.as_mut() else { return };
     p.serial += 1;
     let key = BASE + p.serial;
@@ -305,7 +305,7 @@ fn publish(app: &mut PhotocraftApp, boxed: [f64; 4], surface: Surface) {
 
 /// The document to show for document `idx`: the session document with the dragged box applied,
 /// once a render of one has arrived. `None` (and the preview dropped, if it is stale) otherwise.
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let p = app.type_box_preview.as_ref()?;
     let st = app.session.documents().get(idx)?;
     if st.doc.id != p.document {
@@ -332,7 +332,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
 }
 
 /// Keep frames coming while a render computes, and remember the context to wake from the worker.
-pub(crate) fn wake(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn wake(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = app.type_box_preview.as_mut() else { return };
     if p.ctx.is_none() {
         p.ctx = Some(ctx.clone());
@@ -346,7 +346,7 @@ pub(crate) fn wake(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// now (one render, in the edit session's history step), and drop the preview. Nothing happens
 /// without a preview, if it never got a box, or if the document, its revision or the layer is no
 /// longer the one the drag started on.
-pub(crate) fn flush(app: &mut PhotocraftApp) {
+pub(crate) fn flush(app: &mut LienzoApp) {
     let Some(p) = app.type_box_preview.take() else { return };
     let Some(boxed) = p.wanted else { return };
     let Some(i) = app.session.documents().iter().position(|st| st.doc.id == p.document && st.revision == p.revision && text_of(&st.doc, p.layer).is_some())
@@ -367,28 +367,28 @@ pub(crate) fn flush(app: &mut PhotocraftApp) {
 /// A command other than a pure view one starts while a handle may be held: apply the box the drag
 /// reached and end the gesture, so the command (Free Transform capturing the document, say) works
 /// on the box, not the press-time one. Does nothing without a background drag.
-pub(crate) fn end_drag(app: &mut PhotocraftApp) {
+pub(crate) fn end_drag(app: &mut LienzoApp) {
     let Some(layer) = app.type_box_preview.as_ref().map(|p| p.layer) else { return };
     flush(app);
     end_gesture(app, layer);
 }
 
 /// The edit was cancelled: its session is undone, so the box the drag wanted is not applied.
-pub(crate) fn discard(app: &mut PhotocraftApp) {
+pub(crate) fn discard(app: &mut LienzoApp) {
     app.type_box_preview = None;
 }
 
 /// Once a frame: a drag that ended without a release reaching the Type tool (focus lost, a Free
 /// Transform started, the tool switched, the edit replaced) keeps the box it had reached, as it
 /// did when every move was applied. If the document changed meanwhile, the box is dropped.
-pub(crate) fn settle(app: &mut PhotocraftApp) {
+pub(crate) fn settle(app: &mut LienzoApp) {
     if app.type_box_preview.as_ref().is_some_and(|p| !dragging(app, p)) {
         flush(app);
     }
 }
 
 /// Where the layer's pixels were and are, between two keys the canvas showed (0: the document).
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
     if before == after {
         return None;
     }
@@ -408,16 +408,16 @@ mod tests {
     use crate::canvas::{ToolEvent, tool_event};
     use crate::state::Tool;
     use egui::Modifiers;
-    use photocraft_doc::text::TextShape;
+    use lienzo_doc::text::TextShape;
 
     /// An app with one paragraph text layer in a box, open for editing.
-    fn app_with_box() -> (PhotocraftApp, LayerId) {
+    fn app_with_box() -> (LienzoApp, LayerId) {
         app_with_box_and(crate::Services::default())
     }
 
     /// [`app_with_box`] with the given shell services.
-    fn app_with_box_and(services: crate::Services) -> (PhotocraftApp, LayerId) {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    fn app_with_box_and(services: crate::Services) -> (LienzoApp, LayerId) {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
         app.run("file.new", json!({"width": 1600, "height": 900})).unwrap();
         app.sync_views();
         app.ui.extras.rulers = false;
@@ -435,32 +435,32 @@ mod tests {
 
     // The bottom edge's handle sits at the midpoint of the box's lower edge.
     /// Press the bottom-edge handle of the box.
-    fn press(app: &mut PhotocraftApp) {
+    fn press(app: &mut LienzoApp) {
         tool_event(app, ToolEvent::Down { x: 420.0, y: 480.0, pressure: 1.0 }, Modifiers::NONE);
     }
     /// Move the held bottom-edge handle to document `y`.
-    fn to(app: &mut PhotocraftApp, y: f64) {
+    fn to(app: &mut LienzoApp, y: f64) {
         tool_event(app, ToolEvent::Move { x: 420.0, y, pressure: 1.0 }, Modifiers::NONE);
     }
     /// Release the bottom-edge handle at document `y`.
-    fn release(app: &mut PhotocraftApp, y: f64) {
+    fn release(app: &mut LienzoApp, y: f64) {
         tool_event(app, ToolEvent::Up { x: 420.0, y }, Modifiers::NONE);
     }
     // The right edge's handle sits at the midpoint of the box's right edge.
     /// Press the right-edge handle of the box.
-    fn press_right(app: &mut PhotocraftApp) {
+    fn press_right(app: &mut LienzoApp) {
         tool_event(app, ToolEvent::Down { x: 540.0, y: 390.0, pressure: 1.0 }, Modifiers::NONE);
     }
     /// Move the held right-edge handle to document `x`.
-    fn to_x(app: &mut PhotocraftApp, x: f64) {
+    fn to_x(app: &mut LienzoApp, x: f64) {
         tool_event(app, ToolEvent::Move { x, y: 390.0, pressure: 1.0 }, Modifiers::NONE);
     }
     /// Release the right-edge handle at document `x`.
-    fn release_x(app: &mut PhotocraftApp, x: f64) {
+    fn release_x(app: &mut LienzoApp, x: f64) {
         tool_event(app, ToolEvent::Up { x, y: 390.0 }, Modifiers::NONE);
     }
     /// The active document's revision.
-    fn revision(app: &PhotocraftApp) -> u64 {
+    fn revision(app: &LienzoApp) -> u64 {
         app.session.active().unwrap().revision
     }
     /// The text layer `id` of `doc`.
@@ -468,7 +468,7 @@ mod tests {
         text_of(doc, id).unwrap().clone()
     }
     /// The text layer `id` of the active document.
-    fn session_layer(app: &PhotocraftApp, id: LayerId) -> TextLayer {
+    fn session_layer(app: &LienzoApp, id: LayerId) -> TextLayer {
         layer_of(&app.session.active().unwrap().doc, id)
     }
     /// The height of a box-shaped text layer.
@@ -492,7 +492,7 @@ mod tests {
         r == b.content_bounds() && (r.y0..r.y1).all(|y| (r.x0..r.x1).all(|x| a.rgba(x, y) == b.rgba(x, y)))
     }
     /// Turn background jobs on, as the desktop app does.
-    fn background(app: &mut PhotocraftApp) {
+    fn background(app: &mut LienzoApp) {
         app.background_jobs = true;
     }
     /// Let held renders run.
@@ -501,14 +501,14 @@ mod tests {
         gate.1.notify_all();
     }
     /// Hold every render back until the returned gate opens.
-    fn hold(app: &mut PhotocraftApp) -> Arc<(std::sync::Mutex<bool>, std::sync::Condvar)> {
+    fn hold(app: &mut LienzoApp) -> Arc<(std::sync::Mutex<bool>, std::sync::Condvar)> {
         let gate = Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
         app.type_box_preview.as_mut().unwrap().hooks.gate = Some(gate.clone());
         gate
     }
     /// Wait for each render in turn (their threads signal when done), polling after each, until
     /// none runs: the document shown then is for the newest box.
-    fn wait_idle(app: &mut PhotocraftApp) -> Option<(Arc<Document>, u64)> {
+    fn wait_idle(app: &mut LienzoApp) -> Option<(Arc<Document>, u64)> {
         let mut out = None;
         for _ in 0..16 {
             if let Some(r) = app.type_box_preview.as_ref().and_then(|p| p.running.as_ref()) {
@@ -766,7 +766,7 @@ mod tests {
         use crate::control::{ControlRequest, Outcome, handle};
         use std::cell::RefCell;
         use std::rc::Rc;
-        let call = |app: &mut PhotocraftApp, method: &str, params: serde_json::Value| {
+        let call = |app: &mut LienzoApp, method: &str, params: serde_json::Value| {
             let (req, _rx) = ControlRequest::new(method, params);
             match handle(app, &egui::Context::default(), &req) {
                 Outcome::Done(v) => v,
@@ -849,9 +849,9 @@ mod tests {
         let (mut app, id) = app_with_box();
         background(&mut app);
         let ctx = egui::Context::default();
-        let frame = |app: &PhotocraftApp| {
+        let frame = |app: &LienzoApp| {
             let st = app.session.active().unwrap();
-            let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(id).unwrap());
+            let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(id).unwrap());
             [b.x0 as f64, b.y0 as f64, b.x1 as f64, b.y1 as f64]
         };
         let before = frame(&app);

@@ -6,11 +6,11 @@
 //! swatch's caller applies it to the next shape or as one `shape.edit`.
 
 use egui::{Pos2, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_compose::gradient_fill as gf;
-use photocraft_doc::{Fill, GradientStyle};
-use photocraft_engine::gradient_fill_cmds::apply_stop;
-use photocraft_engine::presets::Group;
-use photocraft_engine::presets::gradients::GradientPreset;
+use lienzo_compose::gradient_fill as gf;
+use lienzo_doc::{Fill, GradientStyle};
+use lienzo_engine::gradient_fill_cmds::apply_stop;
+use lienzo_engine::presets::Group;
+use lienzo_engine::presets::gradients::GradientPreset;
 use serde_json::{Value, json};
 
 use crate::shape_paint_ui::{picker_color, picker_rgba, rgba_of, rgba32};
@@ -224,7 +224,7 @@ struct Drag {
 }
 
 /// Colour stops, opacity stops and midpoints.
-type Stops = (Vec<(f32, photocraft_doc::Color)>, Vec<(f32, f32)>, Vec<f32>);
+type Stops = (Vec<(f32, lienzo_doc::Color)>, Vec<(f32, f32)>, Vec<f32>);
 
 /// The colour stops (sorted), opacity stops (sorted; two opaque ones when the gradient has none,
 /// as [`apply_stop`] counts them) and midpoints of `fill`.

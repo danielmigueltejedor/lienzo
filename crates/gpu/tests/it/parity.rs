@@ -1,11 +1,11 @@
 //! GPU vs CPU parity: every blend mode, adjustment, group/clip/mask/fill combination must match
 //! the reference compositor within 2/255 (premultiplied). Skips when no GPU adapter exists.
 
-use photocraft_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
-use photocraft_doc::{Adjustment, Document, Fill, GradientStyle, Layer, LayerContent, LayerMask};
-use photocraft_geom::{Rect, Size, TILE_SIZE};
-use photocraft_gpu::{Compositor, render_to_vec};
+use lienzo_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
+use lienzo_doc::{Adjustment, Document, Fill, GradientStyle, Layer, LayerContent, LayerMask};
+use lienzo_geom::{Rect, Size, TILE_SIZE};
+use lienzo_gpu::{Compositor, render_to_vec};
 
 /// One 8-bit step, plus a few f32 ulps: two results exactly one step apart can differ by a hair
 /// more than `1.0 / 255.0` after premultiplying and subtracting (NVIDIA's shader arithmetic
@@ -79,7 +79,7 @@ fn hdr_adjustments_preserve_range_and_cpu_parity() {
         let mut layer = Layer::raster("pixels", PixelFormat::RGBA32F);
         layer.surface_mut().unwrap().write_region(Rect::new(0, 0, 3, 1), &[4.0, 2.0, 0.5, 1.0, -0.1, 3.0, 0.25, 0.75, 0.0, 0.0, 0.0, 1.0]);
         d.layers = vec![layer, Layer::new("adjustment", LayerContent::Adjustment(adj.clone()))];
-        let cpu = photocraft_compose::flatten(&d);
+        let cpu = lienzo_compose::flatten(&d);
         assert!(cpu.px[0][0] > 1.0, "HDR reference unexpectedly clipped: {adj:?}");
         check(&mut g, &d, &format!("HDR {adj:?}"));
     }
@@ -180,7 +180,7 @@ fn noise_layer(name: &str, fmt: PixelFormat, rect: Rect, seed: u32, min_alpha: f
 
 fn mask(rect: Rect, seed: u32, default: f32) -> LayerMask {
     let mut m = LayerMask::reveal_all();
-    m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[default]);
+    m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[default]);
     let data: Vec<f32> = (0..rect.width() * rect.height()).map(|i| rnd(seed, i)).collect();
     m.surface.write_region(rect, &data);
     m.density = 0.8;
@@ -219,11 +219,11 @@ fn worst_diff(cpu: &[[f32; 4]], gpu: &[[f32; 4]]) -> (f32, usize) {
 
 /// GPU (whole textures, then pages) vs CPU over `rect`: Err with the worst pixel if over the
 /// tolerance, else the stats of the unpaged render.
-fn diff_rect(g: &mut Gpu, doc: &Document, rect: Rect, what: &str) -> Result<photocraft_gpu::Stats, String> {
-    let cpu = timed("CPU reference", || photocraft_compose::render(doc, rect));
+fn diff_rect(g: &mut Gpu, doc: &Document, rect: Rect, what: &str) -> Result<lienzo_gpu::Stats, String> {
+    let cpu = timed("CPU reference", || lienzo_compose::render(doc, rect));
     let mut first = None;
     for (label, comp) in [("", &mut g.comp), (" (paged)", &mut g.paged)] {
-        let (out, stats) = timed(&format!("{what}{label} GPU render/readback"), || photocraft_gpu::render_to_vec_stats(comp, &g.device, &g.queue, doc, rect))
+        let (out, stats) = timed(&format!("{what}{label} GPU render/readback"), || lienzo_gpu::render_to_vec_stats(comp, &g.device, &g.queue, doc, rect))
             .map_err(|e| format!("{what}{label}: {e}"))?;
         let worst = worst_diff(&cpu.px, &out);
         let w = rect.width() as usize;
@@ -271,7 +271,7 @@ fn retain_docs_frees_closed_documents() {
     let Some(mut g) = gpu() else { return };
     let a = base_doc(64, 48);
     let mut b = base_doc(32, 32);
-    b.id = photocraft_doc::DocId(a.id.0 + 1);
+    b.id = lienzo_doc::DocId(a.id.0 + 1);
     for d in [&a, &b] {
         render_to_vec(&mut g.comp, &g.device, &g.queue, d, d.bounds()).expect("render");
     }
@@ -351,10 +351,10 @@ fn prefix_follows_an_edit_up_the_stack_and_stays_exact() {
             let l = noise_layer("layer", doc.pixel_format(), doc.bounds(), seed, 0.2);
             doc.layers.push(if batched { l } else { alone(l) });
         }
-        let mut exact = |g: &mut Gpu, doc: &Document, what: &str| -> photocraft_gpu::Stats {
+        let mut exact = |g: &mut Gpu, doc: &Document, what: &str| -> lienzo_gpu::Stats {
             let stats = diff_rect(g, doc, doc.bounds(), what).unwrap_or_else(|e| panic!("{e}"));
             let cached = render_to_vec(&mut g.comp, &g.device, &g.queue, doc, doc.bounds()).unwrap();
-            let (cold, cold_stats) = photocraft_gpu::render_to_vec_stats(&mut uncached, &g.device, &g.queue, doc, doc.bounds()).unwrap();
+            let (cold, cold_stats) = lienzo_gpu::render_to_vec_stats(&mut uncached, &g.device, &g.queue, doc, doc.bounds()).unwrap();
             assert_eq!(cached, cold, "{depth:?} batched {batched} {what}: reuse preserves the GPU accumulator exactly");
             // Batched and single-layer draws needn't give the same bits on every backend (FXC
             // on D3D12): a render that captures the prefix groups the layers as an uncached one
@@ -400,11 +400,11 @@ fn chunks_keep_their_own_checkpoint_after_a_partial_refresh() {
     for seed in 2..=5 {
         doc.layers.push(alone(noise_layer("layer", PixelFormat::RGBA8, doc.bounds(), seed, 0.2)));
     }
-    let mut render = |g: &mut Gpu, doc: &Document, rect: Rect, what: &str| -> photocraft_gpu::Stats {
-        let (cached, stats) = photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, doc, rect).unwrap();
+    let mut render = |g: &mut Gpu, doc: &Document, rect: Rect, what: &str| -> lienzo_gpu::Stats {
+        let (cached, stats) = lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, doc, rect).unwrap();
         let cold = render_to_vec(&mut uncached, &g.device, &g.queue, doc, rect).unwrap();
         assert_eq!(cached, cold, "{what}: reuse preserves the GPU accumulator exactly");
-        let cpu = photocraft_compose::render(doc, rect);
+        let cpu = lienzo_compose::render(doc, rect);
         assert!(worst_diff(&cpu.px, &cached).0 <= TOL, "{what}: GPU and CPU differ");
         stats
     };
@@ -565,7 +565,7 @@ fn prefix_partial_damage_context_occlusion_and_budget_are_conservative() {
     check(&mut g, &doc, "bounded admission");
     assert!(g.comp.composite_cache_bytes() <= 1 << 20);
     assert!(diff_rect(&mut g, &doc, doc.bounds(), "bounded cache keeps its hits").unwrap().prefix_hits > 0);
-    doc.layers[0].advanced.knockout = photocraft_doc::Knockout::Deep;
+    doc.layers[0].advanced.knockout = lienzo_doc::Knockout::Deep;
     assert!(render_to_vec(&mut g.comp, &g.device, &g.queue, &doc, doc.bounds()).is_err());
     assert_eq!(g.comp.composite_cache_bytes(), 0);
 }
@@ -693,7 +693,7 @@ fn xor_rounding_on_half_float_targets() {
         layer.blend = blend;
         doc.layers.push(layer);
     }
-    let cpu = photocraft_compose::flatten(&doc);
+    let cpu = lienzo_compose::flatten(&doc);
     assert!((cpu.px[0][0] - 63.0 / 255.0).abs() < 1e-6);
     let gpu = render_to_vec(&mut comp, &device, &queue, &doc, doc.bounds()).unwrap();
     assert!(worst_diff(&cpu.px, &gpu).0 <= TOL, "CPU {:?}, GPU {:?}", cpu.px[0], gpu[0]);
@@ -951,13 +951,13 @@ fn hard_stop_gradients_match_cpu_or_fall_back() {
             }
             d.layers.clear();
             d.layers.push(Layer::new("gradient", LayerContent::Fill(fill.clone())));
-            let cpu = photocraft_compose::render(&d, d.bounds());
+            let cpu = lienzo_compose::render(&d, d.bounds());
             assert_eq!(cpu.px[4], [1.0; 4]);
             let out = match render_to_vec(&mut g.comp, &g.device, &g.queue, &d, d.bounds()) {
                 Ok(out) => out,
                 Err(e) => {
                     assert!(e.0.contains("coincident gradient stops"), "{e}");
-                    photocraft_compose::render(&d, d.bounds()).into_px()
+                    lienzo_compose::render(&d, d.bounds()).into_px()
                 }
             };
             let worst = worst_diff(&cpu.px, &out);
@@ -973,8 +973,8 @@ fn hard_stop_gradients_match_cpu_or_fall_back() {
 
 #[test]
 fn hard_stop_fill_fallback_respects_caches_and_visibility() {
-    use photocraft_doc::FillCache;
-    use photocraft_raster::Surface;
+    use lienzo_doc::FillCache;
+    use lienzo_raster::Surface;
 
     for opacity in [false, true] {
         // Non-adjacent duplicates must be caught too: the CPU sorts fill stops.
@@ -991,10 +991,10 @@ fn hard_stop_fill_fallback_respects_caches_and_visibility() {
         assert_gradient_fallback(&d);
 
         d.layers[0].visible = false;
-        assert!(photocraft_gpu::plan(&d).is_ok(), "hidden fill is not sampled");
+        assert!(lienzo_gpu::plan(&d).is_ok(), "hidden fill is not sampled");
         d.layers[0].visible = true;
         d.layers[0].fill_cache = Some(FillCache { fill: fill.clone(), surface: Surface::with_default(d.pixel_format(), &[1.0; 4]) });
-        assert!(photocraft_gpu::plan(&d).is_ok(), "matching fill cache is sampled instead of the ramp");
+        assert!(lienzo_gpu::plan(&d).is_ok(), "matching fill cache is sampled instead of the ramp");
         if let LayerContent::Fill(Fill::Gradient { reverse, .. }) = &mut d.layers[0].content {
             *reverse = true;
         }
@@ -1008,12 +1008,12 @@ fn hard_stop_fill_fallback_respects_caches_and_visibility() {
         d.layers = vec![Layer::new("base", LayerContent::Fill(Fill::Solid(Color::WHITE))), clipped];
         assert_gradient_fallback(&d);
         d.layers.push(Layer::new("cover", LayerContent::Fill(Fill::Solid(Color::WHITE))));
-        assert!(photocraft_gpu::plan(&d).is_ok(), "occluded gradients are not sampled");
+        assert!(lienzo_gpu::plan(&d).is_ok(), "occluded gradients are not sampled");
     }
 }
 
 fn assert_gradient_fallback(d: &Document) {
-    let e = photocraft_gpu::plan(d).unwrap_err();
+    let e = lienzo_gpu::plan(d).unwrap_err();
     assert!(e.0.contains("coincident gradient stops"), "{e}");
 }
 
@@ -1045,10 +1045,10 @@ fn hard_stop_effects_and_gradient_maps_request_cpu() {
                 d.layers[0].effects.items = vec![effect];
                 assert_gradient_fallback(&d);
                 d.layers[0].effects.enabled = false;
-                assert!(photocraft_gpu::plan(&d).is_ok(), "disabled effects are not sampled");
+                assert!(lienzo_gpu::plan(&d).is_ok(), "disabled effects are not sampled");
                 d.layers[0].effects.enabled = true;
                 d.layers[0].effects.items[0].set_enabled(false);
-                assert!(photocraft_gpu::plan(&d).is_ok(), "disabled effect is not sampled");
+                assert!(lienzo_gpu::plan(&d).is_ok(), "disabled effect is not sampled");
             }
         }
     }
@@ -1065,7 +1065,7 @@ fn hard_stop_effects_and_gradient_maps_request_cpu() {
     d.layers[1].clipped = true;
     assert_gradient_fallback(&d);
     d.layers[1].visible = false;
-    assert!(photocraft_gpu::plan(&d).is_ok());
+    assert!(lienzo_gpu::plan(&d).is_ok());
 }
 
 #[test]
@@ -1173,7 +1173,7 @@ fn formats_offsets_and_chunks() {
     check(&mut g, &d, "cmyk");
 
     // Wider than one chunk.
-    let w = photocraft_gpu::CHUNK + 100;
+    let w = lienzo_gpu::CHUNK + 100;
     let mut d = base_doc(w, 24);
     let mut l = noise_layer("top", PixelFormat::RGBA8, Rect::new(0, 0, w as i32, 24), 55, 0.0);
     l.blend = BlendMode::Color;
@@ -1190,7 +1190,7 @@ fn incremental_updates_follow_the_document() {
     // Paint into one tile of the top layer: only that tile uploads.
     let top = d.layers[1].surface_mut().unwrap();
     top.fill_rect(Rect::new(10, 10, 60, 60), &[1.0, 0.0, 0.0, 1.0]);
-    let before = photocraft_gpu::render_to_vec(&mut g.comp, &g.device, &g.queue, &d, Rect::new(0, 0, 1, 1)).unwrap();
+    let before = lienzo_gpu::render_to_vec(&mut g.comp, &g.device, &g.queue, &d, Rect::new(0, 0, 1, 1)).unwrap();
     assert_eq!(before.len(), 1);
     check(&mut g, &d, "after paint");
     // Remove all tiles of the top layer, hide nothing: the GPU must clear them.
@@ -1229,7 +1229,7 @@ fn duplicates_copy_their_source_texture() {
     // And a tile removed from a duplicate: it reads as transparent again.
     let mut dup3 = d.layers[1].duplicate();
     *dup3.surface_mut().unwrap() = {
-        let mut s = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+        let mut s = lienzo_raster::Surface::new(PixelFormat::RGBA8);
         s.put_tiles(d.layers[1].surface().unwrap().tiles().skip(1).map(|(c, t)| (*c, t.clone())));
         s
     };
@@ -1249,7 +1249,7 @@ fn changed_mask_default_updates_absent_tiles() {
     let data = vec![0.5f32; 70 * 70];
     for default in [0.0, 1.0] {
         let mut m = LayerMask::reveal_all();
-        m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[default]);
+        m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[default]);
         for r in corners {
             m.surface.write_region(r, &data);
         }
@@ -1270,7 +1270,7 @@ fn shared_tiles_upload_once_and_copy() {
         let mut l = Layer::raster("fill", fmt);
         l.surface_mut().unwrap().fill_rect(Rect::new(30, 40, 90, 70), &[0.3, 0.6, 0.2, 0.9][..fmt.channels()]);
         let mut m = LayerMask::reveal_all();
-        m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[1.0]);
+        m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[1.0]);
         l.mask = Some(m);
         d.layers.push(l);
         check(&mut g, &d, &format!("{fmt:?} small"));
@@ -1286,10 +1286,10 @@ fn shared_tiles_upload_once_and_copy() {
         m.fill_rect(Rect::new(0, 0, w as i32, h as i32), &[0.25]);
         check(&mut g, &d, &format!("{fmt:?} refilled"));
         // Clear the mask back to its (non-zero) default: its tiles go away.
-        d.layers[1].mask.as_mut().unwrap().surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[1.0]);
+        d.layers[1].mask.as_mut().unwrap().surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[1.0]);
         check(&mut g, &d, &format!("{fmt:?} mask cleared"));
         // Clear the layer: every tile goes away and reads as transparent again.
-        *d.layers[1].surface_mut().unwrap() = photocraft_raster::Surface::new(fmt);
+        *d.layers[1].surface_mut().unwrap() = lienzo_raster::Surface::new(fmt);
         check(&mut g, &d, &format!("{fmt:?} cleared"));
     }
 }
@@ -1308,7 +1308,7 @@ fn growing_layer_keeps_its_resident_tiles() {
         let mut l = Layer::raster("paint", fmt);
         l.surface_mut().unwrap().fill_rect(Rect::new(500, 300, 540, 340), &[0.3, 0.6, 0.2, 0.9][..fmt.channels()]);
         let mut m = LayerMask::reveal_all();
-        m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[0.75]);
+        m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[0.75]);
         m.surface.fill_rect(Rect::new(510, 310, 520, 320), &[0.25]);
         l.mask = Some(m);
         d.layers.push(l);
@@ -1336,8 +1336,8 @@ fn growing_layer_keeps_its_resident_tiles() {
 
 // ---- layer effects --------------------------------------------------------------------------
 
-use photocraft_doc::adjust::CurvePoint as Cp;
-use photocraft_doc::{
+use lienzo_doc::adjust::CurvePoint as Cp;
+use lienzo_doc::{
     Bevel, BevelStyle, BevelTechnique, Contour, Effect, FxCommon, FxPaint, Glow, GlowSource, GlowTechnique, Gradient, Pattern, Satin, Shadow, StrokeFx,
     StrokePosition,
 };
@@ -1415,9 +1415,9 @@ fn many_layers_submit_inside_one_chunk_mode(paged: bool) {
         l.mask = Some(mask(Rect::from_xywh(0, 0, 16, 12), 3000 + i as u32, 1.0));
         d.layers.push(l);
     }
-    let cpu = photocraft_compose::render(&d, d.bounds());
+    let cpu = lienzo_compose::render(&d, d.bounds());
     let comp = if paged { &mut g.paged } else { &mut g.comp };
-    let (out, stats) = photocraft_gpu::render_to_vec_stats(comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
+    let (out, stats) = lienzo_gpu::render_to_vec_stats(comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
     assert!(worst_diff(&cpu.px, &out).0 <= TOL, "1200 layers, paged={paged}");
     assert_eq!(stats.layers_batched, 0, "{stats:?}");
     assert_eq!(stats.chunks, 1);
@@ -1527,7 +1527,7 @@ fn blob(name: &str, fmt: PixelFormat, cx: f32, cy: f32, r: f32, color: [f32; 3])
             let bar = ((r * 0.25 - fy.abs()) + 0.5).clamp(0.0, 1.0) * ((r + 10.0 - fx.abs()) * 0.7).clamp(0.0, 1.0);
             let a = (disc * hole).max(bar * 0.7);
             let rgba = [color[0] * (0.7 + 0.3 * (fx / r).abs()), color[1], color[2] * (0.8 + 0.2 * (fy / r)), a];
-            let px = photocraft_raster::from_rgba(&fmt, rgba);
+            let px = lienzo_raster::from_rgba(&fmt, rgba);
             data.extend_from_slice(&px);
         }
     }
@@ -1623,7 +1623,7 @@ fn stroke(size: f32, position: StrokePosition, paint: FxPaint) -> StrokeFx {
 }
 
 fn checker_pattern() -> Pattern {
-    let mut s = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+    let mut s = lienzo_raster::Surface::new(PixelFormat::RGBA8);
     s.fill_rect(Rect::new(0, 0, 6, 5), &[0.9, 0.2, 0.1, 1.0]);
     s.fill_rect(Rect::new(0, 0, 3, 3), &[0.1, 0.3, 0.9, 0.6]);
     s.fill_rect(Rect::new(3, 3, 6, 5), &[0.2, 0.8, 0.3, 1.0]);
@@ -1742,7 +1742,7 @@ fn effect_cases() -> Vec<(&'static str, Vec<Effect>)> {
         (
             "bevel texture",
             vec![Effect::BevelEmboss(Bevel {
-                texture: Some(photocraft_doc::BevelTexture {
+                texture: Some(lienzo_doc::BevelTexture {
                     name: "checker".into(),
                     id: String::new(),
                     scale: 1.4,
@@ -1757,7 +1757,7 @@ fn effect_cases() -> Vec<(&'static str, Vec<Effect>)> {
         (
             "bevel contour",
             vec![Effect::BevelEmboss(Bevel {
-                contour: Some(photocraft_doc::BevelContour { contour: contour(), range: 0.6, anti_alias: false }),
+                contour: Some(lienzo_doc::BevelContour { contour: contour(), range: 0.6, anti_alias: false }),
                 ..bevel(BevelStyle::Emboss, true, 9.0, 1.0)
             })],
         ),
@@ -1855,11 +1855,11 @@ fn effect_cases() -> Vec<(&'static str, Vec<Effect>)> {
 }
 
 /// GPU vs CPU over the whole document: Err with the worst pixel if over the tolerance.
-fn fx_diff(g: &mut Gpu, doc: &Document, what: &str) -> Result<photocraft_gpu::Stats, String> {
+fn fx_diff(g: &mut Gpu, doc: &Document, what: &str) -> Result<lienzo_gpu::Stats, String> {
     diff_rect(g, doc, doc.bounds(), what)
 }
 
-fn fx_check(g: &mut Gpu, doc: &Document, what: &str) -> photocraft_gpu::Stats {
+fn fx_check(g: &mut Gpu, doc: &Document, what: &str) -> lienzo_gpu::Stats {
     fx_diff(g, doc, what).unwrap_or_else(|e| panic!("{e}"))
 }
 
@@ -2050,7 +2050,7 @@ fn layer_effects_on_groups_clipping_and_fills() {
     let mut d = fx_doc(90, 70, SampleType::U8);
     let mut solid = Layer::new("solid", LayerContent::Fill(Fill::Solid(Color::rgb(0.2, 0.5, 0.8))));
     let mut m = LayerMask::reveal_all();
-    m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[0.0]);
+    m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[0.0]);
     m.surface.fill_rect(Rect::new(20, 15, 60, 50), &[1.0]);
     solid.mask = Some(m);
     solid.effects.items = vec![ds.clone(), st.clone(), bv];
@@ -2096,7 +2096,7 @@ fn layer_effects_update_incrementally() {
     let moved = {
         let src = d.layers[1].surface().unwrap();
         let b = src.content_bounds();
-        let mut dst = photocraft_raster::Surface::new(src.format());
+        let mut dst = lienzo_raster::Surface::new(src.format());
         dst.write_region(Rect::new(b.x0 + 17, b.y0 - 9, b.x1 + 17, b.y1 - 9), &src.read_region(b));
         dst
     };
@@ -2136,14 +2136,14 @@ fn layer_effects_move_with_a_layer_overhanging_the_canvas() {
 #[test]
 fn layer_effects_on_shape_layers() {
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::vector::{Path, ShapeLayer, Subpath};
+    use lienzo_doc::vector::{Path, ShapeLayer, Subpath};
     for alpha in [1.0, 0.55] {
         let mut d = fx_doc(90, 70, SampleType::U8);
         let path = Path::new(vec![Subpath::polygon(&[(14.3, 12.6), (70.2, 18.1), (60.7, 58.4), (24.9, 50.2)])]);
         let mut fill = Color::rgb(0.3, 0.6, 0.9);
         fill.alpha = alpha;
         let mut sh = ShapeLayer { path, fill: Some(Fill::Solid(fill)), stroke: None, live: None, cache: None, psd_raw: None, ..ShapeLayer::default() };
-        sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+        sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
         let mut l = Layer::new("shape", LayerContent::Shape(sh));
         l.effects.items = vec![
             Effect::Stroke(stroke(3.0, StrokePosition::Outside, FxPaint::Color(Color::rgb(1.0, 1.0, 1.0)))),
@@ -2162,7 +2162,7 @@ fn stroke_effects_on_filled_and_stroked_shapes() {
     // stroke instances with gradient frames, and a vector stroke above the interior effects with
     // clipped layers and a mask.
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
+    use lienzo_doc::vector::{Path, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         for (fill_kind, vector_stroke, masked) in [(0, false, false), (1, false, true), (0, true, false), (1, true, true)] {
             let mut d = fx_doc(90, 70, depth);
@@ -2181,7 +2181,7 @@ fn stroke_effects_on_filled_and_stroked_shapes() {
                 ..ShapeStroke::default()
             });
             let mut sh = ShapeLayer { path, fill: Some(fill), stroke: stroke_v, live: None, cache: None, psd_raw: None, ..ShapeLayer::default() };
-            sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+            sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
             let mut l = Layer::new("shape", LayerContent::Shape(sh));
             if masked {
                 l.mask = Some(mask(Rect::new(0, 0, 90, 70), 7, 0.6));
@@ -2190,7 +2190,7 @@ fn stroke_effects_on_filled_and_stroked_shapes() {
                 Effect::Stroke(stroke(2.0, StrokePosition::Outside, FxPaint::Color(Color::rgb(1.0, 1.0, 1.0)))),
                 Effect::Stroke(stroke(5.0, StrokePosition::Outside, FxPaint::Gradient(gradient()))),
                 Effect::Stroke(stroke(3.0, StrokePosition::Inside, FxPaint::Gradient(gradient()))),
-                Effect::ColorOverlay { common: photocraft_doc::FxCommon::new(BlendMode::Multiply, 0.7), color: Color::rgb(0.2, 0.2, 0.9) },
+                Effect::ColorOverlay { common: lienzo_doc::FxCommon::new(BlendMode::Multiply, 0.7), color: Color::rgb(0.2, 0.2, 0.9) },
                 Effect::DropShadow(shadow(BlendMode::Multiply, 0.7, 120.0, 4.0, 5.0, 0.0)),
             ];
             d.layers.push(l);
@@ -2210,7 +2210,7 @@ fn stroke_effects_on_filled_and_stroked_shapes() {
 /// 8 bits); split points are compared at every depth.
 #[test]
 fn blend_if() {
-    use photocraft_doc::BlendRange;
+    use lienzo_doc::BlendRange;
     let Some(mut g) = gpu() else { return };
     let r = |b0: u8, b1: u8, w0: u8, w1: u8| BlendRange { black: [b0, b1], white: [w0, w1] };
     // (name, entry, [this layer, underlying], has a hard point)
@@ -2280,7 +2280,7 @@ fn blend_if() {
 /// adjustment inside it leaves the layers beneath alone.
 #[test]
 fn pass_through_group_with_blend_if_is_isolated() {
-    use photocraft_doc::BlendRange;
+    use lienzo_doc::BlendRange;
     let Some(mut g) = gpu() else { return };
     for gated in [true, false] {
         let mut d = base_doc(64, 48);
@@ -2332,14 +2332,14 @@ fn channel_restrictions() {
     l.excluded_channels = 1;
     d.layers.push(l);
     check(&mut g, &d, "gray channels");
-    let flat = photocraft_compose::flatten(&d);
-    let bg = photocraft_compose::render_layer(&d.layers[0], d.bounds());
+    let flat = lienzo_compose::flatten(&d);
+    let bg = lienzo_compose::render_layer(&d.layers[0], d.bounds());
     assert!(flat.px.iter().zip(&bg.px).all(|(a, b)| (a[0] - b[0]).abs() < 1e-6));
 }
 
 /// A type layer whose rendered pixels are `src`'s (blends with the text gamma).
 fn as_text(src: Layer) -> Layer {
-    let t = photocraft_doc::TextLayer { cache: src.surface().cloned(), ..Default::default() };
+    let t = lienzo_doc::TextLayer { cache: src.surface().cloned(), ..Default::default() };
     let mut l = Layer::new(&src.name, LayerContent::Text(t));
     l.blend = src.blend;
     l.opacity = src.opacity;
@@ -2369,10 +2369,10 @@ fn type_layers_blend_with_text_gamma() {
         check(&mut g, &d, &format!("text {mode:?}"));
         // Another gamma (Color Settings), and off.
         for gamma in [1.8, 1.0] {
-            photocraft_compose::psblend::set_text_gamma(gamma);
+            lienzo_compose::psblend::set_text_gamma(gamma);
             check(&mut g, &d, &format!("text {mode:?} gamma {gamma}"));
         }
-        photocraft_compose::psblend::set_text_gamma(photocraft_compose::psblend::TEXT_GAMMA);
+        lienzo_compose::psblend::set_text_gamma(lienzo_compose::psblend::TEXT_GAMMA);
     }
     // With effects (the merge of the layer onto its exterior effects).
     let mut d = fx_doc(96, 80, SampleType::U8);
@@ -2402,7 +2402,7 @@ fn type_layers_blend_with_text_gamma() {
     e.layers.push(c);
     fx_check(&mut g, &e, "clipped text emboss");
     // The gamma changes edge pixels against a linear mix.
-    let flat = photocraft_compose::flatten(&d);
+    let flat = lienzo_compose::flatten(&d);
     let mut lin = d.clone();
     let raster = {
         let LayerContent::Text(t) = &lin.layers[1].content else { unreachable!() };
@@ -2411,7 +2411,7 @@ fn type_layers_blend_with_text_gamma() {
         r
     };
     lin.layers[1] = raster;
-    let flat_lin = photocraft_compose::flatten(&lin);
+    let flat_lin = lienzo_compose::flatten(&lin);
     assert!(flat.px.iter().zip(&flat_lin.px).any(|(a, b)| (a[0] - b[0]).abs() > 0.02));
 }
 
@@ -2431,8 +2431,8 @@ fn blend_mode_extremes() {
                     for k in 0..3 {
                         let (x, y) = ((i * 3 + k) as i32, j as i32 * 3);
                         let r = Rect::from_xywh(x, y, 1, 3);
-                        bg.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&fmt, [b, b, b, 1.0]));
-                        top.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&fmt, [s, s, s, [1.0, 0.6, 0.2][k]]));
+                        bg.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&fmt, [b, b, b, 1.0]));
+                        top.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&fmt, [s, s, s, [1.0, 0.6, 0.2][k]]));
                     }
                 }
             }
@@ -2473,8 +2473,8 @@ fn nonsep_doc(mode: BlendMode, depth: SampleType, colors: &[[f32; 3]]) -> Docume
     for (i, b) in colors.iter().enumerate() {
         for (j, s) in colors.iter().enumerate() {
             let r = Rect::from_xywh(i as i32, j as i32, 1, 1);
-            bg.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&fmt, [b[0], b[1], b[2], 1.0]));
-            top.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&fmt, [s[0], s[1], s[2], 1.0]));
+            bg.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&fmt, [b[0], b[1], b[2], 1.0]));
+            top.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&fmt, [s[0], s[1], s[2], 1.0]));
         }
     }
     top.blend = mode;
@@ -2549,7 +2549,7 @@ fn float_documents_blend_past_white() {
 #[test]
 fn stroked_shapes_with_clipped_layers() {
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
+    use lienzo_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         for (blend, masked) in [(BlendMode::Normal, false), (BlendMode::Multiply, true)] {
             let mut d = Document::new("t", Size::new(80, 64), ColorMode::Rgb, depth);
@@ -2565,7 +2565,7 @@ fn stroked_shapes_with_clipped_layers() {
                 psd_raw: None,
                 ..ShapeLayer::default()
             };
-            sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+            sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
             let mut l = Layer::new("shape", LayerContent::Shape(sh));
             l.blend = blend;
             l.opacity = 0.9;
@@ -2576,7 +2576,7 @@ fn stroked_shapes_with_clipped_layers() {
             c.clipped = true;
             c.blend = BlendMode::Screen;
             d.layers.extend([l, c]);
-            let st = photocraft_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds());
+            let st = lienzo_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds());
             assert!(st.is_ok(), "planned on the GPU");
             check(&mut g, &d, &format!("{depth:?} stroked shape + clipped {blend:?} masked {masked}"));
         }
@@ -2588,7 +2588,7 @@ fn stroked_shapes_with_clipped_layers() {
 #[test]
 fn frame_strokes() {
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::vector::{Path, ShapeStroke, StrokeAlign, Subpath, VectorMask};
+    use lienzo_doc::vector::{Path, ShapeStroke, StrokeAlign, Subpath, VectorMask};
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         for (blend, align, content) in [
             (BlendMode::PassThrough, StrokeAlign::Inside, false),
@@ -2606,7 +2606,7 @@ fn frame_strokes() {
                 gr.frame_stroke = Some(ShapeStroke { width: 5.0, align, paint: Fill::Solid(Color::rgb(0.9, 0.1, 0.1)), ..Default::default() });
             }
             d.layers.push(l);
-            let st = photocraft_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds());
+            let st = lienzo_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds());
             assert!(st.is_ok(), "planned on the GPU");
             check(&mut g, &d, &format!("{depth:?} frame stroke {blend:?} {align:?} content {content}"));
         }
@@ -2616,7 +2616,7 @@ fn frame_strokes() {
 #[test]
 fn artboards() {
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::{Artboard, ArtboardBackground};
+    use lienzo_doc::{Artboard, ArtboardBackground};
     let backgrounds = [
         ArtboardBackground::White,
         ArtboardBackground::Transparent,
@@ -2657,7 +2657,7 @@ fn pattern_cache_tracks_default_pixels() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let fmt = PixelFormat::RGBA8.with_sample(depth);
         let mut d = Document::new("pattern defaults", Size::new(8, 6), ColorMode::Rgb, depth);
-        let mut pat = Pattern::new("cache identity", photocraft_raster::Surface::with_default(fmt, &[1.0, 0.0, 0.0, 1.0]), 2, 2);
+        let mut pat = Pattern::new("cache identity", lienzo_raster::Surface::with_default(fmt, &[1.0, 0.0, 0.0, 1.0]), 2, 2);
         assert_eq!(pat.surface.tiles().count(), 0);
         d.layers.push(Layer::new(
             "pattern",
@@ -2665,10 +2665,10 @@ fn pattern_cache_tracks_default_pixels() {
         ));
         d.patterns.push(pat.clone());
         check(&mut g, &d, &format!("red default {depth:?}"));
-        pat.surface = photocraft_raster::Surface::with_default(fmt, &[0.0, 0.0, 1.0, 1.0]);
+        pat.surface = lienzo_raster::Surface::with_default(fmt, &[0.0, 0.0, 1.0, 1.0]);
         assert_eq!(pat.surface.tiles().count(), 0);
         d.patterns[0] = pat;
-        let cpu = photocraft_compose::flatten(&d);
+        let cpu = lienzo_compose::flatten(&d);
         let mut fresh = Compositor::new(&g.device);
         let out = render_to_vec(&mut fresh, &g.device, &g.queue, &d, d.bounds()).unwrap();
         assert!(worst_diff(&cpu.px, &out).0 <= TOL, "fresh compositor matches blue default");
@@ -2679,7 +2679,7 @@ fn pattern_cache_tracks_default_pixels() {
 /// A document that paints one `side` x `side` pattern named `name`.
 fn pattern_fill_doc(name: &str, side: u32) -> Document {
     let mut d = Document::new(name, Size::new(8, 6), ColorMode::Rgb, SampleType::U8);
-    let pat = Pattern::new(name, photocraft_raster::Surface::with_default(PixelFormat::RGBA8, &[1.0, 0.0, 0.0, 1.0]), side, side);
+    let pat = Pattern::new(name, lienzo_raster::Surface::with_default(PixelFormat::RGBA8, &[1.0, 0.0, 0.0, 1.0]), side, side);
     d.layers.push(Layer::new(
         "pattern",
         LayerContent::Fill(Fill::Pattern { name: pat.name.clone(), id: pat.id.clone(), scale: 1.0, angle: 0.0, link: true, phase: (0.0, 0.0) }),
@@ -2695,7 +2695,7 @@ fn closed_documents_release_their_pattern_textures() {
     let Some(mut g) = gpu() else { return };
     let a = pattern_fill_doc("first", 4);
     let mut b = pattern_fill_doc("second", 4);
-    b.id = photocraft_doc::DocId(a.id.0 + 1);
+    b.id = lienzo_doc::DocId(a.id.0 + 1);
     let one = 4 * 4 * 16;
     assert_eq!(g.comp.pattern_cache_bytes(), 0);
     render_to_vec(&mut g.comp, &g.device, &g.queue, &a, a.bounds()).expect("render a");
@@ -2718,7 +2718,7 @@ fn a_pattern_too_large_for_a_gpu_texture_falls_back_to_the_cpu() {
     let Some(mut g) = gpu() else { return };
     let mut d = Document::new("big pattern", Size::new(8, 6), ColorMode::Rgb, SampleType::U8);
     // 100 MB as RGBA8, 400 MB as an RGBA32F texture.
-    let surface = photocraft_raster::Surface::with_default(PixelFormat::RGBA8, &[1.0, 0.0, 0.0, 1.0]);
+    let surface = lienzo_raster::Surface::with_default(PixelFormat::RGBA8, &[1.0, 0.0, 0.0, 1.0]);
     let pat = Pattern { id: "big".into(), name: "big".into(), width: 5000, height: 5000, surface };
     assert!(pat.is_paintable());
     d.layers.push(Layer::new(
@@ -2728,7 +2728,7 @@ fn a_pattern_too_large_for_a_gpu_texture_falls_back_to_the_cpu() {
     d.patterns.push(pat);
     assert!(render_to_vec(&mut g.comp, &g.device, &g.queue, &d, d.bounds()).is_err(), "the GPU path declines it");
     assert_eq!(g.comp.pattern_cache_bytes(), 0, "nothing was uploaded");
-    assert!(photocraft_compose::flatten(&d).px.iter().all(|p| *p == [1.0, 0.0, 0.0, 1.0]), "the CPU compositor paints it");
+    assert!(lienzo_compose::flatten(&d).px.iter().all(|p| *p == [1.0, 0.0, 0.0, 1.0]), "the CPU compositor paints it");
 }
 
 /// #4971: pattern textures are bounded while their documents stay open, by a byte budget and
@@ -2738,9 +2738,9 @@ fn pattern_textures_are_evicted_over_budget_and_when_idle() {
     let Some(mut g) = gpu() else { return };
     let a = pattern_fill_doc("first", 4);
     let mut b = pattern_fill_doc("second", 4);
-    b.id = photocraft_doc::DocId(a.id.0 + 1);
+    b.id = lienzo_doc::DocId(a.id.0 + 1);
     let mut plain = base_doc(8, 6);
-    plain.id = photocraft_doc::DocId(a.id.0 + 2);
+    plain.id = lienzo_doc::DocId(a.id.0 + 2);
     let one = 4 * 4 * 16;
     // Room for one pattern and a half: painting the second drops the first.
     g.comp.set_pattern_budget(one + one / 2);
@@ -2752,13 +2752,13 @@ fn pattern_textures_are_evicted_over_budget_and_when_idle() {
     render_to_vec(&mut g.comp, &g.device, &g.queue, &b, b.bounds()).expect("render b again");
     assert_eq!(g.comp.pattern_cache_bytes(), one);
     // Idle: frames that paint no pattern age it out.
-    g.comp.set_pattern_budget(photocraft_gpu::PATTERN_BUDGET);
-    for _ in 0..photocraft_gpu::PATTERN_IDLE_FRAMES - 1 {
+    g.comp.set_pattern_budget(lienzo_gpu::PATTERN_BUDGET);
+    for _ in 0..lienzo_gpu::PATTERN_IDLE_FRAMES - 1 {
         render_to_vec(&mut g.comp, &g.device, &g.queue, &plain, plain.bounds()).expect("render plain");
     }
     assert_eq!(g.comp.pattern_cache_bytes(), one, "still within the idle limit");
     render_to_vec(&mut g.comp, &g.device, &g.queue, &plain, plain.bounds()).expect("render plain");
-    assert_eq!(g.comp.pattern_cache_bytes(), 0, "dropped after {} idle frames", photocraft_gpu::PATTERN_IDLE_FRAMES);
+    assert_eq!(g.comp.pattern_cache_bytes(), 0, "dropped after {} idle frames", lienzo_gpu::PATTERN_IDLE_FRAMES);
     check(&mut g, &b, "the pattern is uploaded again after being evicted");
 }
 
@@ -2766,7 +2766,7 @@ fn pattern_textures_are_evicted_over_budget_and_when_idle() {
 fn pattern_cache_tracks_source_format_and_cow_tiles() {
     let Some(mut g) = gpu() else { return };
     let defaults = [0.5, 0.25, 0.75, 1.0];
-    let mut pat = Pattern::new("format identity", photocraft_raster::Surface::with_default(PixelFormat::RGBA32F, &defaults), 2, 2);
+    let mut pat = Pattern::new("format identity", lienzo_raster::Surface::with_default(PixelFormat::RGBA32F, &defaults), 2, 2);
     let mut d = Document::new("pattern formats", Size::new(8, 6), ColorMode::Rgb, SampleType::F32);
     d.layers.push(Layer::new(
         "pattern",
@@ -2774,12 +2774,12 @@ fn pattern_cache_tracks_source_format_and_cow_tiles() {
     ));
     let mut previous = None;
     for fmt in [PixelFormat::RGBA32F, PixelFormat::new(ColorMode::Lab, SampleType::F32, true), PixelFormat::RGBA16, PixelFormat::RGBA8] {
-        pat.surface = photocraft_raster::Surface::with_default(fmt, &defaults);
+        pat.surface = lienzo_raster::Surface::with_default(fmt, &defaults);
         if fmt.sample == SampleType::F32 {
             assert_eq!(pat.surface.default_pixel(), defaults);
         }
         d.patterns = vec![pat.clone()];
-        let cpu = photocraft_compose::flatten(&d);
+        let cpu = lienzo_compose::flatten(&d);
         if fmt.mode == ColorMode::Lab {
             let old: Vec<[f32; 4]> = previous.take().unwrap();
             assert!(worst_diff(&old, &cpu.px).0 > 0.1, "same default bits have different source-format colours");
@@ -2802,7 +2802,7 @@ fn pattern_cache_tracks_source_format_and_cow_tiles() {
     check(&mut g, &d, "COW blue tile edit");
     let mut fresh = Compositor::new(&g.device);
     let out = render_to_vec(&mut fresh, &g.device, &g.queue, &d, d.bounds()).unwrap();
-    assert!(worst_diff(&photocraft_compose::flatten(&d).px, &out).0 <= TOL, "fresh compositor matches COW edit");
+    assert!(worst_diff(&lienzo_compose::flatten(&d).px, &out).0 <= TOL, "fresh compositor matches COW edit");
     assert_eq!(old.surface.tile_count(), 1);
 }
 
@@ -2823,12 +2823,12 @@ fn pattern_fill_layers() {
         d.layers.push(l.clone());
         // With effects, and a missing pattern (transparent).
         let mut fx = l.clone();
-        fx.id = photocraft_doc::LayerId::fresh();
+        fx.id = lienzo_doc::LayerId::fresh();
         fx.effects.items = vec![Effect::DropShadow(shadow(BlendMode::Multiply, 0.6, 90.0, 3.0, 4.0, 0.0))];
         fx.mask = Some(mask(Rect::new(20, 10, 50, 40), 62, 0.0));
         d.layers.push(fx);
         let mut missing = l;
-        missing.id = photocraft_doc::LayerId::fresh();
+        missing.id = lienzo_doc::LayerId::fresh();
         missing.content = LayerContent::Fill(Fill::Pattern { name: "nope".into(), id: "nope".into(), scale: 1.0, angle: 0.0, link: true, phase: (0.0, 0.0) });
         d.layers.push(missing);
         fx_check(&mut g, &d, &format!("pattern fill link {link} scale {scale} angle {angle}"));
@@ -2861,7 +2861,7 @@ fn rgb_patterns_paint_in_the_document_mode() {
         }];
         d.layers.push(o);
         if mode == ColorMode::Grayscale {
-            let cpu = photocraft_compose::flatten(&d);
+            let cpu = lienzo_compose::flatten(&d);
             assert!(cpu.px.iter().all(|p| (p[0] - p[1]).abs() < 1e-6 && (p[1] - p[2]).abs() < 1e-6), "a Grayscale composite is neutral");
         }
         fx_check(&mut g, &d, &format!("RGB pattern in {mode:?}"));
@@ -2890,11 +2890,11 @@ fn lab_documents_mix_in_lab() {
     let mut d = Document::new("lab", Size::new(2, 1), ColorMode::Lab, SampleType::U8);
     let fmt = d.pixel_format();
     let mut a = Layer::raster("a", fmt);
-    a.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 2, 1), &photocraft_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
+    a.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 2, 1), &lienzo_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
     let mut b = Layer::raster("b", fmt);
-    b.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 2, 1), &photocraft_raster::from_rgba(&fmt, [1.0, 1.0, 0.0, 0.5]));
+    b.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 2, 1), &lienzo_raster::from_rgba(&fmt, [1.0, 1.0, 0.0, 0.5]));
     d.layers = vec![a, b];
-    let p = photocraft_compose::flatten(&d).px[0];
+    let p = lienzo_compose::flatten(&d).px[0];
     assert!((p[0] - 0.5).abs() > 0.05 || (p[2] - 0.5).abs() > 0.05, "{p:?}");
 }
 
@@ -2915,9 +2915,9 @@ fn rgba16f_fallback_path_renders() {
     top.opacity = 0.8;
     d.layers.push(top);
     d.layers.push(Layer::new("adj", LayerContent::Adjustment(Adjustment::BrightnessContrast { brightness: 30.0, contrast: 40.0, legacy: false })));
-    let cpu = photocraft_compose::flatten(&d);
+    let cpu = lienzo_compose::flatten(&d);
     let out = render_to_vec(&mut comp, &device, &queue, &d, d.bounds()).expect("16f render");
-    let (cached, stats) = photocraft_gpu::render_to_vec_stats(&mut comp, &device, &queue, &d, d.bounds()).expect("16f cached render");
+    let (cached, stats) = lienzo_gpu::render_to_vec_stats(&mut comp, &device, &queue, &d, d.bounds()).expect("16f cached render");
     assert!(stats.prefix_hits > 0, "half-float checkpoints are reused: {stats:?}");
     assert_eq!(cached, out, "restoring a half-float checkpoint preserves the uncached pixels");
     let mut worst = 0.0f32;
@@ -2996,18 +2996,18 @@ fn documents_larger_than_the_texture_limit() {
     assert!(g.paged.supports(&d).is_ok());
     // Every pass sees page borders, and effect maps and blurs crossing them.
     check(&mut g, &d, "big document");
-    let s = photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
+    let s = lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
     assert!(s.cells >= 20 && s.chunks == s.cells, "{s:?}");
     // A viewport off the page grid covers only its cells.
     let view = Rect::new(300, 330, 790, 610);
     diff_rect(&mut g, &d, view, "viewport").unwrap_or_else(|e| panic!("{e}"));
-    let s = photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, view).unwrap().1;
+    let s = lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, view).unwrap().1;
     assert_eq!(s.cells, 6, "{s:?}");
     // A dab across a page corner on the effect layer, and an edit elsewhere.
     d.layers[3].surface_mut().unwrap().fill_rect(Rect::new(500, 490, 530, 530), &[0.1, 0.1, 0.9, 1.0]);
     d.layers[2].surface_mut().unwrap().fill_rect(Rect::new(250, 250, 270, 270), &[0.0, 0.0, 0.0, 0.0]);
     check(&mut g, &d, "after dabs");
-    let s = photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
+    let s = lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
     assert_eq!((s.tiles_uploaded, s.fx_shapes), (0, 0), "nothing changed since the last render: {s:?}");
 }
 
@@ -3022,9 +3022,8 @@ fn pages_are_evicted_under_the_budget() {
     let page = u64::from(g.paged.page_size()).pow(2) * 4;
     g.paged.set_resident_budget(page);
     for round in 0..3 {
-        let cpu = timed("eviction CPU reference", || photocraft_compose::flatten(&d));
-        let (out, s) =
-            timed("eviction GPU render/readback", || photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())).unwrap();
+        let cpu = timed("eviction CPU reference", || lienzo_compose::flatten(&d));
+        let (out, s) = timed("eviction GPU render/readback", || lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())).unwrap();
         let worst = worst_diff(&cpu.px, &out);
         assert!(worst.0 <= TOL, "round {round}: max diff {:.2}/255 at {}", worst.0 * 255.0, worst.1);
         assert!(s.evicted > 0, "round {round}: {s:?}");
@@ -3054,8 +3053,8 @@ fn layer_pages_are_admitted_under_a_zero_budget_and_stay_on_the_gpu() {
     let all = g.paged.resident_bytes();
     g.paged.set_resident_budget(0);
     for round in 0..2 {
-        let cpu = photocraft_compose::flatten(&d);
-        let (out, s) = photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())
+        let cpu = lienzo_compose::flatten(&d);
+        let (out, s) = lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())
             .unwrap_or_else(|e| panic!("round {round}: a zero budget must not end the refresh on the CPU: {e}"));
         let worst = worst_diff(&cpu.px, &out);
         assert!(worst.0 <= TOL, "round {round}: max diff {:.2}/255 at {}", worst.0 * 255.0, worst.1);
@@ -3081,12 +3080,12 @@ fn a_layer_page_out_of_memory_retries_then_ends_only_that_refresh_on_the_cpu() {
     top.blend = BlendMode::Multiply;
     d.layers.push(top);
     g.paged.set_composite_cache_budget(0);
-    let cpu = photocraft_compose::flatten(&d);
+    let cpu = lienzo_compose::flatten(&d);
     let encode = |g: &mut Gpu, d: &Document| {
         let mut encoder = g.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         g.paged.encode(&g.device, &g.queue, &mut encoder, d, d.bounds(), &mut |_, _| {})
     };
-    let render = |g: &mut Gpu, d: &Document| photocraft_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, d, d.bounds());
+    let render = |g: &mut Gpu, d: &Document| lienzo_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, d, d.bounds());
     let matches = |out: &[[f32; 4]], what: &str| {
         let worst = worst_diff(&cpu.px, out);
         assert!(worst.0 <= TOL, "{what}: max diff {:.2}/255 at {}", worst.0 * 255.0, worst.1);
@@ -3104,7 +3103,7 @@ fn a_layer_page_out_of_memory_retries_then_ends_only_that_refresh_on_the_cpu() {
     // Two: both tries fail, and `encode` gives the refresh to the CPU.
     fresh(&mut g, &d, 2);
     let e = encode(&mut g, &d).expect_err("encode can't submit to free memory");
-    assert_eq!(e.0, photocraft_gpu::OVER_BUDGET);
+    assert_eq!(e.0, lienzo_gpu::OVER_BUDGET);
     assert!(g.paged.fault().is_none(), "out of memory for a page doesn't lose the device");
     // `render` submits, waits and runs the cell once more, which then succeeds.
     fresh(&mut g, &d, 2);
@@ -3114,7 +3113,7 @@ fn a_layer_page_out_of_memory_retries_then_ends_only_that_refresh_on_the_cpu() {
     // Four: the retry after the submit fails as well, so this refresh goes to the CPU...
     fresh(&mut g, &d, 4);
     let e = render(&mut g, &d).expect_err("every try failed");
-    assert_eq!(e.0, photocraft_gpu::OVER_BUDGET);
+    assert_eq!(e.0, lienzo_gpu::OVER_BUDGET);
     assert!(g.paged.fault().is_none(), "out of memory for a page doesn't lose the device");
     // ...and the next one is back on the GPU.
     let (out, _) = render(&mut g, &d).unwrap_or_else(|e| panic!("the refresh after an out-of-memory one is on the GPU: {}", e.0));
@@ -3131,7 +3130,7 @@ fn the_focused_view_stays_resident_after_a_full_refresh() {
     comp.set_composite_cache_budget(0);
     comp.set_texture_limit(PAGED_LIMIT);
     let view = Rect::new(520, 300, 760, 500);
-    photocraft_gpu::render_to_vec(&mut comp, &g.device, &g.queue, &d, view).unwrap();
+    lienzo_gpu::render_to_vec(&mut comp, &g.device, &g.queue, &d, view).unwrap();
     // A budget holding just the view's pages: a full refresh evicts as it goes, and draws the
     // view's cells last, so the next edit in the view uploads nothing.
     // The working set of a region is what rendering it makes resident.
@@ -3141,11 +3140,11 @@ fn the_focused_view_stays_resident_after_a_full_refresh() {
     assert!(comp.fits_budget(&d, view) && !comp.fits_budget(&d, d.bounds()));
     comp.set_focus(Some(view));
     for _ in 0..2 {
-        let s = photocraft_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
+        let s = lienzo_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap().1;
         assert!(s.evicted > 0, "{s:?}");
-        let (out, s) = photocraft_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, view).unwrap();
+        let (out, s) = lienzo_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, view).unwrap();
         assert_eq!(s.tiles_uploaded, 0, "{s:?}");
-        let cpu = timed("focused-view CPU reference", || photocraft_compose::render(&d, view));
+        let cpu = timed("focused-view CPU reference", || lienzo_compose::render(&d, view));
         assert!(worst_diff(&cpu.px, &out).0 <= TOL);
     }
 }
@@ -3169,11 +3168,11 @@ fn layer_pages_that_just_miss_borrow_the_effect_map_share() {
     comp.set_memory_budget(budget);
     assert_eq!(comp.resident_budget(), need, "the loan holds across the budget set before every refresh");
     assert_eq!(comp.fit_layers(need / 2, false), need, "a partial refresh doesn't shrink it");
-    photocraft_gpu::render_to_vec(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
-    let (out, s) = photocraft_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
+    lienzo_gpu::render_to_vec(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
+    let (out, s) = lienzo_gpu::render_to_vec_stats(&mut comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
     // Every page stays resident; effect maps may be evicted and rebuilt, that's the loan.
     assert_eq!(s.tiles_uploaded, 0, "{s:?}");
-    assert!(worst_diff(&photocraft_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
+    assert!(worst_diff(&lienzo_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
     // A need the effect-map share can't cover lends nothing (it would only evict maps), and a
     // smaller need gives the loan back.
     assert_eq!(comp.fit_layers(budget, true), own);
@@ -3259,14 +3258,14 @@ fn transparency_shapes_off_special_blend_falls_back_to_the_cpu() {
 #[test]
 fn soft_shapes_match_the_cpu() {
     let Some(mut g) = gpu() else { return };
-    use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
+    use lienzo_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         for (density, feather, stroked, fx) in [(1.0, 6.0, false, false), (0.4, 0.0, true, false), (0.6, 4.0, true, true), (1.0, 3.0, false, true)] {
             let mut d = fx_doc(90, 70, depth);
             let path = Path::new(vec![Subpath::polygon(&[(14.3, 12.6), (70.2, 18.1), (60.7, 58.4), (24.9, 50.2)])]);
             let stroke = stroked.then(|| ShapeStroke { width: 3.0, paint: Fill::Solid(Color::rgb(0.1, 0.8, 0.2)), ..ShapeStroke::default() });
             let mut sh = ShapeLayer { path, fill: Some(Fill::Solid(Color::rgb(0.3, 0.6, 0.9))), stroke, density, feather, ..ShapeLayer::default() };
-            sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+            sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
             let mut l = Layer::new("shape", LayerContent::Shape(sh));
             if fx {
                 l.effects.items = vec![Effect::DropShadow(shadow(BlendMode::Multiply, 0.7, 120.0, 4.0, 5.0, 0.0))];
@@ -3370,7 +3369,7 @@ fn integration_adjustment_fill_opacity_masks_and_hdr_match_cpu() {
                         layer.fill_opacity = fill;
                         layer.opacity = opacity;
                         let mut mask = LayerMask::reveal_all();
-                        mask.surface = photocraft_raster::Surface::with_default(
+                        mask.surface = lienzo_raster::Surface::with_default(
                             PixelFormat { mode: ColorMode::Grayscale, sample: SampleType::F32, alpha: false },
                             &[coverage],
                         );
@@ -3408,11 +3407,11 @@ fn sibling_compositors_have_independent_residency_and_configuration() {
     assert_eq!(sibling.resident_bytes(), 0);
     sibling.set_texture_limit(PAGED_LIMIT);
     sibling.set_resident_budget(0);
-    let (out, _) = photocraft_gpu::render_to_vec_stats(&mut sibling, &g.device, &g.queue, &d, d.bounds()).unwrap();
-    assert!(worst_diff(&photocraft_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
+    let (out, _) = lienzo_gpu::render_to_vec_stats(&mut sibling, &g.device, &g.queue, &d, d.bounds()).unwrap();
+    assert!(worst_diff(&lienzo_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
     assert_eq!(g.comp.resident_bytes(), 0, "the original has not rendered");
-    let (out, _) = photocraft_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
-    assert!(worst_diff(&photocraft_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
+    let (out, _) = lienzo_gpu::render_to_vec_stats(&mut g.comp, &g.device, &g.queue, &d, d.bounds()).unwrap();
+    assert!(worst_diff(&lienzo_compose::render(&d, d.bounds()).px, &out).0 <= TOL);
     assert!(g.comp.resident_bytes() > 0);
     assert_ne!(g.comp.resident_budget(), sibling.resident_budget());
 }

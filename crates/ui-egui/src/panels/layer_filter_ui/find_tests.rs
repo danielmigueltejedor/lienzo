@@ -3,22 +3,22 @@
 
 use egui::vec2;
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
 use super::{Filter, FilterBy};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// "LinkA", "Other" and "LinkB" over the Background, "Other" selected.
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut s = photocraft_engine::Session::new();
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     for name in ["LinkA", "Other", "LinkB"] {
         s.execute("layer.new.layer", json!({"name": name})).unwrap();
     }
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(8);
     let other = id(&h, "Other");
@@ -27,7 +27,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn id(h: &Harness<'_, PhotocraftApp>, name: &str) -> LayerId {
+fn id(h: &Harness<'_, LienzoApp>, name: &str) -> LayerId {
     h.state()
         .session
         .active()
@@ -40,18 +40,18 @@ fn id(h: &Harness<'_, PhotocraftApp>, name: &str) -> LayerId {
         .unwrap_or_else(|| panic!("no layer {name}"))
 }
 
-fn selected(h: &Harness<'_, PhotocraftApp>) -> Vec<LayerId> {
+fn selected(h: &Harness<'_, LienzoApp>) -> Vec<LayerId> {
     h.state().session.active().unwrap().selected_layers()
 }
 
 /// The names the panel's filter lists, top to bottom.
-fn listed(h: &Harness<'_, PhotocraftApp>) -> Vec<String> {
+fn listed(h: &Harness<'_, LienzoApp>) -> Vec<String> {
     let f = Filter::of_app(h.state());
     let doc = &h.state().session.active().unwrap().doc;
     crate::layer_tree_ui::display_rows(doc, f.active()).into_iter().filter(|(_, l)| f.shows(l)).map(|(_, l)| l.name.clone()).collect()
 }
 
-fn find(h: &mut Harness<'_, PhotocraftApp>, params: serde_json::Value) -> serde_json::Value {
+fn find(h: &mut Harness<'_, LienzoApp>, params: serde_json::Value) -> serde_json::Value {
     let ctx = h.ctx.clone();
     let reply = crate::menus::invoke(h.state_mut(), &ctx, "select.findLayers", params).unwrap();
     h.run_steps(4);
@@ -139,7 +139,7 @@ fn the_menu_item_shows_a_layers_panel_closed_in_the_docking_layout() {
     h.state_mut().run("window.panel.move", json!({"panel": "swatches", "anchor": "layers", "zone": "top"})).unwrap();
     h.state_mut().run("window.panel.close", json!({"panel": "layers"})).unwrap();
     h.run_steps(4);
-    let shown = |h: &Harness<'_, PhotocraftApp>| h.state().ui.docking.as_ref().is_some_and(|w| w.layout.contains(&"layers".to_string()));
+    let shown = |h: &Harness<'_, LienzoApp>| h.state().ui.docking.as_ref().is_some_and(|w| w.layout.contains(&"layers".to_string()));
     assert!(!shown(&h), "the Layers panel is closed");
     h.state_mut().ui.layer_filter_name = "lin".into();
     find(&mut h, json!({}));
@@ -180,7 +180,7 @@ fn engine_execute_without_a_name_lists_what_the_panel_lists() {
 
 #[test]
 fn engine_execute_sets_the_panel_filter_too() {
-    // `engine.execute` runs engine commands through `PhotocraftApp::run`, not `menus::invoke`.
+    // `engine.execute` runs engine commands through `LienzoApp::run`, not `menus::invoke`.
     let mut h = harness();
     h.state_mut().ui.layer_filter_by = FilterBy::Kind;
     h.state_mut().run("select.findLayers", json!({"name": "link"})).unwrap();

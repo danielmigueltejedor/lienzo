@@ -1,4 +1,4 @@
-//! Custom widgets for the PhotoCraft look: cards with pill tabs, thin sliders with round knobs,
+//! Custom widgets for the Lienzo look: cards with pill tabs, thin sliders with round knobs,
 //! monospace value fields with dimmed units, toggle switches, primary/secondary buttons.
 
 use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, pos2, vec2};

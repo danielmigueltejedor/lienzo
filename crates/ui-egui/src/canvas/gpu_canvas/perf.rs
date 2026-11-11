@@ -41,7 +41,7 @@ pub struct Perf {
     /// How long the GPU spent executing a recent composite (ms), from timestamp queries read
     /// back after the fact. `None` on the CPU compositor, on a device without timestamp queries
     /// and on wasm — there is then no honest number to report, and `composite_ms` is not one.
-    /// Excludes layer-tile uploads and end-of-batch work (see `photocraft_gpu::timing`), so it
+    /// Excludes layer-tile uploads and end-of-batch work (see `lienzo_gpu::timing`), so it
     /// is a few per cent under the GPU's full share of a warm refresh and further under a cold
     /// one.
     pub gpu_ms: Option<f64>,
@@ -249,8 +249,8 @@ impl Perf {
         self.stage.composite_ms += ms;
     }
 
-    /// Record a GPU composite measurement that came back (see [`photocraft_gpu::GpuTiming`]).
-    pub fn record_gpu(&mut self, t: photocraft_gpu::GpuTiming) {
+    /// Record a GPU composite measurement that came back (see [`lienzo_gpu::GpuTiming`]).
+    pub fn record_gpu(&mut self, t: lienzo_gpu::GpuTiming) {
         self.gpu_ms = Some(t.ms);
         self.gpu_ms_px = t.px;
     }

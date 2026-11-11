@@ -6,12 +6,12 @@
 //! channel, Delete deletes it, and Load Channel as Selection loads it.
 
 use egui::{Align2, Color32, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_doc::ColorIndicates;
-use photocraft_engine::channel_cmds::{self, ChannelTarget};
+use lienzo_doc::ColorIndicates;
+use lienzo_engine::channel_cmds::{self, ChannelTarget};
 use serde_json::{Value, json};
 
 use crate::theme::{self, Tokens};
-use crate::{PhotocraftApp, icons, widgets};
+use crate::{LienzoApp, icons, widgets};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Row {
@@ -37,7 +37,7 @@ impl Row {
 
     /// The `channel.target` reference a click records: a colour row by the mode's colour name,
     /// which a recorded action can save as Photoshop's component select (an index can't be).
-    fn target_reference(self, mode: photocraft_doc::ColorMode) -> Value {
+    fn target_reference(self, mode: lienzo_doc::ColorMode) -> Value {
         let names = channel_cmds::color_names(mode);
         match self {
             Row::QuickMask => json!("composite"),
@@ -58,14 +58,14 @@ pub fn load_operation(m: egui::Modifiers) -> &'static str {
 }
 
 struct RowPresentationContext<'a> {
-    doc: &'a photocraft_doc::Document,
-    view: &'a photocraft_engine::channel_cmds::ChannelView,
-    mode: photocraft_doc::ColorMode,
+    doc: &'a lienzo_doc::Document,
+    view: &'a lienzo_engine::channel_cmds::ChannelView,
+    mode: lienzo_doc::ColorMode,
     colors: usize,
     gray_view: bool,
     quick: bool,
     mask_targeted: bool,
-    masked: Option<&'a photocraft_doc::Layer>,
+    masked: Option<&'a lienzo_doc::Layer>,
     shown_colors: usize,
 }
 
@@ -86,8 +86,8 @@ struct RowInteractions<'a> {
     response: &'a egui::Response,
     eye_response: &'a egui::Response,
     ctx: &'a egui::Context,
-    doc: &'a photocraft_doc::Document,
-    masked: Option<&'a photocraft_doc::Layer>,
+    doc: &'a lienzo_doc::Document,
+    masked: Option<&'a lienzo_doc::Layer>,
     actions: &'a mut Vec<(String, Value)>,
     mask_click: &'a mut Option<bool>,
     /// Whether Merge Channels… can run (enough grayscale documents of one size).
@@ -172,8 +172,8 @@ fn handle_alpha_double_click(ui: &mut egui::Ui, row: &mut RowInteractions<'_>, i
 fn draw_row_menu(
     ui: &mut egui::Ui,
     row: Row,
-    doc: &photocraft_doc::Document,
-    masked: Option<&photocraft_doc::Layer>,
+    doc: &lienzo_doc::Document,
+    masked: Option<&lienzo_doc::Layer>,
     merge_enabled: bool,
     actions: &mut Vec<(String, Value)>,
 ) {
@@ -194,7 +194,7 @@ fn draw_row_menu(
     });
 }
 
-fn draw_alpha_menu(ui: &mut egui::Ui, index: usize, channel: &photocraft_doc::AlphaChannel, actions: &mut Vec<(String, Value)>) {
+fn draw_alpha_menu(ui: &mut egui::Ui, index: usize, channel: &lienzo_doc::AlphaChannel, actions: &mut Vec<(String, Value)>) {
     item(ui, actions, "Duplicate Channel", "channel.duplicate", json!({ "channel": index }));
     item(ui, actions, "Delete Channel", "channel.delete", json!({ "channel": index }));
     item(ui, actions, "Rename Channel…", "ui.renameChannel", json!(index));
@@ -209,14 +209,14 @@ fn draw_alpha_menu(ui: &mut egui::Ui, index: usize, channel: &photocraft_doc::Al
     }
 }
 
-fn draw_quick_mask_menu(ui: &mut egui::Ui, doc: &photocraft_doc::Document, actions: &mut Vec<(String, Value)>) {
+fn draw_quick_mask_menu(ui: &mut egui::Ui, doc: &lienzo_doc::Document, actions: &mut Vec<(String, Value)>) {
     item(ui, actions, "Exit Quick Mask", "select.editInQuickMaskMode", json!({ "on": false }));
     item(ui, actions, "Quick Mask Options…", "ui.channelOptions", json!("quickMask"));
     indicates_items(ui, actions, json!("quickMask"), doc.quick_mask.as_ref().map(|mask| mask.indicates).unwrap_or_default());
     overlay_colors(ui, actions, json!("quickMask"));
 }
 
-fn draw_mask_menu(ui: &mut egui::Ui, masked: Option<&photocraft_doc::Layer>, actions: &mut Vec<(String, Value)>) {
+fn draw_mask_menu(ui: &mut egui::Ui, masked: Option<&lienzo_doc::Layer>, actions: &mut Vec<(String, Value)>) {
     let enabled = masked.and_then(|layer| layer.mask.as_ref()).is_none_or(|mask| mask.enabled);
     item(ui, actions, crate::layer_menu_ui::mask_toggle_label(enabled), "layer.layerMask.enabled", json!({}));
     item(ui, actions, "Delete Layer Mask", "layer.layerMask.delete", json!({}));
@@ -236,7 +236,7 @@ fn drop_insertion(row: Row, pointer_y: f32, rect: Rect, alpha_count: usize) -> (
 
 /// What clicking `row`'s eye asks for.
 fn eye_action(row: Row, visible: bool, gray_view: bool, layer_id: Option<u64>) -> (String, Value) {
-    let view_cmd = photocraft_engine::mask_view_cmds::ID.to_string();
+    let view_cmd = lienzo_engine::mask_view_cmds::ID.to_string();
     match row {
         // The mask's eye: the overlay on, or the mask view off.
         Row::LayerMask => (view_cmd, json!({ "layer": layer_id, "mode": if visible { "off" } else { "overlay" } })),
@@ -260,7 +260,7 @@ fn paint_row_background(painter: &egui::Painter, t: &Tokens, rect: Rect, selecte
 }
 
 /// Spot channels: a swatch of the ink on the thumbnail corner.
-fn paint_spot_swatch(painter: &egui::Painter, thumb: Rect, spot: Option<(photocraft_doc::Color, f32)>) {
+fn paint_spot_swatch(painter: &egui::Painter, thumb: Rect, spot: Option<(lienzo_doc::Color, f32)>) {
     let Some((ink, _)) = spot else { return };
     let c = ink.to_rgb().map(|v| (v.clamp(0.0, 1.0) * 255.0) as u8);
     painter.rect_filled(Rect::from_min_size(thumb.right_bottom() - vec2(9.0, 9.0), vec2(9.0, 9.0)), 0.0, Color32::from_rgb(c[0], c[1], c[2]));
@@ -302,7 +302,7 @@ fn row_presentation(row: Row, context: &RowPresentationContext<'_>, mask_visible
     RowPresentation { name, thumb_idx, slot, visible, selected }
 }
 
-pub fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn show(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // Greyed in the rows' menu as in the panel menu and the command palette.
     let merge_enabled = crate::menus::is_enabled(app, "channel.merge");
     let t = Tokens::get(ui.ctx());
@@ -314,8 +314,8 @@ pub fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let doc = st.doc.clone();
     let view = st.channel_view.clone();
     // ⌥-click mask view (#196): gray shows the mask alone (colour eyes off), overlay over the composite.
-    let mask_view = photocraft_engine::mask_view_cmds::current(st).map(|v| v.mode);
-    let gray_view = mask_view == Some(photocraft_engine::mask_view_cmds::MaskViewMode::Gray);
+    let mask_view = lienzo_engine::mask_view_cmds::current(st).map(|v| v.mode);
+    let gray_view = mask_view == Some(lienzo_engine::mask_view_cmds::MaskViewMode::Gray);
     let active_layer = st.active_layer;
     let mode = doc.pixel_format().mode;
     let colors = mode.color_channels();
@@ -327,7 +327,7 @@ pub fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let mask_tex = masked.as_ref().and_then(|l| Some(app.mask_thumb(&ctx, &doc, l.id, l.mask.as_ref()?)));
     let mask_targeted = mask_row_targeted(masked.is_some(), app.ui.mask_target, view.target, quick);
     // Multichannel images are their ink channels only (no composite or colour rows).
-    let multichannel = doc.mode == photocraft_doc::ColorMode::Multichannel;
+    let multichannel = doc.mode == lienzo_doc::ColorMode::Multichannel;
     let mut rows = if multichannel { Vec::new() } else { vec![Row::Composite] };
     if colors > 1 && !multichannel {
         rows.extend((0..colors).map(Row::Color));
@@ -559,7 +559,7 @@ fn mask_row_targeted(has_mask: bool, mask_target: bool, target: ChannelTarget, q
 }
 
 /// The layer mask row's name, "<layer> Mask", as Photoshop lists it.
-fn mask_row_name(layer: &photocraft_doc::Layer) -> String {
+fn mask_row_name(layer: &lienzo_doc::Layer) -> String {
     format!("{} Mask", layer.name)
 }
 
@@ -569,7 +569,7 @@ fn mask_row_name(layer: &photocraft_doc::Layer) -> String {
 /// targeted row and are greyed without one (a colour composite, several colour channels). New
 /// Channel…, New Spot Channel…, Channel Options… and Merge Channels… open their dialogs, as from
 /// the command palette; Split Channels runs at once.
-pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     use crate::layers_panel_ui::run_menu_command;
     let target = MenuTarget::of(app);
     run_menu_command(app, ui, tl!("New Channel…"), "channel.new", Some(json!({})));
@@ -599,7 +599,7 @@ struct MenuTarget {
 }
 
 impl MenuTarget {
-    fn of(app: &PhotocraftApp) -> Self {
+    fn of(app: &LienzoApp) -> Self {
         let mask = app.layer_mask_targeted();
         let Some(st) = app.session.active() else { return Self::default() };
         let view = &st.channel_view;

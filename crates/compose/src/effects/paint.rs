@@ -61,7 +61,7 @@ pub fn ranged_lut(contour: &Contour, range: f32) -> Option<Vec<f32>> {
 /// 15 px in, Photoshop's still 0.19 at 16 px), and dropping it lowers the bad pixels of every
 /// contour oracle (bevel-inner-contour-ramp-peak 25.9 → 21.8 %, -double-ring-aa-r70 25.2 → 21.0 %,
 /// bevel-pillow-chisel-hard-gloss-and-contour 11.4 → 7.2 %). What Range does instead is still open.
-pub fn bevel_contour_lut(c: &photocraft_doc::BevelContour) -> Vec<f32> {
+pub fn bevel_contour_lut(c: &lienzo_doc::BevelContour) -> Vec<f32> {
     contour_lut(&c.contour).unwrap_or_else(|| (0..4096).map(|k| k as f32 / 4095.0).collect())
 }
 
@@ -110,7 +110,7 @@ fn apply_contour(m: Map, c: &Contour) -> Map {
     }
 }
 
-pub(super) fn rgb(c: &photocraft_color::Color) -> [f32; 3] {
+pub(super) fn rgb(c: &lienzo_color::Color) -> [f32; 3] {
     c.to_rgb()
 }
 

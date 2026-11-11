@@ -5,7 +5,7 @@
 //! Photoshop's "Foreground to Background") and transparency stops, both at `0..=1`. Midpoints are
 //! always 50 %. Built-in colours are our own.
 
-use photocraft_doc::{Color, Fill, Layer, LayerContent};
+use lienzo_doc::{Color, Fill, Layer, LayerContent};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -435,13 +435,13 @@ fn list(s: &mut Session, _: &Value) -> Result<Value> {
     Ok(json!({"groups": groups, "current": s.presets.gradient.to_json()}))
 }
 
-fn active_gradient_fill(s: &Session) -> Option<photocraft_doc::LayerId> {
+fn active_gradient_fill(s: &Session) -> Option<lienzo_doc::LayerId> {
     let d = s.active()?;
     let id = d.active_layer?;
     matches!(d.doc.layer(id)?.content, LayerContent::Fill(Fill::Gradient { .. })).then_some(id)
 }
 
-fn active_shape(s: &Session) -> Option<photocraft_doc::LayerId> {
+fn active_shape(s: &Session) -> Option<lienzo_doc::LayerId> {
     let d = s.active()?;
     let id = d.active_layer?;
     matches!(d.doc.layer(id)?.content, LayerContent::Shape(_)).then_some(id)
@@ -468,7 +468,7 @@ fn select(s: &mut Session, p: &Value) -> Result<Value> {
         crate::vector_cmds::with_shape(s, id, "Edit Shape", |sh, _| {
             let (angle, scale, style, reverse) = match &sh.fill {
                 Some(Fill::Gradient { angle, scale, style, reverse, .. }) => (*angle, *scale, *style, *reverse),
-                _ => (90.0, 1.0, photocraft_doc::GradientStyle::Linear, false),
+                _ => (90.0, 1.0, lienzo_doc::GradientStyle::Linear, false),
             };
             let mut fill = Fill::gradient(stops_new, angle, scale, style, reverse);
             if let Fill::Gradient { opacity_stops, .. } = &mut fill {

@@ -92,7 +92,7 @@ pub struct PresetState {
     /// Swatches panel library.
     pub swatches: Vec<Group<swatches::Swatch>>,
     /// The user contour library of the Layer Style dialog (`layer.layerStyle.contours.*`).
-    pub contours: Vec<photocraft_doc::Contour>,
+    pub contours: Vec<lienzo_doc::Contour>,
     /// Bumped on every preset change (UIs key thumbnail caches on it).
     pub rev: u64,
 }

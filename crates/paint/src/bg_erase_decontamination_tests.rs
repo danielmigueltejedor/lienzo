@@ -3,9 +3,9 @@
 //! later dabs match its current, decontaminated colour. Expected values are the reference
 //! application's measurements from the issue (8-bit RGB, 40 px hard round tip, sample (200,40,40)).
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba};
 
 use crate::bg_erase::{BgEraseSettings, apply_background_eraser};
 use crate::replace::{Limits, Sampling};

@@ -2,7 +2,7 @@
 
 > **Last reviewed:** 2026-10-12 · **Last updated:** 2026-11-06 · **Change:** minor (Georgian interface catalog; previously minor: Azerbaijani UI catalog merged with current languages; native review pending; Bosnian UI catalog; previously minor: Swedish, Finnish, Danish and Norwegian Bokmål UI catalogs; previously minor: Arabic UI catalog) · **Target:** Adobe Photoshop 2026
 
-Per-language status of PhotoCraft's UI. How catalogs work and how to add one:
+Per-language status of Lienzo's UI. How catalogs work and how to add one:
 [`localization.md`](localization.md). Language notes: [Korean](localization-ko.md), [Spanish](localization-es.md),
 [Simplified Chinese](localization-zh-hans.md), [Italian](localization-it.md), [Russian](localization-ru.md), [Georgian](localization-ka.md).
 

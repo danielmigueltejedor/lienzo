@@ -2,15 +2,15 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use photocraft_codecs::Format;
-use photocraft_color::{BlendMode, Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{
+use lienzo_codecs::Format;
+use lienzo_color::{BlendMode, Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{
     BandRenderer, CpuRenderer, ExportOptions, IoError, RenderBand, RenderError, document_to_image_with_renderer, export_flat, export_flat_with_renderer,
     export_png_streamed_with_renderer, export_preview_png_with_renderer,
 };
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_raster::{Interrupt, Surface};
 
 fn synthetic_doc() -> Document {
     let mut doc = Document::with_background("synth", Size::new(128, 300), ColorMode::Rgb, SampleType::U8, Color::WHITE);
@@ -75,7 +75,7 @@ impl BandRenderer for FailingRenderer {
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         let rows = if band_rows > 0 { band_rows } else { 32 };
-        photocraft_compose::render_bands(doc, rect, rows, |buf| {
+        lienzo_compose::render_bands(doc, rect, rows, |buf| {
             let count = self.call_count.fetch_add(1, Ordering::SeqCst);
             if count >= self.fail_after_bands {
                 return match self.error_kind {
@@ -227,7 +227,7 @@ impl BandRenderer for UnpollingRenderer {
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         let rows = if band_rows > 0 { band_rows } else { 32 };
-        photocraft_compose::render_bands(doc, rect, rows, |buf| {
+        lienzo_compose::render_bands(doc, rect, rows, |buf| {
             sink(RenderBand { rect: buf.rect, pixels: buf.into_px() })?;
             self.bands += 1;
             Ok(())
@@ -278,7 +278,7 @@ fn ora_and_pdf_exports_report_cpu_use_when_a_renderer_is_set() {
     let opts = ExportOptions::default();
     for (name, marker) in [("out.ora", "OpenRaster export uses CPU compositor"), ("out.pdf", "PDF export uses CPU compositor")] {
         let mut renderer = RecordingRenderer::default();
-        let res = photocraft_io::export_with_renderer(&doc, name, &opts, &Interrupt::NONE, Some(&mut renderer)).expect("CPU-only format export");
+        let res = lienzo_io::export_with_renderer(&doc, name, &opts, &Interrupt::NONE, Some(&mut renderer)).expect("CPU-only format export");
         assert!(res.warnings.iter().any(|w| w.contains(marker)), "{name} must report CPU use: {:?}", res.warnings);
     }
 }
@@ -306,10 +306,10 @@ fn renderer_preview_is_8bit_rgba_while_saved_export_keeps_depth() {
     let mut preview_renderer = RecordingRenderer::default();
     let preview = export_preview_png_with_renderer(&doc, Some(&mut preview_renderer)).expect("preview export");
     assert!(preview_renderer.renders > 0, "the preview must render through the supplied renderer");
-    let img = photocraft_codecs::decode(&preview.bytes).expect("decode preview");
+    let img = lienzo_codecs::decode(&preview.bytes).expect("decode preview");
     assert_eq!((img.width(), img.height()), (64, 48));
-    assert_eq!(img.layout(), photocraft_codecs::ChannelLayout::Rgba, "a preview is always RGBA");
-    assert_eq!(img.sample_type(), photocraft_codecs::SampleType::U8, "a preview is always 8-bit");
+    assert_eq!(img.layout(), lienzo_codecs::ChannelLayout::Rgba, "a preview is always RGBA");
+    assert_eq!(img.sample_type(), lienzo_codecs::SampleType::U8, "a preview is always 8-bit");
 
     let pixel = |x: u32, y: u32| {
         let at = ((y * img.width() + x) * 4) as usize;
@@ -327,8 +327,8 @@ fn renderer_preview_is_8bit_rgba_while_saved_export_keeps_depth() {
     let opts = ExportOptions::default();
     let mut save_renderer = CpuRenderer;
     let saved = export_flat_with_renderer(&doc, Format::Png, &opts, &Interrupt::NONE, Some(&mut save_renderer)).expect("saved export");
-    let saved_img = photocraft_codecs::decode(&saved.bytes).expect("decode saved export");
-    assert_eq!(saved_img.sample_type(), photocraft_codecs::SampleType::U16, "saved exports keep the document's depth");
+    let saved_img = lienzo_codecs::decode(&saved.bytes).expect("decode saved export");
+    assert_eq!(saved_img.sample_type(), lienzo_codecs::SampleType::U16, "saved exports keep the document's depth");
 }
 
 #[test]
@@ -435,7 +435,7 @@ fn unknown_export_format_is_rejected() {
     let opts = ExportOptions::default();
 
     // `export` takes a name or bare extension; an unknown one fails before any codec runs.
-    let export_err = photocraft_io::export(&doc, "invalid_unknown_extension_xyz", &opts);
+    let export_err = lienzo_io::export(&doc, "invalid_unknown_extension_xyz", &opts);
     assert!(export_err.is_err());
 }
 

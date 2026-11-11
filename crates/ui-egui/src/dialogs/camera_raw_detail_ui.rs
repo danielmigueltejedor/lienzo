@@ -1,9 +1,9 @@
 //! Full-resolution refinement of Camera Raw's interactive proxy. Native work is off the
 //! UI thread; only one revision runs at a time, and obsolete results never replace new edits.
 use egui::{Color32, ColorImage, Context, Pos2, Rect, TextureHandle, TextureOptions, pos2, vec2};
-use photocraft_algo::camera_raw::CameraRaw;
-use photocraft_geom::Rect as PixelRect;
-use photocraft_raster::Surface;
+use lienzo_algo::camera_raw::CameraRaw;
+use lienzo_geom::Rect as PixelRect;
+use lienzo_raster::Surface;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -13,7 +13,7 @@ use std::sync::{
 #[derive(Clone)]
 pub(crate) enum Coverage {
     Selection(Surface),
-    Mask(photocraft_doc::LayerMask),
+    Mask(lienzo_doc::LayerMask),
     None,
 }
 
@@ -168,7 +168,7 @@ impl DetailPreview {
         before: bool,
         params: &CameraRaw,
         needed: bool,
-        display: &photocraft_engine::display_color::CanvasDisplay,
+        display: &lienzo_engine::display_color::CanvasDisplay,
     ) -> bool {
         self.ready = false;
         self.poll(revision);
@@ -255,7 +255,7 @@ impl DetailPreview {
                     if p[3] <= 0.0 || !p.iter().all(|v| v.is_finite()) {
                         return Color32::TRANSPARENT;
                     }
-                    let (lo, hi) = photocraft_algo::histogram::clipping(*p);
+                    let (lo, hi) = lienzo_algo::histogram::clipping(*p);
                     match mode {
                         ClippingMode::ShadowChannels => t.histogram_color(7 ^ lo),
                         ClippingMode::HighlightChannels => {
@@ -299,11 +299,11 @@ impl DetailPreview {
 
 /// The full-size result of `params` over `area`. With a raw file's tone `curve`, the raw-stage
 /// sliders are applied first to the whole area, from the whole frame's maps as Open computes them
-/// ([`photocraft_io::raw::retone`]), then the rest of the pipeline: at 1:1 the preview shows close
+/// ([`lienzo_io::raw::retone`]), then the rest of the pipeline: at 1:1 the preview shows close
 /// to what Open will make. It retones the developed pixels, which already carry the black point,
 /// so it differs from Open only in the deepest shadows, as `retone` documents.
 fn develop(source: &Surface, curve: Option<&[[f32; 2]]>, area: PixelRect, params: &CameraRaw, coverage: &Coverage) -> Surface {
-    let tone = photocraft_io::raw::Tone {
+    let tone = lienzo_io::raw::Tone {
         shadows: params.shadows,
         highlights: params.highlights,
         clarity: params.clarity,
@@ -315,7 +315,7 @@ fn develop(source: &Surface, curve: Option<&[[f32; 2]]>, area: PixelRect, params
             let (w, h) = (area.width() as usize, area.height() as usize);
             let mut px = vec![[0.0f32; 4]; w * h];
             source.read_rgba_into(area, &mut px);
-            photocraft_io::raw::retone(&mut px, w, h, curve, tone);
+            lienzo_io::raw::retone(&mut px, w, h, curve, tone);
             let fmt = source.format();
             let n = fmt.channels();
             // Written back in bands of rows, so only one band-sized buffer lives next to `px`
@@ -330,7 +330,7 @@ fn develop(source: &Surface, curve: Option<&[[f32; 2]]>, area: PixelRect, params
                 source.read_region_into(rect, &mut data);
                 for (o, q) in data.chunks_exact_mut(n).zip(rows) {
                     let alpha = if fmt.alpha { o.get(n - 1).copied() } else { None };
-                    photocraft_raster::from_rgba_into(&fmt, *q, o);
+                    lienzo_raster::from_rgba_into(&fmt, *q, o);
                     if let (Some(a), Some(last)) = (alpha, o.get_mut(n - 1)) {
                         *last = a;
                     }
@@ -343,7 +343,7 @@ fn develop(source: &Surface, curve: Option<&[[f32; 2]]>, area: PixelRect, params
         _ => (None, params.clone()),
     };
     let base = retoned.as_ref().unwrap_or(source);
-    let mut result = photocraft_engine::lens_cmds::camera_raw_surface(base, area, &params);
+    let mut result = lienzo_engine::lens_cmds::camera_raw_surface(base, area, &params);
     if matches!(coverage, Coverage::None) {
         return result;
     }
@@ -392,23 +392,23 @@ fn visible_pixels(image: Rect, viewport: Rect, area: PixelRect, max_side: usize)
     (crop.width() as usize <= max_side && crop.height() as usize <= max_side && crop.width() as u64 * crop.height() as u64 <= 16_777_216).then_some(crop)
 }
 
-/// Pixels per band [`display_image`] reads and colour-converts at once: at least `photocraft-cms`'s
+/// Pixels per band [`display_image`] reads and colour-converts at once: at least `lienzo-cms`'s
 /// parallel threshold (16K pixels), and small enough that a band's float scratch is 1 MiB.
 const CROP_BAND_PIXELS: usize = 64 * 1024;
 
 /// The visible pixels of `surface`, as the canvas shows them.
-fn crop_image(surface: &Surface, area: PixelRect, display: &photocraft_engine::display_color::CanvasDisplay) -> ColorImage {
+fn crop_image(surface: &Surface, area: PixelRect, display: &lienzo_engine::display_color::CanvasDisplay) -> ColorImage {
     display_image(area, display, |rect, out| surface.read_rgba_into(rect, out))
 }
 
 /// `area` as the canvas shows it, with `read` filling each band's float pixels. Converted in
 /// bands of rows, in parallel off wasm, not one row or one whole copy at a time: a row is below
-/// `photocraft-cms`'s parallel threshold, so a per-row conversion ran the display transform (any
+/// `lienzo-cms`'s parallel threshold, so a per-row conversion ran the display transform (any
 /// document profile other than the monitor's, such as an Adobe RGB photo on sRGB) on one core of
 /// the UI thread for every edit (#4682).
 pub(crate) fn display_image(
     area: PixelRect,
-    display: &photocraft_engine::display_color::CanvasDisplay,
+    display: &lienzo_engine::display_color::CanvasDisplay,
     read: impl Fn(PixelRect, &mut [[f32; 4]]) + Sync,
 ) -> ColorImage {
     let (width, height) = (area.width() as usize, area.height() as usize);
@@ -420,7 +420,7 @@ pub(crate) fn display_image(
     let band = |index: usize, out: &mut [Color32]| {
         let y0 = area.y0.saturating_add((index * band_rows) as i32);
         let rect = PixelRect::new(area.x0, y0, area.x1, y0.saturating_add((out.len() / width) as i32));
-        let mut buf = photocraft_compose::Buffer { rect, px: vec![[0.0; 4]; out.len()] };
+        let mut buf = lienzo_compose::Buffer { rect, px: vec![[0.0; 4]; out.len()] };
         read(rect, &mut buf.px);
         let img = display.to_rgba8(&buf);
         for (o, &[r, g, b, a]) in out.iter_mut().zip(img.pixels.as_chunks::<4>().0) {
@@ -442,7 +442,7 @@ pub(crate) fn display_image(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
+    use lienzo_color::PixelFormat;
     #[test]
     fn refinement_uses_the_engine_at_source_resolution_and_respects_selection() {
         let area = PixelRect::new(10, -5, 42, 19);
@@ -453,7 +453,7 @@ mod tests {
         }
         source.write_region(area, &values);
         let params = CameraRaw { exposure: 0.5, texture: 15.0, grain_amount: 30.0, ..Default::default() };
-        let expected = photocraft_engine::lens_cmds::camera_raw_surface(&source, area, &params);
+        let expected = lienzo_engine::lens_cmds::camera_raw_surface(&source, area, &params);
         assert_eq!(develop(&source, None, area, &params, &Coverage::None), expected);
         let mask = Surface::with_default(PixelFormat::GRAY8, &[0.0]);
         assert_eq!(develop(&source, None, area, &params, &Coverage::Selection(mask)), source);
@@ -475,12 +475,12 @@ mod tests {
         let refined = develop(&source, Some(&curve), area, &params, &Coverage::None);
         let mut px = vec![[0.0f32; 4]; 96 * 64];
         source.read_rgba_into(area, &mut px);
-        let tone = photocraft_io::raw::Tone { shadows: 80.0, ..Default::default() };
-        photocraft_io::raw::retone(&mut px, 96, 64, &curve, tone);
+        let tone = lienzo_io::raw::Tone { shadows: 80.0, ..Default::default() };
+        lienzo_io::raw::retone(&mut px, 96, 64, &curve, tone);
         let mut retoned = source.clone();
         let flat: Vec<f32> = px.iter().flatten().copied().collect();
         retoned.write_region(area, &flat);
-        let expected = photocraft_engine::lens_cmds::camera_raw_surface(&retoned, area, &CameraRaw { exposure: 0.25, ..Default::default() });
+        let expected = lienzo_engine::lens_cmds::camera_raw_surface(&retoned, area, &CameraRaw { exposure: 0.25, ..Default::default() });
         let (a, b) = (refined.rgba(10, 30), expected.rgba(10, 30));
         assert!(a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 2e-4), "{a:?} vs {b:?}");
         assert!(
@@ -492,7 +492,7 @@ mod tests {
         );
         // Without a raw curve Shadows is the filter's.
         let filter = develop(&source, None, area, &params, &Coverage::None);
-        assert_eq!(filter, photocraft_engine::lens_cmds::camera_raw_surface(&source, area, &params));
+        assert_eq!(filter, lienzo_engine::lens_cmds::camera_raw_surface(&source, area, &params));
     }
 
     #[test]
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn full_resolution_sampling_and_crops_keep_fine_detail_at_every_supported_depth() {
-        use photocraft_color::{ColorMode, PixelFormat, SampleType};
+        use lienzo_color::{ColorMode, PixelFormat, SampleType};
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
             for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
                 let format = PixelFormat { mode, sample: depth, alpha: true };
@@ -535,7 +535,7 @@ mod tests {
                 source.write_region(area, &pixels);
                 let params = CameraRaw { exposure: 0.5, sharpen_amount: 20.0, grain_amount: 30.0, ..Default::default() };
                 let full = develop(&source, None, area, &params, &Coverage::None);
-                let expected = photocraft_engine::lens_cmds::camera_raw_surface(&source, area, &params);
+                let expected = lienzo_engine::lens_cmds::camera_raw_surface(&source, area, &params);
                 assert_eq!(full, expected);
                 let mut preview = DetailPreview::new(source, area, Coverage::None);
                 preview.result = Some((1, full));
@@ -543,10 +543,9 @@ mod tests {
                 let dark = preview.sample([0.0, 0.0], 1, false, &params).unwrap();
                 let light = preview.sample([1.0 / 40.0, 0.0], 1, false, &params).unwrap();
                 assert!(light[0] - dark[0] > 0.5, "native alternating pixels survive: {mode:?}/{depth:?}");
-                let mut doc =
-                    photocraft_doc::Document::new("test", photocraft_geom::Size::new(40, 30), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
-                doc.icc_profile = Some(photocraft_cms::Builtin::Srgb.profile().to_bytes());
-                let display = photocraft_engine::color_cmds::ColorState::default().canvas_display(&doc).unwrap();
+                let mut doc = lienzo_doc::Document::new("test", lienzo_geom::Size::new(40, 30), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
+                doc.icc_profile = Some(lienzo_cms::Builtin::Srgb.profile().to_bytes());
+                let display = lienzo_engine::color_cmds::ColorState::default().canvas_display(&doc).unwrap();
                 assert_eq!(crop_image(&expected, PixelRect::new(-12, 8, -10, 9), &display).size, [2, 1]);
                 assert!(preview.sample([f32::NAN, 0.0], 1, false, &params).is_none());
                 assert!(preview.sample([0.5, 0.5], 2, false, &params).is_none());
@@ -557,12 +556,11 @@ mod tests {
     #[test]
     fn refined_crop_uses_linear_document_display_encoding() {
         let area = PixelRect::new(0, 0, 1, 1);
-        let mut source =
-            Surface::new(photocraft_color::PixelFormat { mode: photocraft_color::ColorMode::Rgb, sample: photocraft_color::SampleType::F32, alpha: true });
+        let mut source = Surface::new(lienzo_color::PixelFormat { mode: lienzo_color::ColorMode::Rgb, sample: lienzo_color::SampleType::F32, alpha: true });
         source.write_region(area, &[0.25, 0.25, 0.25, 1.0]);
-        let mut doc = photocraft_doc::Document::new("test", photocraft_geom::Size::new(1, 1), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::F32);
-        doc.icc_profile = Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes());
-        let mut color = photocraft_engine::color_cmds::ColorState::default();
+        let mut doc = lienzo_doc::Document::new("test", lienzo_geom::Size::new(1, 1), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::F32);
+        doc.icc_profile = Some(lienzo_cms::Builtin::LinearSrgb.profile().to_bytes());
+        let mut color = lienzo_engine::color_cmds::ColorState::default();
         color.settings.monitor_profile = "srgb".into();
         let display = color.canvas_display(&doc).unwrap();
         let image = crop_image(&source, area, &display);
@@ -595,19 +593,18 @@ mod tests {
         // Several bands, a ragged last one and an area off the image origin, through a real
         // transform (an Adobe RGB document on an sRGB monitor) and without one.
         let area = PixelRect::new(-3, 5, 1021, 5 + 2 * (CROP_BAND_PIXELS / 1024) as i32 + 7);
-        let mut source = Surface::new(PixelFormat { mode: photocraft_color::ColorMode::Rgb, sample: photocraft_color::SampleType::U8, alpha: true });
+        let mut source = Surface::new(PixelFormat { mode: lienzo_color::ColorMode::Rgb, sample: lienzo_color::SampleType::U8, alpha: true });
         let n = (area.width() * area.height()) as usize;
         let px: Vec<f32> = (0..n).flat_map(|i| [(i % 251) as f32 / 255.0, (i % 241) as f32 / 255.0, (i % 239) as f32 / 255.0, (i % 7) as f32 / 6.0]).collect();
         source.write_region(area, &px);
-        for profile in [photocraft_cms::Builtin::AdobeRgbCompat, photocraft_cms::Builtin::Srgb] {
-            let mut doc =
-                photocraft_doc::Document::new("test", photocraft_geom::Size::new(1024, 1024), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
+        for profile in [lienzo_cms::Builtin::AdobeRgbCompat, lienzo_cms::Builtin::Srgb] {
+            let mut doc = lienzo_doc::Document::new("test", lienzo_geom::Size::new(1024, 1024), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
             doc.icc_profile = Some(profile.profile().to_bytes());
-            let mut color = photocraft_engine::color_cmds::ColorState::default();
+            let mut color = lienzo_engine::color_cmds::ColorState::default();
             color.settings.monitor_profile = "srgb".into();
             let display = color.canvas_display(&doc).unwrap();
-            assert_eq!(display.transform.is_some(), profile == photocraft_cms::Builtin::AdobeRgbCompat);
-            let mut whole = photocraft_compose::Buffer { rect: area, px: vec![[0.0; 4]; n] };
+            assert_eq!(display.transform.is_some(), profile == lienzo_cms::Builtin::AdobeRgbCompat);
+            let mut whole = lienzo_compose::Buffer { rect: area, px: vec![[0.0; 4]; n] };
             source.read_rgba_into(area, &mut whole.px);
             let expected = display.to_rgba8(&whole);
             let image = crop_image(&source, area, &display);
@@ -619,13 +616,8 @@ mod tests {
             crop_image(
                 &source,
                 PixelRect::new(0, 0, 0, 4),
-                &photocraft_engine::color_cmds::ColorState::default()
-                    .canvas_display(&photocraft_doc::Document::new(
-                        "t",
-                        photocraft_geom::Size::new(1, 1),
-                        photocraft_doc::ColorMode::Rgb,
-                        photocraft_doc::SampleType::U8
-                    ))
+                &lienzo_engine::color_cmds::ColorState::default()
+                    .canvas_display(&lienzo_doc::Document::new("t", lienzo_geom::Size::new(1, 1), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8))
                     .unwrap()
             )
             .size,

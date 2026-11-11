@@ -3,7 +3,7 @@
 use super::*;
 use crate::{FileDialogAnswer, dds_options_ui};
 use egui_kittest::kittest::Queryable;
-use photocraft_io::{DdsCompression, DdsOptions};
+use lienzo_io::{DdsCompression, DdsOptions};
 use std::{cell::RefCell, rc::Rc};
 
 /// Each write: the path, and the DDS options the export was asked for.
@@ -35,7 +35,7 @@ fn dds_app(to: &str) -> (Prompted, Writes) {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.ctx.set_os(egui::os::OperatingSystem::Windows);
     (h, writes)
 }

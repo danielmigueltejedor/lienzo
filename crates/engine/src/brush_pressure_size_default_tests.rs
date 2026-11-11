@@ -7,7 +7,7 @@
 //! off there.
 
 use crate::Session;
-use photocraft_paint::brush::BrushSettings;
+use lienzo_paint::brush::BrushSettings;
 use serde_json::{Value, json};
 
 /// The brush a fresh session starts with: neither pressure toggle on.
@@ -29,10 +29,7 @@ fn brush_get_reports_both_pressure_toggles_off() {
     assert_eq!(got["pressureOpacity"], json!(false), "brush.get reports Pressure for Opacity off");
     // The session's own starting brush is the default brush at Photoshop's 10 % smoothing — the
     // same brush Reset Tool hands back — so only the smoothing differs.
-    assert_eq!(
-        s.tools.brush,
-        BrushSettings { smoothing: photocraft_paint::brush::Smoothing { amount: 0.1, ..Default::default() }, ..BrushSettings::default() }
-    );
+    assert_eq!(s.tools.brush, BrushSettings { smoothing: lienzo_paint::brush::Smoothing { amount: 0.1, ..Default::default() }, ..BrushSettings::default() });
 }
 
 /// A brush that does not name the field — a preset saved before #11809, an older recorded
@@ -61,7 +58,7 @@ fn pressure_for_size_still_switches_on_and_off() {
 
 /// One stroke of a pressure ramp (0.3 → 0.65 → 1.0) across a new empty layer with `brush`: the
 /// layer's pixels and what the stroke covers.
-fn ramp(brush: Value) -> (Vec<f32>, photocraft_geom::Rect) {
+fn ramp(brush: Value) -> (Vec<f32>, lienzo_geom::Rect) {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 80, "height": 40})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();

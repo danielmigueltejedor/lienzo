@@ -1,6 +1,6 @@
 //! Timing and output hash for Content-Aware Scale's seam carving core (P28).
 //!
-//! `cargo run --release -p photocraft-algo --example bench_seam [width height new_width channels]`
+//! `cargo run --release -p lienzo-algo --example bench_seam [width height new_width channels]`
 //!
 //! Prints the carve time and an FNV-1a hash of the output's raw f32 bits, so two builds can be
 //! compared with `cmp`-level strictness without writing tens of megabytes of pixels to disk.
@@ -24,7 +24,7 @@ fn main() {
         })
         .collect();
     let t = Instant::now();
-    let out = photocraft_algo::seam::carve_width(w, h, ch, &img, None, new_w);
+    let out = lienzo_algo::seam::carve_width(w, h, ch, &img, None, new_w);
     let ms = t.elapsed().as_secs_f64() * 1e3;
     let hash =
         out.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, v| v.to_bits().to_le_bytes().iter().fold(h, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x100_0000_01b3)));

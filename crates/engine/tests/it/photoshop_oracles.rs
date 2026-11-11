@@ -15,8 +15,8 @@
 
 use std::path::{Path, PathBuf};
 
-use photocraft_doc::{Document, LayerContent};
-use photocraft_psd::PsdFile;
+use lienzo_doc::{Document, LayerContent};
+use lienzo_psd::PsdFile;
 
 /// Within two 8-bit steps of Photoshop (same tolerance as the io corpus).
 const PASS_TOL: f32 = 2.0 / 255.0;
@@ -64,14 +64,14 @@ fn rerender(doc: &mut Document) -> Result<usize, String> {
         let Some(l) = doc.layer_mut(id) else { continue };
         match &mut l.content {
             LayerContent::Smart(_) => {
-                if photocraft_engine::smart_cmds::refresh_layer(&snapshot, l).map_err(|e| e.to_string())? {
+                if lienzo_engine::smart_cmds::refresh_layer(&snapshot, l).map_err(|e| e.to_string())? {
                     n += 1;
                 } else {
                     return Err("smart object source unavailable".into());
                 }
             }
             LayerContent::Text(t) => {
-                photocraft_engine::type_cmds::refresh(&snapshot, t);
+                lienzo_engine::type_cmds::refresh(&snapshot, t);
                 n += 1;
             }
             _ => {}
@@ -86,14 +86,14 @@ fn screen_motion_blur_retains_input_coverage() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/photoshop/smart-filters/sf-blend-screen-100.psd");
     let bytes = std::fs::read(&path).expect("Screen/Motion Blur oracle missing: run cargo xtask corpus --all");
     let file = PsdFile::from_bytes(&bytes).expect("parse Screen/Motion Blur oracle");
-    let mut doc = photocraft_io::import("sf-blend-screen-100.psd", &bytes).expect("import Screen/Motion Blur oracle").document;
+    let mut doc = lienzo_io::import("sf-blend-screen-100.psd", &bytes).expect("import Screen/Motion Blur oracle").document;
     assert!(rerender(&mut doc).expect("re-render Screen/Motion Blur oracle") > 0);
-    let merged = photocraft_io::merged_composite(&file).expect("Photoshop merged composite");
-    let (error, bad) = max_diff(&photocraft_compose::flatten(&doc).px, &merged);
+    let merged = lienzo_io::merged_composite(&file).expect("Photoshop merged composite");
+    let (error, bad) = max_diff(&lienzo_compose::flatten(&doc).px, &merged);
     assert!(error <= PASS_TOL, "Screen/Motion Blur error {error}, {bad}% pixels exceed 2/255");
 }
 
-/// Re-render every Photoshop oracle in the corpus with PhotoCraft's filters and compare it with Photoshop's own merged composite.
+/// Re-render every Photoshop oracle in the corpus with Lienzo's filters and compare it with Photoshop's own merged composite.
 #[test]
 fn photoshop_oracles_rerendered() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/photoshop");
@@ -108,7 +108,7 @@ fn photoshop_oracles_rerendered() {
         let name = p.strip_prefix(&root).unwrap_or(p).display().to_string();
         let bytes = std::fs::read(p).unwrap_or_default();
         let Ok(file) = PsdFile::from_bytes(&bytes) else { continue };
-        let Ok(imp) = photocraft_io::import(&name, &bytes) else {
+        let Ok(imp) = lienzo_io::import(&name, &bytes) else {
             eprintln!("{name:<60} IMPORT-ERROR");
             errors += 1;
             continue;
@@ -123,8 +123,8 @@ fn photoshop_oracles_rerendered() {
                 continue;
             }
         };
-        let Ok(merged) = photocraft_io::merged_composite(&file) else { continue };
-        let ours = photocraft_compose::flatten(&doc).into_px();
+        let Ok(merged) = lienzo_io::merged_composite(&file) else { continue };
+        let ours = lienzo_compose::flatten(&doc).into_px();
         let (m, bad) = max_diff(&ours, &merged);
         let group = name.split(['/', '\\']).next().unwrap_or(".").to_string();
         let g = groups.entry(group).or_default();

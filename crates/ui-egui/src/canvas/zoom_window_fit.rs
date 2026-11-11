@@ -15,7 +15,7 @@
 
 use egui::{Context, Id, Pos2, Rect, Vec2, ViewportClass, ViewportCommand, ViewportId, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DocWindow, View};
 
 /// The smallest window a zoom asks for (points), so zooming far out keeps the window usable.
@@ -127,15 +127,7 @@ pub fn resize_for(ctx: &Context, window: u64, on: bool, before: &View, after: &V
 /// command would resize the main window instead, and a maximized or full-screen one keeps the
 /// size the user gave it. A window that grows around the whole image also centres it in `after`.
 /// Returns the size asked for.
-pub fn follow(
-    app: &PhotocraftApp,
-    ctx: &Context,
-    class: ViewportClass,
-    viewport: ViewportId,
-    window: &DocWindow,
-    after: &mut View,
-    rect: Rect,
-) -> Option<Vec2> {
+pub fn follow(app: &LienzoApp, ctx: &Context, class: ViewportClass, viewport: ViewportId, window: &DocWindow, after: &mut View, rect: Rect) -> Option<Vec2> {
     if class != ViewportClass::Immediate {
         return None;
     }
@@ -265,7 +257,7 @@ mod tests {
 
     #[test]
     fn follow_resizes_only_real_floating_windows_with_the_preference_on() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.sync_views();
         app.ui.extras.rulers = false;
@@ -274,7 +266,7 @@ mod tests {
         let rect = Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, 600.0));
         let at = |zoom| view([400, 300], zoom);
         let window = DocWindow { id: 3, document: 0, view: at(1.0), open: true, position: None, floating: false, focused: false };
-        let frame = |app: &PhotocraftApp, class, after: &View| follow(app, &ctx, class, viewport, &window, &mut after.clone(), rect);
+        let frame = |app: &LienzoApp, class, after: &View| follow(app, &ctx, class, viewport, &window, &mut after.clone(), rect);
         // Off by default, as in Photoshop.
         assert!(!app.session.prefs().general.zoom_resizes_windows);
         assert_eq!(frame(&app, ViewportClass::Immediate, &at(1.0)), None);
@@ -352,7 +344,7 @@ mod tests {
 
     #[test]
     fn follow_centres_the_image_in_the_grown_window() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.sync_views();
         app.run("prefs.set", json!({"path": "general.zoomResizesWindows", "value": true})).unwrap();
@@ -372,7 +364,7 @@ mod tests {
 
     #[test]
     fn a_maximized_or_full_screen_window_keeps_its_size() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
         app.sync_views();
         app.run("prefs.set", json!({"path": "general.zoomResizesWindows", "value": true})).unwrap();
@@ -408,12 +400,12 @@ mod tests {
         // Photoshop's Zoom tool option Resize Windows to Fit is Preferences › Zoom Resizes Windows.
         use egui_kittest::Harness;
         use egui_kittest::kittest::Queryable;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.sync_views();
         app.ui.tool = crate::state::Tool::Zoom;
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -421,7 +413,7 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.run_steps(4);
         assert!(!h.state().session.prefs().general.zoom_resizes_windows);
         h.get_by_label("Resize Windows to Fit").click();

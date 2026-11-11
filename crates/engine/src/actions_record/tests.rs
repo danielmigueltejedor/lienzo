@@ -1,4 +1,4 @@
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::{Value, json};
 
 use crate::jobs::Started;
@@ -114,9 +114,12 @@ fn frame_action_keeps_the_layer_it_wraps() {
     let played = s.execute("actions.play", json!({"action": "Frame picture"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
     assert!(
-        s.active().unwrap().doc.walk().iter().any(
-            |(_, _, layer)| matches!(&layer.content, photocraft_doc::LayerContent::Group(group) if group.children.iter().any(|child| child.id.0 == target))
-        ),
+        s.active()
+            .unwrap()
+            .doc
+            .walk()
+            .iter()
+            .any(|(_, _, layer)| matches!(&layer.content, lienzo_doc::LayerContent::Group(group) if group.children.iter().any(|child| child.id.0 == target))),
         "the replayed frame wraps Picture"
     );
 }
@@ -135,8 +138,8 @@ fn selection_actions_keep_the_active_layer_as_their_source() {
     let played = s.execute("actions.play", json!({"action": "Load pixels"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
     assert_eq!(
-        s.active().unwrap().doc.selection.as_ref().map(|mask| mask.content_bounds()).unwrap_or(photocraft_geom::Rect::EMPTY),
-        photocraft_geom::Rect::EMPTY,
+        s.active().unwrap().doc.selection.as_ref().map(|mask| mask.content_bounds()).unwrap_or(lienzo_geom::Rect::EMPTY),
+        lienzo_geom::Rect::EMPTY,
         "the empty source layer must not load the opaque merged document"
     );
 
@@ -202,7 +205,7 @@ fn named_nonactive_layer_is_the_one_converted_to_smart() {
     assert!(s.active().unwrap().doc.layer(LayerId(replay_target)).is_none(), "replay removes the named source");
     assert!(s.active().unwrap().doc.layer(LayerId(top)).is_some(), "replay keeps the selected top layer");
     assert!(
-        s.active().unwrap().doc.walk().iter().any(|(_, _, layer)| matches!(layer.content, photocraft_doc::LayerContent::Smart(_))),
+        s.active().unwrap().doc.walk().iter().any(|(_, _, layer)| matches!(layer.content, lienzo_doc::LayerContent::Smart(_))),
         "replay creates a smart object"
     );
 }
@@ -262,14 +265,14 @@ fn action_replay_preserves_styles_between_separate_typing_edits() {
     s.execute("type.edit", json!({"layer": id, "replace": {"start": 4, "end": 5, "text": "Z"}, "coalesce": "typing"})).unwrap();
     s.execute("actions.stop", json!({})).unwrap();
     let original = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
-    let photocraft_doc::LayerContent::Text(original) = &original.content else { panic!("type layer") };
+    let lienzo_doc::LayerContent::Text(original) = &original.content else { panic!("type layer") };
     let original = original.clone();
     assert_eq!(original.text, "A M Z");
     s.add_document(replay, None);
     let played = s.execute("actions.play", json!({"action": "Two typed edits"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
     let copy = s.active().unwrap().doc.layer(LayerId(id)).unwrap();
-    let photocraft_doc::LayerContent::Text(copy) = &copy.content else { panic!("type layer") };
+    let lienzo_doc::LayerContent::Text(copy) = &copy.content else { panic!("type layer") };
     assert_eq!(copy.text, original.text);
     assert_eq!(copy.char_runs(), original.char_runs(), "the unchanged middle run keeps its style");
 }
@@ -308,7 +311,7 @@ fn keystrokes_in_another_document_do_not_fold_into_the_previous_document() {
     let first = s.execute("type.create", json!({"x": 2, "y": 20, "text": "A", "size": 12})).unwrap()["layer"].as_u64().unwrap();
     let mut copy = s.active().unwrap().doc.as_ref().clone();
     if let Some(layer) = copy.layer_mut(LayerId(first))
-        && let photocraft_doc::LayerContent::Text(text) = &mut layer.content
+        && let lienzo_doc::LayerContent::Text(text) = &mut layer.content
     {
         text.text = "B".into();
     }
@@ -350,7 +353,7 @@ fn a_recording_replays_on_a_document_with_other_layer_ids() {
     let shade = d.walk().into_iter().find(|(_, _, l)| l.name == "Shade").map(|(_, _, l)| l).unwrap();
     assert_eq!(shade.opacity, 0.5, "the new layer, not the one of the first document, got the opacity");
     let text = d.walk().into_iter().find_map(|(_, _, l)| match &l.content {
-        photocraft_doc::LayerContent::Text(t) => Some(t.text.clone()),
+        lienzo_doc::LayerContent::Text(t) => Some(t.text.clone()),
         _ => None,
     });
     assert_eq!(text.as_deref(), Some("Hi"), "the typed text replayed as one step");
@@ -377,6 +380,6 @@ fn recorded_edit_targets_a_named_nonactive_type_layer_on_another_document() {
     let played = s.execute("actions.play", json!({"action": "Edit caption"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
     let layer = s.active().unwrap().doc.layer(LayerId(second)).unwrap();
-    let photocraft_doc::LayerContent::Text(text) = &layer.content else { panic!("expected type layer") };
+    let lienzo_doc::LayerContent::Text(text) = &layer.content else { panic!("expected type layer") };
     assert_eq!(text.text, "New");
 }

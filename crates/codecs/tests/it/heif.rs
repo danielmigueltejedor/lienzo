@@ -10,7 +10,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 use std::sync::LazyLock;
 
 /// A file of `corpus/heif/`.

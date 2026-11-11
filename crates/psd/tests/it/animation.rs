@@ -1,9 +1,9 @@
 //! Synthetic only: no personal PSDs, paths, or copied descriptor payloads.
 
-use photocraft_psd::animation::{AnimationRecord, AnimationResource, frame_info, frame_sets, layer_frame_states, parse_descriptor};
-use photocraft_psd::descriptor::{Descriptor, Value, VersionedDescriptor};
-use photocraft_psd::metadata::{MetadataItem, parse_shmd, write_shmd};
-use photocraft_psd::{ImageResource, PsdBuilder, PsdFile, ResourceData, TaggedBlock, Version};
+use lienzo_psd::animation::{AnimationRecord, AnimationResource, frame_info, frame_sets, layer_frame_states, parse_descriptor};
+use lienzo_psd::descriptor::{Descriptor, Value, VersionedDescriptor};
+use lienzo_psd::metadata::{MetadataItem, parse_shmd, write_shmd};
+use lienzo_psd::{ImageResource, PsdBuilder, PsdFile, ResourceData, TaggedBlock, Version};
 use proptest::prelude::*;
 
 fn descriptor() -> VersionedDescriptor {

@@ -12,7 +12,7 @@
 # Clean-room: translated from the plain meaning of the English labels using ordinary Thai
 # computing and image-editing vocabulary (เลเยอร์, มาสก์, ฟิลเตอร์, การเลือก ...). No proprietary
 # localisation resource, string table or product UI was consulted or copied; add entries the same
-# way. Product and technology names (PhotoCraft, ArtCraft, OpenType, RGB, CMYK, Lab, PSD, PNG,
+# way. Product and technology names (Lienzo, ArtCraft, OpenType, RGB, CMYK, Lab, PSD, PNG,
 # JPEG, WebP, OpenEXR, AVIF ...) stay in Latin letters; the trailing "…" of dialog commands is kept.
 # Thai has no plural inflection, so plural entries use one form (`plural_none` in i18n.rs).
 # Machine-assisted first draft, reviewed for UI terminology; native-speaker review is welcome.
@@ -539,9 +539,9 @@
 	Hide All	ซ่อนทั้งหมด
 
 # Help
-	About PhotoCraft	เกี่ยวกับ PhotoCraft
-	PhotoCraft Website	เว็บไซต์PhotoCraft
-	PhotoCraft on GitHub	PhotoCraftบน GitHub
+	About Lienzo	เกี่ยวกับ Lienzo
+	Lienzo Website	เว็บไซต์Lienzo
+	Lienzo on GitHub	Lienzoบน GitHub
 	Report an Issue…	รายงานปัญหา…
 	ArtCraft Website	เว็บไซต์อาร์ตคราฟต์
 	Join the ArtCraft Discord…	เข้าร่วม ArtCraft Discord…
@@ -622,11 +622,11 @@
 	Import Shortcuts…	นำเข้าทางลัด…
 	Load a keyboard shortcut set saved as .kys	โหลดชุดแป้นพิมพ์ลัดที่บันทึกเป็น .kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	นำเข้าทางลัด {n} จาก {file} คลิกตกลงเพื่อเก็บไว้
-	{n} commands are not in PhotoCraft.	คำสั่ง {n} ไม่ได้อยู่ใน PhotoCraft
+	{n} commands are not in Lienzo.	คำสั่ง {n} ไม่ได้อยู่ใน Lienzo
 	Keyboard shortcuts imported	นำเข้าแป้นพิมพ์ลัดแล้ว
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	ชุดแป้นพิมพ์ลัดของคุณ {set} ใช้งานอยู่ที่นี่: แป้นพิมพ์ลัด {n} แตกต่างจากค่าเริ่มต้น แก้ไข › แป้นพิมพ์ลัดจะแสดงข้อมูลเหล่านั้น รีเซ็ตทั้งหมดเป็นค่าเริ่มต้นจะเลิกทำสิ่งนี้
 	Import keyboard shortcuts?	นำเข้าแป้นพิมพ์ลัดใช่ไหม
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	PhotoCraft พบชุดแป้นพิมพ์ลัดของคุณ {set} จากโปรแกรมแก้ไขภาพอื่นบนคอมพิวเตอร์เครื่องนี้: ทางลัด {n} แตกต่างจากของ PhotoCraft นำเข้าเหรอ?
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	Lienzo พบชุดแป้นพิมพ์ลัดของคุณ {set} จากโปรแกรมแก้ไขภาพอื่นบนคอมพิวเตอร์เครื่องนี้: ทางลัด {n} แตกต่างจากของ Lienzo นำเข้าเหรอ?
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	แก้ไข › แป้นพิมพ์ลัด › รีเซ็ตทั้งหมดเป็นค่าเริ่มต้น ยกเลิกการนำเข้า
 	Don't Import	อย่านำเข้า
 	The keyboard shortcut set was not imported: {error}	ไม่ได้นำเข้าชุดแป้นพิมพ์ลัด: {error}
@@ -930,7 +930,7 @@
 	Embed Color Profile	ฝังโปรไฟล์สี
 	Assign Profile…	กำหนดโปรไฟล์…
 	Convert to Profile…	แปลงเป็นโปรไฟล์…
-	PhotoCraft Manages Colors	PhotoCraft จัดการสี
+	Lienzo Manages Colors	Lienzo จัดการสี
 	Printer Manages Colors	เครื่องพิมพ์จัดการสี
 	(print to the printer)	(พิมพ์ไปยังเครื่องพิมพ์)
 	Absolute Colorimetric	การวัดสีแบบสัมบูรณ์
@@ -1531,15 +1531,15 @@
 	Use File › Open, or paste a copied image with {paste}.	ใช้ไฟล์ › เปิดหรือวางภาพที่คัดลอกด้วย {paste}
 	Native file drag-and-drop is unavailable	การลากและวางไฟล์เนทิฟไม่พร้อมใช้งาน
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	Wayland ยังไม่รองรับการลากและวางไฟล์เนทิฟ ใช้ไฟล์ › เปิดหรือคัดลอกภาพในตัวจัดการไฟล์ของคุณแล้ววางด้วย {paste}
-	To drop files, start PhotoCraft under XWayland: `{command}`	หากต้องการวางไฟล์ ให้เริ่ม PhotoCraft ภายใต้ XWayland: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	หรือตั้งค่า Preferences > Performance > Linux display server เป็น X11: PhotoCraft จะเริ่มทำงานภายใต้ XWayland เสมอ
+	To drop files, start Lienzo under XWayland: `{command}`	หากต้องการวางไฟล์ ให้เริ่ม Lienzo ภายใต้ XWayland: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	หรือตั้งค่า Preferences > Performance > Linux display server เป็น X11: Lienzo จะเริ่มทำงานภายใต้ XWayland เสมอ
 	Edit › Paste	แก้ไข › วาง
 	Photo	ภาพ
 	Print	พิมพ์
 	Art & Illustration	ศิลปะและภาพประกอบ
 	Mobile	มือถือ
 	Film & Video	ภาพยนตร์และวิดีโอ
-	Default PhotoCraft Size	ขนาด PhotoCraft เริ่มต้น
+	Default Lienzo Size	ขนาด Lienzo เริ่มต้น
 	Clipboard	คลิปบอร์ด
 	Photo (2 × 3 in)	ภาพ (2 × 3 นิ้ว)
 	Photo (4 × 6 in)	ภาพ (4 × 6 นิ้ว)
@@ -1691,7 +1691,7 @@
 	Reverse	ย้อนกลับ
 	Align with layer	จัดแนวกับเลเยอร์
 	Join us on Discord	เข้าร่วมกับเราบน Discord
-	PhotoCraft website	เว็บไซต์PhotoCraft
+	Lienzo website	เว็บไซต์Lienzo
 	ArtCraft	อาร์ตคราฟต์
 	GitHub	GitHub
 	No character style	ไม่มีสไตล์ตัวละคร
@@ -1717,9 +1717,9 @@
 	Don't Save	อย่าบันทึก
 	No	ไม่
 	Yes	ใช่
-	These settings aren't available in PhotoCraft yet.	การตั้งค่าเหล่านี้ยังไม่มีใน PhotoCraft
+	These settings aren't available in Lienzo yet.	การตั้งค่าเหล่านี้ยังไม่มีใน Lienzo
 	Shortcut removed.	ลบทางลัดแล้ว
-	All shortcuts reset to PhotoCraft defaults.	ทางลัดทั้งหมดรีเซ็ตเป็นค่าเริ่มต้นของ PhotoCraft
+	All shortcuts reset to Lienzo defaults.	ทางลัดทั้งหมดรีเซ็ตเป็นค่าเริ่มต้นของ Lienzo
 	Add Shortcut	เพิ่มทางลัด
 	Delete Shortcut	ลบทางลัด
 	Press keys…	กดปุ่ม…
@@ -2202,8 +2202,8 @@
 	Output:	เอาท์พุท:
 	Paint Overlay	การทาสีทับซ้อน
 	Pattern Size	ขนาดรูปแบบ
-	PhotoCraft	PhotoCraft
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — โปรแกรมแก้ไขภาพแบบโอเพ่นซอร์สที่เขียนด้วยภาษา Rust
+	Lienzo	Lienzo
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — โปรแกรมแก้ไขภาพแบบโอเพ่นซอร์สที่เขียนด้วยภาษา Rust
 	Position and Size	ตำแหน่งและขนาด
 	Preserve Details	เก็บรายละเอียด
 	Preserve Luminosity	รักษาความส่องสว่าง
@@ -2534,7 +2534,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	อัตโนมัติใช้การเร่งความเร็ว GPU เมื่อพร้อมใช้งานและถอยกลับไปที่การเรนเดอร์ CPU เมื่อมีข้อผิดพลาด
 	Switched to CPU rendering	เปลี่ยนไปใช้การเรนเดอร์ CPU
 	GPU acceleration could not continue. Your documents are unchanged.	การเร่งความเร็ว GPU ไม่สามารถดำเนินการต่อได้ เอกสารของคุณไม่มีการเปลี่ยนแปลง
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	PhotoCraft กำลังใช้ตัวแต่งภาพ CPU หน้าต่างอาจยังคงใช้อะแดปเตอร์กราฟิกของคุณ
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo กำลังใช้ตัวแต่งภาพ CPU หน้าต่างอาจยังคงใช้อะแดปเตอร์กราฟิกของคุณ
 	Retry GPU requires a restart. Save your work first.	ลอง GPU อีกครั้งต้องรีสตาร์ท บันทึกงานของคุณก่อน
 	Retry GPU tries the graphics processor again now.	ลองอีกครั้ง GPU ลองใช้โปรเซสเซอร์กราฟิกอีกครั้งทันที
 	GPU acceleration resumed.	การเร่งความเร็ว GPU กลับมาทำงานอีกครั้ง
@@ -2787,7 +2787,7 @@ fontWeight	Italic	ตัวเอียง
 	Color to Alpha…	สีเป็นอัลฟ่า…
 	Transparency Threshold	เกณฑ์ความโปร่งใส
 	Opacity Threshold	เกณฑ์ความทึบ
-	PhotoCraft — Screen Color Picker	PhotoCraft — ตัวเลือกสีของหน้าจอ
+	Lienzo — Screen Color Picker	Lienzo — ตัวเลือกสีของหน้าจอ
 
 	Rasterize svg groups deeper than	แรสเตอร์กลุ่ม svg ให้ลึกกว่า
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 ปิดเกณฑ์นี้ กลุ่ม SVG ที่ซ้อนกันลึกกว่า 100 ระดับจะถูกแรสเตอร์เสมอ
@@ -3171,7 +3171,7 @@ curves	Smooth	เรียบเนียน
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	โหลดการกระทำ {n} รายการจาก {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} ขั้นตอนยังไม่มีเทียบเท่ากับ PhotoCraft
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} ขั้นตอนยังไม่มีเทียบเท่ากับ Lienzo
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	บันทึกการกระทำ {n} ลงใน {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	{n} ขั้นตอนที่ไม่มี Photoshop เทียบเท่าเหลืออยู่
 
@@ -3268,19 +3268,19 @@ curves	Smooth	เรียบเนียน
 	Shadow Mode	โหมดเงา
 	Shadow Color	สีเงา
 	Shadow Opacity	ความทึบของเงา
-# PhotoCraft release checks.
+# Lienzo release checks.
 	Check for Updates…	ตรวจสอบการอัปเดต…
-	PhotoCraft Updates	อัพเดตPhotoCraft
+	Lienzo Updates	อัพเดตLienzo
 	Checking for updates…	กำลังตรวจสอบการอัปเดต…
 	Open the release page to choose an installer for your system.	เปิดหน้าเผยแพร่เพื่อเลือกตัวติดตั้งสำหรับระบบของคุณ
 	Open Download Page	เปิดหน้าดาวน์โหลด
-	PhotoCraft is up to date.	PhotoCraft เป็นเวอร์ชันล่าสุดแล้ว
+	Lienzo is up to date.	Lienzo เป็นเวอร์ชันล่าสุดแล้ว
 	Could not check for updates.	ไม่สามารถตรวจสอบการอัปเดตได้
 	Updates have not been checked yet.	ยังไม่ได้ตรวจสอบการอัปเดต
 	Check Again	ตรวจสอบอีกครั้ง
 	Automatically Check for Updates	ตรวจสอบการอัปเดตโดยอัตโนมัติ
 	Installed version: {version}	เวอร์ชันที่ติดตั้ง: {version}
-	PhotoCraft {version} is available.	PhotoCraft {version} พร้อมใช้งานแล้ว
+	Lienzo {version} is available.	Lienzo {version} พร้อมใช้งานแล้ว
 # Embedded Profile Mismatch: profile names beside the choices, Remember this choice
 	Use the embedded profile ({profile})	ใช้โปรไฟล์แบบฝัง ({profile})
 	Convert to the working space ({profile})	แปลงเป็นพื้นที่ทำงาน ({profile})
@@ -3306,12 +3306,12 @@ curves	Smooth	เรียบเนียน
 	Bicubic Smoother	Bicubic เรียบเนียนยิ่งขึ้น
 	Bicubic Sharper	เครื่องลับ Bicubic
 	Pasting from other apps is unavailable	ไม่สามารถวางจากแอปอื่นได้
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	PhotoCraft ไม่สามารถเข้าถึงคลิปบอร์ดของระบบในเซสชันนี้ บน Wayland แซนด์บ็อกซ์ Flatpak จะซ่อนโปรโตคอลที่ภาพจากแอปอื่นถูกอ่านผ่าน
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	หากต้องการวางจากแอปอื่น ให้เริ่ม PhotoCraft ภายใต้ XWayland: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	ไม่มีสิ่งใดที่จะวาง: PhotoCraft ไม่สามารถอ่านคลิปบอร์ดของระบบได้ที่นี่
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	Lienzo ไม่สามารถเข้าถึงคลิปบอร์ดของระบบในเซสชันนี้ บน Wayland แซนด์บ็อกซ์ Flatpak จะซ่อนโปรโตคอลที่ภาพจากแอปอื่นถูกอ่านผ่าน
+	To paste from other apps, start Lienzo under XWayland: `{command}`	หากต้องการวางจากแอปอื่น ให้เริ่ม Lienzo ภายใต้ XWayland: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	ไม่มีสิ่งใดที่จะวาง: Lienzo ไม่สามารถอ่านคลิปบอร์ดของระบบได้ที่นี่
 	Delete this set	ลบชุดนี้
 	New Set…	ชุดใหม่…
-	PhotoCraft Defaults	ค่าเริ่มต้นของ PhotoCraft
+	Lienzo Defaults	ค่าเริ่มต้นของ Lienzo
 	Save a list of these shortcuts as a web page	บันทึกรายการทางลัดเหล่านี้เป็นหน้าเว็บ
 	Save the changes to this set	บันทึกการเปลี่ยนแปลงในชุดนี้
 	Save these shortcuts as a .kys file	บันทึกทางลัดเหล่านี้เป็นไฟล์ .kys
@@ -4073,7 +4073,7 @@ curves	Smooth	เรียบเนียน
 	Multiple Flames Path Directions	ทิศทางเส้นทางเปลวไฟหลายจุด
 	Multiple Flames Various Length	เปลวไฟหลายลูก ความยาวหลากหลาย
 	My Brushes	แปรงของฉัน
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run PhotoCraft under XWayland with `WAYLAND_DISPLAY= photocraft`.	Wayland ยังไม่รองรับการลากและวางไฟล์เนทิฟ ใช้ไฟล์ › เปิดหรือเรียกใช้ PhotoCraft ภายใต้ XWayland ด้วย `WAYLAND_DISPLAY= photocraft`
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Wayland ยังไม่รองรับการลากและวางไฟล์เนทิฟ ใช้ไฟล์ › เปิดหรือเรียกใช้ Lienzo ภายใต้ XWayland ด้วย `WAYLAND_DISPLAY= lienzo`
 	Nearest	ใกล้ที่สุด
 	Neon Glow	นีออนโกลว์
 	Neutralize	ทำให้เป็นกลาง
@@ -4160,7 +4160,7 @@ curves	Smooth	เรียบเนียน
 	Pentagon	เพนตากอน
 	Percentage	เปอร์เซ็นต์
 	Permission denied	การอนุญาตถูกปฏิเสธ
-	PhotoCraft keeps retrying; until a save succeeds, preference changes are lost when it closes.	PhotoCraft พยายามอีกครั้ง จนกว่าการบันทึกจะสำเร็จ การเปลี่ยนแปลงการตั้งค่าจะสูญหายไปเมื่อปิด
+	Lienzo keeps retrying; until a save succeeds, preference changes are lost when it closes.	Lienzo พยายามอีกครั้ง จนกว่าการบันทึกจะสำเร็จ การเปลี่ยนแปลงการตั้งค่าจะสูญหายไปเมื่อปิด
 	Photomerge	ผสานภาพ
 	Pick Color From Image	เลือกสีจากภาพ
 	Picture Frame	กรอบรูป
@@ -4217,7 +4217,7 @@ curves	Smooth	เรียบเนียน
 	Pyramids	ปิรามิด
 	Quick Actions	การดำเนินการด่วน
 	Quit	เลิก
-	Quit PhotoCraft	ออกจากPhotoCraft
+	Quit Lienzo	ออกจากLienzo
 	Quit {app}	Quit {app}
 	R G B	อาร์ จี บี
 	R g b	อาร์ จี บี
@@ -4293,7 +4293,7 @@ curves	Smooth	เรียบเนียน
 	Save a Copy	บันทึกสำเนา
 	Save before closing?	บันทึกก่อนปิด?
 	Save for Web (Legacy)	บันทึกสำหรับเว็บ (ดั้งเดิม)
-	Save your work and restart PhotoCraft to retry GPU acceleration. CPU rendering remains active for this session.	บันทึกงานของคุณและรีสตาร์ท PhotoCraft เพื่อลองเร่งความเร็ว GPU อีกครั้ง การเรนเดอร์ CPU ยังคงทำงานอยู่สำหรับเซสชันนี้
+	Save your work and restart Lienzo to retry GPU acceleration. CPU rendering remains active for this session.	บันทึกงานของคุณและรีสตาร์ท Lienzo เพื่อลองเร่งความเร็ว GPU อีกครั้ง การเรนเดอร์ CPU ยังคงทำงานอยู่สำหรับเซสชันนี้
 	Saved a copy as {path}	บันทึกสำเนาเป็น {path}
 	Saved {path}; image assets: {n} in {dir}	Saved {path}; image assets: {n} in {dir}
 	Saving…	กำลังบันทึก…

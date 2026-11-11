@@ -8,9 +8,9 @@
 use egui::{Align2, Sense, pos2, vec2};
 use serde_json::{Map, Value, json};
 
-use photocraft_engine::prefs::Unit;
+use lienzo_engine::prefs::Unit;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DialogKind, Tool};
 use crate::theme::Tokens;
 
@@ -55,7 +55,7 @@ pub fn is_click(start: [f64; 2], points: &[[f64; 3]], zoom: f32) -> bool {
 
 /// Open the creation dialog of `tool` for a click at `at` (document px). `None` for a tool without
 /// one (Line, Custom Shape).
-pub fn open(app: &mut PhotocraftApp, tool: Tool, at: [f64; 2]) -> Option<u64> {
+pub fn open(app: &mut LienzoApp, tool: Tool, at: [f64; 2]) -> Option<u64> {
     let (kind, label) = kind_of(tool)?;
     if !(at[0].is_finite() && at[1].is_finite()) {
         return None;
@@ -137,7 +137,7 @@ pub fn geometry(f: &Map<String, Value>) -> Result<Value, String> {
 }
 
 /// OK: create the shape and remember the values for the next click.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let result = geometry(f).and_then(|g| crate::vector_ui::create_shape(app, g));
     match &result {
         Ok(_) => {
@@ -160,7 +160,7 @@ fn label(ui: &mut egui::Ui, text: &str) {
     ui.painter().text(pos2(r.right() - 6.0, r.center().y), Align2::RIGHT_CENTER, text, egui::FontId::proportional(12.0), t.text_dim);
 }
 
-pub fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.spacing_mut().item_spacing.y = 6.0;
     let kind = f.get(MARK).and_then(Value::as_str).unwrap_or("").to_string();
     // Width and height each in its own unit (percent of the document's side): the ruler unit, or

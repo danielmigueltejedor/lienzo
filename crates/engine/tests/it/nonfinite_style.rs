@@ -1,6 +1,6 @@
 //! Character style numbers that overflow `f32` are refused, so the document stays saveable.
 
-use photocraft_engine::{EngineError, Session};
+use lienzo_engine::{EngineError, Session};
 use serde_json::json;
 
 fn fixture() -> (Session, u64) {

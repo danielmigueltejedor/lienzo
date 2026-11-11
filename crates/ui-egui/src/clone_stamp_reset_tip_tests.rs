@@ -4,13 +4,13 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::burn_default_tip_tests::{app, invoke, pick};
 use crate::state::Tool;
 
 /// Size, hardness, spacing, angle, roundness and smoothing of the live brush, as `brush.get`
 /// reports the tip.
-fn tip(app: &mut PhotocraftApp) -> [f64; 6] {
+fn tip(app: &mut LienzoApp) -> [f64; 6] {
     let b = app.run("brush.get", json!({})).unwrap();
     let [size, hardness, spacing, angle, roundness] = ["size", "hardness", "spacing", "angle", "roundness"].map(|k| b[k].as_f64().unwrap());
     let smoothing = f64::from(app.session.tools.brush.smoothing.amount);
@@ -18,7 +18,7 @@ fn tip(app: &mut PhotocraftApp) -> [f64; 6] {
 }
 
 /// A tip that is no tool's starting tip, so a reset has something to undo.
-fn scramble(app: &mut PhotocraftApp) {
+fn scramble(app: &mut LienzoApp) {
     let b = &mut app.session.tools.brush;
     (b.size, b.hardness, b.spacing, b.angle, b.roundness, b.smoothing.amount) = (57.0, 0.4, 0.6, 30.0, 0.5, 0.3);
 }

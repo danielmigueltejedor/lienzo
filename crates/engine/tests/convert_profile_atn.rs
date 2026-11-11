@@ -2,16 +2,16 @@
 
 use std::sync::Arc;
 
-use photocraft_cms::Builtin;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, SmartObject, SmartSource};
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_geom::{Affine, Size};
-use photocraft_psd::{
+use lienzo_cms::Builtin;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent, SmartObject, SmartSource};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_geom::{Affine, Size};
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Descriptor, Id, UnicodeString, Value as D},
 };
-use photocraft_raster::Surface;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 const FLAGS: [(&str, &str); 3] = [("Dthr", "dither"), ("Fltt", "flatten"), ("rasterizePlaced", "rasterizePlaced")];
@@ -44,13 +44,13 @@ fn recorded(d: Descriptor) -> Vec<u8> {
 }
 
 fn load(s: &mut Session, bytes: &[u8]) -> Value {
-    s.execute("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(bytes)})).unwrap()
+    s.execute("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(bytes)})).unwrap()
 }
 
 fn save(s: &mut Session) -> Vec<u8> {
     let saved = s.execute("actions.save", json!({"set": "Profile"})).unwrap();
     assert_eq!(saved["skipped"], json!([]));
-    photocraft_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()
+    lienzo_engine::paint::tile::b64_decode(saved["data"].as_str().unwrap()).unwrap()
 }
 
 /// Preserve absolute intent and keep unrepresentable intent settings as complete steps.
@@ -113,7 +113,7 @@ fn intent_fixture() -> Session {
 }
 
 fn rendered(s: &Session) -> Vec<[f32; 4]> {
-    photocraft_compose::flatten(&s.active().unwrap().doc).into_px()
+    lienzo_compose::flatten(&s.active().unwrap().doc).into_px()
 }
 
 /// Assert saved typed fields and independent pixel/model effects, not just paired adapters.
@@ -259,8 +259,8 @@ fn reference_recorded_convert_to_profile_maps() {
     let d = Descriptor::new("null")
         .with(
             "null",
-            D::Reference(vec![photocraft_psd::descriptor::ReferenceItem::Enumerated {
-                class: photocraft_psd::descriptor::Class { name: UnicodeString::new_nul(""), class_id: Id::new("Dcmn") },
+            D::Reference(vec![lienzo_psd::descriptor::ReferenceItem::Enumerated {
+                class: lienzo_psd::descriptor::Class { name: UnicodeString::new_nul(""), class_id: Id::new("Dcmn") },
                 type_id: Id::new("Ordn"),
                 value: Id::new("Trgt"),
             }]),

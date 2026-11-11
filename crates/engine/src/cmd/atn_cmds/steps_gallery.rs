@@ -8,18 +8,18 @@ use super::events::pixel_target;
 use super::fields::{Mapped, step};
 use super::tables::{lookup, lookup_back};
 use super::{AtnEvent, AtnItem, D, Descriptor, Map, Value, json};
-use photocraft_algo::{GalleryEffect, GalleryFilter};
+use lienzo_algo::{GalleryEffect, GalleryFilter};
 
 /// One key of an effect, in recorded order.
 enum G {
     /// An integer clamped to `min..=max` on import, as Photoshop clamps it, and its default.
     Int(&'static str, &'static str, i32, i32, i32),
-    /// An enumeration (Photoshop ↔ PhotoCraft values) and Photoshop's default value. An unknown
+    /// An enumeration (Photoshop ↔ Lienzo values) and Photoshop's default value. An unknown
     /// value keeps the step.
     Enum(&'static str, &'static str, &'static [(&'static str, &'static str)], &'static str),
     Bool(&'static str, &'static str, bool),
     /// A colour object ↔ `#rrggbb` and Photoshop's default, which a step recorded without the
-    /// key loads with. A PhotoCraft step without it saves the effect's own default colour, the
+    /// key loads with. A Lienzo step without it saves the effect's own default colour, the
     /// one it plays with.
     Color(&'static str, &'static str, &'static str),
 }
@@ -598,7 +598,7 @@ fn effect_command(event: &AtnEvent) -> Option<&'static str> {
 pub(crate) const RECORDED_EVENT: &str = "_atnEvent";
 
 /// Remember the event of a step loaded from an effect's own event (`AccE`, `accentedEdges`).
-/// A `GEfc` step carries nothing and saves as `GEfc`, as does a step made in PhotoCraft.
+/// A `GEfc` step carries nothing and saves as `GEfc`, as does a step made in Lienzo.
 pub(super) fn remember_event(item: &AtnItem, steps: &mut [(String, Value)]) {
     let [(id, Value::Object(p))] = steps else { return };
     let menu = id == super::MENU_ITEM
@@ -614,7 +614,7 @@ pub(super) fn remember_event(item: &AtnItem, steps: &mut [(String, Value)]) {
     };
     // `dictionary` keeps the panel name's bytes as recorded (a GBK or Shift_JIS name would not
     // survive a round trip through text); `name` is for reading.
-    let dictionary = photocraft_paint::tile::b64_encode(&item.dictionary);
+    let dictionary = lienzo_paint::tile::b64_encode(&item.dictionary);
     p.insert(RECORDED_EVENT.into(), json!({"event": item.event.id(), "eventKind": kind, "name": item.dictionary(), "dictionary": dictionary}));
 }
 
@@ -628,7 +628,7 @@ pub(super) fn recorded_event(id: &str, params: &Value) -> Option<(AtnEvent, Vec<
         "name" => AtnEvent::name(event),
         _ => return None,
     };
-    let name = match jstr(r, "dictionary").and_then(photocraft_paint::tile::b64_decode) {
+    let name = match jstr(r, "dictionary").and_then(lienzo_paint::tile::b64_decode) {
         Some(bytes) => bytes,
         None => jstr(r, "name").unwrap_or("").as_bytes().to_vec(),
     };
@@ -730,7 +730,7 @@ pub(super) fn gallery_to(id: &str, p: &Value) -> Option<Descriptor> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_algo::GalleryParamKind;
+    use lienzo_algo::GalleryParamKind;
 
     fn params(m: Mapped) -> (String, Value) {
         match m {

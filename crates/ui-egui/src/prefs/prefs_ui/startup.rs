@@ -1,8 +1,8 @@
-use super::{JobEvent, JobOutcome, PhotocraftApp, Started, Value, json, prefs};
+use super::{JobEvent, JobOutcome, LienzoApp, Started, Value, json, prefs};
 
 /// View › Rulers follows `unitsAndRulers.showRulers` when the preference changes (at launch, from
 /// `prefs.set` or a reset), so documents open with the rulers as last set.
-pub(super) fn sync_rulers(app: &mut PhotocraftApp) {
+pub(super) fn sync_rulers(app: &mut LienzoApp) {
     let want = app.session.prefs().units_and_rulers.show_rulers;
     if app.prefs_rt.show_rulers != Some(want) {
         app.ui.extras.rulers = want;
@@ -11,7 +11,7 @@ pub(super) fn sync_rulers(app: &mut PhotocraftApp) {
 }
 
 /// View › Rulers was toggled: remember it for the next launch (Photoshop keeps the last state).
-pub(crate) fn remember_rulers(app: &mut PhotocraftApp, on: bool) {
+pub(crate) fn remember_rulers(app: &mut LienzoApp, on: bool) {
     if app.session.prefs().units_and_rulers.show_rulers != on {
         app.session.prefs.edit(|p| p.units_and_rulers.show_rulers = on);
     }
@@ -21,7 +21,7 @@ pub(crate) fn remember_rulers(app: &mut PhotocraftApp, on: bool) {
 // ------------------------------------------------------------------ lifecycle
 
 /// Load saved preferences once, when the app is created. Recovery starts during frame upkeep.
-pub fn load(app: &mut PhotocraftApp) {
+pub fn load(app: &mut LienzoApp) {
     if app.prefs_rt.loaded {
         return;
     }
@@ -91,7 +91,7 @@ fn stored_base(loaded: &Value, stored: &Value) -> Value {
 /// the defaults over them on the next save so the next launch reads a clean file. The save
 /// base holds the unreadable values, so the three-way merge sees them as changed here and
 /// replaces (or removes) exactly those, keeping everything else in the stored file.
-fn repair_invalid(app: &mut PhotocraftApp, invalid: &[prefs::InvalidPref]) {
+fn repair_invalid(app: &mut LienzoApp, invalid: &[prefs::InvalidPref]) {
     if let Some(base) = app.prefs_rt.saved_value.as_mut() {
         for bad in invalid {
             let Some((key, parent)) = bad.keys.split_last() else {
@@ -106,7 +106,7 @@ fn repair_invalid(app: &mut PhotocraftApp, invalid: &[prefs::InvalidPref]) {
     let paths = invalid.iter().map(prefs::InvalidPref::path).collect::<Vec<_>>().join(", ");
     let (title, line) = (
         "Some preferences were reset",
-        "The preferences file held values PhotoCraft can't read for {paths}. Those settings are back to their defaults; the rest of your preferences loaded.",
+        "The preferences file held values Lienzo can't read for {paths}. Those settings are back to their defaults; the rest of your preferences loaded.",
     );
     // Notices keep their English source and are translated when drawn.
     let id = crate::notices::post(app, title, vec![line.into()], false, None);
@@ -117,7 +117,7 @@ fn repair_invalid(app: &mut PhotocraftApp, invalid: &[prefs::InvalidPref]) {
 
 /// Discover recovery entries after construction, then decode one at a time without blocking
 /// the window. Only the completed job's apply step touches the session.
-pub(super) fn recovery(app: &mut PhotocraftApp) {
+pub(super) fn recovery(app: &mut LienzoApp) {
     if !app.prefs_rt.recovery_started {
         app.prefs_rt.recovery_started = true;
         if app.session.prefs().file_handling.recover_on_launch
@@ -129,7 +129,7 @@ pub(super) fn recovery(app: &mut PhotocraftApp) {
     start_next_recovery(app);
 }
 
-fn start_next_recovery(app: &mut PhotocraftApp) {
+fn start_next_recovery(app: &mut LienzoApp) {
     while app.prefs_rt.recovery_pending.is_none() {
         let Some(r) = app.prefs_rt.recovery_queue.pop_front() else { return };
         let label = format!("Recovering {}", r.name);
@@ -141,7 +141,7 @@ fn start_next_recovery(app: &mut PhotocraftApp) {
             move |ctx| {
                 ctx.check()?;
                 ctx.progress(0.0, "Loading recovery data");
-                let doc = (r.load)().map_err(photocraft_engine::EngineError::Other)?;
+                let doc = (r.load)().map_err(lienzo_engine::EngineError::Other)?;
                 ctx.check()?;
                 Ok(doc)
             },
@@ -149,7 +149,7 @@ fn start_next_recovery(app: &mut PhotocraftApp) {
                 let active = s.active().map(|st| st.doc.id);
                 let first = s.documents().is_empty();
                 s.add_document(doc, r.path);
-                let st = s.active_mut().ok_or(photocraft_engine::EngineError::NoDocument)?;
+                let st = s.active_mut().ok_or(lienzo_engine::EngineError::NoDocument)?;
                 st.saved_revision = 0;
                 let (id, revision) = (st.doc.id, st.revision);
                 if let Some(index) = active.and_then(|id| s.documents().iter().position(|st| st.doc.id == id)) {
@@ -166,7 +166,7 @@ fn start_next_recovery(app: &mut PhotocraftApp) {
     }
 }
 
-fn finish_recovery(app: &mut PhotocraftApp, key: &str, v: &Value) {
+fn finish_recovery(app: &mut LienzoApp, key: &str, v: &Value) {
     let recovered = v
         .get("documentId")
         .and_then(Value::as_u64)
@@ -192,7 +192,7 @@ fn finish_recovery(app: &mut PhotocraftApp, key: &str, v: &Value) {
 
 /// Recovery uses the existing job polling/progress/cancel path. Its successful result adopts
 /// the original entry on the UI thread, using identity rather than a mutable tab position.
-pub(crate) fn on_recovery_event(app: &mut PhotocraftApp, e: &JobEvent) -> bool {
+pub(crate) fn on_recovery_event(app: &mut LienzoApp, e: &JobEvent) -> bool {
     if !app.prefs_rt.recovery_pending.as_ref().is_some_and(|(job, _)| *job == e.id) {
         return false;
     }
@@ -214,7 +214,7 @@ pub(crate) fn on_recovery_event(app: &mut PhotocraftApp, e: &JobEvent) -> bool {
 
 /// Attach the brush preset store once its background load finishes, and surface write
 /// failures in the status bar.
-pub(super) fn presets_store(app: &mut PhotocraftApp) {
+pub(super) fn presets_store(app: &mut LienzoApp) {
     if let Some(rx) = &app.services.preset_store {
         match rx.try_recv() {
             Ok(opened) => {

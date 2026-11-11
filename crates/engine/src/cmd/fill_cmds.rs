@@ -5,10 +5,10 @@
 //! transparency. The selection (or the whole canvas) is filled, as one history step ("Fill").
 //! Every parameter is validated: a bad one is an error, never a panic.
 
-use photocraft_algo::content_aware::FillOptions;
-use photocraft_color::BlendMode;
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::{Surface, from_rgba_into, to_rgba};
+use lienzo_algo::content_aware::FillOptions;
+use lienzo_color::BlendMode;
+use lienzo_geom::{Rect, TILE_SIZE};
+use lienzo_raster::{Surface, from_rgba_into, to_rgba};
 use serde_json::{Value, json};
 
 use crate::commands::{blend_from_str, color_param, layer_param};
@@ -114,11 +114,11 @@ pub fn fill(s: &mut Session, p: &Value) -> Result<Value> {
         "pattern" => {
             let pat = crate::pattern_cmds::resolve_param(s, CMD, p)?;
             let (scale, angle, _, phase) = crate::pattern_cmds::placement(CMD, p)?;
-            let tile = photocraft_compose::pattern::Tile::new(&pat).ok_or_else(|| bad("the pattern is empty or too large to paint"))?;
+            let tile = lienzo_compose::pattern::Tile::new(&pat).ok_or_else(|| bad("the pattern is empty or too large to paint"))?;
             // Photoshop's Fill uses the canvas origin.
-            let place = photocraft_compose::pattern::Placement::new(Rect::EMPTY, false, phase, scale, angle);
+            let place = lienzo_compose::pattern::Placement::new(Rect::EMPTY, false, phase, scale, angle);
             out["pattern"] = json!(pat.id);
-            Source::Pixels(area, photocraft_compose::pattern::render(&tile, &place, area))
+            Source::Pixels(area, lienzo_compose::pattern::render(&tile, &place, area))
         }
         "history" => {
             // A History panel row `state` or a `snapshot`, else the History Brush's source.
@@ -140,7 +140,7 @@ pub fn fill(s: &mut Session, p: &Value) -> Result<Value> {
             let surf = st.doc.layer(lid).and_then(|l| l.surface()).ok_or_else(|| EngineError::Other("Content-Aware fill needs a pixel layer".into()))?;
             let seed = p.get("seed").and_then(Value::as_u64).unwrap_or(1);
             // The native Boolean enables quarter-turn candidates, within the existing mosaic cap.
-            let rotations = if rotate { photocraft_algo::content_aware::rotation_level("full") } else { Vec::new() };
+            let rotations = if rotate { lienzo_algo::content_aware::rotation_level("full") } else { Vec::new() };
             let options = FillOptions { rotations, scale, mirror, ..content_aware_options(adapt, seed) };
             content_aware(surf, sel, doc_bounds, &options)?
         }
@@ -151,7 +151,7 @@ pub fn fill(s: &mut Session, p: &Value) -> Result<Value> {
     }
     // The document's own CMYK profile converts the fill colour, like the compositor and brush.
     let cmyk = crate::brush_cmds::doc_cmyk_space(s);
-    photocraft_color::convert::with_cmyk_space(cmyk.as_ref(), || {
+    lienzo_color::convert::with_cmyk_space(cmyk.as_ref(), || {
         s.edit("Fill", |doc, _| {
             let sel = doc.selection.clone();
             let (surf, lock) = crate::channel_cmds::target_surface(doc, id, p)?;
@@ -172,7 +172,7 @@ fn color_source(s: &Session, c: [f32; 4]) -> Source {
 
 /// `source`'s opaque colour as samples of `fmt` (alpha last, as in [`from_rgba_into`]), or `None`
 /// for a source that is not one colour. A CMYK pick keeps its inks in a CMYK target.
-fn encode_color(fmt: &photocraft_color::PixelFormat, source: &Source, enc: &mut [f32; 8]) -> Option<usize> {
+fn encode_color(fmt: &lienzo_color::PixelFormat, source: &Source, enc: &mut [f32; 8]) -> Option<usize> {
     let (rgba, cmyk) = match source {
         Source::Color(c) if c[3] >= 1.0 => (*c, None),
         Source::Cmyk { rgba, cmyk } => (*rgba, Some(*cmyk)),
@@ -180,7 +180,7 @@ fn encode_color(fmt: &photocraft_color::PixelFormat, source: &Source, enc: &mut 
     };
     let n = from_rgba_into(fmt, rgba, enc);
     if let Some(k) = cmyk
-        && fmt.mode == photocraft_color::ColorMode::Cmyk
+        && fmt.mode == lienzo_color::ColorMode::Cmyk
     {
         enc[..4].copy_from_slice(&k);
     }
@@ -230,7 +230,7 @@ pub(crate) fn blend_color_mask(
     blend_into(surf, area, &source, Some(coverage), Blend { mode, opacity, keep_alpha: preserve_transparency, restore: false })
 }
 
-/// The selection filled from its surroundings (`photocraft_algo::content_aware`), as straight
+/// The selection filled from its surroundings (`lienzo_algo::content_aware`), as straight
 /// RGBA over the sampling window. Only the selected pixels are used.
 fn content_aware(surf: &Surface, sel: &Surface, canvas: Rect, options: &FillOptions) -> Result<Source> {
     let hole_bounds = sel.content_bounds().intersect(&canvas);
@@ -245,7 +245,7 @@ fn content_aware(surf: &Surface, sel: &Surface, canvas: Rect, options: &FillOpti
 }
 
 /// The pixels `is_hole` picks inside `hole_bounds` filled from their surroundings
-/// (`photocraft_algo::content_aware`): Photoshop's sampling window around `hole_bounds`, sampling
+/// (`lienzo_algo::content_aware`): Photoshop's sampling window around `hole_bounds`, sampling
 /// only the non-hole pixels `usable` allows. Returns the window and its pixels in the surface's
 /// own channels (the hole filled, the rest as read). Shared by Edit › Fill › Content-Aware and the
 /// Crop tool's Content-Aware fill (#3823).
@@ -263,7 +263,7 @@ pub(crate) fn content_aware_native(
 
 /// The adaptation defaults shared by Fill and Content-Aware Crop.
 fn content_aware_options(color_adaptation: bool, seed: u64) -> FillOptions {
-    FillOptions { color_adaptation: photocraft_algo::content_aware::color_level(if color_adaptation { "default" } else { "none" }), seed, ..Default::default() }
+    FillOptions { color_adaptation: lienzo_algo::content_aware::color_level(if color_adaptation { "default" } else { "none" }), seed, ..Default::default() }
 }
 
 /// Fill the bounded sampling window with native channel values and the requested adaptations.
@@ -275,7 +275,7 @@ fn content_aware_native_with_options(
     is_hole: impl Fn(i32, i32) -> bool,
     usable: impl Fn(i32, i32) -> bool,
 ) -> Result<(Rect, Vec<f32>)> {
-    use photocraft_algo::content_aware::fill;
+    use lienzo_algo::content_aware::fill;
     let window = sampling_window(hole_bounds, canvas);
     let n = surf.format().channels();
     let (w, h) = window_size(window)?;
@@ -298,11 +298,11 @@ fn content_aware_native_with_options(
 }
 
 /// Photoshop's Content-Aware sampling window around the selection bounds `hole`
-/// ([`photocraft_algo::content_aware::sampling_window`]): Edit › Fill, the workspace's Rectangular
+/// ([`lienzo_algo::content_aware::sampling_window`]): Edit › Fill, the workspace's Rectangular
 /// and Auto areas and the retouching tools all copy from within it. Worked out in i64, so a loaded
 /// document declaring an absurd selection can't overflow it (#963).
 pub(crate) fn sampling_window(hole: Rect, canvas: Rect) -> Rect {
-    photocraft_algo::content_aware::sampling_window(hole.intersect(&canvas), canvas)
+    lienzo_algo::content_aware::sampling_window(hole.intersect(&canvas), canvas)
 }
 
 /// The size of a Content-Aware sampling window, or an error for a window too large to read and
@@ -426,15 +426,15 @@ fn blend_into(surf: &mut Surface, area: Rect, source: &Source, sel: Option<&Surf
 
 /// The selection's coverage over one tile (its channel 0).
 pub(crate) struct Mask<'a> {
-    bytes: Option<photocraft_raster::TileBytes<'a>>,
+    bytes: Option<lienzo_raster::TileBytes<'a>>,
     default: &'a [u8],
-    fmt: photocraft_color::PixelFormat,
+    fmt: lienzo_color::PixelFormat,
     origin: Rect,
 }
 
 impl<'a> Mask<'a> {
     /// `sel` over the tile at `tc` (its default pixel where it has no tile there).
-    pub(crate) fn of(sel: &'a Surface, tc: photocraft_geom::TileCoord) -> Self {
+    pub(crate) fn of(sel: &'a Surface, tc: lienzo_geom::TileCoord) -> Self {
         Mask { bytes: sel.tile(tc).map(|t| t.bytes()), default: sel.default_bytes(), fmt: sel.format(), origin: tc.rect() }
     }
     pub(crate) fn at(&self, x: i32, y: i32) -> f32 {
@@ -442,7 +442,7 @@ impl<'a> Mask<'a> {
         let bpp = self.fmt.bytes_per_pixel();
         // A default-pixel mask is one pixel long: every position reads it.
         let i = if bytes.len() == bpp { 0 } else { ((y - self.origin.y0) as usize * TILE_SIZE as usize + (x - self.origin.x0) as usize) * bpp };
-        bytes.get(i..i + bpp).map_or(0.0, |px| photocraft_color::read_sample(px, self.fmt.sample, 0))
+        bytes.get(i..i + bpp).map_or(0.0, |px| lienzo_color::read_sample(px, self.fmt.sample, 0))
     }
     /// Fully selected over `r`?
     pub(crate) fn full(&self, r: Rect) -> bool {
@@ -455,7 +455,7 @@ impl<'a> Mask<'a> {
 }
 
 /// Blend into one tile's encoded pixels (`bytes`, the tile at `origin`) over `tr`.
-fn blend_tile(bytes: &mut [u8], fmt: &photocraft_color::PixelFormat, origin: Rect, tr: Rect, source: &Source, mask: Option<&Mask>, b: Blend) {
+fn blend_tile(bytes: &mut [u8], fmt: &lienzo_color::PixelFormat, origin: Rect, tr: Rect, source: &Source, mask: Option<&Mask>, b: Blend) {
     let Blend { mode, opacity, keep_alpha, restore } = b;
     let n = fmt.channels();
     let bpp = fmt.bytes_per_pixel();
@@ -467,7 +467,7 @@ fn blend_tile(bytes: &mut [u8], fmt: &photocraft_color::PixelFormat, origin: Rec
     let opaque = match encode_color(fmt, source, &mut enc) {
         Some(m) if mode == BlendMode::Normal => {
             let mut bytes = vec![0u8; bpp];
-            photocraft_raster::encode_pixel(fmt, enc.get(..m.min(n)).unwrap_or(&[]), &mut bytes);
+            lienzo_raster::encode_pixel(fmt, enc.get(..m.min(n)).unwrap_or(&[]), &mut bytes);
             // Keeping alpha: copy the colour samples only (alpha is the last sample).
             let keep = if keep_alpha && fmt.alpha { bpp - bpp / n.max(1) } else { bpp };
             Some((bytes, keep))
@@ -492,13 +492,13 @@ fn blend_tile(bytes: &mut [u8], fmt: &photocraft_color::PixelFormat, origin: Rec
                 continue;
             }
             for (c, v) in px.iter_mut().enumerate().take(n) {
-                *v = photocraft_color::read_sample(pb, fmt.sample, c);
+                *v = lienzo_color::read_sample(pb, fmt.sample, c);
             }
             let d = to_rgba(fmt, &px[..n.min(8)]);
             let mut c = source.at(x, y);
             if mode == BlendMode::Dissolve {
                 // Dissolve: each pixel is either fully painted or untouched, with the coverage as odds.
-                k = if photocraft_color::dither_noise(x, y) < c[3] * k { 1.0 } else { 0.0 };
+                k = if lienzo_color::dither_noise(x, y) < c[3] * k { 1.0 } else { 0.0 };
                 c[3] = 1.0;
                 if k <= 0.0 {
                     continue;
@@ -510,15 +510,15 @@ fn blend_tile(bytes: &mut [u8], fmt: &photocraft_color::PixelFormat, origin: Rec
             } else if keep {
                 // Alpha kept: source atop, so a half-transparent pixel takes the new colour by the
                 // source alpha alone (#5783).
-                photocraft_color::blend::composite_atop(blend, d, c, k)
+                lienzo_color::blend::composite_atop(blend, d, c, k)
             } else {
-                photocraft_color::blend::composite(blend, d, c, k)
+                lienzo_color::blend::composite(blend, d, c, k)
             };
             if keep {
                 o[3] = d[3];
             }
             let m = from_rgba_into(fmt, o, &mut enc);
-            photocraft_raster::encode_pixel(fmt, enc.get(..m.min(n)).unwrap_or(&[]), pb);
+            lienzo_raster::encode_pixel(fmt, enc.get(..m.min(n)).unwrap_or(&[]), pb);
         }
     }
 }

@@ -1,17 +1,17 @@
 //! Shift+Alt+Q selects Behind for Brush and Pencil (#11894).
 
 use egui::{Context, Event, Key, Modifiers, RawInput};
-use photocraft_color::BlendMode;
-use photocraft_engine::Session;
+use lienzo_color::BlendMode;
+use lienzo_engine::Session;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::brush_mode_menu::{self, Item};
 use crate::state::Tool;
 
 /// Create a test document for the selected tool, optionally with a transparent layer.
-fn app(tool: Tool, transparent_layer: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(Session::new(), Default::default());
+fn app(tool: Tool, transparent_layer: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     if transparent_layer {
         app.run("layer.new.layer", json!({})).unwrap();
@@ -21,7 +21,7 @@ fn app(tool: Tool, transparent_layer: bool) -> PhotocraftApp {
 }
 
 /// Send Shift+Alt+Q through the shortcut handler and assert that it consumes the key.
-fn press_behind(app: &mut PhotocraftApp, ctx: &Context) {
+fn press_behind(app: &mut LienzoApp, ctx: &Context) {
     let modifiers = Modifiers::SHIFT | Modifiers::ALT;
     let events = vec![Event::ModifiersChanged(modifiers), Event::Key { key: Key::Q, physical_key: Some(Key::Q), pressed: true, repeat: false, modifiers }];
     ctx.begin_pass(RawInput { events, ..Default::default() });
@@ -31,7 +31,7 @@ fn press_behind(app: &mut PhotocraftApp, ctx: &Context) {
 }
 
 /// Check whether the rendered options bar displays the Behind label.
-fn options_show_behind(app: &mut PhotocraftApp, ctx: &Context) -> bool {
+fn options_show_behind(app: &mut LienzoApp, ctx: &Context) -> bool {
     /// Find the Behind text label in a shape or its descendants.
     fn has_behind(shape: &egui::Shape) -> bool {
         match shape {
@@ -55,7 +55,7 @@ fn brush_and_pencil_select_behind_in_one_command() {
         app.ui.tool_options.pencil_clear = true;
         app.session.tools.brush.mode = BlendMode::Multiply;
         let ctx = Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        LienzoApp::setup_context(&ctx, Default::default());
         assert!(brush_mode_menu::enabled(&app, Item::Behind));
         let (id, params) = brush_mode_menu::engine_call(&app, tool, Item::Behind).unwrap();
         assert_eq!((id, &params), ("tools.setBrush", &json!({"brush": {"mode": "Normal", "behind": true}})));
@@ -76,7 +76,7 @@ fn brush_and_pencil_select_behind_in_one_command() {
 #[test]
 fn brush_and_pencil_do_not_select_behind_without_a_document() {
     for (tool, brush_tool) in [(Tool::Brush, Tool::Pencil), (Tool::Pencil, Tool::Brush)] {
-        let mut app = PhotocraftApp::new(Session::new(), Default::default());
+        let mut app = LienzoApp::new(Session::new(), Default::default());
         assert!(app.session.active().is_none());
         app.ui.tool = tool;
         app.ui.brush_tool = brush_tool;

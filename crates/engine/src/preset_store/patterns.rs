@@ -18,9 +18,9 @@
 
 use std::collections::HashSet;
 
-use photocraft_doc::Pattern;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_doc::Pattern;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 use super::{PresetBackend, missing_file};
@@ -120,7 +120,7 @@ fn preview(p: &Pattern) -> Pattern {
 }
 
 fn read_one(backend: &dyn PresetBackend, file: &str) -> Result<Pattern, String> {
-    let mut v = photocraft_io::pattern_map::read_pat(&backend.read(file, MAX_PATTERN_BYTES)?)?;
+    let mut v = lienzo_io::pattern_map::read_pat(&backend.read(file, MAX_PATTERN_BYTES)?)?;
     if v.is_empty() { Err("no pattern in the file".to_string()) } else { Ok(v.swap_remove(0)) }
 }
 
@@ -293,13 +293,13 @@ pub(super) fn sync(backend: &dyn PresetBackend, files: &mut PatternFiles, librar
 }
 
 fn write_pattern(backend: &dyn PresetBackend, p: &Pattern, e: &Entry, owned: bool) -> Result<(), String> {
-    let bytes = photocraft_io::pattern_map::write_pat(std::slice::from_ref(p)).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))?;
+    let bytes = lienzo_io::pattern_map::write_pat(std::slice::from_ref(p)).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))?;
     if bytes.len() as u64 > MAX_PATTERN_BYTES {
         return Err(format!("pattern \"{}\" is too large to save ({} MB limit)", p.name, MAX_PATTERN_BYTES >> 20));
     }
     if is_large(p.width, p.height) {
         // The preview first: a full file without one still loads (by making it).
-        let small = photocraft_io::pattern_map::write_pat(&[preview(p)]).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))?;
+        let small = lienzo_io::pattern_map::write_pat(&[preview(p)]).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))?;
         write_asset(backend, &preview_name(&e.id), &small, owned).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))?;
     }
     write_asset(backend, &e.file, &bytes, owned).map_err(|err| format!("Couldn't save pattern \"{}\": {err}", p.name))
@@ -318,7 +318,7 @@ fn migrate_legacy(backend: &dyn PresetBackend, warnings: &mut Vec<String>) -> (V
             return (Vec::new(), files);
         }
     };
-    let patterns = match photocraft_io::pattern_map::read_pat(&bytes) {
+    let patterns = match lienzo_io::pattern_map::read_pat(&bytes) {
         Ok(p) => p,
         Err(e) => {
             warnings.push(format!("patterns: legacy file preserved: {e}"));
@@ -343,13 +343,13 @@ fn migrate_legacy(backend: &dyn PresetBackend, warnings: &mut Vec<String>) -> (V
         for (p, e) in patterns.iter().zip(&entries) {
             // Never overwrite unknown files, even if a name collides. Identical orphan assets
             // from an interrupted migration can be reused; the legacy file stays untouched.
-            let full = photocraft_io::pattern_map::write_pat(std::slice::from_ref(p))?;
+            let full = lienzo_io::pattern_map::write_pat(std::slice::from_ref(p))?;
             if full.len() as u64 > MAX_PATTERN_BYTES {
                 return Err("pattern exceeds size limit".into());
             }
             write_migration_asset(backend, &e.file, &full)?;
             if is_large(p.width, p.height) {
-                let small = photocraft_io::pattern_map::write_pat(&[preview(p)])?;
+                let small = lienzo_io::pattern_map::write_pat(&[preview(p)])?;
                 write_migration_asset(backend, &preview_name(&p.id), &small)?;
             }
         }

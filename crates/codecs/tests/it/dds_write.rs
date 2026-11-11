@@ -1,7 +1,7 @@
 //! Writing DDS textures: every storage read back through the reader, the header fields, sizes
 //! that aren't a multiple of four, the mip chain, and the block-compression error on ramps.
 
-use photocraft_codecs::{ChannelLayout, DdsCompression, DdsOptions, EncodeOptions, FidelityWarning, Format, Image, decode, encode, fidelity_warnings_with};
+use lienzo_codecs::{ChannelLayout, DdsCompression, DdsOptions, EncodeOptions, FidelityWarning, Format, Image, decode, encode, fidelity_warnings_with};
 
 const DDSD_PITCH: u32 = 0x8;
 const DDSD_MIPMAPCOUNT: u32 = 0x2_0000;
@@ -348,7 +348,7 @@ fn compression_names_round_trip() {
 /// Encode timings on a synthetic ~30 MP texture (6336×4752). Ignored by default; run in release:
 ///
 /// ```sh
-/// cargo test --release -p photocraft-codecs --test it -- dds_write:: --ignored --nocapture
+/// cargo test --release -p lienzo-codecs --test it -- dds_write:: --ignored --nocapture
 /// ```
 #[test]
 #[ignore]

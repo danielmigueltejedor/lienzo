@@ -3,10 +3,10 @@
 //! Formulas are documented approximations of Photoshop behaviour. Exact matching is tuned in
 //! milestone M7 against Photoshop-rendered PSD composites (the oracle in `testkit`).
 
-use photocraft_color::convert::{D50, SRGB_TO_XYZ_D50, XYZ_D50_TO_SRGB, lab_to_srgb, mat3_mul, rgb_to_gray, srgb_to_lab, srgb_to_linear};
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::Adjustment;
-use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel, ToneSpace, lut3d_len};
+use lienzo_color::convert::{D50, SRGB_TO_XYZ_D50, XYZ_D50_TO_SRGB, lab_to_srgb, mat3_mul, rgb_to_gray, srgb_to_lab, srgb_to_linear};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::Adjustment;
+use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel, ToneSpace, lut3d_len};
 
 use crate::Buffer;
 
@@ -53,12 +53,12 @@ impl Transfer {
     /// Default transfer for a document's colour mode and depth. 32-bit samples are linear, and
     /// Photoshop's Exposure works on them as stored (photoshop corpus rgb32 and gray32
     /// exposure.psd: within 0.5/255, against 69/255 through the 2.2 curve).
-    pub fn for_document(mode: photocraft_color::ColorMode, depth: photocraft_color::SampleType) -> Self {
-        if depth == photocraft_color::SampleType::F32 {
+    pub fn for_document(mode: lienzo_color::ColorMode, depth: lienzo_color::SampleType) -> Self {
+        if depth == lienzo_color::SampleType::F32 {
             return Transfer::Gamma(1.0);
         }
         match mode {
-            photocraft_color::ColorMode::Grayscale | photocraft_color::ColorMode::Duotone | photocraft_color::ColorMode::Bitmap => Transfer::Gamma(1.732),
+            lienzo_color::ColorMode::Grayscale | lienzo_color::ColorMode::Duotone | lienzo_color::ColorMode::Bitmap => Transfer::Gamma(1.732),
             _ => Transfer::Srgb,
         }
     }
@@ -74,7 +74,7 @@ impl Transfer {
     /// Tone-encoded value → linear light.
     pub fn decode(self, v: f32) -> f32 {
         match self {
-            Transfer::Srgb => photocraft_color::convert::srgb_to_linear(v.max(0.0)),
+            Transfer::Srgb => lienzo_color::convert::srgb_to_linear(v.max(0.0)),
             Transfer::Gamma(1.0) => v.max(0.0),
             Transfer::Gamma(g) => v.max(0.0).powf(g),
         }
@@ -82,7 +82,7 @@ impl Transfer {
     /// Linear light → tone-encoded value.
     pub fn encode(self, v: f32) -> f32 {
         match self {
-            Transfer::Srgb => photocraft_color::convert::linear_to_srgb(v.max(0.0)),
+            Transfer::Srgb => lienzo_color::convert::linear_to_srgb(v.max(0.0)),
             Transfer::Gamma(1.0) => v.max(0.0),
             Transfer::Gamma(g) => v.max(0.0).powf(1.0 / g),
         }
@@ -222,7 +222,7 @@ fn apply_depth_mode(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, dept
             map_rgb(buf, |c| {
                 // 32-bit samples are linear already, and may go negative.
                 let f = if linear_doc { mat3_mul(&m, c) } else { mat3_mul(&m, c.map(|v| transfer.decode(v))).map(|v| transfer.encode(v)) };
-                let f = if set_lum { photocraft_color::blend::set_lum(f, photocraft_color::blend::lum(c)) } else { f };
+                let f = if set_lum { lienzo_color::blend::set_lum(f, lienzo_color::blend::lum(c)) } else { f };
                 // 32-bit results aren't clipped (photoshop corpus rgb32 photo-filter.psd: white
                 // filters to 1.19 red).
                 if linear_doc { f } else { f.map(|v| v.clamp(0.0, 1.0)) }
@@ -240,8 +240,8 @@ fn apply_depth_mode(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, dept
                     // the grey's luminosity (SetLum + ClipColor), measured in Photoshop 27.11. In
                     // 32-bit documents nothing clips at 1, as with the blend mode there (photoshop
                     // corpus rgb32 black-white-tint.psd: white tints to 1.05, 1.00, 0.87).
-                    Some(t) if hdr => photocraft_color::blend::blend_rgb_within(photocraft_color::blend::BlendMode::Color, [g; 3], *t, f32::MAX),
-                    Some(t) => photocraft_color::blend::set_lum(*t, g).map(|v| v.clamp(0.0, 1.0)),
+                    Some(t) if hdr => lienzo_color::blend::blend_rgb_within(lienzo_color::blend::BlendMode::Color, [g; 3], *t, f32::MAX),
+                    Some(t) => lienzo_color::blend::set_lum(*t, g).map(|v| v.clamp(0.0, 1.0)),
                     None => [g; 3],
                 }
             })
@@ -255,7 +255,7 @@ fn apply_depth_mode(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, dept
                 // Driven by the W3C luminosity (0.3, 0.59, 0.11), not the Rec. 601 grey: photoshop
                 // corpus rgb8 and rgb16 gradient-map.psd match within a level (2 levels off with
                 // 0.299, 0.587, 0.114).
-                let mut t = photocraft_color::blend::lum([p[0], p[1], p[2]]);
+                let mut t = lienzo_color::blend::lum([p[0], p[1], p[2]]);
                 if *reverse {
                     t = 1.0 - t;
                 }
@@ -298,7 +298,7 @@ pub fn apply_in(adj: &Adjustment, buf: &mut Buffer, transfer: Transfer, depth: O
     if mode == ColorMode::Lab && lab_channel_adjustment(adj) {
         apply_lab(adj, buf, depth);
     } else if mode == ColorMode::Cmyk && cmyk_channel_adjustment(adj) {
-        use photocraft_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
+        use lienzo_color::convert::{cmyk_to_rgb, rgb_to_cmyk};
         if let Adjustment::BrightnessContrast { brightness, contrast, legacy } = adj {
             let table = ink_brightness_contrast_lut(*brightness, *contrast, *legacy);
             map_rgb(buf, |c| cmyk_to_rgb(rgb_to_cmyk(c).map(|v| ink_through(&table, v))));

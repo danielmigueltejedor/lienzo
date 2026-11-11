@@ -10,9 +10,9 @@
 use serde_json::{Map, Value, json};
 use web_time::{Duration, Instant};
 
-use photocraft_engine::prefs::{Actions, PlaybackPerformance};
+use lienzo_engine::prefs::{Actions, PlaybackPerformance};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// The marker a paced playback leaves where a step dialog's id would be (see [`super::waiting_dialog`]).
 pub(crate) const PLAYBACK_TIMER: &str = "__playbackTimer";
@@ -34,13 +34,13 @@ pub(crate) struct Timer {
 }
 
 /// Native Play and control-channel menu clicks may open editors and wait between steps.
-pub(super) fn is_interactive(app: &PhotocraftApp) -> bool {
+pub(super) fn is_interactive(app: &LienzoApp) -> bool {
     !app.automation_input && !app.programmatic_playback
 }
 
 /// How long a person's Play waits after a step, or `None` when it goes straight on (Accelerated,
 /// and always for agents).
-pub(super) fn step_pause(app: &PhotocraftApp) -> Option<Duration> {
+pub(super) fn step_pause(app: &LienzoApp) -> Option<Duration> {
     if !is_interactive(app) {
         return None;
     }
@@ -54,7 +54,7 @@ pub(super) fn step_pause(app: &PhotocraftApp) -> Option<Duration> {
 
 /// Step `i` of `action` ended as `c` (`ran` steps of it before): when it simply ran and Step by
 /// Step or Pause For waits before the next enabled step, park the rest ([`super::Called::Paced`]).
-pub(super) fn paced(app: &mut PhotocraftApp, action: &super::Action, i: usize, id: &str, ran: u64, c: super::Called) -> super::Called {
+pub(super) fn paced(app: &mut LienzoApp, action: &super::Action, i: usize, id: &str, ran: u64, c: super::Called) -> super::Called {
     if !matches!(c, super::Called::Done) || !action.enabled_steps().any(|(j, _)| j > i) {
         return c;
     }
@@ -66,7 +66,7 @@ pub(super) fn paced(app: &mut PhotocraftApp, action: &super::Action, i: usize, i
 
 /// Park `action` after its step `i` (`ran` steps of it so far): it continues from the next step
 /// after `wait`. Returns the `paused` value [`super::play_owned`] reports.
-fn pace(app: &mut PhotocraftApp, action: &str, i: usize, id: &str, ran: u64, wait: Duration) -> Value {
+fn pace(app: &mut LienzoApp, action: &str, i: usize, id: &str, ran: u64, wait: Duration) -> Value {
     let rev = app.session.actions.rev;
     let gate = app.session.authorize;
     let pb = &mut app.paused_playbacks;
@@ -84,18 +84,18 @@ fn pace(app: &mut PhotocraftApp, action: &str, i: usize, id: &str, ran: u64, wai
 }
 
 /// The token of the paced playback that is waiting, if any.
-pub(super) fn waiting(app: &PhotocraftApp) -> Option<u64> {
+pub(super) fn waiting(app: &LienzoApp) -> Option<u64> {
     app.paused_playbacks.timer.map(|t| t.token)
 }
 
 /// Whether a paced playback is waiting for its next step.
-pub(crate) fn pending(app: &PhotocraftApp) -> bool {
+pub(crate) fn pending(app: &LienzoApp) -> bool {
     app.paused_playbacks.timer.is_some()
 }
 
 /// End a waiting paced playback where it is: the steps it applied stay, in one history state when
 /// the option is on. Returns whether one was waiting.
-pub(crate) fn stop(app: &mut PhotocraftApp) -> bool {
+pub(crate) fn stop(app: &mut LienzoApp) -> bool {
     let Some(timer) = app.paused_playbacks.timer.take() else { return false };
     let fields = Map::from_iter([(super::RESUME.to_string(), json!(timer.token))]);
     super::stopped(app, &fields);
@@ -104,7 +104,7 @@ pub(crate) fn stop(app: &mut PhotocraftApp) -> bool {
 
 /// Once per frame: play the next step when its wait is over, or end the playback on Esc, an edit of
 /// the action list or a new recording.
-pub(crate) fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn tick(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(timer) = app.paused_playbacks.timer else { return };
     let esc = app.ui.dialogs.is_empty() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
     let changed = timer.rev != app.session.actions.rev || app.session.actions.recording.is_some();
@@ -130,7 +130,7 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 }
 
 /// Playback Options…: the saved options, Pause For's seconds kept while another mode is chosen.
-pub(super) fn open_dialog(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub(super) fn open_dialog(app: &mut LienzoApp) -> Result<Value, String> {
     let a = &app.session.prefs().actions;
     let fields = json!({
         PLAYBACK_OPTIONS: true,
@@ -201,7 +201,7 @@ fn seconds_of(fields: &Map<String, Value>) -> u8 {
 /// OK: store the options (`actions.setPlayback`). Performance and Create a single history state go
 /// as the dialog holds them, so the command refuses a value automation set that the dialog can't
 /// show (`null`, an unknown mode) instead of saving a default in its place.
-pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, fields: &Map<String, Value>) -> Result<Value, String> {
     let field = |key: &str| fields.get(key).cloned().unwrap_or(Value::Null);
     app.run("actions.setPlayback", json!({"performance": field("performance"), "seconds": seconds_of(fields), "singleState": field("singleState")}))
 }

@@ -7,27 +7,27 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable, by};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 use crate::theme::ThemeKind;
 
-fn bar(tool: Tool) -> Harness<'static, PhotocraftApp> {
+fn bar(tool: Tool) -> Harness<'static, LienzoApp> {
     bar_in(tool, ThemeKind::ProMedium)
 }
 
-fn bar_in(tool: Tool, theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar_in(tool: Tool, theme: ThemeKind) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }
 
 /// The descriptions of the widgets labelled `label`, or, for the controls a caption names (Mode
 /// and the fields), of every control of that kind.
-fn descriptions(h: &Harness<'static, PhotocraftApp>, label: &str) -> Vec<String> {
+fn descriptions(h: &Harness<'static, LienzoApp>, label: &str) -> Vec<String> {
     let of = |n: egui_kittest::Node<'_>| n.accesskit_node().description().map(|d| d.to_string());
     if label == "Mode" {
         return h.query_all_by_role(egui::accesskit::Role::ComboBox).filter_map(of).collect();

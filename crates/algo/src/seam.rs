@@ -14,7 +14,7 @@
 //! or at the border) is the highest energy, and NaN protection protects nothing, so no NaN (whose
 //! sign and payload arithmetic does not keep consistently across builds) reaches the seam search.
 
-use photocraft_raster::{Cancelled, Interrupt};
+use lienzo_raster::{Cancelled, Interrupt};
 
 /// Energy added per unit of protection: far above any gradient magnitude.
 const PROTECT_ENERGY: f32 = 1.0e4;

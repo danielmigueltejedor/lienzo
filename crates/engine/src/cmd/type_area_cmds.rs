@@ -1,10 +1,10 @@
 //! Area type (#218): type that wraps inside a closed path, like Photoshop's Type tool clicked
 //! inside a closed path or shape. `type.detachFromPath` (type_extra_cmds.rs) releases it.
 
-use photocraft_doc::text::TextShape;
-use photocraft_doc::vector::{Knot, Path};
-use photocraft_doc::{Document, LayerContent, LayerId};
-use photocraft_geom::Point;
+use lienzo_doc::text::TextShape;
+use lienzo_doc::vector::{Knot, Path};
+use lienzo_doc::{Document, LayerContent, LayerId};
+use lienzo_geom::Point;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
@@ -15,7 +15,7 @@ const CMD: &str = "type.fillPath";
 
 // Largest total anchor count of a path area type can fill. Within it every path fits the area
 // edge cap, so a big curved path gets "too many anchor points" rather than "encloses no area".
-use photocraft_text::area::MAX_AREA_KNOTS;
+use lienzo_text::area::MAX_AREA_KNOTS;
 
 fn bad(m: &str) -> EngineError {
     EngineError::BadParams { cmd: CMD.into(), msg: m.into() }
@@ -68,8 +68,8 @@ fn fill_path(s: &mut Session, p: &Value) -> Result<Value> {
         for k in path.subpaths.iter_mut().flat_map(|s| s.knots.iter_mut()) {
             *k = Knot { anchor: map(k.anchor), in_ctrl: map(k.in_ctrl), out_ctrl: map(k.out_ctrl), smooth: k.smooth };
         }
-        let vertical = t.orientation == photocraft_doc::text::Orientation::Vertical;
-        if photocraft_text::area::AreaShape::new(&path, vertical).is_none() {
+        let vertical = t.orientation == lienzo_doc::text::Orientation::Vertical;
+        if lienzo_text::area::AreaShape::new(&path, vertical).is_none() {
             return Err(bad("the path encloses no area; draw a closed path"));
         }
         t.shape = TextShape::Area { path };

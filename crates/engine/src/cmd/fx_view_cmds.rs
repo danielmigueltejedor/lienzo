@@ -2,7 +2,7 @@
 //! shared disclosure triangle). View state ([`crate::DocState::fx_collapsed`]): no history step, and a
 //! clean document stays clean.
 
-use photocraft_doc::{Layer, LayerContent, LayerId};
+use lienzo_doc::{Layer, LayerContent, LayerId};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;

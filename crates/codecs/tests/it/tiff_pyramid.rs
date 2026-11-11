@@ -1,7 +1,7 @@
 //! TIFF "Save Image Pyramid" (#8827): reduced-resolution levels after the full image, each half
 //! the size of the one before, that every reader skips when it opens the file.
 
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 fn pyramid() -> EncodeOptions {
     EncodeOptions { tiff_pyramid: true, ..Default::default() }
@@ -117,7 +117,7 @@ fn colour_is_weighted_between_translucent_pixels() {
 #[test]
 fn layered_and_tagged_data_stay_on_the_full_image() {
     let mut img = solid(200, 100, ChannelLayout::Rgb, SampleType::U8, 0.25);
-    img.icc = Some(photocraft_cms_free_profile());
+    img.icc = Some(lienzo_cms_free_profile());
     img.meta.photoshop_layers = Some(vec![1, 2, 3, 4]);
     img.meta.extra_samples = vec![ExtraSample { kind: 0, data: vec![9; 200 * 100] }];
     let bytes = encode(&img, Format::Tiff, &pyramid()).unwrap();
@@ -133,7 +133,7 @@ fn layered_and_tagged_data_stay_on_the_full_image() {
 }
 
 /// Any bytes a decoder keeps as the ICC profile: the codec stores it without parsing.
-fn photocraft_cms_free_profile() -> Vec<u8> {
+fn lienzo_cms_free_profile() -> Vec<u8> {
     (0..=255u8).collect()
 }
 

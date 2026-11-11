@@ -6,14 +6,14 @@
 //! early must not lose it (and must not deliver it twice), and a batch queued for one document
 //! must not be replayed into another.
 
-use crate::{PhotocraftApp, Services};
+use crate::{LienzoApp, Services};
 use eframe::App as _;
 use egui::{Context, Event, Key, Modifiers, RawInput};
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
-fn app_with_doc() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(Session::new(), Services::default());
+fn app_with_doc() -> LienzoApp {
+    let mut app = LienzoApp::new(Session::new(), Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).expect("a document");
     app
 }
@@ -26,7 +26,7 @@ fn release(key: Key) -> Event {
     Event::Key { key, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE }
 }
 
-fn hook(app: &mut PhotocraftApp, ctx: &Context) -> Vec<Event> {
+fn hook(app: &mut LienzoApp, ctx: &Context) -> Vec<Event> {
     let mut raw = RawInput::default();
     app.inject_synthetic(ctx, &mut raw);
     raw.events

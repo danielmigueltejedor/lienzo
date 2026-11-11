@@ -7,8 +7,8 @@
 //! kind, each followed by a padding byte (14 bytes). Photoshop 27's TIFFs use the same 13-byte
 //! 1077 records.
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{AlphaChannel, ColorIndicates};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{AlphaChannel, ColorIndicates};
 
 pub(crate) const DISPLAY_INFO: u16 = 1077;
 pub(crate) const DISPLAY_INFO_OLD: u16 = 1007;
@@ -119,7 +119,7 @@ pub(crate) fn alternate_spot_colors(data: &[u8]) -> Vec<(u32, Color)> {
 }
 
 /// Whether a DisplayInfo resource 1077 marks any channel as a spot (kind 2), in 13-byte records
-/// (Photoshop's, and PhotoCraft's since 0.8.2) or in the 14-byte padded records PhotoCraft wrote
+/// (Photoshop's, and Lienzo's since 0.8.2) or in the 14-byte padded records Lienzo wrote
 /// up to 0.7.0.
 pub(crate) fn display_info_marks_spot(data: &[u8]) -> bool {
     let body = data.get(4..).unwrap_or_default();
@@ -158,7 +158,7 @@ pub(crate) fn decode_color(space: u16, c: [u16; 4]) -> Color {
 /// A PSD colour structure in one of the spaces Photoshop writes for plain colours (0 RGB,
 /// 1 HSB, 2 CMYK, 7 Lab, 8 Grayscale) as an RGB [`Color`], or `None` for any other space id.
 /// CMYK goes through the colour-managed conversion (the active document CMYK profile, see
-/// `photocraft_color::convert::with_cmyk_space`), Lab through the D50 Lab → sRGB conversion.
+/// `lienzo_color::convert::with_cmyk_space`), Lab through the D50 Lab → sRGB conversion.
 pub(crate) fn decode_known_color(space: u16, c: [u16; 4]) -> Option<Color> {
     let n = |v: u16| f32::from(v) / 65535.0;
     Some(match space {
@@ -208,8 +208,8 @@ pub(crate) fn hsb_to_rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
-    use photocraft_raster::Surface;
+    use lienzo_color::PixelFormat;
+    use lienzo_raster::Surface;
 
     #[test]
     fn display_info_roundtrip() {
@@ -281,7 +281,7 @@ mod tests {
         assert_eq!(alpha_identifiers(false, 2), [0, 0, 0, 3, 0, 0, 0, 4]);
     }
 
-    /// PhotoCraft 0.1.0 to 0.7.0 padded each 1077 record to 14 bytes, so a spot after the first
+    /// Lienzo 0.1.0 to 0.7.0 padded each 1077 record to 14 bytes, so a spot after the first
     /// record sits where a 13-byte reader finds no kind 2; it is still recognised.
     #[test]
     fn a_spot_is_found_in_padded_records() {

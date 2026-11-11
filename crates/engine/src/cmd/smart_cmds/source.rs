@@ -1,6 +1,6 @@
 use std::sync::PoisonError;
 
-use photocraft_geom::TILE_SIZE;
+use lienzo_geom::TILE_SIZE;
 
 use super::{
     Arc, ColorMode, Document, Layer, LayerContent, LayerId, Metadata, Mutex, PixelFormat, Rect, Result, SampleType, Session, SmartObject, SmartSource, Surface,
@@ -19,7 +19,7 @@ fn read_file(path: &str) -> Option<Vec<u8>> {
         return None;
     }
     crate::jobs::authorize_render_command("layer.smartObjects.updateModifiedContent", &json!({"path": path})).ok()?;
-    photocraft_format::read_file(&crate::doc_path::resolve(path).ok()?).ok()
+    lienzo_format::read_file(&crate::doc_path::resolve(path).ok()?).ok()
 }
 
 /// The source file of a smart object: embedded bytes, the PSD's embedded linked-layer data (PSD
@@ -35,7 +35,7 @@ pub fn source_bytes(meta: &Metadata, src: &SmartSource) -> Option<(String, Arc<V
 fn embedded_source_bytes(meta: &Metadata, src: &SmartSource) -> Option<(String, Arc<Vec<u8>>)> {
     match src {
         SmartSource::Embedded { file_name, bytes } => Some((file_name.clone(), bytes.clone())),
-        SmartSource::Linked { path } => photocraft_io::linked::find_linked_file(meta, path).map(|f| (f.file_name, Arc::new(f.bytes))),
+        SmartSource::Linked { path } => lienzo_io::linked::find_linked_file(meta, path).map(|f| (f.file_name, Arc::new(f.bytes))),
     }
 }
 
@@ -180,11 +180,11 @@ pub(crate) fn restore_unrendered<E>(
     Ok(())
 }
 
-pub(super) fn buffer_to_surface(buf: &photocraft_compose::Buffer, fmt: PixelFormat) -> Surface {
+pub(super) fn buffer_to_surface(buf: &lienzo_compose::Buffer, fmt: PixelFormat) -> Surface {
     let n = fmt.channels();
     let mut data = vec![0.0f32; buf.px.len() * n];
     for (p, out) in buf.px.iter().zip(data.chunks_exact_mut(n)) {
-        photocraft_raster::from_rgba_into(&fmt, *p, out);
+        lienzo_raster::from_rgba_into(&fmt, *p, out);
     }
     let mut s = Surface::new(fmt);
     if !buf.rect.is_empty() {
@@ -196,23 +196,23 @@ pub(super) fn buffer_to_surface(buf: &photocraft_compose::Buffer, fmt: PixelForm
 
 /// A source's pixels in `fmt` from a flattened `buf` (the stack-mode combine, which has no
 /// document to composite).
-pub(super) fn source_surface_from_buffer(src: &Document, buf: &photocraft_compose::Buffer, fmt: PixelFormat) -> Result<Surface> {
+pub(super) fn source_surface_from_buffer(src: &Document, buf: &lienzo_compose::Buffer, fmt: PixelFormat) -> Result<Surface> {
     let raster = |f| buffer_to_surface(buf, f);
     convert_source(src, fmt, raster)
 }
 
 /// `src` composited straight into `fmt` in blocks, without the full-size RGBA buffer
-/// [`photocraft_compose::flatten`] allocates (16 bytes a pixel on top of the surface).
+/// [`lienzo_compose::flatten`] allocates (16 bytes a pixel on top of the surface).
 pub(super) fn flattened_source(src: &Document, fmt: PixelFormat) -> Result<Surface> {
     let b = src.bounds();
-    if u64::from(b.width()) * u64::from(b.height()) > photocraft_compose::MAX_RENDER_PIXELS {
+    if u64::from(b.width()) * u64::from(b.height()) > lienzo_compose::MAX_RENDER_PIXELS {
         return Err(other(format!("the smart object's {}×{} contents are too large to render", b.width(), b.height())));
     }
     // The banded compositor composites CMYK in inks and Lab in L, a and b: not the same pixels as
     // the RGBA buffer, so those modes keep the buffer path.
     let native = |m| matches!(m, ColorMode::Cmyk | ColorMode::Lab);
     if native(src.mode) || native(fmt.mode) {
-        return source_surface_from_buffer(src, &photocraft_compose::flatten(src), fmt);
+        return source_surface_from_buffer(src, &lienzo_compose::flatten(src), fmt);
     }
     convert_source(src, fmt, |f| composite_in_blocks(src, f))
 }
@@ -221,7 +221,7 @@ pub(super) fn flattened_source(src: &Document, fmt: PixelFormat) -> Result<Surfa
 /// most sources is the whole image again (a band and its f32 conversion are 32 bytes a pixel).
 const BLOCK_PIXELS: u64 = 1 << 20;
 
-/// [`photocraft_compose::flatten_to_surface`] of `src`, composited a block at a time so the float
+/// [`lienzo_compose::flatten_to_surface`] of `src`, composited a block at a time so the float
 /// composite and its conversion never cover more than [`BLOCK_PIXELS`]. Blocks are whole tiles,
 /// so each block's tiles move into the result as they are: nothing is allocated outside the
 /// block, and nothing is copied.
@@ -238,7 +238,7 @@ fn composite_in_blocks(src: &Document, fmt: PixelFormat) -> Surface {
             let x1 = x.saturating_add(bw);
             let block = Rect::new(x, y, x1, y1).intersect(&b);
             if !block.is_empty() {
-                let mut part = photocraft_compose::composite_to_surface(src, block, fmt, None);
+                let mut part = lienzo_compose::composite_to_surface(src, block, fmt, None);
                 out.put_tiles(part.take_tiles(block));
             }
             x = x1;
@@ -272,7 +272,7 @@ fn convert_source(src: &Document, fmt: PixelFormat, raster: impl FnOnce(PixelFor
     doc.layers = vec![Layer::new("source", LayerContent::Raster(raster(src.pixel_format())))];
     if gray {
         let gray_profile = crate::color_cmds::working_profile(ColorMode::Grayscale);
-        crate::color_cmds::convert_document(&mut doc, &gray_profile, photocraft_cms::Intent::RelativeColorimetric, true)?;
+        crate::color_cmds::convert_document(&mut doc, &gray_profile, lienzo_cms::Intent::RelativeColorimetric, true)?;
     }
     if linear {
         crate::image_cmds::change_depth(&mut doc, SampleType::F32);
@@ -295,7 +295,7 @@ pub fn svg_source_image(bytes: &[u8], fmt: PixelFormat, scale: f64) -> Result<So
     if let Some(img) = cache_get(&key) {
         return Ok(img);
     }
-    let buf = photocraft_io::svg::rasterize_bounded(bytes, scale as f32, 24_000_000).map_err(|e| other(format!("can't render the SVG smart object: {e}")))?;
+    let buf = lienzo_io::svg::rasterize_bounded(bytes, scale as f32, 24_000_000).map_err(|e| other(format!("can't render the SVG smart object: {e}")))?;
     let img = SourceImage { surface: Arc::new(buffer_to_surface(&buf, fmt)), bounds: buf.rect };
     cache_put(key, img.clone());
     Ok(img)
@@ -304,13 +304,13 @@ pub fn svg_source_image(bytes: &[u8], fmt: PixelFormat, scale: f64) -> Result<So
 /// Render SVG's sRGB colours into the destination profile before placement. The profile is
 /// part of the source cache key, so assigning a different profile cannot reuse old colours.
 pub(super) fn svg_source_image_in(bytes: &[u8], doc: &Document, scale: f64) -> Result<SourceImage> {
-    use photocraft_color::{ColorMode, SampleType};
+    use lienzo_color::{ColorMode, SampleType};
 
     let fmt = doc.pixel_format();
     let profile = crate::color_cmds::document_profile(doc);
     // An exact built-in sRGB destination needs no CMS conversion. Keep the direct render
     // path (and its depth-specific cache) without approximating custom profile equality.
-    if doc.mode == ColorMode::Rgb && profile.to_bytes().as_ref() == photocraft_cms::Builtin::Srgb.profile().to_bytes().as_ref() {
+    if doc.mode == ColorMode::Rgb && profile.to_bytes().as_ref() == lienzo_cms::Builtin::Srgb.profile().to_bytes().as_ref() {
         return svg_source_image(bytes, fmt, scale);
     }
     let mut h = blake3::Hasher::new();
@@ -331,12 +331,12 @@ pub(super) fn svg_source_image_in(bytes: &[u8], doc: &Document, scale: f64) -> R
 /// Convert an sRGB SVG rendering into the document's profile and pixel format (relative
 /// colorimetric, black-point compensation), keeping its bounds.
 pub(super) fn convert_svg_source(source: SourceImage, doc: &Document) -> Result<SourceImage> {
-    use photocraft_cms::{Builtin, Intent, Transform};
+    use lienzo_cms::{Builtin, Intent, Transform};
     let fmt = doc.pixel_format();
     let profile = crate::color_cmds::document_profile(doc);
     let transform = Transform::new(Builtin::Srgb.profile(), &profile, Intent::RelativeColorimetric, true)
         .map_err(|e| other(format!("can't convert the SVG smart object's colours: {e}")))?;
-    let surface = crate::color_cmds::convert_surface(&source.surface, photocraft_color::ColorMode::Rgb, fmt, &transform).convert(fmt);
+    let surface = crate::color_cmds::convert_surface(&source.surface, lienzo_color::ColorMode::Rgb, fmt, &transform).convert(fmt);
     Ok(SourceImage { surface: Arc::new(surface), bounds: source.bounds })
 }
 

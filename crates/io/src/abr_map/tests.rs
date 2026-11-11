@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_psd::abr::{LegacyBrush, write_v6, write_v6_folders, write_v12};
-use photocraft_psd::descriptor::{Id, UnicodeString};
+use lienzo_psd::abr::{LegacyBrush, write_v6, write_v6_folders, write_v12};
+use lienzo_psd::descriptor::{Id, UnicodeString};
 
 fn sample(id: &str, w: u32, h: u32, depth: u16) -> AbrSample {
     let bpp = usize::from(depth / 8);
@@ -130,7 +130,7 @@ fn grit_pattern() -> PsdPattern {
 
 #[test]
 fn pose_axes_abr_import_preserves_independent_stylus_tilt() {
-    let input = photocraft_paint::StrokePoint { tilt_x: 13.0, tilt_y: -27.0, pressure: 0.71, rotation: 67.0, wheel: 0.24, time: 73.0, ..Default::default() };
+    let input = lienzo_paint::StrokePoint { tilt_x: 13.0, tilt_y: -27.0, pressure: 0.71, rotation: 67.0, wheel: 0.24, time: 73.0, ..Default::default() };
     for subversion in [1, 2] {
         for (x, y) in [(false, false), (true, false), (false, true), (true, true)] {
             let preset = Descriptor::new("brushPreset")
@@ -154,13 +154,13 @@ fn pose_axes_abr_import_preserves_independent_stylus_tilt() {
                 expected.tilt_y = -18.0;
             }
             assert_eq!(
-                photocraft_paint::dynamics::apply_pose(b, input),
+                lienzo_paint::dynamics::apply_pose(b, input),
                 expected,
                 "v6.{subversion}, X={x}, Y={y}: one axis must not override the other's tablet data"
             );
             let stored = serde_json::to_vec(&imported.presets[0]).unwrap();
-            let restored: photocraft_paint::BrushPreset = serde_json::from_slice(&stored).unwrap();
-            assert_eq!(photocraft_paint::dynamics::apply_pose(&restored.brush, input), expected, "preset persistence retains the independent flags");
+            let restored: lienzo_paint::BrushPreset = serde_json::from_slice(&stored).unwrap();
+            assert_eq!(lienzo_paint::dynamics::apply_pose(&restored.brush, input), expected, "preset persistence retains the independent flags");
         }
     }
 }
@@ -369,7 +369,7 @@ fn tilt_scale_projection_spacing_and_mixer_fields_map() {
     // Defaults when the file says nothing.
     let p = &imp.presets[1].brush;
     assert!(p.spacing_enabled && !p.shape_dynamics.brush_projection && p.shape_dynamics.tilt_scale == 0.0);
-    assert_eq!(p.mixer, photocraft_paint::MixerSettings::default());
+    assert_eq!(p.mixer, lienzo_paint::MixerSettings::default());
     assert_eq!((p.transfer.wetness, p.transfer.mix), (Dynamic::default(), Dynamic::default()));
 }
 
@@ -385,10 +385,10 @@ fn sampled_tip_paints_the_brush_colour_never_black() {
     // An imported tip is coverage: its pixels decide where paint lands, never what colour.
     // A black tip pixel must mean "no paint", and a painted pixel must carry the brush colour,
     // so a regression that treats the tip bitmap as RGB shows up here as black output.
-    use photocraft_color::PixelFormat;
-    use photocraft_paint::StrokePoint;
-    use photocraft_paint::render::render_stroke;
-    use photocraft_raster::Surface;
+    use lienzo_color::PixelFormat;
+    use lienzo_paint::StrokePoint;
+    use lienzo_paint::render::render_stroke;
+    use lienzo_raster::Surface;
 
     let preset = Descriptor::new("brushPreset").with("Nm  ", t("Tip")).with("Brsh", Value::Descriptor(sampled_tip("$tip-1")));
     let bytes = write_v6(2, &[sample("$tip-1", 8, 8, 8)], &[], &[preset], false).unwrap();
@@ -434,10 +434,10 @@ fn texture_contrast_maps_both_halves() {
 /// "Pen" presets in the reported file are set up) imported but painted nothing.
 #[test]
 fn low_depth_height_texture_brush_paints() {
-    use photocraft_color::PixelFormat;
-    use photocraft_paint::StrokePoint;
-    use photocraft_paint::render::render_stroke;
-    use photocraft_raster::Surface;
+    use lienzo_color::PixelFormat;
+    use lienzo_paint::StrokePoint;
+    use lienzo_paint::render::render_stroke;
+    use lienzo_raster::Surface;
 
     for mode in ["Hght", "linearHeight"] {
         let preset = Descriptor::new("brushPreset")

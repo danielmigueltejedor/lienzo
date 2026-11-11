@@ -5,7 +5,7 @@
 //! Buffers are straight RGBA in 0..=1, row-major. Median cut follows Heckbert (1982); k-means
 //! refinement is Lloyd's algorithm; error diffusion is Floyd & Steinberg (1976).
 
-use photocraft_color::convert::srgb_to_lab;
+use lienzo_color::convert::srgb_to_lab;
 use serde::{Deserialize, Serialize};
 
 mod nearest;
@@ -369,7 +369,7 @@ fn kmeans(pts: &[([f32; 3], u32)], centers: &mut [[f32; 3]], iters: usize) {
 }
 
 fn lab_to_rgb8(lab: [f32; 3]) -> Rgb8 {
-    photocraft_color::convert::lab_to_srgb(lab).map(to8)
+    lienzo_color::convert::lab_to_srgb(lab).map(to8)
 }
 
 /// Histogram colours as CIE Lab points with their counts. Each point depends only on its own

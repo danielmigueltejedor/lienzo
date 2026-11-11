@@ -1,7 +1,7 @@
 //! `type.create` accepts an exact PostScript face name in its font field.
 
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::Session;
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn font_with_postscript_name(source: &[u8], postscript: &str) -> Vec<u8> {
@@ -15,7 +15,7 @@ fn font_with_postscript_name(source: &[u8], postscript: &str) -> Vec<u8> {
             bytes[offset + 4..offset + 6].copy_from_slice(&900u16.to_be_bytes());
         }
     }
-    let names = [(1u16, "PhotoCraft Black Test"), (2, "Black"), (6, postscript), (16, "PhotoCraft Black Test"), (17, "Black")];
+    let names = [(1u16, "Lienzo Black Test"), (2, "Black"), (6, postscript), (16, "Lienzo Black Test"), (17, "Black")];
     let mut table = Vec::new();
     let mut strings = Vec::new();
     for value in [0u16, names.len() as u16, (6 + names.len() * 12) as u16] {
@@ -38,12 +38,12 @@ fn font_with_postscript_name(source: &[u8], postscript: &str) -> Vec<u8> {
 
 #[test]
 fn type_create_resolves_exact_postscript_font_names() {
-    let ps = "PhotoCraft-Black-Test";
-    photocraft_text::shared()
+    let ps = "Lienzo-Black-Test";
+    lienzo_text::shared()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .fonts
-        .register_font_data(font_with_postscript_name(photocraft_text::fonts::INTER_REGULAR.as_slice(), ps));
+        .register_font_data(font_with_postscript_name(lienzo_text::fonts::INTER_REGULAR.as_slice(), ps));
 
     let mut session = Session::new();
     session.execute("file.new", json!({"width": 200, "height": 100, "background": "transparent"})).unwrap();
@@ -52,7 +52,7 @@ fn type_create_resolves_exact_postscript_font_names() {
     let id = LayerId(response["layer"].as_u64().unwrap());
     let LayerContent::Text(text) = &session.active().unwrap().doc.layer(id).unwrap().content else { panic!("not a text layer") };
     let style = &text.char_runs()[0].style;
-    assert_eq!(style.font_family, "PhotoCraft Black Test");
+    assert_eq!(style.font_family, "Lienzo Black Test");
     assert_eq!(style.postscript_name.as_deref(), Some(ps));
     assert_eq!(style.weight, 900);
 
@@ -64,12 +64,12 @@ fn type_create_resolves_exact_postscript_font_names() {
 
 #[test]
 fn exact_postscript_face_clears_retained_weight_variation() {
-    let ps = "PhotoCraft-Black-Test-Var";
-    photocraft_text::shared()
+    let ps = "Lienzo-Black-Test-Var";
+    lienzo_text::shared()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .fonts
-        .register_font_data(font_with_postscript_name(photocraft_text::fonts::INTER_REGULAR.as_slice(), ps));
+        .register_font_data(font_with_postscript_name(lienzo_text::fonts::INTER_REGULAR.as_slice(), ps));
 
     let mut session = Session::new();
     session.execute("file.new", json!({"width": 200, "height": 100, "background": "transparent"})).unwrap();
@@ -80,7 +80,7 @@ fn exact_postscript_face_clears_retained_weight_variation() {
     session.execute("type.setStyle", json!({"layer": id.0, "font": ps})).unwrap();
     let LayerContent::Text(text) = &session.active().unwrap().doc.layer(id).unwrap().content else { panic!("not a text layer") };
     let style = &text.char_runs()[0].style;
-    assert_eq!(style.font_family, "PhotoCraft Black Test");
+    assert_eq!(style.font_family, "Lienzo Black Test");
     assert_eq!(style.weight, 900);
     assert!(!style.variations.iter().any(|v| v.axis == "wght"));
 
@@ -88,7 +88,7 @@ fn exact_postscript_face_clears_retained_weight_variation() {
     session.execute("type.setStyle", json!({"layer": id.0, "font": ps, "variations": {"wght": 700}})).unwrap();
     let LayerContent::Text(text2) = &session.active().unwrap().doc.layer(id).unwrap().content else { panic!("not a text layer") };
     let style2 = &text2.char_runs()[0].style;
-    assert_eq!(style2.font_family, "PhotoCraft Black Test");
+    assert_eq!(style2.font_family, "Lienzo Black Test");
     assert_eq!(style2.weight, 900);
     assert_eq!(style2.variations.iter().find(|v| v.axis == "wght").map(|v| v.value), Some(700.0));
 }

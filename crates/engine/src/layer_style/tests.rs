@@ -28,7 +28,7 @@ fn stroke_emboss_shades_the_stroke_band_only() {
             s.execute("layer.layerStyle.bevelEmboss", json!({"style": style, "size": 6, "depth": 200})).unwrap();
         }
         let d = &s.active().unwrap().doc;
-        photocraft_compose::render(d, d.bounds()).into_px()
+        lienzo_compose::render(d, d.bounds()).into_px()
     };
     let at = |px: &[[f32; 4]], x: usize, y: usize| px[y * 120 + x];
     let (plain, embossed) = (render(true, None), render(true, Some("stroke")));
@@ -65,7 +65,7 @@ fn bevel_command_sets_technique_contour_and_texture() {
     s.execute("layer.layerStyle.bevelEmboss", json!({"style": "pillow", "technique": "chiselHard", "contour": true, "contourRange": 70, "texture": "Bubbles", "textureDepth": -200, "textureInvert": true})).unwrap();
     let fx = effects(&s);
     let Effect::BevelEmboss(b) = &fx[0] else { panic!("{fx:?}") };
-    assert_eq!((b.style, b.technique), (photocraft_doc::BevelStyle::PillowEmboss, BevelTechnique::ChiselHard));
+    assert_eq!((b.style, b.technique), (lienzo_doc::BevelStyle::PillowEmboss, BevelTechnique::ChiselHard));
     assert!((b.contour.as_ref().unwrap().range - 0.7).abs() < 1e-6);
     let t = b.texture.as_ref().unwrap();
     assert_eq!((t.name.as_str(), t.depth, t.invert), ("Bubbles", -2.0, true));
@@ -179,7 +179,7 @@ fn oversized_satin_and_bevel_sizes_stay_saveable_and_render() {
         } else {
             assert!(matches!(result, Err(EngineError::BadParams { .. })));
         }
-        photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
+        lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
         let start = std::time::Instant::now();
         s.execute("document.pixel", json!({"x": 0, "y": 0})).unwrap_or_else(|e| panic!("{cmd} {p}: {e}"));
         assert!(start.elapsed().as_secs() < 20, "{cmd} {p}: {:?}", start.elapsed());
@@ -352,7 +352,7 @@ fn replace_builds_edits_and_preserves_instances() {
     let mut s = session();
     // Two strokes: the first edits a snapshot (params overlay), the second is fresh.
     let first = Effect::Stroke(StrokeFx {
-        common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0),
+        common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0),
         size: 7.0,
         position: StrokePosition::Outside,
         paint: FxPaint::Gradient(Gradient { stops: vec![(0.0, Color::rgb(0.0, 0.0, 1.0)), (1.0, Color::WHITE)], ..Gradient::default() }),
@@ -389,7 +389,7 @@ fn replace_builds_edits_and_preserves_instances() {
 fn replace_rejects_bad_entries_gracefully() {
     let mut s = session();
     let stroke = Effect::Stroke(StrokeFx {
-        common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0),
+        common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0),
         size: 3.0,
         position: StrokePosition::Outside,
         paint: FxPaint::Color(Color::BLACK),
@@ -429,7 +429,7 @@ fn contour_and_noise_params_edit_existing_effects() {
     // An imported contour with an unknown name survives the same round trip.
     let imported = Contour::Custom {
         name: "Photoshop contour".into(),
-        points: vec![photocraft_doc::adjust::CurvePoint { input: 0.0, output: 1.0 }, photocraft_doc::adjust::CurvePoint { input: 1.0, output: 0.0 }],
+        points: vec![lienzo_doc::adjust::CurvePoint { input: 0.0, output: 1.0 }, lienzo_doc::adjust::CurvePoint { input: 1.0, output: 0.0 }],
         corners: vec![],
     };
     let mut carried = before[0].clone();
@@ -452,9 +452,9 @@ fn contour_presets_match_photoshop() {
     // and Gaussian reads 0.36 at 0.5 through Satin but 0.64 as the preset curve (glows, gloss).
     let lut = |name: &str| {
         let Some(Contour::Custom { points, corners, .. }) = builtin_contour(name) else { panic!("{name}") };
-        photocraft_compose::adjust::contour_curve_lut(&points, &corners)
+        lienzo_compose::adjust::contour_curve_lut(&points, &corners)
     };
-    let satin = |name: &str| photocraft_compose::effects::satin_lut(&builtin_contour(name).unwrap()).unwrap();
+    let satin = |name: &str| lienzo_compose::effects::satin_lut(&builtin_contour(name).unwrap()).unwrap();
     let at = |l: &[f32], x: f32| l[(x * (l.len() - 1) as f32).round() as usize];
     let (cone, inverted) = (satin("Cone"), satin("Cone - Inverted"));
     for x in [0.1, 0.25, 0.5, 0.8] {
@@ -474,7 +474,7 @@ fn gradient_overlay_takes_explicit_stops() {
     s.execute("layer.layerStyle.gradientOverlay", json!({"stops": stops, "opacityStops": [[0, 100], [1, 50]]})).unwrap();
     let Effect::GradientOverlay { gradient, .. } = &effects(&s)[0] else { panic!() };
     assert_eq!(gradient.stops.len(), 3);
-    assert_eq!(gradient.stops[1], (0.5, photocraft_color::Color::rgb(0.0, 1.0, 0.0)));
+    assert_eq!(gradient.stops[1], (0.5, lienzo_color::Color::rgb(0.0, 1.0, 0.0)));
     assert_eq!(gradient.opacity_stops, vec![(0.0, 1.0), (1.0, 0.5)]);
     // Editing the same overlay: new stops replace the list (sorted), unsorted input is sorted,
     // and a geometry-only edit keeps the three stops.
@@ -544,7 +544,7 @@ fn contour_presets_and_custom_curves_apply_in_one_undo_step() {
     assert_eq!(sh.contour, builtin_contour("Cone").unwrap());
     assert!(sh.contour.is_corner(1) && sh.anti_alias);
     let Contour::Custom { points, corners, .. } = &sh.contour else { panic!() };
-    let lut = photocraft_compose::adjust::contour_curve_lut(points, corners);
+    let lut = lienzo_compose::adjust::contour_curve_lut(points, corners);
     let at = |x: f32| lut[(x * (lut.len() - 1) as f32).round() as usize];
     // Photoshop's measured Cone: 0 at both ends, a 0.99 peak at 0.5, symmetric.
     assert!(at(0.0).abs() < 1e-3 && at(1.0).abs() < 1e-3 && at(0.5) > 0.98, "a Λ: {} {} {}", at(0.0), at(0.5), at(1.0));

@@ -1,12 +1,12 @@
 use super::{
-    PhotocraftApp, analysis_ui, brush_panel, brush_picker, camera_raw_ui, canvas, dds_options_ui, dialogs, discard_ui, distort_ui, field_wheel, gpu_canvas,
+    LienzoApp, analysis_ui, brush_panel, brush_picker, camera_raw_ui, canvas, dds_options_ui, dialogs, discard_ui, distort_ui, field_wheel, gpu_canvas,
     gpu_status, gradient_ui, i18n, jobs_ui, jpeg_options_ui, kys_import, last_brush, layers_panel_ui, monitor_status, native_menu, notices, paint_mouse,
     palette, panels, prefs_ui, preset_panels, rasterize_prompt, screen_picker, shape_stroke_ui, shortcuts, smart_svg_ui, targa_options_ui, text_field_menu,
     theme, tiff_options_ui, timeline_ui, titlebar, tool_cursor, tool_memory, transform_tool, type_panels_ui, type_tool, updates_ui, vector_ui, view_cmds,
     wide_angle_ui, work_area, workspace_ui,
 };
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Wait out the rest of [`Self::min_frame_ms`] since the last frame started.
     fn cap_frame_rate(&mut self) {
         #[cfg(not(target_arch = "wasm32"))]
@@ -20,7 +20,7 @@ impl PhotocraftApp {
     }
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Whether the Home screen is what the canvas area shows this frame. Files opening in the
     /// background (#210) have tabs before they have documents, so they win over Home. The frame
     /// draws no tool strip, options bar, status bar or docks under Home, and the canvas area
@@ -127,7 +127,7 @@ impl PhotocraftApp {
         if !dropped.is_empty() {
             let at = self.cursor_pos(ctx);
             self.open_dropped(ctx, dropped, at);
-            // Files dragged in from another app's window: PhotoCraft comes to the front and takes
+            // Files dragged in from another app's window: Lienzo comes to the front and takes
             // the keyboard, as Photoshop does, instead of staying behind the source (#5687).
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
@@ -178,7 +178,7 @@ impl PhotocraftApp {
         i18n::set_current(i18n::Lang::from_pref(&self.session.prefs().interface.language));
         // Fonts registered via set_fonts only take effect next frame; named families would panic now.
         if !self.fonts_ready {
-            // egui consumed this pass's input without PhotoCraft handling it: keep the synthetic
+            // egui consumed this pass's input without Lienzo handling it: keep the synthetic
             // batch for the next pass instead of losing the step.
             self.defer_synthetic_pass();
             ctx.request_repaint();

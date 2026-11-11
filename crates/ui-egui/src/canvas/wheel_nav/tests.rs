@@ -585,7 +585,7 @@ fn the_windows_pinch_fold_follows_the_preference() {
     if !cfg!(target_os = "windows") {
         return;
     }
-    let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = Context::default();
     let event = || Event::MouseWheel {
         unit: MouseWheelUnit::Line,

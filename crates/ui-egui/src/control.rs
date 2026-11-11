@@ -39,7 +39,7 @@ use std::sync::mpsc::Sender;
 use base64::Engine as _;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::{DialogKind, Tool};
 
@@ -137,7 +137,7 @@ pub enum Outcome {
     AfterInput,
     /// A command started a background job and the caller waits for it: reply with its result
     /// once it has been applied (or with its error / "cancelled").
-    AfterJob(photocraft_engine::jobs::JobId),
+    AfterJob(lienzo_engine::jobs::JobId),
 }
 
 fn wrap(r: Result<Value, String>) -> Outcome {
@@ -150,7 +150,7 @@ fn wrap(r: Result<Value, String>) -> Outcome {
 /// Run a command the way automation does (script events off). Long commands may run as
 /// background jobs: by default the reply waits for the job's result (backward compatible); with
 /// `wait` false it is `{job, pending: true}` at once.
-fn run_waiting(app: &mut PhotocraftApp, wait: bool, run: impl FnOnce(&mut PhotocraftApp) -> Result<Value, String>) -> Outcome {
+fn run_waiting(app: &mut LienzoApp, wait: bool, run: impl FnOnce(&mut LienzoApp) -> Result<Value, String>) -> Outcome {
     let events_enabled = app.session.prefs().script_events.enabled;
     if events_enabled {
         app.session.edit_prefs(|prefs| prefs.script_events.enabled = false);
@@ -169,7 +169,7 @@ fn run_waiting(app: &mut PhotocraftApp, wait: bool, run: impl FnOnce(&mut Photoc
 /// The `dialog` id of the shell's own dialog (`workspace_ui`) in `ui.inspect` and `ui.dialog.*`.
 const SHELL_DIALOG: &str = "shell";
 
-pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+pub fn handle(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
     app.frame_tool_ctx = Some(ctx.clone());
     let saved = app.session.authorize;
     if let Some(gate) = app.services.automation_authorize {

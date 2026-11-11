@@ -22,8 +22,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 use crate::photo_util::{BandChol, Csr};
@@ -1207,7 +1207,7 @@ pub fn render_mask(mask: &Surface, mesh: &PuppetMesh, deformed: &[[f64; 2]], ord
     }
     let default = mask.default_pixel().first().copied().unwrap_or(0.0);
     let fmt = mask.format();
-    let mut tmp = Surface::new(photocraft_color::PixelFormat::new(fmt.mode, fmt.sample, true));
+    let mut tmp = Surface::new(lienzo_color::PixelFormat::new(fmt.mode, fmt.sample, true));
     tmp.write_region(src, &mask.read_region(src).iter().flat_map(|g| [*g, 1.0]).collect::<Vec<f32>>());
     let tris: Vec<[usize; 3]> = order.iter().filter_map(|&t| mesh.tris.get(t).copied()).collect();
     // Lift: where the undeformed mesh covers the mask, the mask takes its default value.
@@ -1235,7 +1235,7 @@ pub fn render_mask(mask: &Surface, mesh: &PuppetMesh, deformed: &[[f64; 2]], ord
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
 
     fn blob(st: SampleType) -> Surface {
         let mut s = Surface::new(PixelFormat::new(ColorMode::Rgb, st, true));

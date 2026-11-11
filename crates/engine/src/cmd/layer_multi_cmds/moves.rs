@@ -194,7 +194,7 @@ pub fn translate(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The artboard a layer at `bounds` is on: the topmost board holding the centre of its bounds
 /// ([`crate::layer_place::centre`]), the rule a new layer is placed by. `boards` are top to bottom.
-fn board_under(boards: &[(LayerId, photocraft_geom::Rect)], bounds: photocraft_geom::Rect) -> Option<LayerId> {
+fn board_under(boards: &[(LayerId, lienzo_geom::Rect)], bounds: lienzo_geom::Rect) -> Option<LayerId> {
     let (cx, cy) = crate::layer_place::centre(bounds);
     boards.iter().find(|(_, r)| r.contains(cx, cy)).map(|(id, _)| *id)
 }
@@ -216,11 +216,11 @@ type Nest = ((usize, usize), LayerId, Option<LayerId>, Option<LayerId>);
 ///
 /// `ids` are the moved layers ([`move_targets`]), already at their new positions. Left where they
 /// are: artboards themselves, the Background, empty layers, layers whose board doesn't change, a
-/// group that would nest past [`photocraft_doc::MAX_GROUP_DEPTH`], and layers locked against it
+/// group that would nest past [`lienzo_doc::MAX_GROUP_DEPTH`], and layers locked against it
 /// with Lock › Prevent Auto-Nesting (on the layer, a group around it, or the board it would join).
 /// Returns the layers that changed board, bottom to top.
 fn auto_nest(doc: &mut Document, ids: &[LayerId]) -> Vec<LayerId> {
-    let boards: Vec<(LayerId, photocraft_geom::Rect)> = doc.artboards().into_iter().rev().map(|(id, _, board)| (id, board.rect)).collect();
+    let boards: Vec<(LayerId, lienzo_geom::Rect)> = doc.artboards().into_iter().rev().map(|(id, _, board)| (id, board.rect)).collect();
     if boards.is_empty() {
         return Vec::new();
     }
@@ -245,7 +245,7 @@ fn auto_nest(doc: &mut Document, ids: &[LayerId]) -> Vec<LayerId> {
         if from == to || to.is_some_and(|b| locked_board(doc, b)) || group.iter().any(|m| doc.effective_locks(m.id).artboard) {
             continue;
         }
-        if to.is_some() && group.iter().any(|m| 1 + crate::layer_place::subtree_depth(m) > photocraft_doc::MAX_GROUP_DEPTH) {
+        if to.is_some() && group.iter().any(|m| 1 + crate::layer_place::subtree_depth(m) > lienzo_doc::MAX_GROUP_DEPTH) {
             continue;
         }
         for (k, m) in group.into_iter().enumerate() {
@@ -327,16 +327,16 @@ pub fn moved_target(doc: &Document, ids: &[LayerId], dx: i32, dy: i32, mask_targ
     Ok(out)
 }
 
-/// `photocraft_algo::resample::translate_surface` with the content scan cached per tile (a Move
+/// `lienzo_algo::resample::translate_surface` with the content scan cached per tile (a Move
 /// drag shifts the same layers every frame; scanning them each time cost more than the copy).
-pub(crate) fn shift_surface(s: &photocraft_raster::Surface, dx: i32, dy: i32) -> photocraft_raster::Surface {
-    s.translated(dx, dy, photocraft_compose::bounds::content_bounds(s))
+pub(crate) fn shift_surface(s: &lienzo_raster::Surface, dx: i32, dy: i32) -> lienzo_raster::Surface {
+    s.translated(dx, dy, lienzo_compose::bounds::content_bounds(s))
 }
 
 /// [`crate::commands::translate_layer`] plus the vector side, without re-rendering anything.
 fn shift_shown(doc: &Document, l: &mut Layer, dx: i32, dy: i32) {
     use self::shift_surface as translate_surface;
-    let a = photocraft_geom::Affine::translate(f64::from(dx), f64::from(dy));
+    let a = lienzo_geom::Affine::translate(f64::from(dx), f64::from(dy));
     if let Some(r) = &mut l.effects.reference {
         *r = (r.0 + f64::from(dx), r.1 + f64::from(dy));
     }
@@ -413,7 +413,7 @@ pub fn preview_move(doc: &Document, p: &Value, add_copy: bool) -> Option<Documen
 
 /// The rect of the artboard layer `id` sits in, or `None` when it sits in none (or is itself a
 /// board: boards are never nested, and moving one beside another carries its own rect).
-fn board_rect_of(doc: &Document, id: LayerId) -> Option<photocraft_geom::Rect> {
+fn board_rect_of(doc: &Document, id: LayerId) -> Option<lienzo_geom::Rect> {
     if doc.layer(id)?.artboard().is_some() {
         return None;
     }
@@ -424,7 +424,7 @@ fn board_rect_of(doc: &Document, id: LayerId) -> Option<photocraft_geom::Rect> {
 /// locked there (by its own lock or one on a group or board around it).
 #[derive(Clone, Copy)]
 struct Origin {
-    board: Option<photocraft_geom::Rect>,
+    board: Option<lienzo_geom::Rect>,
     pinned: bool,
 }
 

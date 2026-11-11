@@ -5,7 +5,7 @@
 //! An EXIF block (`Metadata::exif`) is itself a small TIFF stream, so both directions go through
 //! the same reader ([`super::tiff_ifd::File`]): reading a TIFF builds a block from the file's own
 //! directories, writing one copies the block's directories into the file. Values are copied as
-//! bytes (re-ordered when the byte orders differ), so tags PhotoCraft doesn't know survive.
+//! bytes (re-ordered when the byte orders differ), so tags Lienzo doesn't know survive.
 //! Classic TIFF only on the reading side: an EXIF block has 4-byte offsets. What is copied is
 //! bounded by the stream's own size and a fixed cap, because entries of a hostile file can
 //! overlap (see [`read`]).

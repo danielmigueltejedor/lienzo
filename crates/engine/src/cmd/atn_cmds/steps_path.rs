@@ -2,8 +2,8 @@
 use super::descriptors::{PX, class, desc, enm, get_list, get_ref, jstr, px};
 use super::fields::{Mapped, step};
 use super::{D, Descriptor, Id, ReferenceItem, Value, json};
-use photocraft_doc::{FillRule, Knot, Path, PathOp, Subpath};
-use photocraft_geom::Point;
+use lienzo_doc::{FillRule, Knot, Path, PathOp, Subpath};
+use lienzo_geom::Point;
 
 pub(super) const SOURCE: &str = "_atnInsertPathDescriptor";
 // The native path validator admits at most 4096 knots/subpaths. Larger wire
@@ -123,7 +123,7 @@ fn path_from(d: &Descriptor) -> Option<Path> {
             path.subpaths.push(Subpath { closed: *closed, knots, op: if i == 0 { op } else { PathOp::Join } });
         }
     }
-    photocraft_vector::flatten::validate_path(&path).ok()?;
+    lienzo_vector::flatten::validate_path(&path).ok()?;
     Some(path)
 }
 
@@ -134,7 +134,7 @@ pub(super) fn from(d: &Descriptor) -> Mapped {
     if raw.len() > MAX_SOURCE_BYTES {
         return Mapped::Unsupported { harmless: false };
     }
-    step("path.set", json!({"name":"work", "path":crate::vector_cmds::path_json(&path), SOURCE:photocraft_paint::tile::b64_encode(&raw)}))
+    step("path.set", json!({"name":"work", "path":crate::vector_cmds::path_json(&path), SOURCE:lienzo_paint::tile::b64_encode(&raw)}))
 }
 
 /// Write a point using pixel units for both coordinates.
@@ -166,7 +166,7 @@ pub(super) fn to(p: &Value) -> Option<Descriptor> {
         return None;
     }
     let path = crate::vector_cmds::parse_path(value).ok()?;
-    photocraft_vector::flatten::validate_path(&path).ok()?;
+    lienzo_vector::flatten::validate_path(&path).ok()?;
     let mut canonical = crate::vector_cmds::path_json(&path);
     let mut supplied = value.clone();
     super::convert::normalise(&mut canonical);
@@ -179,7 +179,7 @@ pub(super) fn to(p: &Value) -> Option<Descriptor> {
         if text.len() > MAX_SOURCE_BYTES.div_ceil(3) * 4 {
             return None;
         }
-        let raw = photocraft_paint::tile::b64_decode(text)?;
+        let raw = lienzo_paint::tile::b64_decode(text)?;
         if raw.len() > MAX_SOURCE_BYTES {
             return None;
         }

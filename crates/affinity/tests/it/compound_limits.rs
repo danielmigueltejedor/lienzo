@@ -2,9 +2,9 @@
 #![cfg(feature = "synth")]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use photocraft_affinity::model::{Document, Kind};
-use photocraft_affinity::synth::{self, F, Method, tag};
-use photocraft_affinity::{Limits, read};
+use lienzo_affinity::model::{Document, Kind};
+use lienzo_affinity::synth::{self, F, Method, tag};
+use lienzo_affinity::{Limits, read};
 use std::time::{Duration, Instant};
 
 fn compound(id: u32, children: Vec<F>) -> F {
@@ -44,17 +44,14 @@ fn document(definitions: Vec<F>, roots: Vec<F>) -> Document {
 // A stack overflow aborts rather than unwinds. Keep that failure (and an exponential hang)
 // inside a child process, so the regression fails without killing the entire test runner.
 fn isolated(name: &str, check: impl FnOnce()) {
-    if std::env::var("PHOTOCRAFT_COMPOUND_CASE").as_deref() == Ok(name) {
+    if std::env::var("LIENZO_COMPOUND_CASE").as_deref() == Ok(name) {
         check();
         return;
     }
     // The harness names a test by its module path below the crate root.
     let test = module_path!().split_once("::").map_or(name.to_string(), |(_, m)| format!("{m}::{name}"));
-    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
-        .args(["--exact", &test, "--nocapture"])
-        .env("PHOTOCRAFT_COMPOUND_CASE", name)
-        .spawn()
-        .unwrap();
+    let mut child =
+        std::process::Command::new(std::env::current_exe().unwrap()).args(["--exact", &test, "--nocapture"]).env("LIENZO_COMPOUND_CASE", name).spawn().unwrap();
     let start = Instant::now();
     loop {
         if let Some(status) = child.try_wait().unwrap() {

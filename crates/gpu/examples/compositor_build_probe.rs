@@ -1,10 +1,10 @@
 //! Measure compositor pipeline construction and, optionally, device work during a background build.
 //!
-//! `cargo run --release -p photocraft-gpu --example compositor_build_probe -- [dx12|vulkan|metal|gl] [fxc|dxc] [rounds=3] [threads=N] [--background] [--json out.json]`
+//! `cargo run --release -p lienzo-gpu --example compositor_build_probe -- [dx12|vulkan|metal|gl] [fxc|dxc] [rounds=3] [threads=N] [--background] [--json out.json]`
 //!
 //! The explicit thread count is passed to the dedicated Rayon build pool.
 
-use photocraft_gpu::Compositor;
+use lienzo_gpu::Compositor;
 use std::fs;
 use std::time::{Duration, Instant};
 
@@ -52,15 +52,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let format = Compositor::preferred_acc_format(&adapter);
         if background {
             if round == 0 {
-                let doc = photocraft_doc::Document::with_background(
+                let doc = lienzo_doc::Document::with_background(
                     "compositor build probe",
-                    photocraft_geom::Size::new(1920, 1080),
-                    photocraft_color::ColorMode::Rgb,
-                    photocraft_color::SampleType::U8,
-                    photocraft_color::Color::WHITE,
+                    lienzo_geom::Size::new(1920, 1080),
+                    lienzo_color::ColorMode::Rgb,
+                    lienzo_color::SampleType::U8,
+                    lienzo_color::Color::WHITE,
                 );
                 let start = Instant::now();
-                let _ = photocraft_compose::render(&doc, doc.bounds());
+                let _ = lienzo_compose::render(&doc, doc.bounds());
                 cpu_idle_ms = Some(start.elapsed().as_secs_f64() * 1000.0);
             }
             let (build_tx, build_rx) = std::sync::mpsc::channel();
@@ -114,15 +114,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let _ = device.poll(wgpu::PollType::Poll);
                     stall.push(tick.elapsed().as_secs_f64() * 1000.0);
                     if round == 0 && cpu_during_ms.is_none() && last_cpu.elapsed() >= Duration::from_millis(100) {
-                        let doc = photocraft_doc::Document::with_background(
+                        let doc = lienzo_doc::Document::with_background(
                             "compositor build probe",
-                            photocraft_geom::Size::new(1920, 1080),
-                            photocraft_color::ColorMode::Rgb,
-                            photocraft_color::SampleType::U8,
-                            photocraft_color::Color::WHITE,
+                            lienzo_geom::Size::new(1920, 1080),
+                            lienzo_color::ColorMode::Rgb,
+                            lienzo_color::SampleType::U8,
+                            lienzo_color::Color::WHITE,
                         );
                         let cpu_start = Instant::now();
-                        let _ = photocraft_compose::render(&doc, doc.bounds());
+                        let _ = lienzo_compose::render(&doc, doc.bounds());
                         cpu_during_ms = Some(cpu_start.elapsed().as_secs_f64() * 1000.0);
                         last_cpu = Instant::now();
                     }

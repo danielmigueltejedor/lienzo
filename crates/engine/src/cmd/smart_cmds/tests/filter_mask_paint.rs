@@ -49,10 +49,10 @@ fn painting_the_filter_mask_hides_the_filters_there_in_one_undo_step() {
         // The painted mask is saved: .pcraft and PSD give it back.
         let doc = s.active().unwrap().doc.clone();
         let id = s.active().unwrap().active_layer.unwrap();
-        let back = photocraft_format::load_from_bytes(&photocraft_format::save_to_bytes(&doc, &Default::default()).unwrap()).unwrap();
+        let back = lienzo_format::load_from_bytes(&lienzo_format::save_to_bytes(&doc, &Default::default()).unwrap()).unwrap();
         assert_eq!(smart(&back, id).unwrap().filter_mask, smart(&doc, id).unwrap().filter_mask, "depth {depth}: .pcraft");
-        let psd = photocraft_io::export(&doc, "psd", &Default::default()).unwrap();
-        let back = photocraft_io::import("x.psd", &psd.bytes).unwrap().document;
+        let psd = lienzo_io::export(&doc, "psd", &Default::default()).unwrap();
+        let back = lienzo_io::import("x.psd", &psd.bytes).unwrap().document;
         let sm = back.walk().into_iter().find_map(|(_, _, l)| if let LayerContent::Smart(sm) = &l.content { Some(sm.clone()) } else { None }).unwrap();
         let (mut a, mut b) = (Vec::new(), Vec::new());
         sm.filter_mask.as_ref().unwrap().values_into(doc.bounds(), &mut a);

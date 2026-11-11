@@ -16,7 +16,7 @@ nextest-version = "0.9.150"
 gpu = { max-threads = 4 }
 
 [[profile.default.overrides]]
-filter = 'package(photocraft-gpu) | (package(photocraft-ui-egui) & (kind(test) | test(/canvas|gpu|mip|type_tool|background_redraw::|floating_group_titles|swap_arrow::tests::rendered_glyph/)))'
+filter = 'package(lienzo-gpu) | (package(lienzo-ui-egui) & (kind(test) | test(/canvas|gpu|mip|type_tool|background_redraw::|floating_group_titles|swap_arrow::tests::rendered_glyph/)))'
 test-group = 'gpu'
 
 # CI (`--profile ci`, .github/workflows/ci.yml). Collect all failures in one integration run
@@ -33,13 +33,13 @@ failure-output = "immediate-final"
 # CPU-backed adapter it uses all GPU slots, avoiding oversubscription without skipping work.
 [[profile.ci.overrides]]
 platform = 'cfg(target_os = "windows")'
-filter = 'package(photocraft-gpu) & test(/pages_are_evicted_under_the_budget|layer_pages_that_just_miss_borrow_the_effect_map_share/)'
+filter = 'package(lienzo-gpu) & test(/pages_are_evicted_under_the_budget|layer_pages_that_just_miss_borrow_the_effect_map_share/)'
 threads-required = 4
 success-output = "immediate"
 
 [[profile.ci.overrides]]
 platform = 'cfg(target_os = "windows")'
-filter = 'package(photocraft-gpu) & test(/documents_larger_than_the_texture_limit|layer_effects_update_incrementally|pages_are_evicted_under_the_budget|the_focused_view_stays_resident_after_a_full_refresh/)'
+filter = 'package(lienzo-gpu) & test(/documents_larger_than_the_texture_limit|layer_effects_update_incrementally|pages_are_evicted_under_the_budget|the_focused_view_stays_resident_after_a_full_refresh/)'
 success-output = "immediate"
 # These multi-page effect regressions saturate the Windows software GPU. Reserve two
 # scheduling slots so four independent devices do not compete for the same CPU renderer.

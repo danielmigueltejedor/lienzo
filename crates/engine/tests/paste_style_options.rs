@@ -1,10 +1,10 @@
 //! Paste Layer Style applies group eligibility consistently and preserves the ATN flag.
 
-use photocraft_color::{BlendMode, Color, ColorMode, SampleType};
-use photocraft_doc::{BlendRange, Document, Effect, Layer, LayerId};
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds, layer_multi_cmds};
-use photocraft_geom::Size;
-use photocraft_psd::{
+use lienzo_color::{BlendMode, Color, ColorMode, SampleType};
+use lienzo_doc::{BlendRange, Document, Effect, Layer, LayerId};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds, layer_multi_cmds};
+use lienzo_geom::Size;
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Class, Descriptor, Id, UnicodeString, Value as D},
 };
@@ -179,13 +179,13 @@ fn recorded(d: Descriptor) -> Vec<u8> {
 }
 
 fn load(s: &mut Session, bytes: &[u8]) -> Value {
-    s.execute("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(bytes)})).unwrap()
+    s.execute("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(bytes)})).unwrap()
 }
 
 fn save(s: &mut Session) -> Vec<u8> {
     let result = s.execute("actions.save", json!({"set": "Style"})).unwrap();
     assert_eq!(result["skipped"], json!([]));
-    photocraft_engine::paint::tile::b64_decode(result["data"].as_str().unwrap()).unwrap()
+    lienzo_engine::paint::tile::b64_decode(result["data"].as_str().unwrap()).unwrap()
 }
 
 /// Inspect typed saved fields, then play against selected groups and pixels to expose dropped flags.

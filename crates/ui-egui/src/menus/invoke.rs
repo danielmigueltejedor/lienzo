@@ -1,4 +1,4 @@
-use super::{DOCUMENT_ITEM, DialogKind, PhotocraftApp, Value, json};
+use super::{DOCUMENT_ITEM, DialogKind, LienzoApp, Value, json};
 
 /// Photoshop's Window › <panel> ids for the panels the shell already has, as `window.toggle.*`.
 pub(crate) fn panel_alias(id: &str) -> Option<&'static str> {
@@ -63,7 +63,7 @@ fn keeps_box_drag(id: &str) -> bool {
 }
 
 /// Run a command id from any source (menu, shortcut, palette, automation).
-pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+pub fn invoke(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
     if app.automation_input
         && let Some(authorize) = app.services.automation_command.as_ref()
     {
@@ -86,10 +86,10 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Va
 }
 
 /// Layer › New › Convert to Frame without params: asks for the frame's name and size first.
-fn frame_convert_dialog(app: &mut PhotocraftApp, id: &str) -> Result<Value, String> {
+fn frame_convert_dialog(app: &mut LienzoApp, id: &str) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document")?;
     let layer = st.active_layer.and_then(|id| st.doc.layer(id)).ok_or("select a shape or type layer")?;
-    let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, layer);
+    let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, layer);
     let mut fixed = serde_json::Map::new();
     fixed.insert("layer".into(), json!(layer.id.0));
     let dialog = crate::filter_dialog::open_with_spec(app, id, tl!("New Frame"), r#"{"name":text,"width":1..300000=100,"height":1..300000=100}"#, fixed);
@@ -103,7 +103,7 @@ fn frame_convert_dialog(app: &mut PhotocraftApp, id: &str) -> Result<Value, Stri
 }
 
 /// [`invoke`] without the unsaved-changes prompt, for once the user has already answered it.
-fn invoke_early_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+fn invoke_early_commands(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if let Some(tool) = crate::tool_shortcuts::tool(id) {
         crate::tool_memory::select(app, tool);
         return Some(Ok(json!({"tool": tool})));
@@ -115,7 +115,7 @@ fn invoke_early_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str,
         return Some(crate::updates_ui::check(app, ctx, params.clone()));
     }
     // Layer › Copy CSS: the engine writes the CSS, the clipboard is the shell's (#9372).
-    if id == photocraft_engine::layer_css_cmds::ID {
+    if id == lienzo_engine::layer_css_cmds::ID {
         return Some(app.run(id, params.clone()).inspect(|r| {
             if let Some(css) = r.get("css").and_then(Value::as_str) {
                 ctx.copy_text(css.to_string());
@@ -186,7 +186,7 @@ fn invoke_early_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str,
     None
 }
 
-fn invoke_shell_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+fn invoke_shell_commands(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id == "window.panel.brushSettings" {
         app.ui.brush_tab = 0;
     }
@@ -239,7 +239,7 @@ fn invoke_shell_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str,
     None
 }
 
-fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Result<Option<Value>, String> {
+fn invoke_file_commands(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Result<Option<Value>, String> {
     let result = match id {
         // ⌘↩ / Ctrl+Enter (#306): load the path selected in the Paths panel (or the one being
         // drawn) as a selection.
@@ -260,7 +260,7 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
         "layer.renameLayer" if params.get("name").is_none() => {
             let st = app.session.active().ok_or("no document")?;
             let id = params.get("layer").and_then(Value::as_u64).or(st.active_layer.map(|l| l.0)).ok_or("no active layer")?;
-            let name = st.doc.layer(photocraft_doc::LayerId(id)).map(|l| l.name.clone()).ok_or("no such layer")?;
+            let name = st.doc.layer(lienzo_doc::LayerId(id)).map(|l| l.name.clone()).ok_or("no such layer")?;
             // Another rename in progress is committed first (#314).
             if let Some((cmd, p)) = crate::layer_row_ui::start_rename(ctx, id, &name) {
                 app.run(&cmd, p)?;
@@ -290,7 +290,7 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
             app.pick_file_bytes_filtered(&["csv", "txt"], move |app, _name, bytes| {
                 app.refocus(doc)?;
                 let text = data_sets_text(bytes)?;
-                let r = photocraft_engine::import_data_sets_text(&mut app.session, &text, &params).map_err(|e| e.to_string());
+                let r = lienzo_engine::import_data_sets_text(&mut app.session, &text, &params).map_err(|e| e.to_string());
                 app.sync_views();
                 r
             })
@@ -302,7 +302,7 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
             match params.get("path").and_then(Value::as_str) {
                 Some(path) => app.save_as_with(Some(path.to_string()), choices),
                 None => {
-                    let own = app.session.active().and_then(|d| d.path.clone().map(|p| (photocraft_engine::file_cmds::holds_at(&d.doc, &p), p, d)));
+                    let own = app.session.active().and_then(|d| d.path.clone().map(|p| (lienzo_engine::file_cmds::holds_at(&d.doc, &p), p, d)));
                     match own {
                         Some((true, path, d)) => {
                             // Another app changed the file since it was opened or saved: ask first (#6596).
@@ -310,9 +310,9 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
                             crate::disk_change_prompt::intercept(app, doc, &path, false, crate::FormatChoices::default())
                                 .unwrap_or_else(|| app.save_in_place(path, crate::FormatChoices::default()))
                         }
-                        Some((false, path, d)) if photocraft_engine::file_cmds::saves_in_place(&path) => {
+                        Some((false, path, d)) if lienzo_engine::file_cmds::saves_in_place(&path) => {
                             // Its own file is layered but can't hold what the document has now.
-                            let losses = photocraft_engine::file_cmds::losses_at(&d.doc, &path);
+                            let losses = lienzo_engine::file_cmds::losses_at(&d.doc, &path);
                             let name = crate::file_open::display_name(&path);
                             let title = crate::i18n::fmt(tl!("{name} can't keep everything in this document"), &[("name", name.as_str())]);
                             let mut lines = losses;
@@ -364,7 +364,7 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
     result.map(Some)
 }
 
-pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+pub(crate) fn invoke_unguarded(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
     if let Some(result) = crate::smart_svg_ui::intercept(app, id, &params) {
         return result;
     }
@@ -406,8 +406,8 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         }
         "layer.smartFilter.blendingOptions" if params.get("blend").is_none() && params.get("opacity").is_none() => {
             let st = app.session.active().ok_or("no document open")?;
-            let layer = params.get("layer").and_then(Value::as_u64).map(photocraft_doc::LayerId).or(st.active_layer).ok_or("no layer selected")?;
-            let Some(photocraft_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
+            let layer = params.get("layer").and_then(Value::as_u64).map(lienzo_doc::LayerId).or(st.active_layer).ok_or("no layer selected")?;
+            let Some(lienzo_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
                 return Err("the layer is not a Smart Object".into());
             };
             let index = match params.get("index") {
@@ -443,7 +443,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         // Edit › Stroke…: open its full options dialog when called from menus/context
         // menus. Explicit params from Actions, CLI, MCP and control channel execute directly.
         crate::stroke_ui::COMMAND if params.as_object().is_none_or(|o| o.is_empty()) => {
-            if let Some(Err(why)) = photocraft_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
+            if let Some(Err(why)) = lienzo_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
                 return Err(why);
             }
             Ok(json!({"dialog": crate::stroke_ui::open(app)}))
@@ -452,7 +452,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         // New Group button): Photoshop's New Group dialog. Explicit params run the engine directly,
         // and Group Layers (⌘G) never asks.
         _ if crate::new_group_ui::fronts(id) && params.as_object().is_none_or(|o| o.is_empty()) => {
-            if let Some(Err(why)) = photocraft_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
+            if let Some(Err(why)) = lienzo_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
                 return Err(why);
             }
             Ok(json!({"dialog": crate::new_group_ui::open(app, id)}))
@@ -465,7 +465,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
             let mask = app.layer_mask_targeted();
             let st = app.session.active().ok_or("no document is open")?;
             let channel = match st.channel_view.target {
-                photocraft_engine::channel_cmds::ChannelTarget::Alpha(i) => json!(i),
+                lienzo_engine::channel_cmds::ChannelTarget::Alpha(i) => json!(i),
                 _ if st.doc.quick_mask.is_some() => json!("quickMask"),
                 _ if mask => json!("mask"),
                 _ => return Err("target an alpha or spot channel, or a layer mask, first".into()),
@@ -482,7 +482,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         // Channels › Merge Channels… without params: its dialog, which picks the mode and the
         // documents (with params: the engine).
         crate::dialogs::merge_channels_ui::COMMAND if params.as_object().is_none_or(|o| o.is_empty()) => {
-            if let Some(Err(why)) = photocraft_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
+            if let Some(Err(why)) = lienzo_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
                 return Err(why);
             }
             let dialog = crate::dialogs::merge_channels_ui::open(app).ok_or("no document is open")?;
@@ -500,12 +500,12 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
         "select.colorRange" if params.as_object().is_none_or(|o| o.is_empty()) => Ok(json!({"dialog": crate::color_range_ui::open(app)})),
         // Layer › New Fill Layer › Pattern… from the menu: the Pattern Fill dialog (with params:
         // the engine directly).
-        photocraft_engine::pattern_fill_cmds::CREATE if params.as_object().is_none_or(|o| o.is_empty()) => {
+        lienzo_engine::pattern_fill_cmds::CREATE if params.as_object().is_none_or(|o| o.is_empty()) => {
             Ok(json!({"dialog": crate::pattern_fill_ui::open_new(app)?}))
         }
         // Edit › Fill… from the menu or its shortcuts: the Fill dialog (with params: the engine).
         crate::fill_ui::COMMAND if params.as_object().is_none_or(|o| o.is_empty()) => {
-            if let Some(Err(why)) = photocraft_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
+            if let Some(Err(why)) = lienzo_engine::commands::find(id).map(|c| (c.enabled)(&app.session)) {
                 return Err(why);
             }
             Ok(json!({"dialog": crate::fill_ui::open(app)}))
@@ -527,8 +527,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
                     let v = &app.ui.views[i];
                     let pz = app.point_zoom();
                     let (hw, hh) = (app.last_canvas_rect.width() / 2.0 / pz / app.ui.view.display_aspect(), app.last_canvas_rect.height() / 2.0 / pz);
-                    let r =
-                        photocraft_geom::Rect::new((v.center[0] - hw) as i32, (v.center[1] - hh) as i32, (v.center[0] + hw) as i32, (v.center[1] + hh) as i32);
+                    let r = lienzo_geom::Rect::new((v.center[0] - hw) as i32, (v.center[1] - hh) as i32, (v.center[0] + hw) as i32, (v.center[1] + hh) as i32);
                     !clip.bounds.intersect(&r).is_empty()
                 });
             let p = match app.session.active_index() {
@@ -557,11 +556,11 @@ pub(super) fn data_sets_text(bytes: Vec<u8>) -> Result<String, String> {
     String::from_utf8(bytes).map_err(|e| format!("the data set file is not valid UTF-8: {e}"))
 }
 
-fn open_path(app: &mut PhotocraftApp, path: &str) -> Result<Value, String> {
+fn open_path(app: &mut LienzoApp, path: &str) -> Result<Value, String> {
     app.open_path(path).map(|w| json!({"warnings": w}))
 }
 
-fn invoke_export_command(app: &mut PhotocraftApp, id: &str, params: &Value) -> Result<Option<Result<Value, String>>, String> {
+fn invoke_export_command(app: &mut LienzoApp, id: &str, params: &Value) -> Result<Option<Result<Value, String>>, String> {
     let result = match id {
         "file.export.exportAs" => Some(Ok(json!({"dialog": crate::export_dialog::open(app)?}))),
         "file.export.quickExportAsPng" => Some(crate::export_dialog::quick_export_png(app)),
@@ -599,7 +598,7 @@ fn invoke_export_command(app: &mut PhotocraftApp, id: &str, params: &Value) -> R
     Ok(result)
 }
 
-fn invoke_type_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+fn invoke_type_command(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     match id {
         "type.increaseSize" | "type.decreaseSize" | "type.increaseSizeMore" | "type.decreaseSizeMore"
             if params.as_object().is_none_or(|object| object.is_empty()) =>
@@ -656,7 +655,7 @@ fn invoke_type_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, p
     }
 }
 
-fn type_command_target(app: &PhotocraftApp) -> Option<Value> {
+fn type_command_target(app: &LienzoApp) -> Option<Value> {
     let (layer, range) = crate::type_tool::target(app)?;
     let mut params = json!({"layer": layer});
     if let Some(range) = range {
@@ -668,7 +667,7 @@ fn type_command_target(app: &PhotocraftApp) -> Option<Value> {
     Some(params)
 }
 
-fn invoke_view_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+fn invoke_view_command(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     match id {
         "view.zoomIn" | "view.zoomOut" | "view.fitOnScreen" | "view.actualPixels" => Some(app.run(id, params.clone())),
         "view.editSelectedGuides" => Some(crate::new_guide_ui::open_edit(app).map(|_| Value::Null)),
@@ -745,7 +744,7 @@ fn invoke_view_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, p
     }
 }
 
-fn invoke_window_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str) -> Option<Result<Value, String>> {
+fn invoke_window_command(app: &mut LienzoApp, ctx: &egui::Context, id: &str) -> Option<Result<Value, String>> {
     match id {
         "window.newWindowForDocument" => Some((|| {
             let doc = app.session.active_index().ok_or("no document")?;
@@ -815,7 +814,7 @@ fn invoke_window_command(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str)
     }
 }
 
-fn toggle_panels(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn toggle_panels(app: &mut LienzoApp) -> Result<Value, String> {
     if app.ui.view.hides_chrome() {
         // Full Screen Mode: Tab only shows or hides the chrome for now (#6760); the panels'
         // own state, `hidden_by_tab` included, stays as it was before entering.
@@ -836,7 +835,7 @@ fn toggle_panels(app: &mut PhotocraftApp) -> Result<Value, String> {
     Ok(Value::Null)
 }
 
-fn toggle_panel(app: &mut PhotocraftApp, id: &str) -> Result<Value, String> {
+fn toggle_panel(app: &mut LienzoApp, id: &str) -> Result<Value, String> {
     let key = &id["window.toggle.".len()..];
     // A shown but collapsed dock group is expanded rather than hidden (#129).
     if let Some(group) = crate::dock::Group::from_key(key).filter(|group| group.shown(&app.ui.panels) && app.ui.dock.is_collapsed(*group)) {
@@ -866,7 +865,7 @@ fn toggle_panel(app: &mut PhotocraftApp, id: &str) -> Result<Value, String> {
 }
 
 /// Workspace presets (Window → Workspace): which panels are visible.
-pub fn apply_workspace(app: &mut PhotocraftApp) {
+pub fn apply_workspace(app: &mut LienzoApp) {
     // Saved workspaces (Window › Workspace › New Workspace…) restore their own layout.
     if crate::workspace_ui::apply_custom(app) {
         return;
@@ -906,7 +905,7 @@ pub fn apply_workspace(app: &mut PhotocraftApp) {
 }
 
 /// Pointer-dependent shell command; pixel picking and selection remain engine commands.
-fn select_layer_under_cursor(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<Value, String> {
+fn select_layer_under_cursor(app: &mut LienzoApp, ctx: &egui::Context) -> Result<Value, String> {
     if app.drag.is_some() || app.brush_resize.is_some() {
         return Ok(json!({"layer": null}));
     }

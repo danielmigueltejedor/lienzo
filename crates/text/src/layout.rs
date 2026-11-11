@@ -17,9 +17,9 @@
 use std::borrow::Cow;
 use std::ops::Range;
 
+use lienzo_doc::TextLayer;
+use lienzo_doc::text::{Caps, CharStyle, FontBaseline, Kerning, Orientation, ParagraphStyle, TextShape};
 use parley::{FontData, FontFamily, FontFeatures, FontStyle, FontVariations, FontWeight, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
-use photocraft_doc::TextLayer;
-use photocraft_doc::text::{Caps, CharStyle, FontBaseline, Kerning, Orientation, ParagraphStyle, TextShape};
 use skrifa::raw::types::Tag;
 
 use crate::fonts::FontDb;
@@ -370,7 +370,7 @@ impl Layouter {
 /// What a layout run shares between its paragraphs.
 struct Env<'a> {
     text: &'a str,
-    runs: &'a [photocraft_doc::text::TextRun],
+    runs: &'a [lienzo_doc::text::TextRun],
     styles: &'a [CharStyle],
     /// Start offset of each run.
     run_starts: &'a [usize],
@@ -416,8 +416,8 @@ struct Slot {
 #[cfg(test)]
 mod tests {
     use super::{SmallCapsMode, feature_list, small_caps_mode, variation_list};
-    use photocraft_doc::TextLayer;
-    use photocraft_doc::text::{Caps, CharStyle, FontVariation, TextRun};
+    use lienzo_doc::TextLayer;
+    use lienzo_doc::text::{Caps, CharStyle, FontVariation, TextRun};
 
     /// Reference: the lookup the layout used before it became a binary search.
     fn run_index_reference(starts: &[usize], off: usize) -> usize {

@@ -2,18 +2,18 @@ use super::invoke::invoke;
 use super::items::{ItemCache, MenuItem, menu_items};
 use super::render::{alt_click, render_level, render_level_rows};
 use super::search::help_search;
-use super::{PhotocraftApp, TOP_MENUS, Value, json};
+use super::{LienzoApp, TOP_MENUS, Value, json};
 
 /// Draws the menu bar; returns the inner edge of the menu titles, facing the rest of the title bar
 /// (the right edge of the last title, or its left edge in a right-to-left UI, where File is at the
 /// right). The bar itself fills the row.
-pub fn menu_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) -> f32 {
+pub fn menu_bar(app: &mut LienzoApp, ui: &mut egui::Ui) -> f32 {
     // Built only while a menu is open: every item's enabled/checked state scales with the
     // document (layer lookups), which cost milliseconds per frame on large layouts (#125). While
     // one stays open, the items are reused until what they depend on changes.
     let kept = std::cell::Cell::new(app.menu_cache.take());
     let built: std::cell::OnceCell<ItemCache> = std::cell::OnceCell::new();
-    let app_ref: &PhotocraftApp = app;
+    let app_ref: &LienzoApp = app;
     let rtl = crate::direction::is_rtl();
     let mut edge = if rtl { ui.cursor().right() } else { ui.cursor().left() };
     let lang = crate::i18n::current();

@@ -4,7 +4,7 @@
 use super::*;
 use crate::{FileDialogAnswer, jpeg_options_ui};
 use egui_kittest::kittest::Queryable;
-use photocraft_codecs::JpegFormat;
+use lienzo_codecs::JpegFormat;
 use std::{cell::RefCell, rc::Rc};
 
 /// Each write: the path, and the JPEG quality (1–100) and format the export was asked for.
@@ -17,7 +17,7 @@ fn asked(quality: Option<u8>, format: JpegFormat) -> Vec<u8> {
 
 /// The encoder quality for Photoshop quality `q`.
 fn pct(q: u8) -> Option<u8> {
-    Some(photocraft_engine::file_cmds::jpeg_quality(f64::from(q)))
+    Some(lienzo_engine::file_cmds::jpeg_quality(f64::from(q)))
 }
 
 /// One 8×8 RGB document whose exports record their JPEG settings, in a harness showing JPEG
@@ -40,7 +40,7 @@ fn jpeg_app(to: &str) -> (Prompted, Writes) {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.ctx.set_os(egui::os::OperatingSystem::Windows);
     (h, writes)
 }
@@ -117,7 +117,7 @@ fn resaving_an_opened_jpeg_starts_at_its_own_quality() {
 #[test]
 fn a_copy_recorded_from_the_engine_command_replays() {
     let (mut h, writes) = jpeg_app("unused.jpg");
-    let path = std::env::temp_dir().join(format!("photocraft-jpeg-copy-{}.jpg", std::process::id())).to_string_lossy().into_owned();
+    let path = std::env::temp_dir().join(format!("lienzo-jpeg-copy-{}.jpg", std::process::id())).to_string_lossy().into_owned();
     h.state_mut().run("actions.record", json!({})).unwrap();
     h.state_mut().run("file.saveACopy", json!({"path": path, "quality": 90})).unwrap();
     h.state_mut().run("actions.stop", json!({})).unwrap();

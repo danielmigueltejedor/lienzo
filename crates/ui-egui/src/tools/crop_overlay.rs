@@ -12,7 +12,7 @@
 use egui::{Key, Modifiers, Rect, pos2, vec2};
 use serde::{Deserialize, Serialize};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 
 /// The guide drawn inside the crop box.
@@ -251,19 +251,19 @@ fn golden_spiral() -> Polyline {
 
 /// Full-frame guides, or none when the options say not to. Canvas painting uses
 /// [`current_guides_for_frame`] to restrict the turning grid to its viewport.
-pub fn current_guides(app: &PhotocraftApp, w: f32, h: f32) -> Vec<Polyline> {
+pub fn current_guides(app: &LienzoApp, w: f32, h: f32) -> Vec<Polyline> {
     current_guides_visible(app, w, h, Rect::from_min_size(egui::Pos2::ZERO, vec2(w, h)))
 }
 
 /// Guides for the frame actually being painted. Use the caller's quad and clip:
 /// canvas navigation may not have written its local camera back to UI state yet.
-pub fn current_guides_for_frame(app: &PhotocraftApp, q: [egui::Pos2; 4], clip: Rect) -> Vec<Polyline> {
+pub fn current_guides_for_frame(app: &LienzoApp, q: [egui::Pos2; 4], clip: Rect) -> Vec<Polyline> {
     let (w, h) = (q[0].distance(q[1]), q[0].distance(q[3]));
     let Some(visible) = visible_frame(q, clip, w, h) else { return Vec::new() };
     current_guides_visible(app, w, h, visible)
 }
 
-fn current_guides_visible(app: &PhotocraftApp, w: f32, h: f32, visible: Rect) -> Vec<Polyline> {
+fn current_guides_visible(app: &LienzoApp, w: f32, h: f32, visible: Rect) -> Vec<Polyline> {
     let o = &app.ui.tool_options;
     // A turn or a straighten line in progress shows its guides from the start, whether or not the
     // frame has changed yet: they are how the gesture is aimed. Otherwise the overlay waits for
@@ -289,14 +289,14 @@ fn current_guides_visible(app: &PhotocraftApp, w: f32, h: f32, visible: Rect) ->
 /// Within a drag, the first change is what counts: a drag that changes the frame and brings it back
 /// to where it started keeps the started look until it ends, rather than flickering back to the
 /// untouched one (noted in review). Once it ends, `crop_ui::release` decides, as before.
-pub fn crop_started(app: &PhotocraftApp) -> bool {
+pub fn crop_started(app: &LienzoApp) -> bool {
     app.ui.tool_options.crop_shield.classic_mode || !app.crop.default_frame || (app.crop.drag.is_some() && app.crop.drag_moved) || drag_changed(app)
 }
 
 /// Whether the drag in progress has changed the frame since its press. A press that hasn't moved
 /// anything yet is not the first change, so it leaves the untouched look (#10930). The tests mirror
 /// the ones `crop_ui` uses when a drag ends.
-pub(crate) fn drag_changed(app: &PhotocraftApp) -> bool {
+pub(crate) fn drag_changed(app: &LienzoApp) -> bool {
     use crate::crop_ui::CropDrag;
     match &app.crop.drag {
         None => false,
@@ -319,7 +319,7 @@ pub enum FrameLook {
 }
 
 /// The look of the pending crop frame.
-pub fn frame_look(app: &PhotocraftApp) -> FrameLook {
+pub fn frame_look(app: &LienzoApp) -> FrameLook {
     if app.ui.tool_options.crop_shield.classic_mode {
         FrameLook::Classic
     } else if crop_started(app) {
@@ -410,7 +410,7 @@ pub fn cycle_orientation(o: &mut ToolOptions) {
 
 /// O / ⇧O with the Crop tool showing a box and no drag in progress. Returns true when a key was
 /// used; otherwise O stays the Dodge/Burn/Sponge tool key.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if app.ui.tool != Tool::Crop || app.ui.crop_rect.is_none() || app.crop.drag.is_some() {
         return false;
     }
@@ -631,7 +631,7 @@ mod tests {
     }
 
     /// One key press through the shortcut handler, as egui delivers it.
-    fn press(app: &mut PhotocraftApp, mods: Modifiers) {
+    fn press(app: &mut LienzoApp, mods: Modifiers) {
         let ctx = egui::Context::default();
         ctx.input_mut(|i| {
             i.modifiers = mods;
@@ -640,8 +640,8 @@ mod tests {
         crate::shortcuts::handle(app, &ctx);
     }
 
-    fn crop_app() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn crop_app() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", serde_json::json!({"width": 200, "height": 120})).unwrap();
         app.ui.tool = Tool::Crop;
         crate::crop_ui::ensure_frame(&mut app);
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn o_stays_the_dodge_key_without_a_crop_box() {
         // No document: the Crop tool shows no box, so O picks the Dodge tool.
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.tool = Tool::Crop;
         press(&mut app, Modifiers::NONE);
         assert_eq!(app.ui.tool, Tool::Dodge);

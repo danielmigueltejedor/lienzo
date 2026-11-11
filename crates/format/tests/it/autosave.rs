@@ -4,9 +4,9 @@ use crate::common;
 use std::sync::Arc;
 
 use common::*;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{DocId, Document};
-use photocraft_format::*;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{DocId, Document};
+use lienzo_format::*;
 
 #[test]
 fn autosave_then_recover() {
@@ -320,7 +320,7 @@ fn failed_cleanup_after_commit_does_not_fail_the_save() {
 #[test]
 fn a_listing_during_an_autosave_sees_the_entry_exactly_once() {
     let dir = temp_dir("listing-during-autosave");
-    let doc = Document::new("Busy", photocraft_doc::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U8);
+    let doc = Document::new("Busy", lienzo_doc::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U8);
     save_once(&dir, "busy", doc.clone());
     let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let writer = {

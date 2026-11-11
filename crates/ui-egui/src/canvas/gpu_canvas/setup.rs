@@ -4,9 +4,9 @@ use crate::render_path::CpuReason;
 
 /// A CPU composite as the canvas texture stores it (`display`'s encoding; as is without one).
 pub(super) fn texture_buffer<'a>(
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
-    buf: &'a photocraft_compose::Buffer,
-) -> std::borrow::Cow<'a, photocraft_compose::Buffer> {
+    display: Option<&lienzo_engine::display_color::CanvasDisplay>,
+    buf: &'a lienzo_compose::Buffer,
+) -> std::borrow::Cow<'a, lienzo_compose::Buffer> {
     match display {
         Some(d) => d.texture_buffer(buf),
         None => std::borrow::Cow::Borrowed(buf),
@@ -15,11 +15,7 @@ pub(super) fn texture_buffer<'a>(
 
 /// A CPU composite `buf` as texels of a `format` canvas texture, in `display`'s encoding: what
 /// [`GpuCanvas::upload_rect`] takes. Runs anywhere (a redraw's worker converts its own pieces).
-pub fn display_texels(
-    format: wgpu::TextureFormat,
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
-    buf: &photocraft_compose::Buffer,
-) -> Vec<u8> {
+pub fn display_texels(format: wgpu::TextureFormat, display: Option<&lienzo_engine::display_color::CanvasDisplay>, buf: &lienzo_compose::Buffer) -> Vec<u8> {
     texels(format, &texture_buffer(display, buf).px)
 }
 
@@ -44,7 +40,7 @@ pub struct Refresh {
     /// rather than `composite_ms`, which measures encoding and submitting, not executing. It
     /// leaves out layer-tile uploads (`uploads` above counts them), so a first refresh of a
     /// document under-reports by more than the few per cent of a warm one.
-    pub gpu: Option<photocraft_gpu::GpuTiming>,
+    pub gpu: Option<lienzo_gpu::GpuTiming>,
     /// Why the wgpu compositor wasn't used.
     pub fallback: Option<CpuReason>,
 }
@@ -79,13 +75,13 @@ pub fn use_adapter_limits_with(setup: &mut egui_wgpu::WgpuSetup, on_adapter: imp
 
 /// How the app asks for its device: egui's defaults, the adapter's texture and buffer size
 /// limits ([`device_limits`]), and timestamp queries where the adapter has them, so the canvas
-/// can report how long the GPU actually spends compositing ([`photocraft_gpu::GpuTimer`]).
+/// can report how long the GPU actually spends compositing ([`lienzo_gpu::GpuTimer`]).
 /// A bench or test that builds its own device should use this rather than [`device_limits`]
 /// alone, or it measures a device the app never creates. (`bevel_bench`, `fx_bench` and
 /// `interactive_bench` still call [`device_limits`] directly and so report no GPU time.)
 pub fn device_descriptor(adapter: &wgpu::Adapter) -> wgpu::DeviceDescriptor<'static> {
     wgpu::DeviceDescriptor {
-        label: Some("photocraft wgpu device"),
+        label: Some("lienzo wgpu device"),
         required_limits: device_limits(adapter),
         required_features: timing_features(adapter),
         ..Default::default()
@@ -96,13 +92,13 @@ pub fn device_descriptor(adapter: &wgpu::Adapter) -> wgpu::DeviceDescriptor<'sta
 /// feature an adapter lacks fails device creation, and a canvas without GPU timing is far better
 /// than no canvas.
 ///
-/// `PHOTOCRAFT_NO_GPU_TIMING` suppresses the request as well as the timer
-/// ([`photocraft_gpu::Compositor::measure_gpu_time`]), so the variable also rescues a driver
+/// `LIENZO_NO_GPU_TIMING` suppresses the request as well as the timer
+/// ([`lienzo_gpu::Compositor::measure_gpu_time`]), so the variable also rescues a driver
 /// that advertises the features and then fails or misbehaves on device creation — not only one
 /// whose timestamps come back wrong.
 pub fn timing_features(adapter: &wgpu::Adapter) -> wgpu::Features {
-    let want = photocraft_gpu::timing::FEATURES;
-    if std::env::var_os("PHOTOCRAFT_NO_GPU_TIMING").is_some() {
+    let want = lienzo_gpu::timing::FEATURES;
+    if std::env::var_os("LIENZO_NO_GPU_TIMING").is_some() {
         return wgpu::Features::empty();
     }
     if adapter.features().contains(want) { want } else { wgpu::Features::empty() }

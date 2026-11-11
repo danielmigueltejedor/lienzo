@@ -5,31 +5,31 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
-use photocraft_engine::doc::Ruler;
+use lienzo_engine::doc::Ruler;
 
-fn ruler_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn ruler_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.ui.tool = Tool::Ruler;
     app
 }
 
 /// A drag from `from` to `to` with `m` held during the move.
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], press: Modifiers, m: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], press: Modifiers, m: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, press);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
 }
 
-fn ruler(app: &PhotocraftApp) -> Ruler {
+fn ruler(app: &LienzoApp) -> Ruler {
     app.session.active().unwrap().doc.measurement.ruler.expect("a ruler")
 }
 
-fn info(app: &PhotocraftApp) -> Value {
-    photocraft_engine::analysis_cmds::ruler_info(&ruler(app), &Default::default())
+fn info(app: &LienzoApp) -> Value {
+    lienzo_engine::analysis_cmds::ruler_info(&ruler(app), &Default::default())
 }
 
 fn near(a: f64, b: f64) -> bool {

@@ -1,8 +1,8 @@
 use super::*;
 
-fn app_with_layer() -> (egui::Context, PhotocraftApp) {
+fn app_with_layer() -> (egui::Context, LienzoApp) {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 240, "height": 160, "depth": 16})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session.execute("edit.fill", json!({"color": "#4080c0"})).unwrap();
@@ -19,7 +19,7 @@ fn four_clicks_make_a_plane_and_ok_pastes_in_one_step() {
     app.session.execute("edit.copy", json!({})).unwrap();
     app.session.execute("select.deselect", json!({})).unwrap();
     crate::distort_ui::menu(&mut app, &ctx, VP, &json!({})).unwrap().unwrap();
-    let click = |app: &mut PhotocraftApp, x: f64, y: f64| {
+    let click = |app: &mut LienzoApp, x: f64, y: f64| {
         crate::distort_ui::pointer(app, ToolEvent::Down { x, y, pressure: 1.0 }, egui::Modifiers::NONE);
         crate::distort_ui::pointer(app, ToolEvent::Up { x, y }, egui::Modifiers::NONE);
     };
@@ -61,13 +61,13 @@ fn ctrl_drag_tears_off_a_wall_and_the_stamp_clones_in_one_step() {
     app.session.execute("select.deselect", json!({})).unwrap();
     crate::distort_ui::menu(&mut app, &ctx, VP, &json!({})).unwrap().unwrap();
     control(&mut app, &json!({"planes": [{"corners": [[70, 60], [170, 60], [220, 150], [20, 150]]}]})).unwrap();
-    let ev = |app: &mut PhotocraftApp, e: ToolEvent, m: egui::Modifiers| crate::distort_ui::pointer(app, e, m);
-    let drag = |app: &mut PhotocraftApp, a: [f64; 2], b: [f64; 2], m: egui::Modifiers| {
+    let ev = |app: &mut LienzoApp, e: ToolEvent, m: egui::Modifiers| crate::distort_ui::pointer(app, e, m);
+    let drag = |app: &mut LienzoApp, a: [f64; 2], b: [f64; 2], m: egui::Modifiers| {
         ev(app, ToolEvent::Down { x: a[0], y: a[1], pressure: 1.0 }, m);
         ev(app, ToolEvent::Move { x: (a[0] + b[0]) / 2.0, y: (a[1] + b[1]) / 2.0, pressure: 1.0 }, m);
         ev(app, ToolEvent::Up { x: b[0], y: b[1] }, m);
     };
-    fn vp(app: &PhotocraftApp) -> &VpSession {
+    fn vp(app: &LienzoApp) -> &VpSession {
         app.distort.vanishing.as_ref().unwrap()
     }
 
@@ -123,12 +123,12 @@ fn undo_steps_back_through_clone_strokes_and_tear_offs() {
     let (ctx, mut app) = app_with_layer();
     crate::distort_ui::menu(&mut app, &ctx, VP, &json!({})).unwrap().unwrap();
     control(&mut app, &json!({"planes": [{"corners": [[70, 60], [170, 60], [220, 150], [20, 150]]}]})).unwrap();
-    let drag = |app: &mut PhotocraftApp, a: [f64; 2], b: [f64; 2], m: egui::Modifiers| {
+    let drag = |app: &mut LienzoApp, a: [f64; 2], b: [f64; 2], m: egui::Modifiers| {
         crate::distort_ui::pointer(app, ToolEvent::Down { x: a[0], y: a[1], pressure: 1.0 }, m);
         crate::distort_ui::pointer(app, ToolEvent::Move { x: b[0], y: b[1], pressure: 1.0 }, m);
         crate::distort_ui::pointer(app, ToolEvent::Up { x: b[0], y: b[1] }, m);
     };
-    let step = |app: &mut PhotocraftApp, st: Step| {
+    let step = |app: &mut LienzoApp, st: Step| {
         app.distort.vanishing.as_mut().unwrap().step(st);
         sync_preview(app);
     };
@@ -180,15 +180,15 @@ fn overlapping_stamp_preview_matches_commit_across_batches() {
         s.strokes[0].points.extend_from_slice(&points[2..]);
         assert!(s.paint_preview(|| 2));
         let (shown, _) = s.shown().unwrap();
-        let expected = photocraft_compose::flatten(&shown).into_px();
-        assert_ne!(expected, photocraft_compose::flatten(&app.session.active().unwrap().doc).px);
+        let expected = lienzo_compose::flatten(&shown).into_px();
+        assert_ne!(expected, lienzo_compose::flatten(&app.session.active().unwrap().doc).px);
         commit(&mut app).unwrap();
-        assert_eq!(photocraft_compose::flatten(&app.session.active().unwrap().doc).px, expected, "newLayer={new_layer}");
+        assert_eq!(lienzo_compose::flatten(&app.session.active().unwrap().doc).px, expected, "newLayer={new_layer}");
     }
 }
 
 /// A red square on the clipboard (copied from the layer's top-left corner).
-fn copy_red_square(app: &mut PhotocraftApp) {
+fn copy_red_square(app: &mut LienzoApp) {
     app.session.execute("select.rect", json!({"x": 0, "y": 0, "width": 40, "height": 40})).unwrap();
     app.session.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
     app.session.execute("edit.copy", json!({})).unwrap();
@@ -217,9 +217,9 @@ fn stamp_preview_paints_over_the_paste_like_ok() {
         let s = app.distort.vanishing.as_ref().unwrap();
         assert!(s.preview_has_paste(), "the preview shows the paste, so the overlay isn't drawn over the strokes");
         let (shown, _) = s.shown().unwrap();
-        let expected = photocraft_compose::flatten(&shown).into_px();
+        let expected = lienzo_compose::flatten(&shown).into_px();
         commit(&mut app).unwrap();
-        assert_eq!(photocraft_compose::flatten(&app.session.active().unwrap().doc).px, expected, "newLayer={new_layer}");
+        assert_eq!(lienzo_compose::flatten(&app.session.active().unwrap().doc).px, expected, "newLayer={new_layer}");
     }
 }
 
@@ -230,7 +230,7 @@ fn moving_the_paste_repaints_the_stamp_preview() {
     crate::distort_ui::menu(&mut app, &ctx, VP, &json!({})).unwrap().unwrap();
     control(&mut app, &json!({"planes": [{"corners": [[10, 10], [230, 10], [230, 150], [10, 150]]}]})).unwrap();
     control(&mut app, &json!({"clone": [{"source": [200, 130], "points": [[30, 130]], "size": 8}]})).unwrap();
-    let red = |app: &PhotocraftApp, x: i32, y: i32| {
+    let red = |app: &LienzoApp, x: i32, y: i32| {
         let (shown, _) = app.distort.vanishing.as_ref().unwrap().shown().unwrap();
         let l = app.session.active().unwrap().active_layer.unwrap();
         shown.layer(l).unwrap().surface().unwrap().rgba(x, y)[0]
@@ -252,12 +252,12 @@ fn dragging_the_paste_shows_it_once() {
     control(&mut app, &json!({"planes": [{"corners": [[10, 10], [230, 10], [230, 150], [10, 150]]}], "tool": "edit"})).unwrap();
     control(&mut app, &json!({"clone": [{"source": [200, 130], "points": [[30, 130]], "size": 8}]})).unwrap();
     let layer = app.session.active().unwrap().active_layer.unwrap();
-    let red = |app: &PhotocraftApp, x: i32, y: i32| {
+    let red = |app: &LienzoApp, x: i32, y: i32| {
         let (shown, _) = crate::distort_ui::display_doc(app, 0)?;
         Some(shown.layer(layer).unwrap().surface().unwrap().rgba(x, y)[0])
     };
     assert!(red(&app, 100, 60).unwrap() > 0.9, "the paste is in the preview");
-    let ev = |app: &mut PhotocraftApp, e: ToolEvent| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
+    let ev = |app: &mut LienzoApp, e: ToolEvent| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
     ev(&mut app, ToolEvent::Down { x: 100.0, y: 60.0, pressure: 1.0 });
     ev(&mut app, ToolEvent::Move { x: 60.0, y: 100.0, pressure: 1.0 });
     // Mid-drag: no copy left behind at the old place, only the overlay at the pointer.
@@ -313,7 +313,7 @@ fn deleting_the_last_plane_drops_the_stamp_preview() {
 }
 
 /// Opens the mode on the active layer of `app_with_layer` and stamps one stroke.
-fn stamp_a_stroke(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn stamp_a_stroke(app: &mut LienzoApp, ctx: &egui::Context) {
     crate::distort_ui::menu(app, ctx, VP, &json!({})).unwrap().unwrap();
     control(app, &json!({"planes": [{"corners": [[10, 10], [230, 10], [230, 150], [10, 150]]}]})).unwrap();
     control(app, &json!({"clone": [{"source": [60, 80], "points": [[120, 80], [126, 80]], "size": 12}]})).unwrap();
@@ -349,7 +349,7 @@ fn ok_paints_the_layer_the_mode_was_opened_on() {
         app.session.execute("layer.new.layer", json!({"name": "other"})).unwrap();
         let other = app.session.active().unwrap().active_layer.unwrap();
         sync_preview(&mut app);
-        let expected = photocraft_compose::flatten(&crate::distort_ui::display_doc(&app, 0).unwrap().0).into_px();
+        let expected = lienzo_compose::flatten(&crate::distort_ui::display_doc(&app, 0).unwrap().0).into_px();
         commit(&mut app).unwrap();
         let d = &app.session.active().unwrap().doc;
         assert!(d.layer(other).unwrap().surface().unwrap().content_bounds().is_empty(), "newLayer={new_layer}");
@@ -358,7 +358,7 @@ fn ok_paints_the_layer_the_mode_was_opened_on() {
             // And it becomes active, so Fade and a colour-channel target follow it.
             assert_eq!(app.session.active().unwrap().active_layer, Some(layer));
         }
-        assert_eq!(photocraft_compose::flatten(d).px, expected, "newLayer={new_layer}");
+        assert_eq!(lienzo_compose::flatten(d).px, expected, "newLayer={new_layer}");
     }
 }
 
@@ -389,9 +389,9 @@ fn an_edit_under_the_mode_shows_on_the_canvas() {
     let px = shown.layer(layer).unwrap().surface().unwrap();
     assert!(px.rgba(210, 30)[1] > 0.9, "the edit shows: {:?}", px.rgba(210, 30));
     assert!(px.rgba(120, 80) != st.doc.layer(layer).unwrap().surface().unwrap().rgba(120, 80), "and so does the stroke");
-    let expected = photocraft_compose::flatten(&shown).into_px();
+    let expected = lienzo_compose::flatten(&shown).into_px();
     commit(&mut app).unwrap();
-    assert_eq!(photocraft_compose::flatten(&app.session.active().unwrap().doc).px, expected);
+    assert_eq!(lienzo_compose::flatten(&app.session.active().unwrap().doc).px, expected);
 }
 
 #[test]

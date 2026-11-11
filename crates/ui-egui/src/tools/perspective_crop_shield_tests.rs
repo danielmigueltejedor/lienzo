@@ -67,7 +67,7 @@ fn a_degenerate_quad_has_no_shield() {
 }
 
 /// The shield polygons `draw_overlay` paints.
-fn painted(app: &PhotocraftApp) -> usize {
+fn painted(app: &LienzoApp) -> usize {
     let ctx = egui::Context::default();
     let xf = ViewXform { rect: Rect::from_min_size(Pos2::ZERO, vec2(200.0, 150.0)), zoom: 1.0, center: [100.0, 75.0], flip: false, rotation: 0.0, aspect: 1.0 };
     let mut o = ctx.run_ui(Default::default(), |ui| draw_overlay(app, ui.painter(), &xf));
@@ -75,8 +75,8 @@ fn painted(app: &PhotocraftApp) -> usize {
     o.shapes.iter().filter(|c| matches!(&c.shape, egui::Shape::Path(p) if p.fill == SHIELD)).count()
 }
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.ui.tool = Tool::PerspectiveCrop;
     app

@@ -1,10 +1,10 @@
 //! Stroke effects on shape layers: the outline, the vector stroke's place, gradient frames.
 
 use super::*;
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
-use photocraft_doc::{Effect, FxCommon, FxPaint, Gradient, GradientStyle, Layer, LayerContent, LayerMask, StrokeFx, StrokePosition};
-use photocraft_geom::Size;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::vector::{Path, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
+use lienzo_doc::{Effect, FxCommon, FxPaint, Gradient, GradientStyle, Layer, LayerContent, LayerMask, StrokeFx, StrokePosition};
+use lienzo_geom::Size;
 
 const E: f32 = 2.0 / 255.0;
 
@@ -32,7 +32,7 @@ fn blue() -> FxPaint {
 fn shape(x0: f64, x1: f64, fill: Fill, stroke: Option<ShapeStroke>) -> Layer {
     let path = Path::new(vec![Subpath::polygon(&[(x0, x0), (x1, x0), (x1, x1), (x0, x1)])]);
     let mut sh = ShapeLayer { path, fill: Some(fill), stroke, live: None, cache: None, psd_raw: None, ..ShapeLayer::default() };
-    sh.cache = Some(photocraft_vector::render_shape(&sh, PixelFormat::RGBA8, Rect::new(0, 0, 40, 40)));
+    sh.cache = Some(lienzo_vector::render_shape(&sh, PixelFormat::RGBA8, Rect::new(0, 0, 40, 40)));
     Layer::new("shape", LayerContent::Shape(sh))
 }
 
@@ -54,7 +54,7 @@ fn split_stroked_gradient_with_effect_keeps_document_precision() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let mut d = Document::with_background("t", Size::new(4000, 40), ColorMode::Rgb, depth, Color::WHITE);
         let mut sh = gradient_shape(4000, 40);
-        sh.cache = Some(photocraft_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
+        sh.cache = Some(lienzo_vector::render_shape(&sh, d.pixel_format(), d.bounds()));
         let mut layer = Layer::new("gradient shape", LayerContent::Shape(sh));
         layer.effects.items = vec![stroke(1.0, StrokePosition::Outside, blue())];
         d.layers.push(layer);
@@ -75,13 +75,13 @@ fn split_cache_keeps_same_shape_separate_at_each_document_depth() {
     let canvas = Rect::new(0, 0, 64, 8);
     let mut sh = gradient_shape(64, 8);
     // Keep the shape and cached tile identities identical while only the document depth changes.
-    sh.cache = Some(photocraft_vector::render_shape(&sh, PixelFormat::RGBA32F, canvas));
+    sh.cache = Some(lienzo_vector::render_shape(&sh, PixelFormat::RGBA32F, canvas));
     let mut layer = Layer::new("same shape", LayerContent::Shape(sh.clone()));
     layer.effects.items = vec![stroke(1.0, StrokePosition::Outside, blue())];
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32, SampleType::U8] {
         let mut d = Document::with_background("t", Size::new(64, 8), ColorMode::Rgb, depth, Color::WHITE);
         d.layers.push(layer.clone());
-        let expected = photocraft_vector::render_shape(&sh, PixelFormat::RGBA8.with_sample(depth), canvas).pixel(17, 4)[0];
+        let expected = lienzo_vector::render_shape(&sh, PixelFormat::RGBA8.with_sample(depth), canvas).pixel(17, 4)[0];
         let actual = px(&d, 17, 4)[0];
         assert!((actual - expected).abs() < 1e-6, "{depth:?}: got {actual}, expected {expected}; split cache must include document depth");
     }
@@ -158,7 +158,7 @@ fn a_stroked_shapes_mask_applies_to_fill_and_stroke_together() {
     let vs = ShapeStroke { width: 4.0, align: StrokeAlign::Inside, paint: Fill::Solid(Color::rgb(0.0, 1.0, 0.0)), ..ShapeStroke::default() };
     let mut l = shape(10.0, 30.0, Fill::Solid(Color::rgb(1.0, 0.0, 0.0)), Some(vs));
     let mut m = LayerMask::reveal_all();
-    m.surface = photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[0.5]);
+    m.surface = lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[0.5]);
     l.mask = Some(m);
     let mut clip = Layer::raster("clip", PixelFormat::RGBA8);
     clip.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
@@ -233,7 +233,7 @@ fn hairline_vector_stroke_keeps_the_files_edge_pixel_colour() {
         let mut d = Document::with_background("t", Size::new(40, 40), ColorMode::Rgb, sample, Color::WHITE);
         let vs = ShapeStroke { width: 0.25, paint: Fill::Solid(Color::rgb(0.48, 0.48, 0.48)), ..ShapeStroke::default() };
         let path = Path::new(vec![Subpath::polygon(&[(10.3, 10.3), (29.7, 10.3), (29.7, 29.7), (10.3, 29.7)])]);
-        let mut cache = photocraft_raster::Surface::new(fmt);
+        let mut cache = lienzo_raster::Surface::new(fmt);
         cache.fill_rect(Rect::new(10, 10, 30, 30), &[edge, edge, edge, 1.0]);
         cache.fill_rect(Rect::new(11, 11, 29, 29), &[fill, fill, fill, 1.0]);
         let sh = ShapeLayer {
@@ -261,7 +261,7 @@ fn hairline_vector_stroke_keeps_the_files_edge_pixel_colour() {
 #[test]
 fn outside_stroke_on_raster_layer_does_not_paint_inside_opaque_pixels() {
     let mut d = doc(40, 40);
-    let mut pixels = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+    let mut pixels = lienzo_raster::Surface::new(PixelFormat::RGBA8);
     pixels.fill_rect(Rect::new(15, 15, 25, 25), &[1.0, 0.0, 0.0, 1.0]);
     let mut l = Layer::new("raster", LayerContent::Raster(pixels));
     l.effects.items = vec![stroke(3.0, StrokePosition::Outside, blue())];
@@ -278,7 +278,7 @@ fn outside_stroke_on_raster_layer_does_not_paint_inside_opaque_pixels() {
 /// raster layer and a filled shape alike.
 #[test]
 fn outside_stroke_under_multiply_layer_leaves_interior_to_backdrop() {
-    let mut pixels = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+    let mut pixels = lienzo_raster::Surface::new(PixelFormat::RGBA8);
     pixels.fill_rect(Rect::new(15, 15, 25, 25), &[1.0, 0.0, 0.0, 1.0]);
     let layers = [("raster", Layer::new("raster", LayerContent::Raster(pixels))), ("shape", shape(15.0, 25.0, Fill::Solid(Color::rgb(1.0, 0.0, 0.0)), None))];
     for (what, mut l) in layers {
@@ -297,7 +297,7 @@ fn outside_stroke_under_multiply_layer_leaves_interior_to_backdrop() {
 #[test]
 fn outside_stroke_on_zero_fill_raster_layer_keeps_interior_clear() {
     let mut d = Document::new("t", Size::new(40, 40), ColorMode::Rgb, SampleType::U8);
-    let mut pixels = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+    let mut pixels = lienzo_raster::Surface::new(PixelFormat::RGBA8);
     pixels.fill_rect(Rect::new(15, 15, 25, 25), &[1.0, 0.0, 0.0, 1.0]);
     let mut l = Layer::new("raster", LayerContent::Raster(pixels));
     l.fill_opacity = 0.0;
@@ -312,7 +312,7 @@ fn outside_stroke_on_zero_fill_raster_layer_keeps_interior_clear() {
 #[test]
 fn outside_stroke_on_partial_fill_raster_layer_keeps_interior_free_of_stroke() {
     let mut d = Document::new("t", Size::new(40, 40), ColorMode::Rgb, SampleType::U8);
-    let mut pixels = photocraft_raster::Surface::new(PixelFormat::RGBA8);
+    let mut pixels = lienzo_raster::Surface::new(PixelFormat::RGBA8);
     pixels.fill_rect(Rect::new(15, 15, 25, 25), &[1.0, 0.0, 0.0, 1.0]);
     let mut l = Layer::new("raster", LayerContent::Raster(pixels));
     l.fill_opacity = 0.5;

@@ -18,7 +18,7 @@
 
 use std::sync::Arc;
 
-use photocraft_doc::{DocId, Document, LayerContent, LayerId};
+use lienzo_doc::{DocId, Document, LayerContent, LayerId};
 use serde_json::Value;
 
 use crate::Session;

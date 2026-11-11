@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-raster"
+name = "lienzo-raster"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,8 +8,8 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
+lienzo-geom = { workspace = true }
+lienzo-color = { workspace = true }
 serde = { workspace = true }
 crc32fast = "1"
 lz4_flex = { version = "0.11", default-features = false, features = ["std", "safe-encode", "safe-decode"] }

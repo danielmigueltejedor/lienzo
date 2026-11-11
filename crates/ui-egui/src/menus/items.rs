@@ -1,6 +1,6 @@
 use super::invoke::{panel_alias, proof_preset, workspace_name};
 use super::state::{checked, is_enabled, reveal_label};
-use super::{DOCUMENT_ITEM, PhotocraftApp, UI_COMMANDS};
+use super::{DOCUMENT_ITEM, LienzoApp, UI_COMMANDS};
 
 /// Menu tree entry for rendering and for `ui.inspect`.
 #[derive(Clone, Debug, serde::Serialize)]
@@ -20,7 +20,7 @@ pub struct MenuItem {
 /// the parity report ([`crate::parity`]).
 pub fn is_live(id: &str) -> bool {
     static UI_IDS: std::sync::OnceLock<std::collections::HashSet<&'static str>> = std::sync::OnceLock::new();
-    photocraft_engine::commands::find(id).is_some()
+    lienzo_engine::commands::find(id).is_some()
         || crate::tool_shortcuts::tool(id).is_some()
         || UI_IDS.get_or_init(|| UI_COMMANDS.iter().map(|c| c.0).collect()).contains(id)
         || panel_alias(id).is_some()
@@ -45,7 +45,7 @@ const PLACE_AFTER: &[(&str, &str)] = &[
     ("filter.other.colorToAlpha", "filter.other.offset"),
 ];
 
-pub fn menu_items(app: &PhotocraftApp) -> Vec<MenuItem> {
+pub fn menu_items(app: &LienzoApp) -> Vec<MenuItem> {
     // 1) Photoshop's full menu tree, in Photoshop order; live where we implement the command.
     let known = is_live;
     let mut items: Vec<MenuItem> = crate::menu_catalog::CATALOG
@@ -75,7 +75,7 @@ pub fn menu_items(app: &PhotocraftApp) -> Vec<MenuItem> {
             color: None,
         });
     }
-    for c in photocraft_engine::command_specs().iter().filter(|c| !c.menu.is_empty()) {
+    for c in lienzo_engine::command_specs().iter().filter(|c| !c.menu.is_empty()) {
         extra.push(MenuItem {
             id: c.id.into(),
             label: c.label.into(),
@@ -109,7 +109,7 @@ pub fn menu_items(app: &PhotocraftApp) -> Vec<MenuItem> {
     // Layer › Merge Layers reads Merge Group with just a group selected, as in Photoshop (#3832).
     if let Some(st) = app.session.active()
         && st.selected_layers().len() <= 1
-        && st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, photocraft_doc::LayerContent::Group(_)))
+        && st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, lienzo_doc::LayerContent::Group(_)))
         && let Some(item) = items.iter_mut().find(|i| i.id == "layer.mergeLayers")
     {
         item.label = "Merge Group".into();
@@ -118,7 +118,7 @@ pub fn menu_items(app: &PhotocraftApp) -> Vec<MenuItem> {
     // On the web it intentionally downloads PNG until the quick-export service supports
     // the other formats; the Layer quick-export command also always produces PNG.
     if let Some(item) = items.iter_mut().find(|i| i.id == "file.export.quickExportAsPng") {
-        use photocraft_engine::prefs::QuickExportFormat;
+        use lienzo_engine::prefs::QuickExportFormat;
         let format = if cfg!(target_arch = "wasm32") {
             "PNG"
         } else {

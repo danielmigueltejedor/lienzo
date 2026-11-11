@@ -5,13 +5,13 @@
 use super::*;
 use web_time::{Duration, Instant};
 
-fn names(app: &PhotocraftApp) -> Vec<String> {
+fn names(app: &LienzoApp) -> Vec<String> {
     app.session.active().unwrap().doc.walk().iter().map(|(_, _, l)| l.name.clone()).filter(|n| n != "Background").collect()
 }
 
 /// `Three` makes layers A, B and C.
-fn app_with(performance: &str, seconds: u8, single: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(performance: &str, seconds: u8, single: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 6})).unwrap();
     app.run("actions.setPlayback", json!({"performance": performance, "seconds": seconds, "singleState": single})).unwrap();
     let steps = ["A", "B", "C"].map(|n| ("layer.new.layer".to_string(), json!({"name": n}))).to_vec();
@@ -20,13 +20,13 @@ fn app_with(performance: &str, seconds: u8, single: bool) -> PhotocraftApp {
 }
 
 /// One frame of the app's loop as far as pacing goes, with `events` as its input.
-fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) {
+fn frame(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>) {
     let raw = egui::RawInput { events, ..Default::default() };
     ctx.run_ui(raw, |ui| playback::tick(app, ui.ctx())).drop_without_applying_deltas();
 }
 
 /// Let the wait run out, then one frame.
-fn next_step(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn next_step(app: &mut LienzoApp, ctx: &egui::Context) {
     if let Some(t) = app.paused_playbacks.timer.as_mut() {
         t.due = Instant::now();
     }
@@ -37,7 +37,7 @@ fn esc() -> egui::Event {
     egui::Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE }
 }
 
-fn assert_idle(app: &PhotocraftApp) {
+fn assert_idle(app: &LienzoApp) {
     assert_eq!(app.session.actions.playing, 0);
     assert!(app.session.actions.playback_stack.is_empty());
     assert!(app.paused_playbacks.paused.is_empty());
@@ -45,7 +45,7 @@ fn assert_idle(app: &PhotocraftApp) {
 }
 
 /// No continuation keeps the history policy leased once a playback ended.
-fn assert_released(app: &mut PhotocraftApp) {
+fn assert_released(app: &mut LienzoApp) {
     let single = app.session.prefs().actions.create_single_history_state;
     app.run("actions.setHistory", json!({"singleState": single})).unwrap();
 }
@@ -211,14 +211,14 @@ fn the_panel_menu_opens_playback_options_and_ok_saves_them() {
     d.fields.insert("singleState".into(), json!(false));
     crate::dialogs::confirm(&mut app, id).unwrap();
     let a = &app.session.prefs().actions;
-    assert_eq!(a.performance, photocraft_engine::prefs::PlaybackPerformance::Pause);
+    assert_eq!(a.performance, lienzo_engine::prefs::PlaybackPerformance::Pause);
     assert_eq!(a.pause_seconds, 60, "a number past the range takes the closest one");
     assert!(!a.create_single_history_state);
     // Cancel keeps them.
     let id = playback::open_dialog(&mut app).unwrap()["dialog"].as_u64().unwrap();
     app.ui.dialog_mut(id).unwrap().fields.insert("performance".into(), json!("step"));
     crate::dialogs::cancel(&mut app, id).unwrap();
-    assert_eq!(app.session.prefs().actions.performance, photocraft_engine::prefs::PlaybackPerformance::Pause);
+    assert_eq!(app.session.prefs().actions.performance, lienzo_engine::prefs::PlaybackPerformance::Pause);
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn the_dialog_shows_the_reference_layout() {
     use egui_kittest::{Harness, kittest::Queryable};
     let app = app_with("step", 9, true);
     let mut h = Harness::builder().with_size(egui::vec2(520.0, 420.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     playback::open_dialog(h.state_mut()).unwrap();
     h.run_steps(3);
     for label in ["Performance", "Accelerated", "Step by Step", "Pause For:", "seconds", "History", "Create a single history state", "OK", "Cancel"] {
@@ -242,7 +242,7 @@ fn the_dialog_shows_the_reference_layout() {
     h.get_by_label("OK").click();
     h.run_steps(2);
     let a = &h.state().session.prefs().actions;
-    assert_eq!((a.performance, a.pause_seconds, a.create_single_history_state), (photocraft_engine::prefs::PlaybackPerformance::Pause, 9, false));
+    assert_eq!((a.performance, a.pause_seconds, a.create_single_history_state), (lienzo_engine::prefs::PlaybackPerformance::Pause, 9, false));
 }
 
 #[test]
@@ -268,8 +268,8 @@ fn a_paced_play_clears_an_earlier_playback_error() {
 
 #[test]
 fn playback_options_ok_refuses_values_automation_set_that_the_dialog_cannot_show() {
-    use photocraft_engine::prefs::PlaybackPerformance;
-    let control = |app: &mut PhotocraftApp, method: &str, params: Value| {
+    use lienzo_engine::prefs::PlaybackPerformance;
+    let control = |app: &mut LienzoApp, method: &str, params: Value| {
         let (request, _) = crate::control::ControlRequest::new(method, params);
         match crate::control::handle(app, &egui::Context::default(), &request) {
             crate::control::Outcome::Done(v) => v,

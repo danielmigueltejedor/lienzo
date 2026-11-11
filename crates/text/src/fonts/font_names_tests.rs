@@ -1,6 +1,6 @@
 //! Reproduce numeric subfamilies without redistributing proprietary fonts.
 use super::*;
-use photocraft_doc::text::CharStyle;
+use lienzo_doc::text::CharStyle;
 
 fn numeric_font(source: &[u8], style: &str, ps: &str) -> Vec<u8> {
     let mut bytes = source.to_vec();
@@ -54,7 +54,7 @@ fn numeric_subfamilies_with_identical_weights_select_distinct_faces() {
     assert_ne!(a.font_family, b.font_family);
     assert_eq!(db.faces(&a.font_family)[0].postscript_name.as_deref(), Some("UnrelatedPS20"));
     assert_eq!(db.faces(&b.font_family)[0].postscript_name.as_deref(), Some("UnrelatedPS30"));
-    assert!(!db.families().iter().any(|f| f.starts_with(".PhotoCraft-face-")));
+    assert!(!db.families().iter().any(|f| f.starts_with(".Lienzo-face-")));
     let alias = b.font_family.clone();
     b.font_family = "Numeric Test".into();
     db.select_named_face(&mut b);
@@ -63,7 +63,7 @@ fn numeric_subfamilies_with_identical_weights_select_distinct_faces() {
 
 #[test]
 fn numeric_styles_shape_different_outlines_and_keep_psd_identity() {
-    use photocraft_doc::{TextLayer, text::TextRun};
+    use lienzo_doc::{TextLayer, text::TextRun};
     let mut engine = crate::TextEngine::new();
     engine.fonts.register_font_data(numeric_font(&INTER_REGULAR, "20", "UnrelatedPS20"));
     engine.fonts.register_font_data(numeric_font(&INTER_SEMIBOLD, "30", "UnrelatedPS30"));
@@ -385,7 +385,7 @@ fn width_hvar(hhea: &[u8], hmtx: &[u8], maxp: &[u8]) -> Vec<u8> {
 
 /// The axis values `select_named_face` gives a style of the synthesized variable family that
 /// carries the PostScript name `ps`, sorted by axis.
-fn instance_axes(db: &mut FontDb, ps: &str, variations: Vec<photocraft_doc::text::FontVariation>) -> Vec<(String, f32)> {
+fn instance_axes(db: &mut FontDb, ps: &str, variations: Vec<lienzo_doc::text::FontVariation>) -> Vec<(String, f32)> {
     let mut style = CharStyle { font_family: "Instance Test".into(), postscript_name: Some(ps.into()), weight: 300, variations, ..Default::default() };
     db.select_named_face(&mut style);
     let mut axes: Vec<_> = style.variations.into_iter().map(|v| (v.axis, v.value)).collect();
@@ -399,7 +399,7 @@ fn instance_axes(db: &mut FontDb, ps: &str, variations: Vec<photocraft_doc::text
 /// leaves the style at the default instance, and axes the style sets itself are kept.
 #[test]
 fn postscript_name_of_a_named_instance_selects_its_axis_values() {
-    use photocraft_doc::text::FontVariation;
+    use lienzo_doc::text::FontVariation;
     let mut db = FontDb::new();
     db.register_font_data(instance_font(&INTER_REGULAR));
     assert_eq!(db.faces("Instance Test").len(), 1, "a variable family is one face");
@@ -450,8 +450,8 @@ fn named_instance_wins_over_a_matching_font_style() {
 /// variable face itself, so the default instance would be chosen if the instance were skipped.
 #[test]
 fn postscript_name_of_a_named_instance_lays_out_at_that_instance() {
-    use photocraft_doc::TextLayer;
-    use photocraft_doc::text::{FontVariation, TextRun};
+    use lienzo_doc::TextLayer;
+    use lienzo_doc::text::{FontVariation, TextRun};
     let mut engine = crate::TextEngine::new();
     engine.fonts.register_font_data(instance_font(&INTER_REGULAR));
     let text = "Hamburgefonstiv 0123";

@@ -1,9 +1,9 @@
 use super::{
-    DocId, ExportSettings, FormatChoices, PhotocraftApp, SAVE_OPTIONS_OPEN, SaveKind, Value, camera_raw_ui, dds_options_ui, file_open, jobs_ui,
-    jpeg_options_ui, json, notices, open_prompt, plain_raster, preset_files_ui, saved_revision_after_write, targa_options_ui, tiff_options_ui,
+    DocId, ExportSettings, FormatChoices, LienzoApp, SAVE_OPTIONS_OPEN, SaveKind, Value, camera_raw_ui, dds_options_ui, file_open, jobs_ui, jpeg_options_ui,
+    json, notices, open_prompt, plain_raster, preset_files_ui, saved_revision_after_write, targa_options_ui, tiff_options_ui,
 };
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Record `path` as the most-recently-opened file (File › Open Recent): de-duplicated, newest
     /// first, capped at Preferences › File Handling › Recent File List Contains. The list lives in
     /// the preferences (`fileHandling.recentFiles`), so it survives a restart; `ui.recent_files`
@@ -90,19 +90,19 @@ impl PhotocraftApp {
             return Ok(Vec::new());
         }
         let import = self.services.import.as_ref().ok_or("no importer configured")?;
-        let opts = photocraft_engine::jobs::import_options(self.session.prefs());
+        let opts = lienzo_engine::jobs::import_options(self.session.prefs());
         // A PSD and a magic-detected TIFF both go through the typed IO path: only it carries
         // `PsdApprovalRequired` (and, for a PSD, the structured damaged flag), so a layered
         // TIFF's high-memory decision can raise its prompt instead of becoming a terminal
         // string. Every other format keeps the shell's import service.
-        let typed_open = photocraft_io::is_psd(bytes) || photocraft_codecs::detect(bytes) == Some(photocraft_codecs::Format::Tiff);
+        let typed_open = lienzo_io::is_psd(bytes) || lienzo_codecs::detect(bytes) == Some(lienzo_codecs::Format::Tiff);
         let (mut doc, warnings, damaged) = if typed_open {
             // Read PSD damage as structured information in the same decode, not by
             // retrying an error or matching the text of a compatibility warning. A TIFF never
             // sets it: its layered import has no damaged-content confirmation.
-            let (r, damaged) = match photocraft_io::import_for_open(name, bytes, &opts) {
+            let (r, damaged) = match lienzo_io::import_for_open(name, bytes, &opts) {
                 Ok(result) => result,
-                Err(photocraft_io::IoError::PsdApprovalRequired { .. }) => {
+                Err(lienzo_io::IoError::PsdApprovalRequired { .. }) => {
                     jobs_ui::start_open(self, name, path.map(str::to_string), jobs_ui::bytes(bytes), slot, order)?;
                     return Ok(Vec::new());
                 }
@@ -114,20 +114,20 @@ impl PhotocraftApp {
             (doc, warnings, false)
         };
         // Preferences › Raw Defaults › Resolution, as the engine's open applies it.
-        photocraft_engine::file_cmds::raw_defaults(&self.session, &warnings, &mut doc);
+        lienzo_engine::file_cmds::raw_defaults(&self.session, &warnings, &mut doc);
         // Edit › Color Settings policies apply on open; Ask When Opening holds the file back
         // until its prompt is answered, and later files wait behind it (`open_prompt`).
         // Missing fonts are read from the document itself: it may not be open yet (#4559).
         let warnings = file_open::with_missing_fonts_of(&doc, warnings);
         // A developed raw has no embedded profile to ask about.
-        let developed = warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE));
+        let developed = warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE));
         let question = self.session.color.open_question(&doc).filter(|_| !developed);
         let wants_raw = camera_raw_ui::wants_open_dialog(self, &warnings);
         open_prompt::arrive(
             self,
             open_prompt::Held {
                 doc,
-                read_only: photocraft_io::affinity::is_affinity(bytes),
+                read_only: lienzo_io::affinity::is_affinity(bytes),
                 damage_pending: damaged,
                 name: name.to_string(),
                 path: path.map(str::to_string),
@@ -171,14 +171,14 @@ impl PhotocraftApp {
     /// events and no Color Settings policy (which may read user-configured profile paths).
     fn import_automation_document(&mut self, name: &str, bytes: &[u8], approved: bool) -> Result<Vec<String>, String> {
         let import = self.services.import.as_ref().ok_or("no importer configured")?;
-        let mut opts = photocraft_engine::jobs::import_options(self.session.prefs());
+        let mut opts = lienzo_engine::jobs::import_options(self.session.prefs());
         opts.psd_high_memory_approved = approved;
         let (mut doc, warnings) = import(name, bytes, &opts)?;
-        photocraft_engine::file_cmds::raw_defaults(&self.session, &warnings, &mut doc);
+        lienzo_engine::file_cmds::raw_defaults(&self.session, &warnings, &mut doc);
         // The caller records the path it read from.
         self.session.add_document(doc, None);
         if let Some(st) = self.session.active_mut() {
-            st.source_read_only = photocraft_io::affinity::is_affinity(bytes);
+            st.source_read_only = lienzo_io::affinity::is_affinity(bytes);
         }
         self.sync_views();
         self.ui.status = crate::i18n::fmt(tl!("Opened {name}"), &[("name", name)]);
@@ -228,17 +228,17 @@ impl PhotocraftApp {
         let flat = plain_raster(&st.doc).is_some();
         let ext = st.path.as_deref().and_then(|p| std::path::Path::new(p).extension()).map(|e| e.to_string_lossy().to_ascii_lowercase());
         // An OpenRaster file only when it holds the whole document (#3806): else PSD is offered.
-        let holds_ora = st.path.as_deref().is_some_and(|p| photocraft_engine::file_cmds::holds_at(&st.doc, p));
+        let holds_ora = st.path.as_deref().is_some_and(|p| lienzo_engine::file_cmds::holds_at(&st.doc, p));
         let writable = ext.is_some_and(|e| {
-            matches!(e.as_str(), photocraft_format::EXTENSION | "psd" | "psb" | "tif" | "tiff")
+            matches!(e.as_str(), lienzo_format::EXTENSION | "psd" | "psb" | "tif" | "tiff")
                 || (e == "ora" && holds_ora)
-                || (flat && photocraft_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
+                || (flat && lienzo_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
         });
         let suggested = match &st.path {
             Some(p) if writable => p.clone(),
             p => {
                 let source = p.as_deref().unwrap_or(&st.doc.name);
-                let ext = match photocraft_engine::file_cmds::extension(source).as_deref() {
+                let ext = match lienzo_engine::file_cmds::extension(source).as_deref() {
                     Some("pdn") => "pcraft",
                     Some("kra" | "krz") => "ora",
                     _ => "psd",
@@ -450,11 +450,11 @@ impl PhotocraftApp {
             let choices = FormatChoices::from_step(params, id)?;
             let st = self.session.active().ok_or("no document")?;
             let flat_own = |p: &str| {
-                !photocraft_engine::file_cmds::saves_in_place(p)
+                !lienzo_engine::file_cmds::saves_in_place(p)
                     && plain_raster(&st.doc).is_some()
-                    && photocraft_engine::file_cmds::extension(p).is_some_and(|e| photocraft_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
+                    && lienzo_engine::file_cmds::extension(p).is_some_and(|e| lienzo_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
             };
-            let path = st.path.clone().filter(|p| photocraft_engine::file_cmds::holds_at(&st.doc, p) || flat_own(p)).ok_or(
+            let path = st.path.clone().filter(|p| lienzo_engine::file_cmds::holds_at(&st.doc, p) || flat_own(p)).ok_or(
                 "Save writes back only to the document's own PSD, PSB, .pcraft or OpenRaster file (OpenRaster only when it holds everything), or to its own flat file while the document is a single plain layer",
             )?;
             return self.save_in_place(path, choices);
@@ -483,8 +483,8 @@ impl PhotocraftApp {
     /// Photoshop's Save and Save As options start there.
     pub(crate) fn save_settings(&self) -> ExportSettings {
         let file_handling = &self.session.prefs().file_handling;
-        let previews = file_handling.image_previews != photocraft_engine::prefs::Ask::Never;
-        let maximize = file_handling.maximize_psd_compatibility != photocraft_engine::prefs::Ask::Never;
+        let previews = file_handling.image_previews != lienzo_engine::prefs::Ask::Never;
+        let maximize = file_handling.maximize_psd_compatibility != lienzo_engine::prefs::Ask::Never;
         let mut settings = ExportSettings {
             image_previews: previews,
             psd_maximize_compatibility: maximize,
@@ -511,9 +511,9 @@ impl PhotocraftApp {
         // An OpenRaster file that can't hold everything (adjustment layers, styles…) is a copy too,
         // so the editable document isn't marked saved after losing them (#3806).
         let st = self.session.active().ok_or("no document")?;
-        let tiff = |p: &str| matches!(photocraft_engine::file_cmds::extension(p).as_deref(), Some("tif" | "tiff"));
-        let holds = photocraft_engine::file_cmds::holds_at(&st.doc, path) || tiff(path);
-        let lives_layered = st.path.as_deref().is_some_and(|p| photocraft_engine::file_cmds::saves_in_place(p) || tiff(p));
+        let tiff = |p: &str| matches!(lienzo_engine::file_cmds::extension(p).as_deref(), Some("tif" | "tiff"));
+        let holds = lienzo_engine::file_cmds::holds_at(&st.doc, path) || tiff(path);
+        let lives_layered = st.path.as_deref().is_some_and(|p| lienzo_engine::file_cmds::saves_in_place(p) || tiff(p));
         Ok(tiff_layers == Some(false) || (!holds && (plain_raster(&st.doc).is_none() || lives_layered)))
     }
 
@@ -564,7 +564,7 @@ impl PhotocraftApp {
             .session
             .documents()
             .iter()
-            .filter(|st| st.doc.id != saver && st.path.as_deref().is_some_and(|p| photocraft_engine::file_cmds::same_file(p, path)))
+            .filter(|st| st.doc.id != saver && st.path.as_deref().is_some_and(|p| lienzo_engine::file_cmds::same_file(p, path)))
             .map(|st| (st.doc.id, st.doc.name.clone()))
             .collect();
         let mut detached = Vec::new();
@@ -620,7 +620,7 @@ impl PhotocraftApp {
         let (hooks, arm) = match kind {
             SaveKind::User => (true, true),
             SaveKind::Automation => {
-                let holds = self.session.documents().iter().find(|st| st.doc.id == doc).is_some_and(|st| photocraft_engine::file_cmds::holds_at(&st.doc, path));
+                let holds = self.session.documents().iter().find(|st| st.doc.id == doc).is_some_and(|st| lienzo_engine::file_cmds::holds_at(&st.doc, path));
                 (false, holds)
             }
         };
@@ -639,10 +639,10 @@ impl PhotocraftApp {
                     st.saved_revision = revision;
                     app.remember_stamp(doc, path);
                     // History Options › Automatically Create New Snapshot When Saving (#2966).
-                    photocraft_engine::history_options_cmds::snapshot_on_save(&mut app.session);
+                    lienzo_engine::history_options_cmds::snapshot_on_save(&mut app.session);
                 }
                 // "Save Document" script events and File › Generate › Image Assets.
-                if hooks && let Some(r) = photocraft_engine::automate_cmds::document_saved(&mut app.session, doc) {
+                if hooks && let Some(r) = lienzo_engine::automate_cmds::document_saved(&mut app.session, doc) {
                     let files = r["files"].as_array().map_or(0, Vec::len);
                     asset_ok = files;
                     asset_dir = r["dir"].as_str().unwrap_or("").to_string();
@@ -696,7 +696,7 @@ impl PhotocraftApp {
     }
 
     /// Note how `doc`'s own file at `path` looks now that the document read or wrote it.
-    pub(crate) fn remember_stamp(&mut self, doc: photocraft_doc::DocId, path: &str) {
+    pub(crate) fn remember_stamp(&mut self, doc: lienzo_doc::DocId, path: &str) {
         match self.services.file_stamp.as_ref().and_then(|stamp| stamp(path)) {
             Some(now) => self.disk_stamps.insert(doc, (path.to_string(), now)),
             None => self.disk_stamps.remove(&doc),
@@ -705,7 +705,7 @@ impl PhotocraftApp {
 
     /// Another app changed `doc`'s own file at `path` since the document was opened from it or
     /// last saved to it. A file that is gone, or one never stamped, counts as unchanged.
-    pub(crate) fn changed_on_disk(&self, doc: photocraft_doc::DocId, path: &str) -> bool {
+    pub(crate) fn changed_on_disk(&self, doc: lienzo_doc::DocId, path: &str) -> bool {
         let Some((own, then)) = self.disk_stamps.get(&doc) else { return false };
         own == path && self.services.file_stamp.as_ref().and_then(|stamp| stamp(path)).is_some_and(|now| now != *then)
     }
@@ -766,7 +766,7 @@ impl PhotocraftApp {
         let target = {
             let state = self.session.active().ok_or("no document")?;
             // As File › Save: without `path` only a layered file is written back (#416).
-            path.or_else(|| state.path.clone().filter(|p| photocraft_engine::file_cmds::holds_at(&state.doc, p))).ok_or(
+            path.or_else(|| state.path.clone().filter(|p| lienzo_engine::file_cmds::holds_at(&state.doc, p))).ok_or(
                 "pass `path`: a save without one writes back only to the document's own PSD, PSB, .pcraft or OpenRaster file, and to OpenRaster only when it holds everything (adjustment layers, styles and masks don't fit)",
             )?
         };
@@ -826,13 +826,13 @@ fn remembered_new_document_value(key: &str, v: &serde_json::Value) -> bool {
 }
 
 /// Remember the New Document fields `f` its OK used, for the next New Document.
-pub(crate) fn remember_new_document(app: &mut PhotocraftApp, f: &serde_json::Map<String, serde_json::Value>) {
+pub(crate) fn remember_new_document(app: &mut LienzoApp, f: &serde_json::Map<String, serde_json::Value>) {
     let kept: serde_json::Map<String, serde_json::Value> =
         NEW_DOCUMENT_REMEMBERED.iter().filter_map(|k| f.get(*k).filter(|v| remembered_new_document_value(k, v)).map(|v| (k.to_string(), v.clone()))).collect();
     app.session.prefs.edit(|p| p.dialogs.insert(NEW_DOCUMENT.into(), serde_json::Value::Object(kept)));
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// File › New's fields: the defaults, then the settings of the last document made with the
     /// dialog (Photoshop starts from them, #1810), then the Clipboard preset (the clipboard image's
     /// size, selected) when the clipboard holds an image. Opening the dialog is an explicit
@@ -859,10 +859,9 @@ impl PhotocraftApp {
 /// Refuses a save that won't fit in memory, before any encoding starts (#10024): on the web a
 /// failed allocation aborts the module and the unsaved document is lost with it. The document
 /// stays open and unchanged, and the message says how to free memory.
-pub(crate) fn ensure_memory_to_save(doc: &photocraft_engine::doc::Document, path: &str) -> Result<(), String> {
+pub(crate) fn ensure_memory_to_save(doc: &lienzo_engine::doc::Document, path: &str) -> Result<(), String> {
     let name = file_open::display_name(path);
-    photocraft_engine::memory_gate::ensure_for_save(&format!("save \u{201c}{name}\u{201d}"), photocraft_io::estimate_export_bytes(doc, path))
-        .map_err(|e| e.to_string())
+    lienzo_engine::memory_gate::ensure_for_save(&format!("save \u{201c}{name}\u{201d}"), lienzo_io::estimate_export_bytes(doc, path)).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -874,7 +873,7 @@ mod tests {
     #[test]
     fn a_user_save_reports_image_assets_outputs_that_failed() {
         let unique = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
-        let root = std::env::temp_dir().join(format!("photocraft-11117-{}-{unique}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("lienzo-11117-{}-{unique}", std::process::id()));
         let assets = root.join("probe-assets");
         std::fs::create_dir_all(&assets).unwrap();
         // `blocked` is a regular file, so the `blocked/fail.png` asset cannot create its folder;
@@ -882,7 +881,7 @@ mod tests {
         std::fs::write(assets.join("blocked"), "not a folder").unwrap();
         let path = root.join("probe.psd").to_string_lossy().into_owned();
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         // A save script closes this earlier tab, shifting the saved document's index.
         app.session.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
         app.session.execute("file.new", json!({"width": 8, "height": 8})).unwrap();

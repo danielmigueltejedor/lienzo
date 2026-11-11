@@ -7,7 +7,7 @@ already translate: filter and adjustment parameter names, Camera Raw panels, lig
 History / Layers / paths / channels menu labels, metadata fields, status messages, System Info
 and dialog text. In Russian those showed in English.
 They are now translated, reusing the vocabulary the catalog already uses elsewhere so the same
-term reads the same everywhere. Translations are written from the meaning of PhotoCraft's English
+term reads the same everywhere. Translations are written from the meaning of Lienzo's English
 labels; no proprietary translation resources, fonts, screenshots or user documents are included.
 
 ## Register and style
@@ -17,7 +17,7 @@ where the catalog already uses a noun it is kept (*Уровни…*, *Кривы
 first word, as in the rest of the catalog. Ellipses on dialog commands are preserved (`Ветер…`
 → `Ветер…`). Decimals use a comma (the file format's own labels keep their dots, e.g.
 `Landscape, 10 x 8` stays `Альбомная, 10 x 8`). Latin product and technology names are not
-translated (PhotoCraft, Camera Raw, RGB, CMYK, Lab, LUT, WebP); Camera Raw keeps `.xmp`; the
+translated (Lienzo, Camera Raw, RGB, CMYK, Lab, LUT, WebP); Camera Raw keeps `.xmp`; the
 `HDR`, `HSL`, `HSB` and `W3C` acronyms and the `sGray`/`Pro Photo` identifiers stay Latin.
 
 ## Terminology
@@ -51,7 +51,7 @@ Existing choices were followed rather than re-invented, so the new rows use:
 
 ## Native review
 
-The review was AI-assisted and each row was checked against the meaning of PhotoCraft's own
+The review was AI-assisted and each row was checked against the meaning of Lienzo's own
 English label. A review by a native speaker is still welcome.
 
 ## Not covered
@@ -65,7 +65,7 @@ translated to stay aligned with the other catalogs.
 
 - Every filter and adjustment parameter, symbolic choice and gallery name has a Russian row, as do
   the rasterize prompts, hardware status lines and composed status templates.
-- `cargo test -p photocraft-ui-egui --lib`: 2,998 passed, 0 failed.
+- `cargo test -p lienzo-ui-egui --lib`: 2,998 passed, 0 failed.
 - `cargo xtask i18n-coverage`: `ru` remains at 100% of the measured keys.
-- The offscreen `snapshot` example with `PHOTOCRAFT_LOCALE=ru` renders the dialogs with Russian
+- The offscreen `snapshot` example with `LIENZO_LOCALE=ru` renders the dialogs with Russian
   labels, without missing glyphs or clipped text.

@@ -4,7 +4,7 @@ use super::{
     Affine, Arc, BlendMode, Document, EngineError, Homography, Layer, LayerContent, LayerId, PLACED_KEYS, Rect, Result, Session, Size, SmartContentsId,
     SmartObject, SmartSource, Surface, Value, encode_source, json, layer_param, other, source_box, translate_surface,
 };
-use photocraft_algo::transform::Interp;
+use lienzo_algo::transform::Interp;
 
 /// Rounds float noise off a composed transform (scale 0.1 then 10 should be exactly 1), so
 /// repeated transforms land back on exact, lossless placements.
@@ -75,7 +75,7 @@ pub(super) fn reset_transform(s: &mut Session, p: &Value) -> Result<Value> {
     let LayerContent::Smart(sm) = &st.doc.layer(id).ok_or(EngineError::NoLayer(id))?.content else {
         return Err(other("the layer is not a smart object"));
     };
-    // Checked before anything changes, so a filter PhotoCraft doesn't have (kept verbatim from a
+    // Checked before anything changes, so a filter Lienzo doesn't have (kept verbatim from a
     // PSD) leaves the document as it was, as `layer.smartObjects.updateModifiedContent` insists on
     // a re-render too.
     let stuck = unapplied_filters(sm);
@@ -238,7 +238,7 @@ pub fn layers_to_smart(doc: &Document, name: &str, layers: Vec<Layer>) -> Result
     let region = layers.iter().map(|l| subtree_bounds(l, canvas)).fold(canvas, |a, b| a.union(&b)).inflate(if has_fx { 256 } else { 0 });
     sub.layers = layers;
 
-    let buf = photocraft_compose::render(&sub, region);
+    let buf = lienzo_compose::render(&sub, region);
     let w = region.width() as usize;
     let mut b = Rect::EMPTY;
     for (i, p) in buf.px.iter().enumerate() {
@@ -252,7 +252,7 @@ pub fn layers_to_smart(doc: &Document, name: &str, layers: Vec<Layer>) -> Result
     }
     let fmt = doc.pixel_format();
     let mut cache = buffer_to_surface(&buf, fmt);
-    cache = photocraft_algo::resample::crop_surface(&cache, b);
+    cache = lienzo_algo::resample::crop_surface(&cache, b);
     cache.prune();
 
     sub.layers.iter_mut().for_each(|l| shift_layer(l, -b.x0, -b.y0));

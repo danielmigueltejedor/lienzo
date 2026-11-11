@@ -1,7 +1,7 @@
 use super::defaults::default_style_params;
 use super::editing::{begin_edit, commit_with};
 use super::layout::{hit_layer, hit_offset, layout, to_text};
-use super::{BoxResize, LayerId, PLACEHOLDER, PhotocraftApp, Point, TextEdit, TextLayout, active_doc_id, byte_of, current_text, json, session_key, text_layer};
+use super::{BoxResize, LayerId, LienzoApp, PLACEHOLDER, Point, TextEdit, TextLayout, active_doc_id, byte_of, current_text, json, session_key, text_layer};
 
 /// Smallest paragraph box a handle drag leaves, in text-space px.
 pub(super) const MIN_BOX: f32 = 4.0;
@@ -20,15 +20,15 @@ pub(super) fn handle_sides(i: u8) -> (bool, bool, bool, bool) {
     }
 }
 
-pub(crate) fn box_shape(app: &PhotocraftApp, id: LayerId) -> Option<(f32, f32, f32, f32)> {
+pub(crate) fn box_shape(app: &LienzoApp, id: LayerId) -> Option<(f32, f32, f32, f32)> {
     match app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape.clone()))? {
-        photocraft_doc::text::TextShape::Box { x, y, width, height } => Some((x, y, width, height)),
+        lienzo_doc::text::TextShape::Box { x, y, width, height } => Some((x, y, width, height)),
         _ => None,
     }
 }
 
 /// The paragraph-box handle under the document point, if the layer is paragraph text.
-pub(crate) fn box_handle_at(app: &mut PhotocraftApp, id: LayerId, x: f64, y: f64) -> Option<u8> {
+pub(crate) fn box_handle_at(app: &mut LienzoApp, id: LayerId, x: f64, y: f64) -> Option<u8> {
     let (bx, by, w, h) = box_shape(app, id)?;
     let (_, aff, _) = layout(app, id)?;
     let (r, b) = (bx + w, by + h);
@@ -56,7 +56,7 @@ pub(crate) fn box_handle_at(app: &mut PhotocraftApp, id: LayerId, x: f64, y: f64
 /// the drag about the centre the box started with, so the block grows symmetrically instead of
 /// from one side — pressing or releasing ⌥ mid-drag switches that on and off as if it had been
 /// held from the start.
-fn resize_box(app: &mut PhotocraftApp, ed: &TextEdit, r: BoxResize, x: f64, y: f64, alt: bool) {
+fn resize_box(app: &mut LienzoApp, ed: &TextEdit, r: BoxResize, x: f64, y: f64, alt: bool) {
     let (px, py) = to_text(&r.aff, x, y);
     let (l, rw, t, b) = handle_sides(r.handle);
     let (bx, by, w, h) = (r.shape[0], r.shape[1], r.shape[2], r.shape[3]);
@@ -107,7 +107,7 @@ fn resize_box(app: &mut PhotocraftApp, ed: &TextEdit, r: BoxResize, x: f64, y: f
 
 /// True when document point (`x`, `y`) lies inside the paragraph box of type layer `id` (false
 /// for point text).
-pub(crate) fn inside_box(app: &mut PhotocraftApp, id: LayerId, x: f64, y: f64) -> bool {
+pub(crate) fn inside_box(app: &mut LienzoApp, id: LayerId, x: f64, y: f64) -> bool {
     let Some((bx, by, w, h)) = box_shape(app, id) else { return false };
     let Some((_, aff, _)) = layout(app, id) else { return false };
     let (tx, ty) = to_text(&aff, x, y);
@@ -115,7 +115,7 @@ pub(crate) fn inside_box(app: &mut PhotocraftApp, id: LayerId, x: f64, y: f64) -
 }
 
 /// Pointer down with the Type tool. Returns true when the press was consumed (no box drag).
-pub fn pointer_down(app: &mut PhotocraftApp, x: f64, y: f64, mods: egui::Modifiers) -> bool {
+pub fn pointer_down(app: &mut LienzoApp, x: f64, y: f64, mods: egui::Modifiers) -> bool {
     if let Some(ed) = app.ui.text_edit.clone() {
         let id = LayerId(ed.layer);
         if let Some(i) = box_handle_at(app, id, x, y) {
@@ -189,7 +189,7 @@ pub fn pointer_down(app: &mut PhotocraftApp, x: f64, y: f64, mods: egui::Modifie
     false
 }
 
-pub fn pointer_move(app: &mut PhotocraftApp, x: f64, y: f64, mods: egui::Modifiers) {
+pub fn pointer_move(app: &mut LienzoApp, x: f64, y: f64, mods: egui::Modifiers) {
     let Some(ed) = app.ui.text_edit.clone() else { return };
     if let Some(r) = ed.resize {
         resize_box(app, &ed, r, x, y, mods.alt);
@@ -215,9 +215,9 @@ pub(crate) enum PathClick {
 }
 
 /// Arc length (px) along `sub` from its first anchor to segment `seg` at curve parameter `t`.
-fn arc_length_to(sub: &photocraft_doc::Subpath, seg: usize, t: f64) -> f64 {
+fn arc_length_to(sub: &lienzo_doc::Subpath, seg: usize, t: f64) -> f64 {
     const PIECES: usize = 32;
-    let eval = photocraft_vector::edit::eval;
+    let eval = lienzo_vector::edit::eval;
     let length = |s: &[Point; 4], upto: f64| {
         (1..=PIECES)
             .fold((0.0, eval(s, 0.0)), |(len, prev), j| {
@@ -236,8 +236,8 @@ fn arc_length_to(sub: &photocraft_doc::Subpath, seg: usize, t: f64) -> f64 {
 /// one, area type. The work path's inside counts only while the canvas draws it (selected in the
 /// Paths panel, #6551): a hidden Work Path left after Load as Selection must not turn a plain
 /// click into area type. None while View › Show › Target Path (or Extras) hides paths.
-pub(crate) fn path_target(app: &PhotocraftApp, x: f64, y: f64) -> Option<PathClick> {
-    use photocraft_vector::edit::{Hit, hit};
+pub(crate) fn path_target(app: &LienzoApp, x: f64, y: f64) -> Option<PathClick> {
+    use lienzo_vector::edit::{Hit, hit};
     if !app.ui.view.shows(app.ui.view.show.target_path) {
         return None;
     }
@@ -248,13 +248,13 @@ pub(crate) fn path_target(app: &PhotocraftApp, x: f64, y: f64) -> Option<PathCli
     // anchors than this is not a click target (the click and the pointer agree: plain point
     // text). 4096 anchors is far beyond hand-drawn paths and shapes yet keeps a frame cheap, and
     // it is the most `type.fillPath` accepts, so every area click target can be filled.
-    const MAX_TARGET_KNOTS: usize = photocraft_text::area::MAX_AREA_KNOTS;
-    let small = |path: &photocraft_doc::vector::Path| path.subpaths.iter().map(|s| s.knots.len()).fold(0usize, usize::saturating_add) <= MAX_TARGET_KNOTS;
+    const MAX_TARGET_KNOTS: usize = lienzo_text::area::MAX_AREA_KNOTS;
+    let small = |path: &lienzo_doc::vector::Path| path.subpaths.iter().map(|s| s.knots.len()).fold(0usize, usize::saturating_add) <= MAX_TARGET_KNOTS;
     let tol = 6.0 / app.point_zoom().max(0.01) as f64;
     // Only the horizontal Type tool starts type on a path: vertical type on a path is not laid
     // out yet.
     let vertical = app.ui.tool.is_vertical_type();
-    let outline = |path: &photocraft_doc::vector::Path, shape: Option<u64>| {
+    let outline = |path: &lienzo_doc::vector::Path, shape: Option<u64>| {
         let on_path = |sp: usize, k: usize, t: f64| {
             // Type on a path needs a segment to run along (`type.attachToPath` rejects one anchor).
             let sub = path.subpaths.get(sp).filter(|s| !vertical && s.knots.len() >= 2)?;
@@ -266,7 +266,7 @@ pub(crate) fn path_target(app: &PhotocraftApp, x: f64, y: f64) -> Option<PathCli
             _ => None,
         }
     };
-    let inside = |path: &photocraft_doc::vector::Path| photocraft_text::area::AreaShape::new(path, false).is_some_and(|a| a.contains(x as f32, y as f32));
+    let inside = |path: &lienzo_doc::vector::Path| lienzo_text::area::AreaShape::new(path, false).is_some_and(|a| a.contains(x as f32, y as f32));
     if let Some((id, p)) = shape_path.as_ref().filter(|(_, p)| small(p)) {
         if let Some(c) = outline(p, Some(*id)) {
             return Some(c);
@@ -289,7 +289,7 @@ pub(crate) fn path_target(app: &PhotocraftApp, x: f64, y: f64) -> Option<PathCli
 /// (a click then commits rather than starting new type). While the button is held it is what the
 /// release makes (`pointer_up`): nothing once the drag is a text box, else the path click at the
 /// press.
-pub(crate) fn hover_path_target(app: &mut PhotocraftApp, x: f64, y: f64, shift: bool) -> Option<PathClick> {
+pub(crate) fn hover_path_target(app: &mut LienzoApp, x: f64, y: f64, shift: bool) -> Option<PathClick> {
     if app.ui.text_edit.is_some() {
         return None;
     }
@@ -303,14 +303,14 @@ pub(crate) fn hover_path_target(app: &mut PhotocraftApp, x: f64, y: f64, shift: 
 
 /// Whether a press at `start` released at `end` drags out a paragraph box rather than clicking
 /// (at least 4 screen pixels both ways).
-fn makes_box(app: &PhotocraftApp, start: [f64; 2], end: [f64; 2]) -> bool {
+fn makes_box(app: &LienzoApp, start: [f64; 2], end: [f64; 2]) -> bool {
     let (w, h) = ((end[0] - start[0]).abs(), (end[1] - start[1]).abs());
     let min = 4.0 / app.point_zoom().max(0.01) as f64;
     w >= min && h >= min
 }
 
 /// Pointer up. `rect` is the dragged box (document px) when no edit session consumed the press.
-pub fn pointer_up(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) {
+pub fn pointer_up(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2]) {
     crate::type_box_preview::flush(app);
     if let Some(e) = app.ui.text_edit.as_mut() {
         e.dragging = false;
@@ -385,7 +385,7 @@ pub fn pointer_up(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2]) {
 
 /// Character index of the previous / next word boundary (shared with `type.navigate`).
 pub(super) fn word_boundary(text: &str, from: usize, forward: bool) -> usize {
-    photocraft_text::word_boundary(text, from, forward)
+    lienzo_text::word_boundary(text, from, forward)
 }
 
 /// Most clicks in a run that select more: 2 a word, 3 a line, 4 a paragraph, 5 all text. The
@@ -428,8 +428,8 @@ pub(crate) fn click_selection(layout: Option<&TextLayout>, text: &str, caret: us
         }
         3 => {
             let Some(l) = layout else { return paragraph_of(text, c) };
-            let ln = line.and_then(|i| l.lines.get(i)).or_else(|| l.lines.get(photocraft_text::line_index(l, byte_of(text, c))));
-            ln.map_or((c, c), |ln| (photocraft_text::char_index(text, ln.range.start), photocraft_text::char_index(text, ln.range.end)))
+            let ln = line.and_then(|i| l.lines.get(i)).or_else(|| l.lines.get(lienzo_text::line_index(l, byte_of(text, c))));
+            ln.map_or((c, c), |ln| (lienzo_text::char_index(text, ln.range.start), lienzo_text::char_index(text, ln.range.end)))
         }
         4 => paragraph_of(text, c),
         5 => (0, n),
@@ -440,17 +440,17 @@ pub(crate) fn click_selection(layout: Option<&TextLayout>, text: &str, caret: us
 /// Characters of the paragraph holding character `c`, without its hard return.
 fn paragraph_of(text: &str, c: usize) -> (usize, usize) {
     let b = byte_of(text, c);
-    let paras = photocraft_text::layout::split_paragraphs(text);
+    let paras = lienzo_text::layout::split_paragraphs(text);
     let Some(r) = paras.iter().find(|r| b >= r.start && b < r.end).or_else(|| paras.last()) else { return (c, c) };
     let body = text.get(r.clone()).unwrap_or("").trim_end_matches(['\r', '\n']);
-    let start = photocraft_text::char_index(text, r.start);
+    let start = lienzo_text::char_index(text, r.start);
     (start, start + body.chars().count())
 }
 
 /// A click while editing type at document point (`x`, `y`), after it placed the caret there.
 /// `egui_count` is egui's count for the click (see [`next_click_count`]). Like Photoshop, two
 /// clicks select a word, three the line, four the paragraph and five all text.
-pub fn multi_click(app: &mut PhotocraftApp, egui_count: u32, x: f64, y: f64) {
+pub fn multi_click(app: &mut LienzoApp, egui_count: u32, x: f64, y: f64) {
     let Some(ed) = app.ui.text_edit.clone() else {
         app.type_clicks = None;
         return;
@@ -467,7 +467,7 @@ pub fn multi_click(app: &mut PhotocraftApp, egui_count: u32, x: f64, y: f64) {
     let (caret, line) = match &laid {
         Some((l, aff, t)) if *t == text && x.is_finite() && y.is_finite() => {
             let (tx, ty) = to_text(aff, x, y);
-            let (ci, line) = photocraft_text::hit_char(l, t, tx, ty);
+            let (ci, line) = lienzo_text::hit_char(l, t, tx, ty);
             (ci, Some(line))
         }
         _ => (ed.caret, None),

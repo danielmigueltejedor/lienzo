@@ -6,10 +6,10 @@
 
 use std::sync::Arc;
 
-use photocraft_algo::transform::Interp;
-use photocraft_cms::Intent;
-use photocraft_color::BlendMode;
-use photocraft_doc::{Document, Group, Layer, LayerContent, LayerId, Metadata, SmartObject, SmartSource};
+use lienzo_algo::transform::Interp;
+use lienzo_cms::Intent;
+use lienzo_color::BlendMode;
+use lienzo_doc::{Document, Group, Layer, LayerContent, LayerId, Metadata, SmartObject, SmartSource};
 use serde_json::{Value, json};
 
 use super::{authorize_source, authorized_source_bytes, decode_source, detach_psd, other, placement, shift_layer, smart};
@@ -48,7 +48,7 @@ fn contents(s: &Session, doc: &Document, sm: &SmartObject, intent: Intent, bpc: 
 /// behind: embed those sources so the nested smart objects keep rendering in the document.
 fn embed_nested(meta: &Metadata, l: &mut Layer) {
     let found = match &l.content {
-        LayerContent::Smart(SmartObject { source: SmartSource::Linked { path }, .. }) => photocraft_io::linked::find_linked_file(meta, path),
+        LayerContent::Smart(SmartObject { source: SmartSource::Linked { path }, .. }) => lienzo_io::linked::find_linked_file(meta, path),
         _ => None,
     };
     if let Some(f) = found {
@@ -90,13 +90,13 @@ fn place(s: &Session, doc: &Document, sm: &SmartObject, layers: &mut [Layer]) ->
     let h = placement(sm);
     let affine = sm.perspective.is_none().then_some(sm.transform);
     if let SmartSource::Embedded { bytes, .. } = &sm.source
-        && photocraft_io::svg::is_svg(bytes)
+        && lienzo_io::svg::is_svg(bytes)
         && let Some(transform) = affine
     {
         check_destination_shapes(layers, transform, doc.size, doc.pixel_format().bytes_per_pixel()).map_err(other)?;
     }
     for l in layers {
-        released(l, |l| crate::transform_cmds::transform_layer(None, photocraft_doc::Locks::default(), l, &h, affine, Interp::Bicubic))?;
+        released(l, |l| crate::transform_cmds::transform_layer(None, lienzo_doc::Locks::default(), l, &h, affine, Interp::Bicubic))?;
         crate::transform_cmds::refresh_text(doc, l);
     }
     Ok(())
@@ -198,13 +198,13 @@ pub(super) fn convert_to_layers(s: &mut Session, p: &Value) -> Result<Value> {
 /// itself keeps its layer caches under (several full-canvas shapes in a 24 MP document fit).
 fn check_destination_shapes(
     layers: &[Layer],
-    transform: photocraft_geom::Affine,
-    size: photocraft_geom::Size,
+    transform: lienzo_geom::Affine,
+    size: lienzo_geom::Size,
     bytes_per_pixel: usize,
 ) -> std::result::Result<(), String> {
     const MAX_CACHE_BYTES: u64 = 1 << 30;
     let max_pixels = MAX_CACHE_BYTES / u64::try_from(bytes_per_pixel.max(1)).unwrap_or(u64::MAX);
-    let canvas = photocraft_geom::Rect::from_size(size);
+    let canvas = lienzo_geom::Rect::from_size(size);
     let mut pixels = 0u64;
     let mut pending: Vec<&Layer> = layers.iter().collect();
     while let Some(layer) = pending.pop() {
@@ -212,7 +212,7 @@ fn check_destination_shapes(
         let LayerContent::Shape(shape) = &layer.content else { continue };
         let mut shape = shape.clone();
         crate::vector_cmds::transform_shape(&mut shape, &transform);
-        let compiled = photocraft_vector::CompiledShape::new(&shape, photocraft_vector::DEFAULT_TOLERANCE, canvas);
+        let compiled = lienzo_vector::CompiledShape::new(&shape, lienzo_vector::DEFAULT_TOLERANCE, canvas);
         let area = compiled.bounds().map_or(0, |bounds| bounds.intersect(&canvas).size().area());
         pixels = pixels.checked_add(area).ok_or("The unpacked shape caches exceed the smart-object cache budget")?;
         if pixels > max_pixels {

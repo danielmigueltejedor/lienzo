@@ -6,7 +6,7 @@ use egui::pos2;
 use super::*;
 
 /// The open popup's position: the Pen's canvas tool menu, or else the Brush Preset picker.
-fn popup_at(h: &Harness<'static, PhotocraftApp>, pen: bool) -> Option<[f32; 2]> {
+fn popup_at(h: &Harness<'static, LienzoApp>, pen: bool) -> Option<[f32; 2]> {
     if pen { h.state().ui.canvas_tool_menu.as_ref().map(|m| m.pos) } else { h.state().ui.brush_picker }
 }
 
@@ -65,13 +65,13 @@ fn a_right_click_on_a_canvas_scrollbar_opens_no_menu() {
 }
 
 /// One pointer button event in its own frame.
-fn button(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2, button: PointerButton, pressed: bool) {
+fn button(h: &mut Harness<'static, LienzoApp>, pos: Pos2, button: PointerButton, pressed: bool) {
     h.event(egui::Event::PointerButton { pos, button, pressed, modifiers: Modifiers::NONE });
     h.run_steps(1);
 }
 
 /// A pointer move by `by` from `from`, in `steps` frames; returns where it ends.
-fn move_by(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, by: egui::Vec2, steps: usize) -> Pos2 {
+fn move_by(h: &mut Harness<'static, LienzoApp>, from: Pos2, by: egui::Vec2, steps: usize) -> Pos2 {
     for i in 1..=steps {
         h.event(egui::Event::PointerMoved(from + by * (i as f32 / steps as f32)));
         h.run_steps(1);
@@ -79,13 +79,13 @@ fn move_by(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, by: egui::Vec2, 
     from + by
 }
 
-fn space(h: &mut Harness<'static, PhotocraftApp>, pressed: bool) {
+fn space(h: &mut Harness<'static, LienzoApp>, pressed: bool) {
     h.event(egui::Event::Key { key: egui::Key::Space, physical_key: None, pressed, repeat: false, modifiers: Modifiers::NONE });
     h.run_steps(1);
 }
 
 /// A harness zoomed in far enough to pan, with `tool`.
-fn zoomed(tool: Tool, prefs: Option<&str>) -> Harness<'static, PhotocraftApp> {
+fn zoomed(tool: Tool, prefs: Option<&str>) -> Harness<'static, LienzoApp> {
     let mut h = harness(prefs);
     h.state_mut().ui.tool = tool;
     h.state_mut().ui.views[0].zoom = 4.0;
@@ -93,7 +93,7 @@ fn zoomed(tool: Tool, prefs: Option<&str>) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn nothing_opened(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn nothing_opened(h: &Harness<'static, LienzoApp>) -> bool {
     h.state().ui.brush_picker.is_none() && h.state().ui.canvas_tool_menu.is_none()
 }
 
@@ -202,7 +202,7 @@ fn a_right_press_moved_during_a_left_stroke_opens_no_picker() {
 }
 
 /// One key going down and up, each in its own frame, with `mods` held.
-fn key(h: &mut Harness<'static, PhotocraftApp>, key: egui::Key, mods: Modifiers) {
+fn key(h: &mut Harness<'static, LienzoApp>, key: egui::Key, mods: Modifiers) {
     for pressed in [true, false] {
         h.event(egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers: mods });
         h.run_steps(1);

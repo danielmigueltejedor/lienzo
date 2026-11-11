@@ -4,8 +4,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use photocraft_automation::{AuthorizedWorkspace, Headless};
-use photocraft_doc::{Document, LayerContent, LayerId};
+use lienzo_automation::{AuthorizedWorkspace, Headless};
+use lienzo_doc::{Document, LayerContent, LayerId};
 use serde_json::{Value, json};
 
 pub struct Fixture(PathBuf);
@@ -54,7 +54,7 @@ impl Fixture {
         let mut doc = (*h.session.active().unwrap().doc).clone();
         let LayerContent::Smart(sm) = &mut doc.layer_mut(layer).unwrap().content else { panic!("smart object") };
         sm.smart_filters[0].params = path_params(lookup, &self.outside(if lookup { "white.cube" } else { "white.png" }));
-        let bytes = photocraft_format::save_to_bytes(&doc, &Default::default()).unwrap();
+        let bytes = lienzo_format::save_to_bytes(&doc, &Default::default()).unwrap();
         std::fs::write(self.root().join("stored.pcraft"), bytes).unwrap();
         (doc, layer)
     }
@@ -72,8 +72,8 @@ pub fn png(value: impl Fn(u32) -> u8) -> Vec<u8> {
             pixels.extend([value(x); 3]);
         }
     }
-    let image = photocraft_codecs::Image::from_u8(32, 32, photocraft_codecs::ChannelLayout::Rgb, pixels).unwrap();
-    photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+    let image = lienzo_codecs::Image::from_u8(32, 32, lienzo_codecs::ChannelLayout::Rgb, pixels).unwrap();
+    lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap()
 }
 pub fn cube(value: u8) -> String {
     format!("LUT_3D_SIZE 2\n{}", format!("{value} {value} {value}\n").repeat(8))

@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
 
 /// The segment walk before #937: every dab, whether or not it can reach the field.
 fn full_walk(f: &mut LiquifyField, s: &LiquifyStroke, a: [f64; 3], b: [f64; 3]) -> Rect {

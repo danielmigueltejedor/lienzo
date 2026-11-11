@@ -2,7 +2,7 @@ name: CI
 
 # Quality gates for every push to main and every pull request. The Linux gate runs through the
 # suite's shared gate workflow in craft-common-actions (`cargo xtask ci`); the Windows legs, the
-# test variant and the corpus, web and fuzz jobs are PhotoCraft's own.
+# test variant and the corpus, web and fuzz jobs are Lienzo's own.
 on:
   push:
     branches: [main]
@@ -54,11 +54,11 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  PHOTOCRAFT_FULL_SWEEP: ${{ inputs.full_sweep && '1' || '0' }}
+  LIENZO_FULL_SWEEP: ${{ inputs.full_sweep && '1' || '0' }}
   # No test or fuzz run may print a page: the engine refuses to spool, and if something ever
   # bypasses that, lp fails loudly on a printer that does not exist.
-  PHOTOCRAFT_NO_PRINT: "1"
-  LPDEST: photocraft-no-such-printer
+  LIENZO_NO_PRINT: "1"
+  LPDEST: lienzo-no-such-printer
 
 # A newer push to a PR branch cancels its older run. Every push to main gets a run of its own that
 # is never cancelled, so each state of main is checked to the end. Adding any label but `full-ci`
@@ -131,7 +131,7 @@ jobs:
           # The browser build (a fat-LTO wasm build) runs only when something it compiles or
           # packages changed: the web app and its packaging, crate sources and manifests (the web
           # build compiles nearly every crate), the workspace manifests and this workflow.
-          if git diff --name-only "$BASE" HEAD | grep -Eq '^(apps/photocraft-web(-boot)?/|packaging/web/|packaging/env\.sh$|crates/[^/]+/(src/|Cargo\.toml$|build\.rs$)|Cargo\.(toml|lock)$|rust-toolchain(\.toml)?$|\.github/workflows/ci\.yml$)'; then
+          if git diff --name-only "$BASE" HEAD | grep -Eq '^(apps/lienzo-web(-boot)?/|packaging/web/|packaging/env\.sh$|crates/[^/]+/(src/|Cargo\.toml$|build\.rs$)|Cargo\.(toml|lock)$|rust-toolchain(\.toml)?$|\.github/workflows/ci\.yml$)'; then
             echo "web=true" >> "$GITHUB_OUTPUT"
           else
             echo "web=false" >> "$GITHUB_OUTPUT"
@@ -158,9 +158,9 @@ jobs:
       # Cargo.toml's dev profile already keeps line tables only.
       dev-debug: ""
       env: |
-        PHOTOCRAFT_FULL_SWEEP=${{ inputs.full_sweep && '1' || '0' }}
-        PHOTOCRAFT_NO_PRINT=1
-        LPDEST=photocraft-no-such-printer
+        LIENZO_FULL_SWEEP=${{ inputs.full_sweep && '1' || '0' }}
+        LIENZO_NO_PRINT=1
+        LPDEST=lienzo-no-such-printer
       timeout-minutes: 100
       # fmt, clippy, layers, panel-commands, scorecard, tests, panic_hunt, doctests and the wasm32 check, with
       # `--locked --features heif`, then the missing-translations report (xtask/src/main.rs).
@@ -309,7 +309,7 @@ jobs:
           tool: cargo-nextest@0.9.150
 
       - name: Test without heif
-        run: cargo nextest run -p photocraft-heif -p photocraft-codecs -p photocraft-io --locked --profile ci
+        run: cargo nextest run -p lienzo-heif -p lienzo-codecs -p lienzo-io --locked --profile ci
 
   corpus:
     if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
@@ -473,7 +473,7 @@ jobs:
       - name: Compare exact outputs and release timings on 24 MP
         run: |
           set -o pipefail
-          cargo test --release -p photocraft-engine --lib color_range_release_comparison -- --ignored --nocapture | tee color-range-perf.txt
+          cargo test --release -p lienzo-engine --lib color_range_release_comparison -- --ignored --nocapture | tee color-range-perf.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -503,11 +503,11 @@ jobs:
       - name: Compare exact outputs and release timings on 36 MP
         run: |
           set -o pipefail
-          cargo run --release -p photocraft-algo --example bench_selection_morphology | tee selection-morphology-perf.txt
+          cargo run --release -p lienzo-algo --example bench_selection_morphology | tee selection-morphology-perf.txt
       - name: Compare cropped command reads and writeback on 36 MP
         run: |
           set -o pipefail
-          cargo test --release -p photocraft-engine --lib sparse_modify_release_comparison -- --ignored --nocapture | tee -a selection-morphology-perf.txt
+          cargo test --release -p lienzo-engine --lib sparse_modify_release_comparison -- --ignored --nocapture | tee -a selection-morphology-perf.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -556,7 +556,7 @@ jobs:
       - name: Compare exact outputs and release timings on 36 MP
         run: |
           set -o pipefail
-          cargo test --release -p photocraft-algo --lib gray8_combining_release_comparison -- --ignored --nocapture | tee selection-combining-perf.txt
+          cargo test --release -p lienzo-algo --lib gray8_combining_release_comparison -- --ignored --nocapture | tee selection-combining-perf.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -589,8 +589,8 @@ jobs:
       - name: Build the same benchmark against both versions
         run: |
           cp after/crates/paint/examples/big_dab_bench.rs before/crates/paint/examples/big_dab_bench.rs
-          cargo build --release --locked --manifest-path before/Cargo.toml -p photocraft-paint --example big_dab_bench
-          cargo build --release --locked --manifest-path after/Cargo.toml -p photocraft-paint --example big_dab_bench
+          cargo build --release --locked --manifest-path before/Cargo.toml -p lienzo-paint --example big_dab_bench
+          cargo build --release --locked --manifest-path after/Cargo.toml -p lienzo-paint --example big_dab_bench
       - name: Compare round and transformed tips on 24 MP
         run: |
           set -o pipefail
@@ -627,9 +627,9 @@ jobs:
           git fetch --no-tags upstream main
           base=$(git merge-base HEAD upstream/main)
           echo "sha=$base" >> "$GITHUB_OUTPUT"
-          git worktree add --detach "$RUNNER_TEMP/photocraft-baseline" "$base"
-          mkdir -p "$RUNNER_TEMP/photocraft-baseline/crates/engine/examples"
-          cp crates/engine/examples/bench_dry_mixer.rs "$RUNNER_TEMP/photocraft-baseline/crates/engine/examples/bench_dry_mixer.rs"
+          git worktree add --detach "$RUNNER_TEMP/lienzo-baseline" "$base"
+          mkdir -p "$RUNNER_TEMP/lienzo-baseline/crates/engine/examples"
+          cp crates/engine/examples/bench_dry_mixer.rs "$RUNNER_TEMP/lienzo-baseline/crates/engine/examples/bench_dry_mixer.rs"
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - name: Install Linux build dependencies
         uses: storytold/craft-common-actions/actions/install-apt-packages@main
@@ -642,8 +642,8 @@ jobs:
           set -o pipefail
           echo "baseline=${{ steps.baseline.outputs.sha }}" | tee dry-mixer-perf.txt
           echo "candidate=${GITHUB_SHA}" | tee -a dry-mixer-perf.txt
-          CARGO_TARGET_DIR="$RUNNER_TEMP/target-baseline" cargo run --release --manifest-path "$RUNNER_TEMP/photocraft-baseline/Cargo.toml" -p photocraft-engine --example bench_dry_mixer | tee baseline-mixer.txt
-          CARGO_TARGET_DIR="$RUNNER_TEMP/target-candidate" cargo run --release -p photocraft-engine --example bench_dry_mixer | tee candidate-mixer.txt
+          CARGO_TARGET_DIR="$RUNNER_TEMP/target-baseline" cargo run --release --manifest-path "$RUNNER_TEMP/lienzo-baseline/Cargo.toml" -p lienzo-engine --example bench_dry_mixer | tee baseline-mixer.txt
+          CARGO_TARGET_DIR="$RUNNER_TEMP/target-candidate" cargo run --release -p lienzo-engine --example bench_dry_mixer | tee candidate-mixer.txt
           cat baseline-mixer.txt candidate-mixer.txt >> dry-mixer-perf.txt
           python3 - <<'PY'
           import re

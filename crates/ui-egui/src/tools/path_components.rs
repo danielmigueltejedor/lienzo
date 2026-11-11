@@ -8,11 +8,11 @@
 //! selected component.
 
 use egui::{Event, Key};
-use photocraft_doc::{Path, PathOp};
-use photocraft_geom::Point;
+use lienzo_doc::{Path, PathOp};
+use lienzo_geom::Point;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::direct_select::{DirectSelection, PathRef, active_paths};
 use crate::state::Tool;
 
@@ -28,14 +28,14 @@ fn op_value(op: PathOp) -> &'static str {
 
 /// The path Path Selection selects in: the targeted vector mask or the active shape layer's
 /// path, else the Work Path (`active_paths`, front first).
-fn target(app: &PhotocraftApp) -> Option<(PathRef, Path)> {
+fn target(app: &LienzoApp) -> Option<(PathRef, Path)> {
     active_paths(app).into_iter().next()
 }
 
 /// The selected components: their path and the first subpath of each, in order. `None` with
 /// nothing selected, a selection on a path that is not an active one any more, or a tool other
 /// than Path Selection (the only one that shows it, so the only one that acts on it).
-pub(crate) fn selected(app: &PhotocraftApp) -> Option<(PathRef, Path, Vec<usize>)> {
+pub(crate) fn selected(app: &LienzoApp) -> Option<(PathRef, Path, Vec<usize>)> {
     if app.ui.tool != Tool::PathSelection {
         return None;
     }
@@ -53,7 +53,7 @@ pub(crate) fn selected(app: &PhotocraftApp) -> Option<(PathRef, Path, Vec<usize>
 }
 
 /// The operation every selected component has, for the menu's icon; `None` when they differ.
-pub(crate) fn selected_op(app: &PhotocraftApp) -> Option<&'static str> {
+pub(crate) fn selected_op(app: &LienzoApp) -> Option<&'static str> {
     let (_, path, heads) = selected(app)?;
     let mut ops = heads.iter().filter(|h| **h < path.subpaths.len()).map(|h| op_value(path.effective_op(*h)));
     let first = ops.next()?;
@@ -63,7 +63,7 @@ pub(crate) fn selected_op(app: &PhotocraftApp) -> Option<&'static str> {
 /// A Path Operations pick (menu or key): the selected components take `op`, and the tool keeps it
 /// for the next path. New Layer is not an operation a component can have: it only sets the tool.
 /// The first component always combines (it is what the others act on), so it keeps its operation.
-pub(crate) fn set_op(app: &mut PhotocraftApp, op: &str) -> Result<(), String> {
+pub(crate) fn set_op(app: &mut LienzoApp, op: &str) -> Result<(), String> {
     app.ui.tool_options.pen_path_op = op.into();
     if op == "newLayer" {
         return Ok(());
@@ -79,7 +79,7 @@ pub(crate) fn set_op(app: &mut PhotocraftApp, op: &str) -> Result<(), String> {
     run_selected_command(app, "path.setOperation", params)
 }
 
-fn run_selected_command(app: &mut PhotocraftApp, id: &str, params: serde_json::Value) -> Result<(), String> {
+fn run_selected_command(app: &mut LienzoApp, id: &str, params: serde_json::Value) -> Result<(), String> {
     let selection = std::mem::take(&mut app.ui.direct_selection);
     let result = app.run(id, params);
     if result.is_ok() || crate::direct_select::still_valid(app, &selection) {
@@ -92,11 +92,9 @@ fn run_selected_command(app: &mut PhotocraftApp, id: &str, params: serde_json::V
 /// (last) component wins.
 fn component_at(path: &Path, at: [f64; 2], tol: f64) -> Option<std::ops::Range<usize>> {
     let components = path.components();
-    if let Some(hit) = photocraft_vector::edit::hit(path, Point::new(at[0], at[1]), tol, &[]) {
+    if let Some(hit) = lienzo_vector::edit::hit(path, Point::new(at[0], at[1]), tol, &[]) {
         let s = match hit {
-            photocraft_vector::edit::Hit::Anchor([s, _])
-            | photocraft_vector::edit::Hit::Handle([s, _], _)
-            | photocraft_vector::edit::Hit::Segment([s, _], _) => s,
+            lienzo_vector::edit::Hit::Anchor([s, _]) | lienzo_vector::edit::Hit::Handle([s, _], _) | lienzo_vector::edit::Hit::Segment([s, _], _) => s,
         };
         return components.into_iter().find(|c| c.contains(&s));
     }
@@ -108,7 +106,7 @@ fn component_at(path: &Path, at: [f64; 2], tol: f64) -> Option<std::ops::Range<u
             .unwrap_or_default()
             .iter()
             .filter(|s| s.closed)
-            .map(|s| crossings(&photocraft_vector::flatten::flatten_subpath(s, 0.25).pts, at))
+            .map(|s| crossings(&lienzo_vector::flatten::flatten_subpath(s, 0.25).pts, at))
             .sum();
         crossings % 2 == 1
     })
@@ -128,7 +126,7 @@ fn crossings(pts: &[(f64, f64)], at: [f64; 2]) -> usize {
 /// Path Selection's press at `at`: selects the component there (⇧ adds or removes it). Pressing a
 /// selected component keeps the selection, so the drag moves all of it; pressing off every
 /// component deselects, unless ⇧ is held.
-pub(crate) fn press(app: &mut PhotocraftApp, at: [f64; 2], shift: bool) {
+pub(crate) fn press(app: &mut LienzoApp, at: [f64; 2], shift: bool) {
     let tol = 6.0 / f64::from(app.point_zoom().max(0.01));
     let Some((r, path)) = target(app) else {
         app.ui.direct_selection = DirectSelection::default();
@@ -165,7 +163,7 @@ pub(crate) fn press(app: &mut PhotocraftApp, at: [f64; 2], shift: bool) {
 /// Path Selection's drag by `d` with components selected on the path it edits: moves those
 /// components, one History step. `None` with none or all of them selected: the whole path moves
 /// instead, which keeps a live rectangle or ellipse live.
-pub(crate) fn move_selected(app: &mut PhotocraftApp, d: [f64; 2]) -> Option<Result<(), String>> {
+pub(crate) fn move_selected(app: &mut LienzoApp, d: [f64; 2]) -> Option<Result<(), String>> {
     let (r, _) = moving_selected(app)?;
     let mut params = r.params(app);
     params["anchors"] = json!(app.ui.direct_selection.anchors);
@@ -174,16 +172,16 @@ pub(crate) fn move_selected(app: &mut PhotocraftApp, d: [f64; 2]) -> Option<Resu
 }
 
 /// The path [`move_selected`] moves components of, with some but not all of them selected.
-fn moving_selected(app: &PhotocraftApp) -> Option<(PathRef, Path)> {
+fn moving_selected(app: &LienzoApp) -> Option<(PathRef, Path)> {
     let (r, path, heads) = selected(app)?;
     (target(app).map(|(t, _)| t) == Some(r) && heads.len() < path.components().len()).then_some((r, path))
 }
 
 /// The path [`move_selected`] leaves after a drag by `d`, for the drag's live preview: the
 /// selected components moved with their handles, as `path.moveAnchors` moves them.
-pub(crate) fn moved_selected(app: &PhotocraftApp, d: [f64; 2]) -> Option<(PathRef, Path)> {
+pub(crate) fn moved_selected(app: &LienzoApp, d: [f64; 2]) -> Option<(PathRef, Path)> {
     let (r, mut path) = moving_selected(app)?;
-    photocraft_vector::edit::move_anchors(&mut path, &app.ui.direct_selection.anchors, d).ok()?;
+    lienzo_vector::edit::move_anchors(&mut path, &app.ui.direct_selection.anchors, d).ok()?;
     Some((r, path))
 }
 
@@ -195,7 +193,7 @@ fn has_keys(tool: Tool) -> bool {
 /// Consumes this frame's `+` (Combine Shapes) and `-` (Subtract Front Shape) presses while a tool
 /// with the Path Operations menu is active, as in Photoshop. `+` is ⇧= on many layouts and the
 /// keypad's key on all, so ⇧ is allowed; with these tools ⇧+ / ⇧− step no blend mode.
-pub fn handle_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn handle_keys(app: &mut LienzoApp, ctx: &egui::Context) {
     if !has_keys(app.ui.tool) {
         return;
     }

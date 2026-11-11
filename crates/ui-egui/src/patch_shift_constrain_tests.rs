@@ -4,13 +4,13 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// A 500 x 400 document with 100..200 square selected, the Patch tool active.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 500, "height": 400, "background": "white"})).unwrap();
     app.run("select.rect", json!({"x": 100, "y": 100, "width": 100, "height": 100, "mode": "replace"})).unwrap();
     app.ui.tool = Tool::Patch;
@@ -18,22 +18,22 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn mv(app: &mut PhotocraftApp, x: f64, y: f64, m: Modifiers) {
+fn mv(app: &mut LienzoApp, x: f64, y: f64, m: Modifiers) {
     tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
 }
 
 /// Press at 140,140 without ⇧, move past the first 60 px, then to `to` with `m` held.
-fn drag_to(app: &mut PhotocraftApp, to: [f64; 2], m: Modifiers) {
+fn drag_to(app: &mut LienzoApp, to: [f64; 2], m: Modifiers) {
     tool_event(app, ToolEvent::Down { x: 140.0, y: 140.0, pressure: 1.0 }, Modifiers::NONE);
     mv(app, 200.0, 145.0, Modifiers::NONE);
     mv(app, to[0], to[1], m);
 }
 
-fn patch_offsets(app: &PhotocraftApp) -> Vec<serde_json::Value> {
+fn patch_offsets(app: &LienzoApp) -> Vec<serde_json::Value> {
     app.session.journal.iter().filter(|(id, _)| id == "paint.patch").map(|(_, p)| p["offset"].clone()).collect()
 }
 
-fn outline_offset(app: &mut PhotocraftApp) -> [i32; 2] {
+fn outline_offset(app: &mut LienzoApp) -> [i32; 2] {
     let (start, end) = {
         let d = app.drag.as_ref().unwrap();
         (d.start, crate::retouch_ui::patch_end(d, d.points.last().map_or(d.start, |p| [p[0], p[1]])))

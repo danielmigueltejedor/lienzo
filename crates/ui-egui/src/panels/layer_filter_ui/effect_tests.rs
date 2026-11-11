@@ -3,18 +3,18 @@
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::Document;
+use lienzo_doc::Document;
 use serde_json::json;
 
 use super::effect::EffectKind;
 use super::{Filter, FilterBy};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::UiState;
 
 /// One pixel layer per effect kind (the three overlays each on their own), "shadow off" whose
 /// Drop Shadow is turned off, and "plain" without effects, over the Background.
-fn session() -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn session() -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     for (name, kind, params) in [
         ("plain", "", json!({})),
@@ -98,7 +98,7 @@ fn saved_settings_without_the_effect_still_load() {
 }
 
 /// The names of the rows the Layers panel drew, top to bottom.
-fn drawn(h: &Harness<'_, PhotocraftApp>) -> Vec<String> {
+fn drawn(h: &Harness<'_, LienzoApp>) -> Vec<String> {
     let doc = &h.state().session.active().unwrap().doc;
     let mut rows = crate::layer_row_ui::recorded(&h.ctx);
     rows.sort_by(|a, b| a.row.top().total_cmp(&b.row.top()));
@@ -109,8 +109,8 @@ fn drawn(h: &Harness<'_, PhotocraftApp>) -> Vec<String> {
 fn the_panel_filters_by_the_effect_picked_in_the_dropdown() {
     let session = session();
     let mut h = Harness::builder().with_size(vec2(1440.0, 1200.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(session, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(session, crate::Services::default())
     });
     h.run_steps(8);
     h.get_by_value("Kind").click();

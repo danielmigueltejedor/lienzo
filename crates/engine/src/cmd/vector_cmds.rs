@@ -10,20 +10,20 @@
 //! ```
 //!
 //! A knot given as `[x, y]` is a corner with retracted handles; `in`/`out` default to the
-//! anchor. The serde form of `photocraft_doc::Path` is accepted too. Colours are `"#rrggbb"`,
+//! anchor. The serde form of `lienzo_doc::Path` is accepted too. Colours are `"#rrggbb"`,
 //! `"#rrggbbaa"` or `[r,g,b,a]` (0..1); opacities are percentages (0..100).
 //!
-//! Every edit re-renders the shape layer's cache with `photocraft-vector` in one undoable step.
-//! PSD blocks stay byte-identical while they still decode to the model (see `photocraft-io`).
+//! Every edit re-renders the shape layer's cache with `lienzo-vector` in one undoable step.
+//! PSD blocks stay byte-identical while they still decode to the model (see `lienzo-io`).
 
-use photocraft_algo::selection::{self as sel, SelectionMode};
-use photocraft_color::{BlendMode, Color};
-use photocraft_doc::{
+use lienzo_algo::selection::{self as sel, SelectionMode};
+use lienzo_color::{BlendMode, Color};
+use lienzo_doc::{
     ClippingPath, Document, Fill, FillRule, GradientStyle, Knot, Layer, LayerContent, LayerId, LineCap, LineJoin, LiveShape, NamedPath, Path, PathOp,
     ShapeLayer, ShapeStroke, StrokeAlign, Subpath, VectorMask,
 };
-use photocraft_geom::{Affine, Point, Rect};
-use photocraft_vector as vector;
+use lienzo_geom::{Affine, Point, Rect};
+use lienzo_vector as vector;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, blend_from_str};

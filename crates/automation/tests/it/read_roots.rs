@@ -2,8 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use photocraft_automation::{AuthorizedWorkspace, Headless, files};
-use photocraft_engine::actions_cmds::Action;
+use lienzo_automation::{AuthorizedWorkspace, Headless, files};
+use lienzo_engine::actions_cmds::Action;
 use serde_json::{Value, json};
 
 struct Roots {
@@ -63,7 +63,7 @@ fn assert_source(headless: &Headless, width: u32, rgba: [u8; 4]) {
     let state = headless.session.active().unwrap();
     assert_eq!(state.doc.size.width, width);
     assert_eq!(state.doc.size.height, 5);
-    let preview = photocraft_compose::thumbnail(&state.doc, 32);
+    let preview = lienzo_compose::thumbnail(&state.doc, 32);
     assert!(!preview.pixels.is_empty());
     assert!(preview.pixels.as_chunks::<4>().0.iter().all(|pixel| pixel == &rgba), "opened the wrong source pixels");
 }
@@ -195,7 +195,7 @@ fn flat_export_does_not_arm_implicit_save_for_a_library_document() {
     headless.save(None, Some(Path::new("preview.png")), None, &Default::default()).unwrap();
     assert_eq!(snapshot(&mut headless), before, "a flat export must not clear dirty or attach a save path");
     let exported = std::fs::read(roots.work.join("preview.png")).unwrap();
-    assert_eq!(photocraft_codecs::decode(&exported).unwrap().dimensions(), (11, 5));
+    assert_eq!(lienzo_codecs::decode(&exported).unwrap().dimensions(), (11, 5));
     assert!(headless.save(None, None, None, &Default::default()).is_err());
     assert_eq!(snapshot(&mut headless), before);
     assert_eq!(std::fs::read(roots.work.join("preview.png")).unwrap(), exported);

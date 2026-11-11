@@ -126,7 +126,7 @@ fn shifted_tiles_match_a_whole_mask_at_canvas_edges() {
         segment::{ImageSampler, RgbImage},
         selection::Region,
     };
-    use photocraft_geom::Rect;
+    use lienzo_geom::Rect;
     let (w, h) = (611usize, 317usize);
     let img = RgbImage::from_fn(w, h, |_, _| [0.5; 3]);
     let sampler = ImageSampler { img: &img, origin: (0, 0) };

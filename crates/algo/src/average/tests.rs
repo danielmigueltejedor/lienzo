@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::ColorMode;
+use lienzo_color::ColorMode;
 
 #[test]
 fn preserves_alpha_and_averages_hidden_rgb_at_each_depth() {

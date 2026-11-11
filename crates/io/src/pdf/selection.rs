@@ -43,7 +43,7 @@ impl SelectionFont {
         let mut differences = String::new();
         let mut procs = String::new();
         let mut cmap = String::from(
-            "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /PhotoCraftUnicode def\n/CMapType 2 def\n1 begincodespacerange\n<00> <FF>\nendcodespacerange\n",
+            "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /LienzoUnicode def\n/CMapType 2 def\n1 begincodespacerange\n<00> <FF>\nendcodespacerange\n",
         );
         // PDF permits at most 100 entries in each bfchar block.
         let chars: Vec<_> = self.chars.iter().take(count).collect();

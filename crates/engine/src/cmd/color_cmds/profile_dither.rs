@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::Tile;
+use lienzo_geom::{Rect, TILE_SIZE, TileCoord};
+use lienzo_raster::Tile;
 use rayon::prelude::*;
 
 use super::{
@@ -137,7 +137,7 @@ fn dither_tile(s: &Surface, out: &Surface, t: &Transform, bounds: Rect, c: TileC
         }
         t.eval_fast(&input[..ni], &mut output[..no]);
         // The hash can return 1.0; recenter its 65536 bins strictly inside (0, 1).
-        let threshold = (f64::from(photocraft_color::dither_noise(x, y)) * 65535.0 + 0.5) / 65536.0;
+        let threshold = (f64::from(lienzo_color::dither_noise(x, y)) * 65535.0 + 0.5) / 65536.0;
         for (d, value) in dp.iter_mut().zip(output).take(no) {
             *d = quantize(value, threshold);
         }

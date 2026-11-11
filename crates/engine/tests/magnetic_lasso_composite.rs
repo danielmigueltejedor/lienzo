@@ -1,11 +1,11 @@
 //! The Magnetic Lasso follows the edges of the visible composite, whichever layer is active
 //! (#11686), in the live `EdgeSource` and in `select.magneticLasso` with `trace: true`.
 
-use photocraft_algo::magnetic::Settings;
-use photocraft_doc::LayerId;
-use photocraft_engine::Session;
-use photocraft_engine::magnetic_cmds::EdgeSource;
-use photocraft_geom::Rect;
+use lienzo_algo::magnetic::Settings;
+use lienzo_doc::LayerId;
+use lienzo_engine::Session;
+use lienzo_engine::magnetic_cmds::EdgeSource;
+use lienzo_geom::Rect;
 use serde_json::json;
 
 /// The red rectangle's pixels: x 50..125, y 40..100, 75 x 60 = 4500 px.

@@ -1,13 +1,13 @@
-use super::{Key, Modifiers, PhotocraftApp, Tool, handle};
+use super::{Key, LienzoApp, Modifiers, Tool, handle};
 use crate::panels::toolbar::TOOL_SECTIONS;
 use crate::spring_tools::key_of;
 use std::collections::HashSet;
 
-fn app() -> PhotocraftApp {
-    PhotocraftApp::new(photocraft_engine::Session::new(), Default::default())
+fn app() -> LienzoApp {
+    LienzoApp::new(lienzo_engine::Session::new(), Default::default())
 }
 
-fn press(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn press(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     let raw = egui::RawInput {
         events: vec![
             egui::Event::ModifiersChanged(modifiers),

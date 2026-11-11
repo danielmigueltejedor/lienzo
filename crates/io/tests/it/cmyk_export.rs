@@ -3,12 +3,12 @@
 
 use std::sync::Arc;
 
-use photocraft_cms::Builtin;
-use photocraft_codecs::ChannelLayout;
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::*;
+use lienzo_cms::Builtin;
+use lienzo_codecs::ChannelLayout;
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::*;
 
 fn cmyk_doc(depth: SampleType) -> Document {
     let mut d = Document::new("c", Size::new(12, 8), ColorMode::Cmyk, depth);
@@ -35,12 +35,12 @@ fn layered(depth: SampleType) -> Document {
     d
 }
 
-fn decode(bytes: &[u8]) -> photocraft_codecs::Image {
-    photocraft_codecs::decode(bytes).unwrap_or_else(|e| panic!("decode: {e}"))
+fn decode(bytes: &[u8]) -> lienzo_codecs::Image {
+    lienzo_codecs::decode(bytes).unwrap_or_else(|e| panic!("decode: {e}"))
 }
 
 /// Normalized C, M, Y, K (and alpha) of pixel (x, y).
-fn pixel(img: &photocraft_codecs::Image, x: u32, y: u32) -> Vec<f32> {
+fn pixel(img: &lienzo_codecs::Image, x: u32, y: u32) -> Vec<f32> {
     let n = img.layout().channels();
     let (w, _) = img.dimensions();
     let v = img.to_normalized();
@@ -154,7 +154,7 @@ fn ink_adjustments_export_exact_inks() {
     // Invert in CMYK turns every ink into its opposite: blank paper becomes four-colour black,
     // K-only black loses its K and gains full C, M and Y.
     let mut d = layered(SampleType::U8);
-    d.layers.push(Layer::new("inv", photocraft_doc::LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    d.layers.push(Layer::new("inv", lienzo_doc::LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     let r = export(&d, "a.tif", &ExportOptions::default()).unwrap_or_else(|e| panic!("{e}"));
     assert!(!r.warnings.iter().any(|w| w.contains("converted back")), "{:?}", r.warnings);
     let img = decode(&r.bytes);
@@ -169,7 +169,7 @@ fn ink_adjustments_export_exact_inks() {
 fn channel_weighing_adjustments_go_through_the_profile() {
     // Threshold weighs the channels together: it isn't an ink-by-ink edit.
     let mut d = layered(SampleType::U8);
-    d.layers.push(Layer::new("t", photocraft_doc::LayerContent::Adjustment(photocraft_doc::Adjustment::Threshold { level: 0.5 })));
+    d.layers.push(Layer::new("t", lienzo_doc::LayerContent::Adjustment(lienzo_doc::Adjustment::Threshold { level: 0.5 })));
     let r = export(&d, "a.tif", &ExportOptions::default()).unwrap_or_else(|e| panic!("{e}"));
     assert!(r.warnings.iter().any(|w| w.contains("converted back through the document's CMYK profile")), "{:?}", r.warnings);
     assert_eq!(decode(&r.bytes).layout(), ChannelLayout::Cmyk);
@@ -178,14 +178,14 @@ fn channel_weighing_adjustments_go_through_the_profile() {
 #[test]
 fn layer_effects_export_their_inks() {
     // K-only type with a K-only drop shadow on blank paper: the TIFF has black ink only.
-    use photocraft_doc::effects::{Contour, Effect, FxCommon, Shadow};
+    use lienzo_doc::effects::{Contour, Effect, FxCommon, Shadow};
     let mut d = cmyk_doc(SampleType::U8);
     d.layers.push(fill(SampleType::U8, false, &[(Rect::new(0, 0, 12, 8), [0.0; 5])]));
     let mut t = fill(SampleType::U8, true, &[(Rect::new(2, 2, 6, 5), [0.0, 0.0, 0.0, 1.0, 1.0])]);
     t.effects.enabled = true;
     t.effects.items.push(Effect::DropShadow(Shadow {
         common: FxCommon::new(BlendMode::Multiply, 0.75),
-        color: photocraft_color::Color { mode: ColorMode::Cmyk, c: [0.0, 0.0, 0.0, 1.0], alpha: 1.0 },
+        color: lienzo_color::Color { mode: ColorMode::Cmyk, c: [0.0, 0.0, 0.0, 1.0], alpha: 1.0 },
         angle: 135.0,
         use_global_light: false,
         distance: 2.0,
@@ -222,7 +222,7 @@ fn psd_merged_image_keeps_exact_inks() {
     m.blend = BlendMode::Multiply;
     d.layers.push(m);
     let r = export(&d, "a.psd", &ExportOptions::default()).unwrap_or_else(|e| panic!("{e}"));
-    let f = photocraft_psd::PsdFile::from_bytes(&r.bytes).unwrap_or_else(|e| panic!("{e}"));
+    let f = lienzo_psd::PsdFile::from_bytes(&r.bytes).unwrap_or_else(|e| panic!("{e}"));
     let planes = f.decode_merged().unwrap_or_else(|e| panic!("{e}"));
     let n = 12 * 8;
     // Planar, inverted (255 = no ink).

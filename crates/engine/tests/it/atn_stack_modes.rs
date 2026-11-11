@@ -1,9 +1,9 @@
 //! The measured Smart Object Stack Mode events retain their descriptor and native behavior.
 
-use photocraft_doc::{Group, Layer, LayerContent, StackMode};
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_geom::Rect;
-use photocraft_psd::{
+use lienzo_doc::{Group, Layer, LayerContent, StackMode};
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_geom::Rect;
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Class, Descriptor, Id, UnicodeString, Value as D},
 };
@@ -122,13 +122,13 @@ fn stack(depth: u32) -> Session {
             .enumerate()
             .map(|(index, value)| {
                 let mut layer = Layer::raster(format!("Frame {index}"), fmt);
-                let pixel = photocraft_raster::from_rgba(&fmt, [value, value, value, 1.0]);
+                let pixel = lienzo_raster::from_rgba(&fmt, [value, value, value, 1.0]);
                 layer.surface_mut().unwrap().write_region(Rect::new(0, 0, 3, 2), &pixel.repeat(6));
                 layer
             })
             .collect();
         let group = Layer::new("Stack", LayerContent::Group(Group { children, expanded: true, artboard: None, frame_stroke: None }));
-        let smart = photocraft_engine::smart_cmds::layer_to_smart(doc, &group)?;
+        let smart = lienzo_engine::smart_cmds::layer_to_smart(doc, &group)?;
         *active = Some(smart.id);
         doc.layers = vec![smart];
         Ok(())
@@ -227,8 +227,8 @@ fn stack_mode_edits_and_unrepresented_native_parameters_are_safe() {
     assert_eq!(applied.event, AtnEvent::name(APPLY));
     assert_eq!(applied.descriptor, Some(descriptor("avrg", "Mean")));
 
-    let unknown_empty = photocraft_engine::paint::tile::b64_encode(&Descriptor::new("nope").to_bytes());
-    let unknown_class = photocraft_engine::paint::tile::b64_encode(&descriptor("nope", "Mean").to_bytes());
+    let unknown_empty = lienzo_engine::paint::tile::b64_encode(&Descriptor::new("nope").to_bytes());
+    let unknown_class = lienzo_engine::paint::tile::b64_encode(&descriptor("nope", "Mean").to_bytes());
     for command in ["layer.smartObjects.stackMode.mean", "layer.smartObjects.stackMode.none"] {
         for params in [json!(null), json!([]), json!({"layer":12}), json!({"layer":"Named"}), json!({"target":"mask"}), json!({"unknown":true})] {
             let action = Action::new("Mode", vec![(command.into(), params)]);

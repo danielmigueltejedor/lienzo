@@ -4,8 +4,8 @@
 
 use egui::{Event, Key, Modifiers, PointerButton, Pos2, Rect, Shape, Vec2, accesskit::Role, pos2, vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_ui_egui::{
-    PhotocraftApp,
+use lienzo_ui_egui::{
+    LienzoApp,
     control::{ControlRequest, Outcome, handle},
     dialogs, filter_dialog, i18n,
     theme::ThemeKind,
@@ -14,12 +14,12 @@ use serde_json::{Map, Value, json};
 
 const COMMAND: &str = "filter.blur.radialBlur";
 
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     themed_harness(ThemeKind::Pro, vec2(1000.0, 800.0))
 }
 
-fn themed_harness(theme: ThemeKind, size: Vec2) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn themed_harness(theme: ThemeKind, size: Vec2) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("paint.stroke", json!({"points": [[8, 8, 1]], "size": 4, "color": "#ff8000"})).unwrap();
     let mut h = Harness::builder().with_size(size).build_ui_state(
@@ -29,14 +29,14 @@ fn themed_harness(theme: ThemeKind, size: Vec2) -> Harness<'static, PhotocraftAp
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     control(&mut h, "ui.menu.invoke", json!({"id": COMMAND}));
     let id = h.state().ui.dialogs.last().unwrap().id;
     control(&mut h, "ui.dialog.set", json!({"dialog": id, "field": "method", "value": "zoom"}));
     h
 }
 
-fn control(h: &mut Harness<'_, PhotocraftApp>, method: &str, params: Value) {
+fn control(h: &mut Harness<'_, LienzoApp>, method: &str, params: Value) {
     let ctx = h.ctx.clone();
     let (request, _rx) = ControlRequest::new(method, params);
     let result = handle(h.state_mut(), &ctx, &request);
@@ -44,25 +44,25 @@ fn control(h: &mut Harness<'_, PhotocraftApp>, method: &str, params: Value) {
     h.run_steps(3);
 }
 
-fn fields<'a>(h: &'a Harness<'_, PhotocraftApp>) -> &'a Map<String, Value> {
+fn fields<'a>(h: &'a Harness<'_, LienzoApp>) -> &'a Map<String, Value> {
     &h.state().ui.dialogs.last().unwrap().fields
 }
 
-fn center(h: &Harness<'_, PhotocraftApp>) -> [f64; 2] {
+fn center(h: &Harness<'_, LienzoApp>) -> [f64; 2] {
     [fields(h)["centerX"].as_f64().unwrap(), fields(h)["centerY"].as_f64().unwrap()]
 }
 
-fn diagram(h: &Harness<'_, PhotocraftApp>) -> Rect {
+fn diagram(h: &Harness<'_, LienzoApp>) -> Rect {
     h.get_by_role_and_label(Role::Slider, "Center").rect()
 }
 
-fn pointer(h: &mut Harness<'_, PhotocraftApp>, pos: Pos2, pressed: bool) {
+fn pointer(h: &mut Harness<'_, LienzoApp>, pos: Pos2, pressed: bool) {
     h.event(Event::PointerMoved(pos));
     h.event(Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE });
     h.step();
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, x: f32, y: f32) {
+fn click(h: &mut Harness<'_, LienzoApp>, x: f32, y: f32) {
     let plot = diagram(h).shrink(4.0);
     let pos = plot.min + vec2(x, y) * plot.size();
     pointer(h, pos, true);
@@ -78,7 +78,7 @@ fn marker(shape: &Shape, rect: Rect) -> Option<Pos2> {
     }
 }
 
-fn assert_marker(h: &Harness<'_, PhotocraftApp>, x: f32, y: f32) {
+fn assert_marker(h: &Harness<'_, LienzoApp>, x: f32, y: f32) {
     let rect = diagram(h);
     let plot = rect.shrink(4.0);
     let expected = plot.min + vec2(x, y) * plot.size();
@@ -179,7 +179,7 @@ fn editing_the_diagram_is_only_a_preview_until_confirmed() {
     let id = h.state().ui.dialogs.last().unwrap().id;
     control(&mut h, "ui.dialog.confirm", json!({"dialog": id}));
     let actual = &h.state().session.active().unwrap().doc;
-    assert_eq!(photocraft_compose::render(actual, actual.bounds()), photocraft_compose::render(&expected, expected.bounds()));
+    assert_eq!(lienzo_compose::render(actual, actual.bounds()), lienzo_compose::render(&expected, expected.bounds()));
     assert!(h.state().session.active().unwrap().revision > revision);
     control(&mut h, "ui.menu.invoke", json!({"id": COMMAND}));
     let id = h.state().ui.dialogs.last().unwrap().id;
@@ -216,7 +216,7 @@ fn diagram_and_sliders_fit_every_theme_and_amount_changes_the_rays() {
                 assert!(slider.left() > diagram.right(), "{theme:?}: {label} is beside the diagram");
                 assert!(viewport.contains_rect(slider), "{theme:?}: {label} fits at {width} pt");
             }
-            let rays = |h: &Harness<'_, PhotocraftApp>| {
+            let rays = |h: &Harness<'_, LienzoApp>| {
                 h.output()
                     .shapes
                     .iter()

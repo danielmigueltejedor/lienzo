@@ -8,20 +8,20 @@ use egui::{Modifiers, PointerButton, Pos2, pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
 /// A 400×300 document at 400 % (so it fills the window round the dialog) with the Brush selected,
 /// and the `command` filter dialog open over it when there is one.
-fn harness(command: Option<&str>, rotation: f32) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(command: Option<&str>, rotation: f32) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = Tool::Brush;
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -32,7 +32,7 @@ fn harness(command: Option<&str>, rotation: f32) -> Harness<'static, PhotocraftA
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     (v.zoom, v.center, v.rotation, v.fit_pending) = (4.0, [200.0, 150.0], rotation, false);
@@ -43,7 +43,7 @@ fn harness(command: Option<&str>, rotation: f32) -> Harness<'static, PhotocraftA
     h
 }
 
-fn xf(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
+fn xf(h: &Harness<'static, LienzoApp>) -> ViewXform {
     let app = h.state();
     let v = &app.ui.views[0];
     ViewXform {
@@ -57,7 +57,7 @@ fn xf(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
 }
 
 /// The preview window's centre, in document pixels.
-fn centre(h: &Harness<'static, PhotocraftApp>) -> [f64; 2] {
+fn centre(h: &Harness<'static, LienzoApp>) -> [f64; 2] {
     let f = &h.state().ui.dialogs.last().unwrap().fields;
     let at = |k: &str| f.get(k).and_then(Value::as_f64).unwrap();
     [at("__pvCx"), at("__pvCy")]
@@ -68,22 +68,22 @@ fn near(a: [f64; 2], b: [f64; 2]) -> bool {
 }
 
 /// The document's revision and undo depth: a click that reached a tool or ran a command moves them.
-fn edits(h: &Harness<'static, PhotocraftApp>) -> (u64, usize) {
+fn edits(h: &Harness<'static, LienzoApp>) -> (u64, usize) {
     let st = h.state().session.active().unwrap();
     (st.revision, st.history.past_len())
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, down: bool) {
+fn button(h: &mut Harness<'static, LienzoApp>, p: Pos2, down: bool) {
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: Modifiers::NONE });
     h.run_steps(1);
 }
 
-fn move_to(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn move_to(h: &mut Harness<'static, LienzoApp>, p: Pos2) {
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
 }
 
-fn click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn click(h: &mut Harness<'static, LienzoApp>, p: Pos2) {
     move_to(h, p);
     button(h, p, true);
     button(h, p, false);
@@ -205,7 +205,7 @@ fn agents_centre_the_preview_with_ui_pointer_without_painting() {
 }
 
 /// Sends `events` as one `ui.pointer` request, then lets the frames run as between requests.
-fn pointer(h: &mut Harness<'static, PhotocraftApp>, events: Value) {
+fn pointer(h: &mut Harness<'static, LienzoApp>, events: Value) {
     let (req, _rx) = crate::control::ControlRequest::new("ui.pointer", json!({"events": events}));
     let _ = crate::control::handle(h.state_mut(), &egui::Context::default(), &req);
     h.run_steps(2);

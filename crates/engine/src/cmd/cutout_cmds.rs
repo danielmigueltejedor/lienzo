@@ -3,10 +3,10 @@
 //! Like Photoshop it is non-destructive (the pixels stay; the mask hides the background), turns
 //! the Background layer into a normal layer first and has no menu item.
 
-use photocraft_algo::matting::{self, RefineParams};
-use photocraft_algo::segment::subject;
-use photocraft_doc::{Document, Layer, LayerContent, LayerMask};
-use photocraft_geom::Rect;
+use lienzo_algo::matting::{self, RefineParams};
+use lienzo_algo::segment::subject;
+use lienzo_doc::{Document, Layer, LayerContent, LayerMask};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
@@ -105,8 +105,8 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_algo::segment::Rng;
-    use photocraft_doc::LayerId;
+    use lienzo_algo::segment::Rng;
+    use lienzo_doc::LayerId;
 
     fn session_with(w: u32, h: u32, depth: u32, px: impl Fn(u32, u32) -> [f32; 3]) -> Session {
         let mut s = Session::new();
@@ -194,7 +194,7 @@ mod tests {
             assert!(mask_cov(&s, 100, 80) >= 0.8, "depth {depth}: disc centre hidden");
             // Non-destructive: the pixels are untouched, only masked.
             assert_eq!(layer(&s, id).surface().unwrap().read_region(Rect::new(0, 0, 200, 160)), pixels, "depth {depth}");
-            let corner = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(0, 0, 1, 1)).px[0][3];
+            let corner = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(0, 0, 1, 1)).px[0][3];
             assert!(corner < 0.2, "depth {depth}: composite corner alpha {corner}");
             assert!(s.active().unwrap().doc.selection.is_none());
             s.execute("edit.undo", json!({})).unwrap();
@@ -319,17 +319,17 @@ mod tests {
             }
             s.edit("stroke", |doc, _| {
                 let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-                l.effects.items = vec![photocraft_doc::Effect::Stroke(photocraft_doc::StrokeFx {
-                    common: photocraft_doc::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
+                l.effects.items = vec![lienzo_doc::Effect::Stroke(lienzo_doc::StrokeFx {
+                    common: lienzo_doc::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
                     size: 3.0,
-                    position: photocraft_doc::StrokePosition::Outside,
-                    paint: photocraft_doc::FxPaint::Color(photocraft_color::Color::rgb(0.0, 0.0, 1.0)),
+                    position: lienzo_doc::StrokePosition::Outside,
+                    paint: lienzo_doc::FxPaint::Color(lienzo_color::Color::rgb(0.0, 0.0, 1.0)),
                     overprint: false,
                 })];
                 Ok(())
             })
             .unwrap();
-            let img = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(0, 0, 260, 220));
+            let img = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(0, 0, 260, 220));
             // Just outside the photo's left edge, and just inside it: no stroke.
             for x in [27, 28, 29, 30, 31] {
                 let a = img.px[110 * 260 + x][3];

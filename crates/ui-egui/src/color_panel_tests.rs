@@ -6,25 +6,25 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::color_panel_ui::{Model, hex_code, html_color, ramp_color};
 use crate::dock::Group;
 use crate::state::{ColorPanelMode, ColorRamp};
 use crate::theme::{ThemeKind, Tokens};
 
 /// The Color tab of `kind` in `mode`, alone in a 300 x 400 pt panel that offers it 360 pt.
-fn color_tab(kind: ThemeKind, mode: ColorPanelMode, fg: [f32; 4]) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn color_tab(kind: ThemeKind, mode: ColorPanelMode, fg: [f32; 4]) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.tools.foreground = fg;
     app.ui.color_panel.mode = mode;
     color_tab_of(kind, app)
 }
 
 /// The Color tab of `kind` for `app`, as [`color_tab`].
-fn color_tab_of(kind: ThemeKind, app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn color_tab_of(kind: ThemeKind, app: LienzoApp) -> Harness<'static, LienzoApp> {
     let tab = Group::Color.tabs(Tokens::for_kind(kind).pro).iter().position(|name| *name == "Color").unwrap();
     let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.data_mut(|d| d.insert_temp(crate::panels::color_field_fill_id(), 360.0_f32));
                 crate::panels::dock_body(app, ui, Group::Color, tab);
@@ -32,13 +32,13 @@ fn color_tab_of(kind: ThemeKind, app: PhotocraftApp) -> Harness<'static, Photocr
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, kind);
+    LienzoApp::setup_context(&h.ctx, kind);
     h.run_steps(3);
     h
 }
 
 /// Click at `p` with `modifiers` held.
-fn press(h: &mut Harness<'_, PhotocraftApp>, p: Pos2, modifiers: Modifiers) {
+fn press(h: &mut Harness<'_, LienzoApp>, p: Pos2, modifiers: Modifiers) {
     h.hover_at(p);
     h.event(egui::Event::ModifiersChanged(modifiers));
     h.run_steps(1);
@@ -54,7 +54,7 @@ fn bytes(c: [f32; 4]) -> [u8; 3] {
     [c[0], c[1], c[2]].map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8)
 }
 
-fn type_into(h: &mut Harness<'_, PhotocraftApp>, role: egui::accesskit::Role, nth: usize, text: &str) {
+fn type_into(h: &mut Harness<'_, LienzoApp>, role: egui::accesskit::Role, nth: usize, text: &str) {
     h.query_all_by_role(role).nth(nth).unwrap().click();
     h.run_steps(1);
     h.key_press_modifiers(Modifiers::COMMAND, egui::Key::A);
@@ -244,7 +244,7 @@ fn cube_modes_warn_when_the_colour_cannot_print() {
         let h = color_tab(ThemeKind::Classic, mode, [0.5, 0.5, 0.5, 1.0]);
         assert!(h.query_by_label(GAMUT).is_none(), "{mode:?}");
         // CodeRabbit on #9154: with the background chip active, the click sets the background.
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.tools.foreground = [0.5, 0.5, 0.5, 1.0];
         app.session.tools.background = [0.0, 1.0, 0.0, 1.0];
         app.ui.color_panel.mode = mode;
@@ -335,24 +335,24 @@ fn color_wheel_ring_sets_hue_and_triangle_sets_saturation_and_brightness() {
     // The triangle's centre: some saturation, some brightness, same hue.
     press(&mut h, center, Modifiers::NONE);
     let after = bytes(h.state().session.tools.foreground);
-    let hsv = photocraft_color::convert::rgb_to_hsb(after.map(|v| f32::from(v) / 255.0));
+    let hsv = lienzo_color::convert::rgb_to_hsb(after.map(|v| f32::from(v) / 255.0));
     assert!((hsv[0] - 90.0).abs() < 4.0 && hsv[1] < 0.9 && hsv[2] < 0.95, "{after:?} {hsv:?}");
 }
 
 /// Picking a mode from the panel menu changes the panel; the theme never does.
 #[test]
 fn panel_menu_picks_the_mode_and_ramp() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.tools.foreground = [0.2, 0.6, 0.8, 1.0];
     let mut h = Harness::builder().with_size(vec2(260.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::color_panel_ui::panel_menu(app, ui);
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::AdwaitaDark);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::AdwaitaDark);
     h.run_steps(2);
     assert!(h.query_by_label("✔ Hue Cube").is_some(), "Hue Cube is the default");
     for mode in ColorPanelMode::ALL.into_iter().skip(1).chain([ColorPanelMode::HueCube, ColorPanelMode::WebColorSliders]) {
@@ -382,9 +382,9 @@ fn panel_menu_picks_the_mode_and_ramp() {
 /// `ui.set colorPanel` merges, so setting the mode keeps the edited chip; bad values change nothing.
 #[test]
 fn control_sets_the_mode_ramp_and_web_safe_ramp() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    let call = |app: &mut PhotocraftApp, params: serde_json::Value| {
+    let call = |app: &mut LienzoApp, params: serde_json::Value| {
         let (req, _rx) = crate::control::ControlRequest::new("ui.set", params);
         match crate::control::handle(app, &ctx, &req) {
             crate::control::Outcome::Done(v) => v["ok"] == true,
@@ -449,12 +449,12 @@ fn color_wheel_ignores_clicks_beside_it() {
 #[test]
 fn color_wheel_fits_the_default_color_group() {
     for kind in ThemeKind::ALL {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.color_panel.mode = ColorPanelMode::ColorWheel;
         app.ui.theme = kind;
         app.ui.dock_tabs.color = Group::Color.tabs(Tokens::for_kind(kind).pro).iter().position(|name| *name == "Color").unwrap();
         let mut h = Harness::builder().with_size(vec2(1440.0, 1200.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     crate::panels::dock_area(app, ui);
                     egui::CentralPanel::default().show(ui, |_| {});
@@ -462,7 +462,7 @@ fn color_wheel_fits_the_default_color_group() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, kind);
+        LienzoApp::setup_context(&h.ctx, kind);
         h.run_steps(4);
         let group = crate::panel_docking::probe::native_group_rect(h.state(), &h.ctx, Group::Color).unwrap();
         assert!((group.height() - Group::Color.default_height()).abs() < 0.5, "{kind:?}: Color group {group:?}");
@@ -474,8 +474,8 @@ fn color_wheel_fits_the_default_color_group() {
 
 /// The Color tab in `mode` with a document holding one selected black rectangle, the Rectangle tool
 /// in hand, foreground blue and background red, editing the background chip if `background`.
-fn color_tab_with_a_shape(mode: ColorPanelMode, background: bool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn color_tab_with_a_shape(mode: ColorPanelMode, background: bool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
     app.run("shape.create", json!({"kind": "rect", "rect": [20, 20, 50, 50], "fill": "#000000"})).unwrap();
@@ -488,7 +488,7 @@ fn color_tab_with_a_shape(mode: ColorPanelMode, background: bool) -> Harness<'st
 }
 
 /// Types `text` into the first slider field (Hue or Red) and commits it with Enter.
-fn type_first_slider(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
+fn type_first_slider(h: &mut Harness<'_, LienzoApp>, text: &str) {
     h.query_all_by_role(egui::accesskit::Role::SpinButton).next().unwrap().click();
     h.run_steps(2);
     h.key_press_modifiers(Modifiers::COMMAND, egui::Key::A);
@@ -499,10 +499,10 @@ fn type_first_slider(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
     h.run_steps(3);
 }
 
-fn shape_fill(app: &PhotocraftApp) -> [u8; 3] {
+fn shape_fill(app: &LienzoApp) -> [u8; 3] {
     let st = app.session.active().unwrap();
-    let photocraft_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("shape layer") };
-    let Some(photocraft_doc::Fill::Solid(c)) = &sh.fill else { panic!("solid fill") };
+    let lienzo_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("shape layer") };
+    let Some(lienzo_doc::Fill::Solid(c)) = &sh.fill else { panic!("solid fill") };
     bytes([c.c[0], c.c[1], c.c[2], 1.0])
 }
 
@@ -565,18 +565,18 @@ fn every_slider_mode_recolours_the_selected_shape() {
 /// Photoshop; preferences without them keep the defaults.
 #[test]
 fn color_panel_options_survive_a_restart() {
-    let mut first = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut first = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     first.ui.color_panel.mode = ColorPanelMode::HsbSliders;
     first.ui.color_panel.ramp = ColorRamp::GrayscaleRamp;
     crate::color_panel_ui::persist(&mut first);
     let saved = first.session.prefs().clone();
 
-    let mut next = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut next = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     next.session.prefs.edit(|p| *p = saved);
     crate::color_panel_ui::restore(&mut next);
     assert_eq!((next.ui.color_panel.mode, next.ui.color_panel.ramp), (ColorPanelMode::HsbSliders, ColorRamp::GrayscaleRamp));
 
-    let mut fresh = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut fresh = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     crate::color_panel_ui::restore(&mut fresh);
     assert_eq!(fresh.ui.color_panel.mode, ColorPanelMode::HueCube, "no saved options: the default");
 }
@@ -585,7 +585,7 @@ fn color_panel_options_survive_a_restart() {
 /// The next frame takes it into the live panel instead of writing the panel's old options back.
 #[test]
 fn an_outside_preference_change_reaches_the_live_panel() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.color_panel.mode = ColorPanelMode::HsbSliders;
     crate::color_panel_ui::persist(&mut app);
     // As prefs.set or a reset to defaults would: the stored options change under the panel.

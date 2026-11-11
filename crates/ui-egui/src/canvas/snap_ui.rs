@@ -1,4 +1,4 @@
-//! Snapping in the shell: builds [`photocraft_engine::snap`] targets from View › Snap To and the
+//! Snapping in the shell: builds [`lienzo_engine::snap`] targets from View › Snap To and the
 //! document, snaps tool gestures (Move tool, marquees, crop, shapes, pen anchors, Free Transform
 //! handles and guides), and draws smart guides (magenta alignment lines) while layers move.
 //!
@@ -7,10 +7,10 @@
 //! tool to other layers' edges and centres. The threshold is 8 screen pixels at the current zoom.
 
 use egui::{Color32, Stroke, pos2};
-use photocraft_doc::LayerId;
-use photocraft_engine::snap::{SnapKind, SnapLine, SnapOptions, SnapTargets, layer_rect, union};
+use lienzo_doc::LayerId;
+use lienzo_engine::snap::{SnapKind, SnapLine, SnapOptions, SnapTargets, layer_rect, union};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::Tool;
 
@@ -56,7 +56,7 @@ pub struct ActiveSnap {
 }
 
 /// Snap To options from the View menu and the Guides/Grid preferences.
-pub fn options(app: &PhotocraftApp) -> SnapOptions {
+pub fn options(app: &LienzoApp) -> SnapOptions {
     let st = &app.ui.view.snap_to;
     let e = &app.ui.extras;
     let grid_step = app.session.active().map_or([18.0; 2], |d| {
@@ -76,20 +76,20 @@ pub fn options(app: &PhotocraftApp) -> SnapOptions {
 }
 
 /// Snap tolerance in document pixels at the current zoom.
-pub fn tolerance(app: &PhotocraftApp) -> f64 {
+pub fn tolerance(app: &LienzoApp) -> f64 {
     SNAP_PX / app.point_zoom().max(0.01) as f64
 }
 
-fn smart_on(app: &PhotocraftApp) -> bool {
+fn smart_on(app: &LienzoApp) -> bool {
     app.ui.view.shows(app.ui.view.show.smart_guides)
 }
 
-fn snap_on(app: &PhotocraftApp) -> bool {
+fn snap_on(app: &LienzoApp) -> bool {
     app.ui.extras.snap
 }
 
 /// Targets of the active document (smart = layer alignments only).
-fn build(app: &PhotocraftApp, exclude: &[LayerId], smart: bool) -> SnapTargets {
+fn build(app: &LienzoApp, exclude: &[LayerId], smart: bool) -> SnapTargets {
     let Some(st) = app.session.active() else { return SnapTargets::default() };
     let opts =
         if smart { SnapOptions { guides: false, grid: false, layers: true, document: true, selection: false, grid_step: [0.0; 2] } } else { options(app) };
@@ -99,7 +99,7 @@ fn build(app: &PhotocraftApp, exclude: &[LayerId], smart: bool) -> SnapTargets {
 
 /// What a move with `tool` in effect drags: the selection's bounds where its pixels float
 /// (`move_ui`), else the union of the selected layers' bounds.
-fn moving_rect(app: &PhotocraftApp, tool: Tool) -> Option<[f64; 4]> {
+fn moving_rect(app: &LienzoApp, tool: Tool) -> Option<[f64; 4]> {
     let st = app.session.active()?;
     if crate::move_ui::moves_selected_pixels_with(app, tool) {
         return selection_rect(app);
@@ -109,10 +109,10 @@ fn moving_rect(app: &PhotocraftApp, tool: Tool) -> Option<[f64; 4]> {
 
 /// The bounds of the pixels a selection moves, where they are shown: its floating piece's outline
 /// at its offset (#7538), else (nothing cut yet, or a mask or empty piece) the selection's bounds.
-fn selection_rect(app: &PhotocraftApp) -> Option<[f64; 4]> {
+fn selection_rect(app: &LienzoApp) -> Option<[f64; 4]> {
     let st = app.session.active()?;
     let sel = st.doc.selection.as_ref()?;
-    let r = match photocraft_engine::float_cmds::floating(st) {
+    let r = match lienzo_engine::float_cmds::floating(st) {
         Some(f) => f.parts.outline().unwrap_or(sel).content_bounds().translate(f.offset.0, f.offset.1),
         None => sel.content_bounds(),
     };
@@ -121,7 +121,7 @@ fn selection_rect(app: &PhotocraftApp) -> Option<[f64; 4]> {
 
 /// A press cut the selected pixels after snapping began (`filter_event` runs before the tools):
 /// the move now snaps the cut piece's outline, not the selection it was cut with (#7538).
-pub(crate) fn follow_cut(app: &mut PhotocraftApp) {
+pub(crate) fn follow_cut(app: &mut LienzoApp) {
     let Some(rect) = selection_rect(app) else { return };
     if let Some(snap) = app.prefs_rt.snap.as_mut() {
         match &mut snap.gesture {
@@ -174,23 +174,23 @@ fn override_held(mods: egui::Modifiers) -> bool {
     mods.ctrl && !mods.mac_cmd
 }
 
-fn corner_distorts(app: &PhotocraftApp, gesture: &Gesture, mods: egui::Modifiers) -> bool {
+fn corner_distorts(app: &LienzoApp, gesture: &Gesture, mods: egui::Modifiers) -> bool {
     matches!(gesture, Gesture::TransformCorner { index, .. } if crate::transform_tool::corner_distorts(app, *index, mods))
 }
 
-fn override_for_gesture(app: &PhotocraftApp, mods: egui::Modifiers) -> bool {
+fn override_for_gesture(app: &LienzoApp, mods: egui::Modifiers) -> bool {
     override_held(mods) && !(mods.command && app.prefs_rt.snap.as_ref().is_some_and(|s| corner_distorts(app, &s.gesture, mods)))
 }
 
 /// The Move tool's press at `p` picked other layers (Auto-Select): the drag moves those, so its
 /// box, what it snaps and what it leaves out of the targets are theirs, not the ones selected
 /// before (a group or an empty layer selected before had no box at all).
-pub(crate) fn retarget_move(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) {
+pub(crate) fn retarget_move(app: &mut LienzoApp, p: [f64; 2], mods: egui::Modifiers) {
     begin(app, p, mods);
 }
 
 /// Start snapping for a drag beginning at `p` with `mods` held (called on pointer down).
-fn begin(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) {
+fn begin(app: &mut LienzoApp, p: [f64; 2], mods: egui::Modifiers) {
     app.prefs_rt.snap = None;
     app.prefs_rt.snap_lines.clear();
     // Puppet Warp's pins and Perspective Warp's quads go where they are dragged, as in Photoshop:
@@ -312,7 +312,7 @@ fn begin(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) {
 
 /// Snap a guide drag that ⌘ with a selection tool starts at `p` (`canvas::command_guide_at`,
 /// #2690) as the Move tool's guide drag: never to guides, so not back onto itself.
-pub fn begin_guide(app: &mut PhotocraftApp, p: [f64; 2]) {
+pub fn begin_guide(app: &mut LienzoApp, p: [f64; 2]) {
     app.prefs_rt.snap_lines.clear();
     let targets = if snap_on(app) { build(app, &[], false).filtered(|k| k != SnapKind::Guide) } else { SnapTargets::default() };
     app.prefs_rt.snap = Some(ActiveSnap { gesture: Gesture::Guide, start: p, targets, smart: SnapTargets::default(), disabled: false });
@@ -323,7 +323,7 @@ pub fn begin_guide(app: &mut PhotocraftApp, p: [f64; 2]) {
 /// at the snapped point, as one outside does (#11392). Not to the selection's own bounds, which the
 /// click replaces (on a 1 px line they would pick the line beside it). Ctrl held (`mods`) turns
 /// snapping off, as during a drag.
-pub(crate) fn snap_click(app: &PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
+pub(crate) fn snap_click(app: &LienzoApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
     if !snap_on(app) || override_held(mods) {
         return p;
     }
@@ -333,7 +333,7 @@ pub(crate) fn snap_click(app: &PhotocraftApp, p: [f64; 2], mods: egui::Modifiers
 
 /// Round to whole pixels when Preferences › Tools asks vector tools and transforms to snap to
 /// the pixel grid.
-fn pixel_round(app: &PhotocraftApp, p: [f64; 2]) -> [f64; 2] {
+fn pixel_round(app: &LienzoApp, p: [f64; 2]) -> [f64; 2] {
     if app.session.prefs().tools.snap_vector_tools_and_transforms_to_pixel_grid
         && matches!(
             app.ui.tool,
@@ -347,7 +347,7 @@ fn pixel_round(app: &PhotocraftApp, p: [f64; 2]) -> [f64; 2] {
 }
 
 /// Snap one pointer position for the active gesture; records the alignment lines.
-fn apply(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
+fn apply(app: &mut LienzoApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2] {
     let tol = tolerance(app);
     let Some(snap) = app.prefs_rt.snap.as_ref() else { return p };
     if let Gesture::Pivot { anchors } = &snap.gesture {
@@ -395,7 +395,7 @@ fn apply(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) -> [f64; 2
 
 /// A corner stopped by the transform's convexity constraint is not aligned to the proposed
 /// target. Keep only the lines the final corner actually reaches, after the transform applies.
-pub(crate) fn retain_transform_lines(app: &mut PhotocraftApp, mods: egui::Modifiers) {
+pub(crate) fn retain_transform_lines(app: &mut LienzoApp, mods: egui::Modifiers) {
     let Some(snap) = app.prefs_rt.snap.as_ref() else { return };
     let Gesture::TransformCorner { index, .. } = snap.gesture else { return };
     if !corner_distorts(app, &snap.gesture, mods) {
@@ -411,7 +411,7 @@ pub(crate) fn retain_transform_lines(app: &mut PhotocraftApp, mods: egui::Modifi
 /// Center Preview the handle is found on the image, calculated from the original camera: snapping
 /// the pointer in the moving camera feeds the previous frame's pan back into the resize and makes
 /// a stationary pointer oscillate near the canvas edges.
-fn crop_handle(app: &PhotocraftApp, p: [f64; 2], mods: egui::Modifiers, targets: &SnapTargets, tol: f64) -> Option<([f64; 2], Vec<SnapLine>)> {
+fn crop_handle(app: &LienzoApp, p: [f64; 2], mods: egui::Modifiers, targets: &SnapTargets, tol: f64) -> Option<([f64; 2], Vec<SnapLine>)> {
     if app.ui.tool != Tool::Crop {
         return None;
     }
@@ -504,7 +504,7 @@ fn crop_handle(app: &PhotocraftApp, p: [f64; 2], mods: egui::Modifiers, targets:
 /// travel the other way over the document, so its edges and centre snap and the pointer moves by
 /// the frame's correction the other way too (#8580). As `crop_ui` reads this drag, the pointer is
 /// read in the camera at the press, since the view pans with the frame meanwhile.
-fn crop_image(app: &PhotocraftApp, p: [f64; 2], targets: &SnapTargets, tol: f64) -> Option<([f64; 2], Vec<SnapLine>)> {
+fn crop_image(app: &LienzoApp, p: [f64; 2], targets: &SnapTargets, tol: f64) -> Option<([f64; 2], Vec<SnapLine>)> {
     let crate::crop_ui::CropDrag::MoveImage { start, rect, view } = app.crop.drag? else { return None };
     let q = crate::crop_mode::to_press(app, view, p);
     let d = [q[0] - start[0], q[1] - start[1]];
@@ -518,7 +518,7 @@ fn crop_image(app: &PhotocraftApp, p: [f64; 2], targets: &SnapTargets, tol: f64)
 
 /// The bounds `[x0, y0, x1, y1]` of what drag `d` draws so far, for the tools whose drag Space
 /// repositions and that snap (`None` for the rest, or a shape still too small to draw).
-fn drawn_rect(app: &PhotocraftApp, d: &crate::canvas::Drag) -> Option<[f64; 4]> {
+fn drawn_rect(app: &LienzoApp, d: &crate::canvas::Drag) -> Option<[f64; 4]> {
     let last = d.points.last().map_or(d.start, |p| [p[0], p[1]]);
     let (a, b) = match d.tool {
         Tool::RectMarquee | Tool::EllipseMarquee => crate::canvas::marquee_corners(&app.ui.tool_options, d, last),
@@ -532,7 +532,7 @@ fn drawn_rect(app: &PhotocraftApp, d: &crate::canvas::Drag) -> Option<[f64; 4]> 
 /// Space held while a marquee, Object Selection box or shape is drawn moves the whole of it
 /// (`hold_keys`): its edges and centre snap, as a moved selection's do, not just the corner under
 /// the pointer. Releasing Space goes back to snapping that corner.
-fn follow_reposition(app: &mut PhotocraftApp) {
+fn follow_reposition(app: &mut LienzoApp) {
     let Some(d) = app.drag.as_ref() else { return };
     let Some(snap) = app.prefs_rt.snap.as_ref() else { return };
     let gesture = match (&snap.gesture, d.reposition) {
@@ -553,7 +553,7 @@ fn follow_reposition(app: &mut PhotocraftApp) {
 /// A click on a crop frame or one of its handles (released where it was pressed, the frame not
 /// moved) changes nothing, as a Move-tool click doesn't move the layer (`canvas::tool_event`):
 /// snapping the release would pull an edge within reach onto a nearby one.
-fn crop_click(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+fn crop_click(app: &LienzoApp, p: [f64; 2]) -> bool {
     use crate::crop_ui::CropDrag;
     let Some(snap) = app.prefs_rt.snap.as_ref() else { return false };
     let Some(CropDrag::Move { rect, .. } | CropDrag::Resize { rect, .. } | CropDrag::MoveImage { rect, .. }) = app.crop.drag else {
@@ -563,7 +563,7 @@ fn crop_click(app: &PhotocraftApp, p: [f64; 2]) -> bool {
 }
 
 /// Snap a tool event's coordinates (called by `canvas::tool_event` before the tools see it).
-pub fn filter_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> ToolEvent {
+pub fn filter_event(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) -> ToolEvent {
     match ev {
         ToolEvent::Down { x, y, pressure } => {
             begin(app, [x, y], mods);
@@ -622,7 +622,7 @@ pub fn filter_event(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifier
 }
 
 /// Snap a guide being dragged out of a ruler (`vertical` guides snap their x).
-pub fn snap_guide(app: &mut PhotocraftApp, vertical: bool, pos: f64) -> f64 {
+pub fn snap_guide(app: &mut LienzoApp, vertical: bool, pos: f64) -> f64 {
     if !snap_on(app) {
         return pos;
     }
@@ -639,16 +639,16 @@ pub fn snap_guide(app: &mut PhotocraftApp, vertical: bool, pos: f64) -> f64 {
 }
 
 fn hex_color(s: &str, fallback: Color32) -> Color32 {
-    photocraft_engine::prefs::parse_hex(s).map_or(fallback, |c| Color32::from_rgb(c[0], c[1], c[2]))
+    lienzo_engine::prefs::parse_hex(s).map_or(fallback, |c| Color32::from_rgb(c[0], c[1], c[2]))
 }
 
 /// The Smart Guides colour from Preferences › Guides, Grid & Slices (magenta by default).
-pub(crate) fn smart_color(app: &PhotocraftApp) -> Color32 {
+pub(crate) fn smart_color(app: &LienzoApp) -> Color32 {
     hex_color(&app.session.prefs().guides_grid_and_slices.smart_guide_color, Color32::from_rgb(255, 0, 255))
 }
 
 /// Draw smart guides (and the moving bounds) for the drag in progress.
-pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let Some(snap) = &app.prefs_rt.snap else { return };
     let smart_color = smart_color(app);
     // The moved layers' bounds follow the Move tool (Free Transform draws its own box).

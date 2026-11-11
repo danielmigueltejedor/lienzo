@@ -2,8 +2,8 @@
 //! with the peak resident memory of each case.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example flat_open_bench -- [--quick] [--reps 5] [--only jpeg-36] [--cpu] [--cache DIR] [--json out.json]
-//! cargo run --release -p photocraft-ui-egui --example flat_open_bench -- --case png16-36   # one case, one process
+//! cargo run --release -p lienzo-ui-egui --example flat_open_bench -- [--quick] [--reps 5] [--only jpeg-36] [--cpu] [--cache DIR] [--json out.json]
+//! cargo run --release -p lienzo-ui-egui --example flat_open_bench -- --case png16-36   # one case, one process
 //! ```
 //!
 //! Cases (`--only` matches a substring of the key): `jpeg-{24,36}` (RGB, quality 90, 4:2:0),
@@ -13,7 +13,7 @@
 //!
 //! The inputs are generated in-process (smooth gradients, soft blobs and seeded noise, so the
 //! compression is realistic) with the workspace's own encoders and cached in `--cache` (default:
-//! `$PHOTOCRAFT_FIXTURE_DIR`, else `fixtures/` in the target directory), never committed.
+//! `$LIENZO_FIXTURE_DIR`, else `fixtures/` in the target directory), never committed.
 //!
 //! Rows per case, in ms over `--reps` repetitions:
 //! - `import`: `import_for_open_with`, the real File › Open path (decode, orientation, tiles)
@@ -39,9 +39,9 @@ use std::process::{Command, Stdio};
 use std::time::Instant;
 
 use eframe::egui_wgpu::RenderState;
-use photocraft_codecs::{ChannelLayout, DecodeOptions, EncodeOptions, Format, Image};
-use photocraft_engine::Session;
-use photocraft_ui_egui::gpu_canvas::GpuCanvas;
+use lienzo_codecs::{ChannelLayout, DecodeOptions, EncodeOptions, Format, Image};
+use lienzo_engine::Session;
+use lienzo_ui_egui::gpu_canvas::GpuCanvas;
 use rayon::prelude::*;
 use serde_json::{Value, json};
 
@@ -107,7 +107,7 @@ fn ms(t: Instant) -> f64 {
 
 /// `<target>/fixtures`: the binary lives in `<target>/release/examples/`.
 fn default_cache() -> PathBuf {
-    if let Some(d) = std::env::var_os("PHOTOCRAFT_FIXTURE_DIR") {
+    if let Some(d) = std::env::var_os("LIENZO_FIXTURE_DIR") {
         return PathBuf::from(d);
     }
     std::env::current_exe().ok().and_then(|e| e.ancestors().nth(3).map(|t| t.join("fixtures"))).unwrap_or_else(std::env::temp_dir)
@@ -168,7 +168,7 @@ fn generate(case: &Case, w: u32, h: u32) -> Result<Vec<u8>, String> {
     };
     let format = if case.kind == Kind::Jpeg { Format::Jpeg } else { Format::Png };
     let opts = EncodeOptions { jpeg_quality: 90, jpeg_chroma_subsampling: true, ..Default::default() };
-    let mut bytes = photocraft_codecs::encode(&img, format, &opts).map_err(|e| e.to_string())?;
+    let mut bytes = lienzo_codecs::encode(&img, format, &opts).map_err(|e| e.to_string())?;
     if case.orient6 {
         // The encoder writes the pixels as given and resets the orientation, so the tag goes in
         // as an Exif APP1 segment right after the JPEG's SOI marker.
@@ -202,7 +202,7 @@ fn ensure_fixture(case: &Case, dir: &Path, quick: bool) -> Result<PathBuf, Strin
 
 /// A headless GPU canvas on a device created like the app's.
 fn canvas() -> Option<(GpuCanvas, RenderState)> {
-    let setup = photocraft_ui_egui::gpu_canvas::wgpu_setup();
+    let setup = lienzo_ui_egui::gpu_canvas::wgpu_setup();
     let rs = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| egui_kittest::wgpu::create_render_state(setup, Default::default()))).ok()?;
     Some((GpuCanvas::new(&rs), rs))
 }
@@ -217,16 +217,16 @@ fn refresh(gpu: Option<&(GpuCanvas, RenderState)>, s: &Session) -> Result<f64, S
             let _ = rs.device.poll(eframe::wgpu::PollType::Wait { submission_index: None, timeout: None });
         }
         None => {
-            std::hint::black_box(photocraft_compose::render(&st.doc, st.doc.bounds()));
+            std::hint::black_box(lienzo_compose::render(&st.doc, st.doc.bounds()));
         }
     }
     Ok(ms(t))
 }
 
 /// `import_for_open_with`, File › Open's real path.
-fn import_once(name: &str, bytes: &[u8]) -> Result<photocraft_doc::Document, String> {
-    let opts = photocraft_io::ImportOptions::default();
-    photocraft_io::import_for_open_with(name, bytes, &opts, &Default::default()).map(|(r, _)| r.document).map_err(|e| e.to_string())
+fn import_once(name: &str, bytes: &[u8]) -> Result<lienzo_doc::Document, String> {
+    let opts = lienzo_io::ImportOptions::default();
+    lienzo_io::import_for_open_with(name, bytes, &opts, &Default::default()).map(|(r, _)| r.document).map_err(|e| e.to_string())
 }
 
 /// Runs every measurement for one case in this process; the result is the JSON line's payload.
@@ -256,21 +256,21 @@ fn run_case(case: &Case, dir: &Path, quick: bool, reps: usize, cpu: bool) -> Res
         s.open_document(doc, Some(name.clone()));
         put(1, ms(t));
     }
-    let peak_process_after_import = photocraft_testkit::perf::process_peak_rss_bytes();
+    let peak_process_after_import = lienzo_testkit::perf::process_peak_rss_bytes();
 
     // Pass 2: the phases of the import on their own.
-    let format = photocraft_codecs::detect(&bytes).ok_or("unknown format")?;
+    let format = lienzo_codecs::detect(&bytes).ok_or("unknown format")?;
     let keep = DecodeOptions { keep_orientation: true, ..Default::default() };
     for _ in 0..reps {
         let t = Instant::now();
-        let img = photocraft_codecs::decode_as_with(format, &bytes, &keep).map_err(|e| e.to_string())?;
+        let img = lienzo_codecs::decode_as_with(format, &bytes, &keep).map_err(|e| e.to_string())?;
         put(2, ms(t));
-        let o = photocraft_codecs::exif_orientation(img.meta.exif.as_deref().unwrap_or_default());
+        let o = lienzo_codecs::exif_orientation(img.meta.exif.as_deref().unwrap_or_default());
         let t = Instant::now();
         let upright = img.oriented(o).map_err(|e| e.to_string())?;
         put(3, ms(t));
         let t = Instant::now();
-        let r = photocraft_io::image_to_document(&name, &upright).map_err(|e| e.to_string())?;
+        let r = lienzo_io::image_to_document(&name, &upright).map_err(|e| e.to_string())?;
         put(4, ms(t));
         drop(r);
     }
@@ -294,7 +294,7 @@ fn run_case(case: &Case, dir: &Path, quick: bool, reps: usize, cpu: bool) -> Res
         put(5, c);
         put(6, open + c);
     }
-    let peak_process_after_all_passes = photocraft_testkit::perf::process_peak_rss_bytes();
+    let peak_process_after_all_passes = lienzo_testkit::perf::process_peak_rss_bytes();
     let phases: serde_json::Map<String, Value> = PHASES.iter().zip(ph).map(|(n, v)| ((*n).to_string(), json!(v))).collect();
     Ok(json!({
         "key": case.key, "label": case.label, "width": w, "height": h, "file_bytes": bytes.len(),
@@ -311,7 +311,7 @@ fn rows_of(res: &Value) -> Vec<Value> {
             let samples: Vec<f64> = res["phases"][*p].as_array().map(|a| a.iter().filter_map(Value::as_f64).collect()).unwrap_or_default();
             let composite = matches!(*p, "first composite" | "editable");
             let peak = res[if composite { "peak_process_after_all_passes_bytes" } else { "peak_process_after_import_bytes" }].as_u64();
-            let mut row = photocraft_testkit::perf::row(&format!("{label}: {p}"), &samples, peak, None);
+            let mut row = lienzo_testkit::perf::row(&format!("{label}: {p}"), &samples, peak, None);
             row["peak_rss_provenance"] = json!(if composite { "whole_case_process_after_all_passes" } else { "case_process_after_import_and_admission" });
             row
         })
@@ -415,10 +415,10 @@ fn main() {
             "reps": reps, "quick": quick, "cache": dir.display().to_string(), "cases": cases, "errors": errors, "gpu_adapter": adapter,
             "threads": std::thread::available_parallelism().map(|n| n.get()).ok(),
         });
-        let mut report = photocraft_testkit::perf::report("flat_open_bench", context, rows, None);
+        let mut report = lienzo_testkit::perf::report("flat_open_bench", context, rows, None);
         // Each case ran in its own process: this one's peak says nothing about them.
         report["process_peak_rss_bytes"] = json!(results.iter().filter_map(|r| r["peak_process_after_all_passes_bytes"].as_u64()).max());
-        if let Err(e) = photocraft_testkit::perf::write_report(&out, &report) {
+        if let Err(e) = lienzo_testkit::perf::write_report(&out, &report) {
             eprintln!("{e}");
             errors.push(json!({"name": "report", "error": e}));
         }

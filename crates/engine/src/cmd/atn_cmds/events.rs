@@ -341,7 +341,7 @@ fn smart_path_from(d: &Descriptor, id: &str) -> Mapped {
     let Some(mut expected) = smart_path_to(id, &p) else { return unsupported };
     if let Some(hint) = d.get("LyrI") {
         // The reference explicitly omits recording-session IDs on save (#10603,
-        // docs/atn.md:200). They must never become PhotoCraft's playback target.
+        // docs/atn.md:200). They must never become Lienzo's playback target.
         if !matches!(id, "layer.smartObjects.relinkToFile" | "layer.smartObjects.replaceContents") || !matches!(hint, D::Integer(n) if *n > 0) {
             return unsupported;
         }
@@ -386,7 +386,7 @@ macro_rules! target_event {
     };
 }
 
-/// Every Photoshop event PhotoCraft maps. The order matters only for the panel label.
+/// Every Photoshop event Lienzo maps. The order matters only for the panel label.
 pub(super) const EVENTS: &[Event] = &[
     selection_event!("AddT", "addTo", "Add to Selection", &["select.rect"], |d| super::steps_selection::selection_from(d, "add"), |_, p| {
         super::steps_selection::selection_to(p, "add")
@@ -953,7 +953,7 @@ pub(super) const EVENTS: &[Event] = &[
         to: delete_to,
     },
     Event { code: "", name: "applyLocking", label: "Apply Locking", ids: &["layer.lockLayers"], from: locking_from, to: locking_to },
-    // Timeline › Make Frames from Layers: no frame animation in PhotoCraft, no document change.
+    // Timeline › Make Frames from Layers: no frame animation in Lienzo, no document change.
     Event {
         code: "",
         name: "animationFramesFromLayers",
@@ -1218,7 +1218,7 @@ pub(super) const EVENTS: &[Event] = &[
     Event { code: "Stop", name: "stop", label: "Stop", ids: &[STOP_MESSAGE], from: stop_from, to: stop_to },
 ];
 
-/// Four-char codes PhotoCraft once exported for events Photoshop only runs by name (or by
+/// Four-char codes Lienzo once exported for events Photoshop only runs by name (or by
 /// another code), with the name they stand for. Measured in Photoshop: `executeAction` with
 /// these codes fails ("the command is not currently available"), and `Fltn` is the
 /// `flatness` property, not the flatten event. Import keeps accepting them so actions saved

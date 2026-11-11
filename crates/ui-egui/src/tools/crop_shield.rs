@@ -12,7 +12,7 @@
 use egui::{Color32, Key, Modifiers};
 use serde::{Deserialize, Serialize};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// Photoshop's default shield opacity, percent.
@@ -106,12 +106,12 @@ pub fn fill(s: &CropShield, canvas: Color32, editing: bool) -> Option<Color32> {
 
 /// The pasteboard colour the shield matches: Preferences › Interface's, else black in Full Screen
 /// Mode (the backdrop there) and the theme's canvas otherwise.
-pub fn canvas_color(app: &PhotocraftApp, ctx: &egui::Context) -> Color32 {
+pub fn canvas_color(app: &LienzoApp, ctx: &egui::Context) -> Color32 {
     crate::prefs_ui::pasteboard_color(app).unwrap_or_else(|| if app.ui.view.hides_chrome() { Color32::BLACK } else { crate::theme::Tokens::get(ctx).canvas })
 }
 
 /// The shield over the pending crop box now ([`fill`]).
-pub fn current(app: &PhotocraftApp, ctx: &egui::Context) -> Option<Color32> {
+pub fn current(app: &LienzoApp, ctx: &egui::Context) -> Option<Color32> {
     let s = &app.ui.tool_options.crop_shield;
     // No shield before the crop has started: an untouched frame shows only itself (#10930).
     // Show Cropped Area off still hides everything outside the frame, as it does once started.
@@ -122,7 +122,7 @@ pub fn current(app: &PhotocraftApp, ctx: &egui::Context) -> Option<Color32> {
 }
 
 /// Show Cropped Area is off with the Crop tool showing a box: nothing outside it shows.
-pub fn hides_outside(app: &PhotocraftApp) -> bool {
+pub fn hides_outside(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && app.ui.crop_rect.is_some() && !app.ui.tool_options.crop_shield.shows_cropped_area()
 }
 
@@ -131,7 +131,7 @@ pub fn hides_outside(app: &PhotocraftApp) -> bool {
 /// Mode. Returns true when a key was used; otherwise H stays the Hand tool key and P the Pen's,
 /// also over the untouched default frame the tool shows when picked or after a commit (#6536,
 /// #9731). ⇧H and ⇧P are always the tool keys.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if app.ui.tool != Tool::Crop || app.ui.crop_rect.is_none() || app.crop.default_frame || app.crop.drag.is_some() {
         return false;
     }
@@ -218,15 +218,15 @@ pub fn options_button(s: &mut CropShield, ui: &mut egui::Ui) -> bool {
     pick
 }
 
-/// Custom…: PhotoCraft's Color Picker on the custom shield colour; OK sets it
+/// Custom…: Lienzo's Color Picker on the custom shield colour; OK sets it
 /// (`color_picker_ui::confirm`, target `cropShield`).
-pub fn pick_custom_color(app: &mut PhotocraftApp) -> u64 {
+pub fn pick_custom_color(app: &mut LienzoApp) -> u64 {
     let rgb = app.ui.tool_options.crop_shield.custom_color.map(|v| v as f32 / 255.0);
     crate::color_picker_ui::open_for_target(app, "cropShield", "Color Picker (Crop Shield Color)", rgb)
 }
 
 /// The Color Picker's OK for the custom shield colour (`"#rrggbb"`).
-pub fn set_custom_color(app: &mut PhotocraftApp, hex: &str) -> Result<(), String> {
+pub fn set_custom_color(app: &mut LienzoApp, hex: &str) -> Result<(), String> {
     let rgb = crate::color_picker_ui::parse_hex(hex).ok_or_else(|| format!("not a colour: {hex}"))?;
     let s = &mut app.ui.tool_options.crop_shield;
     s.custom_color = rgb.map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
@@ -311,14 +311,14 @@ mod tests {
         assert_eq!(serde_json::to_value(ShieldColor::MatchCanvas).unwrap(), "matchCanvas");
     }
 
-    fn press_h(app: &mut PhotocraftApp) {
+    fn press_h(app: &mut LienzoApp) {
         let ctx = egui::Context::default();
         ctx.input_mut(|i| i.events.push(egui::Event::Key { key: Key::H, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }));
         crate::shortcuts::handle(app, &ctx);
     }
 
-    fn crop_app() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn crop_app() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", serde_json::json!({"width": 200, "height": 120})).unwrap();
         app.ui.tool = Tool::Crop;
         crate::crop_ui::ensure_frame(&mut app);
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn h_stays_the_hand_key_without_a_crop_box() {
         // No document: no box, so H picks the Hand tool.
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.tool = Tool::Crop;
         press_h(&mut app);
         assert_eq!(app.ui.tool, Tool::Hand);
@@ -399,7 +399,7 @@ mod tests {
 
     /// A crop in progress: a frame changed from the default one, so [`keys`] gets past its
     /// early returns (#9731).
-    fn crop_in_progress_app() -> PhotocraftApp {
+    fn crop_in_progress_app() -> LienzoApp {
         let mut app = crop_app();
         app.ui.crop_rect = Some([20.0, 10.0, 120.0, 90.0]);
         app.crop.default_frame = false;

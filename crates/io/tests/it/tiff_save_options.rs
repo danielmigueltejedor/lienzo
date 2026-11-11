@@ -2,12 +2,12 @@
 //! channels, and Save Image Pyramid. Unset Save Transparency is covered in `tiff_layers`.
 
 use crate::common::*;
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::*;
-use photocraft_psd::tiff::ImageSourceData;
-use photocraft_raster::Surface;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{AlphaChannel, Document, Layer, LayerContent};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::*;
+use lienzo_psd::tiff::ImageSourceData;
+use lienzo_raster::Surface;
 
 /// A 4×4 document whose one layer is opaque red in its middle and transparent around it, with a
 /// "White" spot channel inked in its left half when `spot`.
@@ -15,12 +15,12 @@ fn art(depth: SampleType, spot: bool) -> Document {
     let mut doc = Document::new("t", Size::new(4, 4), ColorMode::Rgb, depth);
     let fmt = doc.pixel_format();
     let mut s = Surface::new(fmt);
-    s.fill_rect(Rect::new(1, 1, 3, 3), &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+    s.fill_rect(Rect::new(1, 1, 3, 3), &lienzo_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
     doc.layers.push(Layer::new("Layer 1", LayerContent::Raster(s)));
     if spot {
         let gray = PixelFormat::new(ColorMode::Grayscale, depth, false);
         let mut plate = Surface::new(gray);
-        plate.fill_rect(Rect::new(0, 0, 2, 4), &photocraft_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
+        plate.fill_rect(Rect::new(0, 0, 2, 4), &lienzo_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
         let mut white = AlphaChannel::new("White", plate);
         white.spot = Some((Color::rgb(0.8, 0.2, 0.2), 1.0));
         doc.channels.push(white);
@@ -40,8 +40,8 @@ fn extra_samples_tag(bytes: &[u8]) -> Vec<u16> {
 /// A TIFF's channel resources: the names in 1006, and the byte lengths of DisplayInfo (1077)
 /// and the alpha identifiers (1053).
 fn channel_resources(bytes: &[u8]) -> (Vec<String>, usize, usize) {
-    let tag = photocraft_codecs::tiff_photoshop_tags(bytes).0.expect("resources");
-    let (resources, _) = photocraft_psd::tiff::resources_from_bytes(tag).expect("parse resources");
+    let tag = lienzo_codecs::tiff_photoshop_tags(bytes).0.expect("resources");
+    let (resources, _) = lienzo_psd::tiff::resources_from_bytes(tag).expect("parse resources");
     let data = |id: u16| resources.iter().find(|r| r.id == id).map(|r| r.data.clone()).unwrap_or_default();
     let pascal = data(1006);
     let (mut at, mut names) = (0usize, Vec::new());
@@ -53,8 +53,8 @@ fn channel_resources(bytes: &[u8]) -> (Vec<String>, usize, usize) {
 }
 
 /// The first sample of pixel (0, 0) and its alpha, on the 0–1 scale.
-fn corner(img: &photocraft_codecs::Image) -> (f32, Option<f32>) {
-    let f = img.convert(img.layout(), photocraft_codecs::SampleType::F32);
+fn corner(img: &lienzo_codecs::Image) -> (f32, Option<f32>) {
+    let f = img.convert(img.layout(), lienzo_codecs::SampleType::F32);
     let s = f.to_f32_samples().unwrap();
     (s[0], img.layout().has_alpha().then(|| s[img.layout().channels() - 1]))
 }
@@ -74,7 +74,7 @@ fn off_mattes_the_composite_on_white_and_layers_keep_theirs() {
                 let doc = art(depth, spot);
                 let r = save(&doc, layers, Some(false));
                 assert!(!r.warnings.iter().any(|w| w.contains("Save Transparency")), "{case}: the user chose it: {:?}", r.warnings);
-                let img = photocraft_codecs::decode(&r.bytes).unwrap();
+                let img = lienzo_codecs::decode(&r.bytes).unwrap();
                 assert!(!img.layout().has_alpha(), "{case}");
                 assert_eq!(img.meta.extra_samples.len(), usize::from(spot), "{case}");
                 assert_eq!(extra_samples_tag(&r.bytes), if spot { vec![0] } else { vec![] }, "{case}");
@@ -83,7 +83,7 @@ fn off_mattes_the_composite_on_white_and_layers_keep_theirs() {
                 assert_eq!(back.channels.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), if spot { vec!["White"] } else { vec![] }, "{case}");
                 if layers {
                     assert_eq!(layer_alpha(&back, 0, 0), 0.0, "{case}: the layer keeps its transparency");
-                    let (isd, _) = ImageSourceData::from_bytes(photocraft_codecs::tiff_photoshop_tags(&r.bytes).1.unwrap()).unwrap();
+                    let (isd, _) = ImageSourceData::from_bytes(lienzo_codecs::tiff_photoshop_tags(&r.bytes).1.unwrap()).unwrap();
                     assert!(!isd.layer_info.unwrap().merged_alpha, "{case}: no merged transparency is claimed");
                     assert!(!isd.global_blocks.iter().any(|b| b.is_merged_transparency_marker()), "{case}");
                 }
@@ -100,7 +100,7 @@ fn on_keeps_transparency_ahead_of_spot_channels() {
             let doc = art(depth, true);
             let r = save(&doc, layers, Some(true));
             assert!(!r.warnings.iter().any(|w| w.contains("composited over white")), "{case}: {:?}", r.warnings);
-            let img = photocraft_codecs::decode(&r.bytes).unwrap();
+            let img = lienzo_codecs::decode(&r.bytes).unwrap();
             assert!(img.layout().has_alpha(), "{case}");
             assert_eq!(img.meta.extra_samples.len(), 1, "{case}");
             // Transparency (unassociated alpha) first, then the spot.
@@ -122,7 +122,7 @@ fn on_keeps_transparency_ahead_of_spot_channels() {
             assert_eq!(ids, 2 * 4, "{case}: identifiers");
             if layers {
                 // As Photoshop writes it: a positive layer count and `MTrn` first.
-                let (isd, _) = ImageSourceData::from_bytes(photocraft_codecs::tiff_photoshop_tags(&r.bytes).1.unwrap()).unwrap();
+                let (isd, _) = ImageSourceData::from_bytes(lienzo_codecs::tiff_photoshop_tags(&r.bytes).1.unwrap()).unwrap();
                 assert!(!isd.layer_info.as_ref().unwrap().merged_alpha, "{case}");
                 assert_eq!(&isd.global_blocks[0].key, b"MTrn", "{case}");
                 // The marker is kept for the next save, as from Photoshop's own file.
@@ -155,7 +155,7 @@ fn on_keeps_a_quick_mask_in_place() {
     let mut doc = art(SampleType::U8, true);
     let gray = PixelFormat::new(ColorMode::Grayscale, SampleType::U8, false);
     let mut q = Surface::new(gray);
-    q.fill_rect(Rect::new(2, 2, 4, 4), &photocraft_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
+    q.fill_rect(Rect::new(2, 2, 4, 4), &lienzo_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
     doc.quick_mask = Some(AlphaChannel::new("Quick Mask", q));
     for layers in [false, true] {
         let r = save(&doc, layers, Some(true));
@@ -180,7 +180,7 @@ fn on_past_sixteen_channels_keeps_each_channels_name() {
     }
     let r = save(&doc, true, Some(true));
     assert!(r.warnings.iter().any(|w| w.contains("18 extra channels") && w.contains("first 16")), "{:?}", r.warnings);
-    let img = photocraft_codecs::decode(&r.bytes).unwrap();
+    let img = lienzo_codecs::decode(&r.bytes).unwrap();
     assert!(img.layout().has_alpha());
     assert_eq!(img.meta.extra_samples.len(), 16);
     let back = import("t.tif", &r.bytes).unwrap().document;
@@ -195,11 +195,11 @@ fn on_without_transparency_writes_no_alpha() {
     doc.layers[0].locks.transparency = true;
     let fmt = doc.pixel_format();
     if let LayerContent::Raster(s) = &mut doc.layers[0].content {
-        s.fill_rect(Rect::new(0, 0, 4, 4), &photocraft_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
+        s.fill_rect(Rect::new(0, 0, 4, 4), &lienzo_raster::from_rgba(&fmt, [0.0, 0.0, 1.0, 1.0]));
     }
     for layers in [false, true] {
         let r = save(&doc, layers, Some(true));
-        let img = photocraft_codecs::decode(&r.bytes).unwrap();
+        let img = lienzo_codecs::decode(&r.bytes).unwrap();
         assert!(!img.layout().has_alpha() || corner(&img).1 == Some(1.0), "layers {layers}");
     }
 }
@@ -210,29 +210,29 @@ fn pyramid_levels_follow_the_full_image_and_open_the_same_document() {
     let mut doc = Document::new("t", Size::new(100, 100), ColorMode::Rgb, SampleType::U8);
     let fmt = doc.pixel_format();
     let mut s = Surface::new(fmt);
-    s.fill_rect(Rect::new(10, 10, 60, 30), &photocraft_raster::from_rgba(&fmt, [1.0, 0.5, 0.0, 1.0]));
+    s.fill_rect(Rect::new(10, 10, 60, 30), &lienzo_raster::from_rgba(&fmt, [1.0, 0.5, 0.0, 1.0]));
     doc.layers.push(Layer::new("Layer 1", LayerContent::Raster(s)));
     let gray = PixelFormat::new(ColorMode::Grayscale, SampleType::U8, false);
     let mut plate = Surface::new(gray);
-    plate.fill_rect(Rect::new(0, 0, 50, 100), &photocraft_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
+    plate.fill_rect(Rect::new(0, 0, 50, 100), &lienzo_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
     doc.channels.push(AlphaChannel::new("Alpha 1", plate));
     for layers in [false, true] {
         let opts = |pyramid| ExportOptions {
             tiff_layers: layers,
-            encode: photocraft_codecs::EncodeOptions { tiff_pyramid: pyramid, ..Default::default() },
+            encode: lienzo_codecs::EncodeOptions { tiff_pyramid: pyramid, ..Default::default() },
             ..Default::default()
         };
         let with = export(&doc, "t.tif", &opts(true)).unwrap();
         let without = export(&doc, "t.tif", &opts(false)).unwrap();
-        let info = photocraft_codecs::tiff_info(&with.bytes).unwrap();
+        let info = lienzo_codecs::tiff_info(&with.bytes).unwrap();
         let kinds: Vec<_> = info.pages.iter().map(|p| (p.kind, p.width)).collect();
-        assert_eq!(kinds, [(photocraft_codecs::TiffPageKind::Page, 100), (photocraft_codecs::TiffPageKind::ReducedResolution, 50)], "layers {layers}");
+        assert_eq!(kinds, [(lienzo_codecs::TiffPageKind::Page, 100), (lienzo_codecs::TiffPageKind::ReducedResolution, 50)], "layers {layers}");
         // The level holds the image at half size: level (15, 10) covers full-size (30..32, 20..22),
         // inside the orange fill; (40, 40) is outside it, composited over white (the alpha
         // channel keeps the transparency out of the file).
-        let level = photocraft_codecs::decode_tiff_page(&with.bytes, 1, &photocraft_codecs::DecodeOptions::default()).unwrap();
+        let level = lienzo_codecs::decode_tiff_page(&with.bytes, 1, &lienzo_codecs::DecodeOptions::default()).unwrap();
         assert_eq!(level.dimensions(), (50, 50), "layers {layers}");
-        let level = level.convert(level.layout(), photocraft_codecs::SampleType::F32);
+        let level = level.convert(level.layout(), lienzo_codecs::SampleType::F32);
         let px = level.to_f32_samples().unwrap();
         for ((x, y), want) in [((15, 10), [1.0f32, 0.5, 0.0]), ((40, 40), [1.0, 1.0, 1.0])] {
             let i = (y * 50 + x) * level.layout().channels();
@@ -247,16 +247,16 @@ fn pyramid_levels_follow_the_full_image_and_open_the_same_document() {
     }
 }
 
-/// `PHOTOCRAFT_TIFF_INTEROP=<dir>` writes every TIFF Options combination there, to check with
+/// `LIENZO_TIFF_INTEROP=<dir>` writes every TIFF Options combination there, to check with
 /// other readers (libtiff `tiffinfo`, ImageMagick, vips):
 ///
 /// ```sh
-/// PHOTOCRAFT_TIFF_INTEROP=/tmp/tiff cargo test -p photocraft-io --test it -- tiff_save_options::write_interop_samples --ignored
+/// LIENZO_TIFF_INTEROP=/tmp/tiff cargo test -p lienzo-io --test it -- tiff_save_options::write_interop_samples --ignored
 /// ```
 #[test]
-#[ignore = "writes sample files for other readers; set PHOTOCRAFT_TIFF_INTEROP"]
+#[ignore = "writes sample files for other readers; set LIENZO_TIFF_INTEROP"]
 fn write_interop_samples() {
-    let Some(dir) = std::env::var_os("PHOTOCRAFT_TIFF_INTEROP") else { return };
+    let Some(dir) = std::env::var_os("LIENZO_TIFF_INTEROP") else { return };
     let dir = std::path::PathBuf::from(dir);
     std::fs::create_dir_all(&dir).unwrap();
     for (mode, mname) in [(ColorMode::Rgb, "rgb"), (ColorMode::Cmyk, "cmyk"), (ColorMode::Grayscale, "gray")] {
@@ -267,13 +267,13 @@ fn write_interop_samples() {
             let mut doc = Document::new("t", Size::new(300, 200), mode, depth);
             let fmt = doc.pixel_format();
             let mut s = Surface::new(fmt);
-            s.fill_rect(Rect::new(40, 30, 260, 170), &photocraft_raster::from_rgba(&fmt, [0.9, 0.2, 0.1, 1.0]));
+            s.fill_rect(Rect::new(40, 30, 260, 170), &lienzo_raster::from_rgba(&fmt, [0.9, 0.2, 0.1, 1.0]));
             doc.layers.push(Layer::new("Layer 1", LayerContent::Raster(s)));
             for spot in [false, true] {
                 if spot {
                     let gray = PixelFormat::new(ColorMode::Grayscale, depth, false);
                     let mut plate = Surface::new(gray);
-                    plate.fill_rect(Rect::new(0, 0, 150, 200), &photocraft_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
+                    plate.fill_rect(Rect::new(0, 0, 150, 200), &lienzo_raster::from_rgba(&gray, [1.0, 1.0, 1.0, 1.0]));
                     let mut white = AlphaChannel::new("White", plate);
                     white.spot = Some((Color::rgb(0.8, 0.2, 0.2), 1.0));
                     doc.channels = vec![white];
@@ -281,15 +281,15 @@ fn write_interop_samples() {
                 for layers in [false, true] {
                     for (t, tname) in [(None, "unset"), (Some(true), "on"), (Some(false), "off")] {
                         for (c, cname) in [
-                            (photocraft_codecs::TiffCompression::None, "none"),
-                            (photocraft_codecs::TiffCompression::Lzw, "lzw"),
-                            (photocraft_codecs::TiffCompression::Deflate, "zip"),
+                            (lienzo_codecs::TiffCompression::None, "none"),
+                            (lienzo_codecs::TiffCompression::Lzw, "lzw"),
+                            (lienzo_codecs::TiffCompression::Deflate, "zip"),
                         ] {
                             for pyramid in [false, true] {
                                 let opts = ExportOptions {
                                     tiff_layers: layers,
                                     tiff_transparency: t,
-                                    encode: photocraft_codecs::EncodeOptions { tiff_compression: c, tiff_pyramid: pyramid, ..Default::default() },
+                                    encode: lienzo_codecs::EncodeOptions { tiff_compression: c, tiff_pyramid: pyramid, ..Default::default() },
                                     ..Default::default()
                                 };
                                 let r = export(&doc, "t.tif", &opts).unwrap();
@@ -319,13 +319,13 @@ fn every_colour_mode_saves_or_mattes_its_transparency() {
             let mut doc = Document::new("t", Size::new(4, 4), mode, depth);
             let fmt = doc.pixel_format();
             let mut s = Surface::new(fmt);
-            s.fill_rect(Rect::new(1, 1, 3, 3), &photocraft_raster::from_rgba(&fmt, [0.2, 0.4, 0.6, 1.0]));
+            s.fill_rect(Rect::new(1, 1, 3, 3), &lienzo_raster::from_rgba(&fmt, [0.2, 0.4, 0.6, 1.0]));
             doc.layers.push(Layer::new("Layer 1", LayerContent::Raster(s)));
             for layers in [false, true] {
                 for t in [Some(true), Some(false)] {
                     let case = format!("{mode:?} {depth:?} layers {layers} {t:?}");
                     let r = save(&doc, layers, t);
-                    let img = photocraft_codecs::decode(&r.bytes).unwrap_or_else(|e| panic!("{case}: {e}"));
+                    let img = lienzo_codecs::decode(&r.bytes).unwrap_or_else(|e| panic!("{case}: {e}"));
                     assert_eq!(img.layout().has_alpha(), t == Some(true), "{case}");
                     let back = import("t.tif", &r.bytes).unwrap().document;
                     assert_eq!(back.mode, mode, "{case}");
@@ -339,7 +339,7 @@ fn every_colour_mode_saves_or_mattes_its_transparency() {
                             ColorMode::Grayscale => &[1.0],
                             _ => &[1.0, 1.0, 1.0],
                         };
-                        let f = img.convert(img.layout(), photocraft_codecs::SampleType::F32);
+                        let f = img.convert(img.layout(), lienzo_codecs::SampleType::F32);
                         let merged = f.to_f32_samples().unwrap();
                         assert_eq!(img.layout().channels(), white.len(), "{case}");
                         assert!(merged.iter().zip(white).all(|(a, b)| (a - b).abs() < 1e-2), "{case}: merged {:?} vs {white:?}", &merged[..white.len()]);
@@ -349,7 +349,7 @@ fn every_colour_mode_saves_or_mattes_its_transparency() {
                         assert!(centre.iter().zip(white).any(|(a, b)| (a - b).abs() >= 1e-2), "{case}: centre {centre:?} is matte white");
                         // The corner was transparent: now the mode's white, read back opaque.
                         let LayerContent::Raster(s) = &back.layers[0].content else { panic!("raster") };
-                        let want = photocraft_raster::from_rgba(&back.pixel_format(), [1.0, 1.0, 1.0, 1.0]);
+                        let want = lienzo_raster::from_rgba(&back.pixel_format(), [1.0, 1.0, 1.0, 1.0]);
                         if !layers {
                             let px = s.pixel(0, 0);
                             assert!(px.iter().zip(&want).all(|(a, b)| (a - b).abs() < 1e-2), "{case}: {px:?} vs {want:?}");

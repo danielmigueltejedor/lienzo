@@ -1,26 +1,26 @@
 use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use lienzo_doc::{Fill, LayerContent, LayerId};
 use serde_json::json;
 
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30, "depth": 16})).unwrap();
     app
 }
 
-fn pattern_id(app: &PhotocraftApp, name: &str) -> String {
+fn pattern_id(app: &LienzoApp, name: &str) -> String {
     app.session.patterns.items.iter().find(|p| p.name == name).unwrap().id.clone()
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-fn set(app: &mut PhotocraftApp, dialog: u64, values: serde_json::Value) {
+fn set(app: &mut LienzoApp, dialog: u64, values: serde_json::Value) {
     let d = app.ui.dialog_mut(dialog).unwrap();
     for (k, v) in values.as_object().unwrap() {
         d.fields.insert(k.clone(), v.clone());
@@ -90,7 +90,7 @@ fn cancelling_a_new_pattern_fill_adds_nothing() {
     let r = crate::menus::invoke(&mut app, &ctx, cmds::CREATE, json!({"pattern": "Grid"})).unwrap();
     assert!(r["layer"].as_u64().is_some());
     // No document: an error, not a dialog or a panic.
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(crate::menus::invoke(&mut empty, &ctx, cmds::CREATE, json!({})).is_err());
     assert!(empty.ui.dialogs.is_empty());
 }
@@ -132,14 +132,14 @@ fn content_options_edit_the_layer_and_cancel_restores() {
     assert!(open(&mut app).is_none());
 }
 
-fn harness() -> (Harness<'static, PhotocraftApp>, LayerId) {
-    let mut s = photocraft_engine::Session::new();
+fn harness() -> (Harness<'static, LienzoApp>, LayerId) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     let id = LayerId(s.execute(cmds::CREATE, json!({"pattern": "Checkerboard"})).unwrap()["layer"].as_u64().unwrap());
     s.execute("layer.new.layer", json!({"name": "Other"})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (r, _) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -148,7 +148,7 @@ fn harness() -> (Harness<'static, PhotocraftApp>, LayerId) {
     (h, id)
 }
 
-fn double_click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
+fn double_click(h: &mut Harness<'_, LienzoApp>, at: Pos2) {
     h.run_steps(40);
     for _ in 0..2 {
         h.hover_at(at);
@@ -481,7 +481,7 @@ fn a_replaced_or_deleted_edit_target_is_not_previewed_or_committed() {
     assert_eq!(steps(&app), count, "a stale OK adds no History step");
 }
 
-fn drag_screen(h: &mut Harness<'_, PhotocraftApp>, from: Pos2, delta: egui::Vec2) {
+fn drag_screen(h: &mut Harness<'_, LienzoApp>, from: Pos2, delta: egui::Vec2) {
     h.event(Event::PointerMoved(from));
     h.step();
     h.event(Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -493,13 +493,13 @@ fn drag_screen(h: &mut Harness<'_, PhotocraftApp>, from: Pos2, delta: egui::Vec2
 }
 
 /// A window-sized document with a linked Pattern Fill dialog open over its canvas.
-fn canvas_harness() -> (Harness<'static, PhotocraftApp>, u64) {
-    let mut s = photocraft_engine::Session::new();
+fn canvas_harness() -> (Harness<'static, LienzoApp>, u64) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
     s.execute(cmds::CREATE, json!({"pattern": "Checkerboard"})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (r, _) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -513,7 +513,7 @@ fn canvas_harness() -> (Harness<'static, PhotocraftApp>, u64) {
 #[test]
 fn a_canvas_drag_moves_the_linked_pattern_but_not_from_the_dialog() {
     let (mut h, dialog) = canvas_harness();
-    let phase = |h: &Harness<'_, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == dialog).unwrap().fields["phase"].clone();
+    let phase = |h: &Harness<'_, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == dialog).unwrap().fields["phase"].clone();
     let before = phase(&h);
     let canvas = h.state().last_canvas_rect;
     let xf = crate::canvas::ViewXform::active(h.state()).unwrap();
@@ -539,7 +539,7 @@ fn a_canvas_drag_moves_the_linked_pattern_but_not_from_the_dialog() {
 #[test]
 fn an_occluded_release_or_a_dialog_press_does_not_move_the_pattern() {
     let (mut h, dialog) = canvas_harness();
-    let phase = |h: &Harness<'_, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == dialog).unwrap().fields["phase"].clone();
+    let phase = |h: &Harness<'_, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == dialog).unwrap().fields["phase"].clone();
     let canvas = h.state().last_canvas_rect;
     let xf = crate::canvas::ViewXform::active(h.state()).unwrap();
     let start = xf.to_screen(20.0, 20.0);

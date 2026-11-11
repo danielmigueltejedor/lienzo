@@ -1,8 +1,8 @@
 //! `path.deleteAnchor` on a path's last anchor (#12764): a saved path is left empty and stays
 //! listed; the Work Path and a vector mask keep refusing it.
 
-use photocraft_doc::text::TextShape;
-use photocraft_doc::{Document, LayerContent, LayerId, Path, Subpath};
+use lienzo_doc::text::TextShape;
+use lienzo_doc::{Document, LayerContent, LayerId, Path, Subpath};
 use serde_json::{Value, json};
 
 use crate::Session;
@@ -87,11 +87,11 @@ fn an_empty_saved_path_selects_fills_and_strokes_nothing() {
 #[test]
 fn an_empty_saved_path_survives_pcraft_and_psd_round_trips() {
     let s = emptied();
-    let bytes = photocraft_format::save_to_bytes(doc(&s), &Default::default()).unwrap();
-    let back = photocraft_format::load_from_bytes(&bytes).unwrap();
+    let bytes = lienzo_format::save_to_bytes(doc(&s), &Default::default()).unwrap();
+    let back = lienzo_format::load_from_bytes(&bytes).unwrap();
     assert_eq!(back.paths.iter().map(|p| (p.name.as_str(), p.path.subpaths.len())).collect::<Vec<_>>(), [("Path 1", 0)]);
-    let psd = photocraft_io::export(doc(&s), "x.psd", &Default::default()).unwrap().bytes;
-    let back = photocraft_io::import("x.psd", &psd).unwrap().document;
+    let psd = lienzo_io::export(doc(&s), "x.psd", &Default::default()).unwrap().bytes;
+    let back = lienzo_io::import("x.psd", &psd).unwrap().document;
     assert_eq!(back.paths.iter().map(|p| (p.name.as_str(), p.path.subpaths.len())).collect::<Vec<_>>(), [("Path 1", 0)]);
 }
 
@@ -99,8 +99,8 @@ fn an_empty_saved_path_survives_pcraft_and_psd_round_trips() {
 fn an_empty_clipping_path_survives_a_psd_round_trip() {
     let mut s = emptied();
     s.execute("path.clippingPath.set", json!({"name": "Path 1"})).unwrap();
-    let psd = photocraft_io::export(doc(&s), "x.psd", &Default::default()).unwrap().bytes;
-    let back = photocraft_io::import("x.psd", &psd).unwrap().document;
+    let psd = lienzo_io::export(doc(&s), "x.psd", &Default::default()).unwrap().bytes;
+    let back = lienzo_io::import("x.psd", &psd).unwrap().document;
     assert_eq!(back.paths.iter().map(|p| (p.name.as_str(), p.path.subpaths.len())).collect::<Vec<_>>(), [("Path 1", 0)]);
     assert_eq!(back.clipping_path.map(|c| c.name).as_deref(), Some("Path 1"));
 }

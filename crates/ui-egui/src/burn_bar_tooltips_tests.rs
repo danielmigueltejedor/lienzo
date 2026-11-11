@@ -6,7 +6,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable, by};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::i18n::{Lang, tr};
 use crate::state::Tool;
 
@@ -17,8 +17,8 @@ const CONTROLS: [(Role, &str, &str); 3] = [
 ];
 
 /// Build a settled options-bar fixture with the requested tool, locale, viewport and scale.
-fn bar(tool: Tool, lang: Lang, width: f32, scale: f32, narrow: bool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn bar(tool: Tool, lang: Lang, width: f32, scale: f32, narrow: bool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.run("prefs.set", json!({"path": "workspace.enableNarrowOptionsBar", "value": narrow})).unwrap();
     app.ui.tool = tool;
@@ -26,7 +26,7 @@ fn bar(tool: Tool, lang: Lang, width: f32, scale: f32, narrow: bool) -> Harness<
         .with_size(vec2(width / scale, 300.0))
         .with_pixels_per_point(scale)
         .with_step_dt(1.0 / 60.0)
-        .with_context_setup(|ctx| PhotocraftApp::setup_context(ctx, crate::theme::ThemeKind::ProMedium))
+        .with_context_setup(|ctx| LienzoApp::setup_context(ctx, crate::theme::ThemeKind::ProMedium))
         .build_ui_state(
             move |ui, app| {
                 let _language = crate::i18n::language_scope(lang);
@@ -39,12 +39,12 @@ fn bar(tool: Tool, lang: Lang, width: f32, scale: f32, narrow: bool) -> Harness<
 }
 
 /// Find the named control by its accessibility role without matching tooltip labels.
-fn control<'a>(h: &'a Harness<'static, PhotocraftApp>, role: Role, label: &str) -> egui_kittest::Node<'a> {
+fn control<'a>(h: &'a Harness<'static, LienzoApp>, role: Role, label: &str) -> egui_kittest::Node<'a> {
     h.query_all_by_role(role).find(|n| n.accesskit_node().label().as_deref() == Some(label)).unwrap_or_else(|| panic!("missing {role:?} {label:?}"))
 }
 
 /// Resolve the localized control name, using the numeric node for the existing RTL caption layout.
-fn control_name(h: &Harness<'static, PhotocraftApp>, lang: Lang, role: Role, label: &str) -> String {
+fn control_name(h: &Harness<'static, LienzoApp>, lang: Lang, role: Role, label: &str) -> String {
     // The existing scrub-caption link only names fields laid out left to right.
     if role == Role::SpinButton && lang.dir() == crate::i18n::Dir::Rtl {
         h.get_by_role(role).accesskit_node().label().unwrap_or_default()
@@ -54,7 +54,7 @@ fn control_name(h: &Harness<'static, PhotocraftApp>, lang: Lang, role: Role, lab
 }
 
 /// Scroll a control into view, wait for its hover delay and assert the visible tooltip text.
-fn hover(h: &mut Harness<'static, PhotocraftApp>, role: Role, label: &str, tip: &str) {
+fn hover(h: &mut Harness<'static, LienzoApp>, role: Role, label: &str, tip: &str) {
     control(h, role, label).scroll_to_me();
     h.run_steps(4);
     let rect = control(h, role, label).rect();
@@ -178,16 +178,16 @@ fn tool_switching_clears_the_old_tooltip_and_leaves_other_percentage_fields_unch
 
 /// Run explicitly to inspect the rendered tooltips; no GPU is required by the normal regressions.
 #[test]
-#[ignore = "offscreen visual inspection; writes PNGs to PHOTOCRAFT_TOOLTIP_IMAGES or the temp directory"]
+#[ignore = "offscreen visual inspection; writes PNGs to LIENZO_TOOLTIP_IMAGES or the temp directory"]
 fn render_tooltips_for_visual_inspection() {
-    let out = std::env::var_os("PHOTOCRAFT_TOOLTIP_IMAGES").map(std::path::PathBuf::from).unwrap_or_else(|| std::env::temp_dir().join("photocraft-12670"));
-    let lang = std::env::var("PHOTOCRAFT_TOOLTIP_LANGUAGE").ok().and_then(|code| Lang::from_code(&code)).unwrap_or(Lang::EN);
+    let out = std::env::var_os("LIENZO_TOOLTIP_IMAGES").map(std::path::PathBuf::from).unwrap_or_else(|| std::env::temp_dir().join("lienzo-12670"));
+    let lang = std::env::var("LIENZO_TOOLTIP_LANGUAGE").ok().and_then(|code| Lang::from_code(&code)).unwrap_or(Lang::EN);
     std::fs::create_dir_all(&out).unwrap();
     for theme in crate::theme::ThemeKind::ALL {
         for tool in [Tool::Burn, Tool::Dodge] {
             for (i, (role, label, tip)) in CONTROLS.into_iter().enumerate() {
                 let mut h = bar(tool, lang, 1000.0, 1.0, false);
-                PhotocraftApp::setup_context(&h.ctx, theme);
+                LienzoApp::setup_context(&h.ctx, theme);
                 h.run_steps(4);
                 h.render().unwrap().save(out.join(format!("{theme:?}-{tool:?}-{i}-before.png"))).unwrap();
                 let name = control_name(&h, lang, role, label);
@@ -202,7 +202,7 @@ fn render_tooltips_for_visual_inspection() {
             let name = control_name(&h, lang, role, label);
             hover(&mut h, role, &name, tr(lang, tip));
             h.render().unwrap().save(out.join(format!("narrow-3x-{tool:?}-{i}.png"))).unwrap();
-            crate::theme::set_ui_font_size(&h.ctx, photocraft_engine::prefs::UiFontSize::Large);
+            crate::theme::set_ui_font_size(&h.ctx, lienzo_engine::prefs::UiFontSize::Large);
             h.run_steps(8);
             let name = control_name(&h, lang, role, label);
             hover(&mut h, role, &name, tr(lang, tip));
@@ -242,7 +242,7 @@ fn tooltip_descriptions_do_not_create_anonymous_accessibility_nodes() {
 /// Check that English and German tooltip text fits the narrow 3x viewport at every interface font size.
 #[test]
 fn tooltip_text_fits_with_every_ui_font_size_in_a_narrow_scaled_bar() {
-    use photocraft_engine::prefs::UiFontSize;
+    use lienzo_engine::prefs::UiFontSize;
     for size in [UiFontSize::Tiny, UiFontSize::Small, UiFontSize::Medium, UiFontSize::Large] {
         for lang in [Lang::EN, Lang::from_code("de").unwrap()] {
             for tool in [Tool::Burn, Tool::Dodge] {

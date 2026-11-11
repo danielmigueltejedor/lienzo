@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 const CLIPBOARD_UNREADABLE: &str = "Pasting from other apps is unavailable";
 /// At most this many notices are kept; older ones drop off.
@@ -49,7 +49,7 @@ impl Notice {
 }
 
 /// Show a notice (newest last); returns its id.
-pub fn post(app: &mut PhotocraftApp, title: impl Into<String>, lines: Vec<String>, error: bool, dismiss_pref: Option<&str>) -> u64 {
+pub fn post(app: &mut LienzoApp, title: impl Into<String>, lines: Vec<String>, error: bool, dismiss_pref: Option<&str>) -> u64 {
     let id = app.ui.alloc_id();
     app.ui.notices.push(Notice {
         id,
@@ -65,7 +65,7 @@ pub fn post(app: &mut PhotocraftApp, title: impl Into<String>, lines: Vec<String
     id
 }
 
-fn cap_notices(app: &mut PhotocraftApp) {
+fn cap_notices(app: &mut LienzoApp) {
     while app.ui.notices.len() > MAX_NOTICES {
         let oldest_temporary = app.ui.notices.iter().position(|notice| notice.dismiss_pref.is_none() && !notice.sticky).unwrap_or(0);
         app.ui.notices.remove(oldest_temporary);
@@ -74,7 +74,7 @@ fn cap_notices(app: &mut PhotocraftApp) {
 
 /// How to paste in hints: Edit › Paste's effective shortcut (`Ctrl+V`), else the menu path.
 #[cfg(test)]
-pub(crate) fn paste_hint(app: &PhotocraftApp) -> String {
+pub(crate) fn paste_hint(app: &LienzoApp) -> String {
     crate::shortcuts::shortcut_label(app, "edit.paste").unwrap_or_else(|| tl!("Edit › Paste").to_string())
 }
 
@@ -82,18 +82,18 @@ pub(crate) fn paste_hint(app: &PhotocraftApp) -> String {
 /// data-control protocol that other apps' images are read through, and there is no X server to
 /// fall back to, so the clipboard may hold an image all the same. Say so, and give the command
 /// that starts this install under XWayland, where the X11 clipboard works, when there is one.
-pub fn clipboard_unreadable(app: &mut PhotocraftApp) {
-    app.ui.status = tl!("Nothing to paste: PhotoCraft can't read the system clipboard here").into();
+pub fn clipboard_unreadable(app: &mut LienzoApp) {
+    app.ui.status = tl!("Nothing to paste: Lienzo can't read the system clipboard here").into();
     app.ui.status_error = false;
     if app.ui.notices.iter().any(|notice| notice.title == CLIPBOARD_UNREADABLE) {
         return;
     }
     // English templates, translated when drawn, as in `wayland_file_drop_guidance`.
     let mut lines =
-        vec!["PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.".to_owned()];
+        vec!["Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.".to_owned()];
     let mut args = Vec::new();
     if let Some(command) = &app.services.xwayland_command {
-        lines.push("To paste from other apps, start PhotoCraft under XWayland: `{command}`".to_owned());
+        lines.push("To paste from other apps, start Lienzo under XWayland: `{command}`".to_owned());
         args.push(("command".to_owned(), command.clone()));
     }
     let id = post(app, CLIPBOARD_UNREADABLE, lines, false, None);
@@ -105,7 +105,7 @@ pub fn clipboard_unreadable(app: &mut PhotocraftApp) {
 /// A full refresh of document `doc` fell back to the CPU compositor (`reason`, the GPU's) and took
 /// `ms`. The canvas doesn't respond while it runs, so once per document say why it was slow and
 /// which edits will do it again (#1015).
-pub fn slow_cpu_refresh(app: &mut PhotocraftApp, doc: u64, ms: f64, reason: Option<&crate::render_path::CpuReason>) {
+pub fn slow_cpu_refresh(app: &mut LienzoApp, doc: u64, ms: f64, reason: Option<&crate::render_path::CpuReason>) {
     if matches!(reason, Some(crate::render_path::CpuReason::CompositorBuilding))
         || ms.is_nan()
         || ms < SLOW_CPU_REFRESH_MS
@@ -136,7 +136,7 @@ pub fn slow_cpu_refresh(app: &mut PhotocraftApp, doc: u64, ms: f64, reason: Opti
     post(app, tl!("Large document: redrawing on the CPU"), lines, false, None);
 }
 
-fn dismiss(app: &mut PhotocraftApp, id: u64) {
+fn dismiss(app: &mut LienzoApp, id: u64) {
     let dismiss_pref = app.ui.notices.iter().find(|notice| notice.id == id).and_then(|notice| notice.dismiss_pref.clone());
     app.ui.notices.retain(|notice| notice.id != id);
     if let Some(key) = dismiss_pref {
@@ -148,7 +148,7 @@ fn dismiss(app: &mut PhotocraftApp, id: u64) {
 
 /// Report import/export `warnings` for the file operation `what` (e.g. "Opened a.psd"): the status
 /// bar says how many there were, and a notice lists them. Nothing happens when there are none.
-pub fn io_warnings(app: &mut PhotocraftApp, what: &str, warnings: &[String]) {
+pub fn io_warnings(app: &mut LienzoApp, what: &str, warnings: &[String]) {
     let Some(first) = warnings.first() else { return };
     let n = warnings.len();
     let title = crate::i18n::fmt(&crate::i18n::trn(crate::i18n::current(), n as u64, "{what} with {n} warning", "{what} with {n} warnings"), &[("what", what)]);
@@ -160,7 +160,7 @@ pub fn io_warnings(app: &mut PhotocraftApp, what: &str, warnings: &[String]) {
 /// Report the files a folder run (Batch, Image Processor, …) could not process, one line each:
 /// the status bar shows the first as an error, and a notice titled with how many failed lists
 /// them all until dismissed (#10682).
-pub fn file_failures(app: &mut PhotocraftApp, what: &str, failures: &[String]) {
+pub fn file_failures(app: &mut LienzoApp, what: &str, failures: &[String]) {
     let Some(first) = failures.first() else { return };
     let n = failures.len();
     let title = crate::i18n::fmt(&crate::i18n::trn(crate::i18n::current(), n as u64, "{what}: {n} file failed", "{what}: {n} files failed"), &[("what", what)]);
@@ -171,7 +171,7 @@ pub fn file_failures(app: &mut PhotocraftApp, what: &str, failures: &[String]) {
 
 /// Report a failed file operation: the status bar shows it as an error and a notice keeps it on
 /// screen until dismissed.
-pub fn error(app: &mut PhotocraftApp, message: String) {
+pub fn error(app: &mut LienzoApp, message: String) {
     app.ui.status = message.clone();
     app.ui.status_error = true;
     post(app, message, Vec::new(), true, None);
@@ -182,7 +182,7 @@ pub fn error(app: &mut PhotocraftApp, message: String) {
 /// is true on the frame it moves away. In both cases the timers restart from `now`, so a long
 /// stationary hover is never counted as elapsed time. Returns the seconds until the next notice
 /// would expire, so the caller can request a repaint then.
-fn expire(app: &mut PhotocraftApp, now: f64, hovered: bool, just_left: bool, auto_hide: bool, duration: f64) -> Option<f64> {
+fn expire(app: &mut LienzoApp, now: f64, hovered: bool, just_left: bool, auto_hide: bool, duration: f64) -> Option<f64> {
     if !auto_hide {
         return None;
     }
@@ -215,7 +215,7 @@ fn expire(app: &mut PhotocraftApp, now: f64, hovered: bool, just_left: bool, aut
 
 /// Draw the notices; each has a close button. When Interface › Notification › Auto Hide Notices
 /// is on, a notice disappears once its delay is up unless the pointer rests on the stack.
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.ui.notices.is_empty() {
         app.notices_hovered = false;
         return;
@@ -223,7 +223,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let t = crate::theme::Tokens::get(ctx);
     let mut dismiss_id = None;
     // Clear the status bar (~24 px) and leave the dock's edge some air.
-    let area = egui::Area::new(egui::Id::unique("photocraft-notices"))
+    let area = egui::Area::new(egui::Id::unique("lienzo-notices"))
         .order(egui::Order::Foreground)
         .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-16.0, -36.0))
         .interactable(true)
@@ -286,12 +286,12 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PhotocraftApp, Services};
-    use photocraft_engine::Session;
+    use crate::{LienzoApp, Services};
+    use lienzo_engine::Session;
 
     #[test]
     fn wayland_session_does_not_post_unavailable_notice() {
-        let app = PhotocraftApp::new(Session::new(), Services { is_wayland: true, ..Default::default() });
+        let app = LienzoApp::new(Session::new(), Services { is_wayland: true, ..Default::default() });
         assert!(app.ui.notices.is_empty());
     }
 
@@ -299,7 +299,7 @@ mod tests {
     /// paste anyway, once while shown; a clipboard that simply holds no image stays a quiet no-op.
     #[test]
     fn unreadable_clipboard_paste_explains_the_sandbox() {
-        let command = "flatpak run --nosocket=wayland --socket=x11 ai.storyteller.photocraft";
+        let command = "flatpak run --nosocket=wayland --socket=x11 dev.danielmiguelt.Lienzo";
         let services = |unreadable: bool| Services {
             clipboard_get_image: Some(Box::new(move || if unreadable { Err("no clipboard backend".into()) } else { Ok(None) })),
             clipboard_unreadable: Some(Box::new(move || unreadable)),
@@ -307,18 +307,18 @@ mod tests {
             ..Default::default()
         };
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(Session::new(), services(true));
+        let mut app = LienzoApp::new(Session::new(), services(true));
         for _ in 0..2 {
             let r = crate::menus::invoke(&mut app, &ctx, "edit.paste", serde_json::json!({})).unwrap();
             assert_eq!(r["pasted"], serde_json::json!(false));
         }
-        assert_eq!(app.ui.status, "Nothing to paste: PhotoCraft can't read the system clipboard here");
+        assert_eq!(app.ui.status, "Nothing to paste: Lienzo can't read the system clipboard here");
         let shown: Vec<_> = app.ui.notices.iter().filter(|notice| notice.title == CLIPBOARD_UNREADABLE).collect();
         assert_eq!(shown.len(), 1, "a second paste doesn't stack another notice");
         let guidance = english(shown[0]);
         assert!(guidance.contains(&format!("under XWayland: `{command}`")), "{guidance}");
 
-        let mut empty = PhotocraftApp::new(Session::new(), services(false));
+        let mut empty = LienzoApp::new(Session::new(), services(false));
         crate::menus::invoke(&mut empty, &ctx, "edit.paste", serde_json::json!({})).unwrap();
         assert_eq!(empty.ui.status, "Nothing to paste: the clipboard holds no image");
         assert!(empty.ui.notices.iter().all(|notice| notice.title != CLIPBOARD_UNREADABLE));
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn paste_hint_follows_the_shortcut_and_falls_back_to_the_menu() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         assert_eq!(paste_hint(&app), crate::shortcuts::shortcut_label(&app, "edit.paste").unwrap());
         app.session.prefs.edit(|prefs| {
             prefs.shortcuts.insert("edit.paste".into(), String::new());
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn preparing_compositor_does_not_warn_about_large_documents() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         slow_cpu_refresh(&mut app, 1, 60_000.0, Some(&crate::render_path::CpuReason::CompositorBuilding));
         assert!(app.ui.notices.is_empty());
         assert!(app.ui.slow_refresh_noticed.is_empty());
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn a_slow_cpu_refresh_is_explained_once_per_document() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         let over = crate::render_path::CpuReason::OverBudget { needed: 3600 << 20, budget: 3400 << 20 };
         slow_cpu_refresh(&mut app, 1, 400.0, Some(&over));
         slow_cpu_refresh(&mut app, 1, f64::NAN, Some(&over));
@@ -378,7 +378,7 @@ mod tests {
 
     #[test]
     fn import_warning_punctuation_is_localized_without_changing_english() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         for lang in [crate::i18n::Lang::EN, crate::i18n::Lang::from_code("cs").unwrap()] {
             crate::i18n::with_language(lang, || {
                 let what = crate::i18n::fmt(tl!("Opened {name}"), &[("name", "x.psd")]);
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn dismissing_a_notice_writes_its_own_preference_key() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Dismissible", Vec::new(), false, Some("ui.testNoticeDismissed"));
         let id = app.ui.notices[0].id;
         dismiss(&mut app, id);
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn notices_auto_hide_after_their_delay() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Transient", Vec::new(), false, None);
         // The first draw stamps the timer and schedules the hide.
         assert_eq!(expire(&mut app, 100.0, false, false, true, 6.0), Some(6.0));
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn hover_pauses_the_autohide_timer() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Transient", Vec::new(), false, None);
         // While the pointer rests on the stack the timer keeps resetting: it never expires.
         for t in [5.0, 6.0, 7.0, 100.0] {
@@ -433,7 +433,7 @@ mod tests {
 
     #[test]
     fn leaving_a_long_hover_gives_a_fresh_delay() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Transient", Vec::new(), false, None);
         // Hovering starts the pause...
         assert_eq!(expire(&mut app, 0.0, true, false, true, 6.0), None);
@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn autohide_can_be_switched_off() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Persistent", Vec::new(), false, None);
         assert_eq!(expire(&mut app, 0.0, false, false, false, 6.0), None);
         assert_eq!(expire(&mut app, 1_000_000.0, false, false, false, 6.0), None);
@@ -456,7 +456,7 @@ mod tests {
     /// another frame at once; otherwise the card lingers until unrelated input.
     #[test]
     fn expiring_a_notice_requests_a_frame_to_clear_it() {
-        let mut app = PhotocraftApp::new(Session::new(), Services::default());
+        let mut app = LienzoApp::new(Session::new(), Services::default());
         post(&mut app, "Transient", Vec::new(), false, None);
         let ctx = egui::Context::default();
         let mut out = ctx.run_ui(Default::default(), |ui| show(&mut app, ui.ctx()));

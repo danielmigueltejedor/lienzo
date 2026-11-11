@@ -5,7 +5,7 @@
 
 use egui::{Event, Key, Modifiers, Vec2, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Screen points a ⇧ page key scrolls.
 pub const SMALL_STEP: f32 = 10.0;
@@ -41,7 +41,7 @@ pub fn page_key(key: Key, mods: Modifiers, size: Vec2) -> Option<PageKey> {
 }
 
 /// Consumes this frame's page keys and moves the active document's view. True when one ran.
-pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn handle(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     let Some(i) = app.session.active_index() else { return false };
     let rect = crate::rulers::content_rect(app, app.last_canvas_rect);
     let size = rect.size();
@@ -133,14 +133,14 @@ mod tests {
     #[test]
     fn page_keys_scroll_the_zoomed_canvas() {
         let ctx = egui::Context::default();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 2000, "height": 2000})).unwrap();
         app.sync_views();
         app.ppp = 1.0;
         let v = &mut app.ui.views[0];
         (v.zoom, v.center, v.fit_pending, v.fill_pending) = (4.0, [1000.0, 1000.0], false, false);
         let size = crate::rulers::content_rect(&app, app.last_canvas_rect).size();
-        let press = |app: &mut PhotocraftApp, key: Key, modifiers: Modifiers| {
+        let press = |app: &mut LienzoApp, key: Key, modifiers: Modifiers| {
             let raw = egui::RawInput {
                 events: vec![Event::ModifiersChanged(modifiers), Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
                 ..Default::default()

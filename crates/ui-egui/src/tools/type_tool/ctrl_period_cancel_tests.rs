@@ -5,15 +5,15 @@
 //! Keys go through the app's shortcut handling, as on the canvas.
 
 use egui_kittest::Harness;
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_raster::Surface;
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_raster::Surface;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn new_app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn new_app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 200})).unwrap();
     // A selection away from the text, which a Type Mask session must leave as it is.
     app.run("select.rect", json!({"x": 300, "y": 150, "width": 60, "height": 30})).unwrap();
@@ -23,15 +23,15 @@ fn new_app(tool: Tool) -> PhotocraftApp {
 }
 
 /// Start new text with a click and type `s`, as the canvas does.
-fn type_new(app: &mut PhotocraftApp, s: &str) {
+fn type_new(app: &mut LienzoApp, s: &str) {
     super::pointer_up(app, [50.0, 100.0], [50.0, 100.0]);
     super::insert(app, s);
 }
 
 /// One frame of the app's shortcut handling for each of `events`.
-fn send(app: PhotocraftApp, events: Vec<egui::Event>) -> PhotocraftApp {
+fn send(app: LienzoApp, events: Vec<egui::Event>) -> LienzoApp {
     let mut h = Harness::builder().build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             // As `canvas_tests`' harness: the shortcuts wait for the app's fonts.
             if ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
@@ -40,7 +40,7 @@ fn send(app: PhotocraftApp, events: Vec<egui::Event>) -> PhotocraftApp {
         },
         app,
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    crate::LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     for event in events {
         h.event(event);
@@ -53,11 +53,11 @@ fn key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
     egui::Event::Key { key, physical_key: Some(key), pressed: true, repeat: false, modifiers }
 }
 
-fn press(app: PhotocraftApp, k: egui::Key, modifiers: egui::Modifiers) -> PhotocraftApp {
+fn press(app: LienzoApp, k: egui::Key, modifiers: egui::Modifiers) -> LienzoApp {
     send(app, vec![key(k, modifiers)])
 }
 
-fn command_period(app: PhotocraftApp) -> PhotocraftApp {
+fn command_period(app: LienzoApp) -> LienzoApp {
     press(app, egui::Key::Period, egui::Modifiers::COMMAND)
 }
 
@@ -77,19 +77,19 @@ impl std::fmt::Debug for Snapshot {
     }
 }
 
-fn snapshot(app: &PhotocraftApp) -> Snapshot {
+fn snapshot(app: &LienzoApp) -> Snapshot {
     let st = app.session.active().unwrap();
     Snapshot { selection: st.doc.selection.clone(), history: st.history.entries(), layers: st.doc.layers.iter().map(|l| l.id).collect() }
 }
 
-fn text_of(app: &PhotocraftApp, id: LayerId) -> String {
+fn text_of(app: &LienzoApp, id: LayerId) -> String {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Text(t) => t.text.clone(),
         other => panic!("{}", other.kind_name()),
     }
 }
 
-fn size_of(app: &PhotocraftApp, id: LayerId) -> f32 {
+fn size_of(app: &LienzoApp, id: LayerId) -> f32 {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Text(t) => t.runs[0].style.size_pt,
         other => panic!("{}", other.kind_name()),

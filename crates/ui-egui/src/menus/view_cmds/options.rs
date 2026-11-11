@@ -1,4 +1,4 @@
-use super::{Map, PhotocraftApp, Show, SnapTo, Value, ViewOptions};
+use super::{LienzoApp, Map, Show, SnapTo, Value, ViewOptions};
 
 /// Whether the window was maximized when a screen mode took it full screen (egui temp data).
 pub(super) fn was_maximized_id() -> egui::Id {
@@ -125,7 +125,7 @@ fn changed_flags<T: Copy>(now: T, def: T, keys: &[&str], slot: impl for<'a> Fn(&
 /// View › Extras, Show and Snap To as remembered across restarts (`Preferences::view_extras`):
 /// only what differs from the defaults, so a default changed in a later release still reaches
 /// users who never touched that item. `Null` when nothing differs.
-fn remembered(app: &PhotocraftApp) -> Value {
+fn remembered(app: &LienzoApp) -> Value {
     let (v, e, def) = (&app.ui.view, &app.ui.extras, crate::state::Extras::default());
     let mut m = Map::new();
     if v.extras != ViewOptions::default().extras {
@@ -153,7 +153,7 @@ fn remembered(app: &PhotocraftApp) -> Value {
 /// Remember View › Extras, Show and Snap To in the preferences once the user lets go of the
 /// pointer (#3762). Cheap: a small JSON compare per frame. Run every frame, so items set by the
 /// control channel or the Show Extras Options dialog are remembered too.
-pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn persist(app: &mut LienzoApp, ctx: &egui::Context) {
     if ctx.input(|i| i.pointer.any_down()) {
         return;
     }
@@ -165,7 +165,7 @@ pub fn persist(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Restore the remembered View › Extras, Show and Snap To items at launch. A hand-edited file
 /// can't break them: an unknown key or a value that isn't a boolean keeps its default.
-pub fn restore(app: &mut PhotocraftApp) {
+pub fn restore(app: &mut LienzoApp) {
     let saved = app.session.prefs().view_extras.clone();
     if !saved.is_null() && !saved.is_object() {
         log::warn!("Preferences: the remembered View › Show items are not an object; using the defaults");
@@ -197,7 +197,7 @@ pub fn restore(app: &mut PhotocraftApp) {
 }
 
 /// Window › <panel>: (panel, dock tab) for panels that live as tabs of a dock card.
-pub(super) fn panel_tab(app: &PhotocraftApp, id: &str) -> Option<(&'static str, usize)> {
+pub(super) fn panel_tab(app: &LienzoApp, id: &str) -> Option<(&'static str, usize)> {
     let pro = app.ui.theme.is_pro();
     Some(match id {
         "window.panel.info" => ("navigator", 2),
@@ -220,7 +220,7 @@ pub(super) fn panel_tab(app: &PhotocraftApp, id: &str) -> Option<(&'static str, 
     })
 }
 
-pub(super) fn panel_state<'a>(app: &'a mut PhotocraftApp, panel: &str) -> (&'a mut bool, &'a mut usize) {
+pub(super) fn panel_state<'a>(app: &'a mut LienzoApp, panel: &str) -> (&'a mut bool, &'a mut usize) {
     let (p, t) = (&mut app.ui.panels, &mut app.ui.dock_tabs);
     match panel {
         "navigator" => (&mut p.navigator, &mut t.navigator),

@@ -4,7 +4,7 @@
 //! layer, and a grey ramp of ten 40 px blocks (grey 100, 105, …, 145) from x 100 at y 350–450,
 //! on its own transparent layer or composited on white (Sample All Layers).
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 use super::{Region, magic_wand, wand_region};
 

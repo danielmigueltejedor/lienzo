@@ -6,14 +6,14 @@
 //! columns at 100 % (and their mipmapped grey zoomed out). Drives the real app offscreen on wgpu;
 //! skips when no GPU adapter exists (like `drag_preview_canvas.rs`).
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Size};
-use photocraft_geom::Rect;
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::control::{ControlRequest, handle};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Size};
+use lienzo_geom::Rect;
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::control::{ControlRequest, handle};
 use serde_json::{Value, json};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 // Just above the 5 MP proxy threshold; keep the same factor-two reduction.
 const W: i32 = 2502;
@@ -22,8 +22,8 @@ const H: i32 = 2000;
 fn harness() -> Option<Harness> {
     let built = std::panic::catch_unwind(|| {
         egui_kittest::Harness::builder().with_size(egui::vec2(1100.0, 760.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -48,7 +48,7 @@ fn control(h: &mut Harness, method: &str, params: Value) {
 
 fn columns_document() -> Document {
     let mut doc = Document::with_background("columns", Size::new(W as u32, H as u32), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-    assert_eq!(photocraft_ui_egui::proxy::factor(&doc), 2, "the fixture must exercise a reduced preview");
+    assert_eq!(lienzo_ui_egui::proxy::factor(&doc), 2, "the fixture must exercise a reduced preview");
     let s = doc.layers[0].surface_mut().expect("background pixels");
     let row: Vec<f32> = (0..W)
         .flat_map(|x| {
@@ -94,7 +94,7 @@ fn row(h: &mut Harness) -> Vec<i32> {
     h.run_steps(4);
     let canvas = {
         let app = h.state();
-        photocraft_ui_egui::rulers::content_rect(app, app.last_canvas_rect)
+        lienzo_ui_egui::rulers::content_rect(app, app.last_canvas_rect)
     };
     // egui_kittest waits 10 s for the GPU. Windows CI renders on WARP, a software rasterizer,
     // where the first full-resolution composite of this 5 MP document can take longer; the
@@ -124,7 +124,7 @@ fn mean(r: &[i32]) -> f32 {
 /// them off it matches the committed view (the columns' mipmapped grey).
 #[test]
 fn adjustment_layer_drag_previews_at_full_resolution_when_low_res_is_off() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     setup(&mut h, 1.0);
     if !on_gpu(&mut h) {
@@ -159,7 +159,7 @@ fn adjustment_layer_drag_previews_at_full_resolution_when_low_res_is_off() {
 /// the reduced copy (only the black columns), and with them off it matches the committed view.
 #[test]
 fn filter_dialog_previews_at_full_resolution_when_low_res_is_off() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     setup(&mut h, 0.5);
     if !on_gpu(&mut h) {
@@ -169,7 +169,7 @@ fn filter_dialog_previews_at_full_resolution_when_low_res_is_off() {
     assert!(committed > 60.0, "zoomed out the columns average to grey ({committed})");
     control(&mut h, "ui.set", json!({"zoom": 1.0, "center": [W / 2, H / 2]}));
     // Offset 0, 0 leaves the pixels as they are: any change is the preview's resolution.
-    photocraft_ui_egui::filter_dialog::open(h.state_mut(), "filter.other.offset").expect("Offset dialog");
+    lienzo_ui_egui::filter_dialog::open(h.state_mut(), "filter.other.offset").expect("Offset dialog");
     let at_100 = row(&mut h);
     assert!(columns(&at_100) > 0.9, "default at 100 %: the preview is never coarser than the screen ({})", columns(&at_100));
     control(&mut h, "ui.set", json!({"zoom": 0.5, "center": [W / 2, H / 2]}));
@@ -182,7 +182,7 @@ fn filter_dialog_previews_at_full_resolution_when_low_res_is_off() {
 
 #[test]
 fn adjustment_dialog_zoomed_out_skips_the_reduced_copy_when_low_res_is_off() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     setup(&mut h, 0.5);
     if !on_gpu(&mut h) {
@@ -190,13 +190,13 @@ fn adjustment_dialog_zoomed_out_skips_the_reduced_copy_when_low_res_is_off() {
     }
     let committed = mean(&row(&mut h));
     assert!(committed > 60.0, "zoomed out the columns average to grey ({committed})");
-    photocraft_ui_egui::adjust_dialog::open(h.state_mut(), "image.adjustments.levels").expect("Levels dialog");
+    lienzo_ui_egui::adjust_dialog::open(h.state_mut(), "image.adjustments.levels").expect("Levels dialog");
     h.run_steps(4);
-    assert!(photocraft_ui_egui::adjust_preview::gpu_proxy(h.state_mut(), 0, 0.5).is_some(), "default: zoomed out on the reduced copy");
+    assert!(lienzo_ui_egui::adjust_preview::gpu_proxy(h.state_mut(), 0, 0.5).is_some(), "default: zoomed out on the reduced copy");
     let reduced = mean(&row(&mut h));
     assert!(reduced < 30.0, "the reduced copy keeps only the black columns ({reduced})");
     low_res(&mut h, false);
-    assert!(photocraft_ui_egui::adjust_preview::gpu_proxy(h.state_mut(), 0, 0.5).is_none(), "off: no reduced copy");
+    assert!(lienzo_ui_egui::adjust_preview::gpu_proxy(h.state_mut(), 0, 0.5).is_none(), "off: no reduced copy");
     let full = mean(&row(&mut h));
     assert!((full - committed).abs() < 8.0, "off: the preview matches the committed view ({full} vs {committed})");
 }

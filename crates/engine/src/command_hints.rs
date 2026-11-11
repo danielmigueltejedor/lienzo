@@ -28,7 +28,7 @@ pub fn near_matches<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str
         .filter(|c| *c != name)
         .filter_map(|c| {
             let cl = c.to_lowercase();
-            if let Some(d) = photocraft_text::spell::edit_distance(&lower, &cl, max) {
+            if let Some(d) = lienzo_text::spell::edit_distance(&lower, &cl, max) {
                 return Some((0, d, c));
             }
             let (namespace, _) = dotted?;
@@ -42,7 +42,7 @@ pub fn near_matches<'a>(name: &str, candidates: impl IntoIterator<Item = &'a str
             } else {
                 return None;
             };
-            Some((tier, photocraft_text::spell::edit_distance(&lower, &cl, 64).unwrap_or(usize::MAX), c))
+            Some((tier, lienzo_text::spell::edit_distance(&lower, &cl, 64).unwrap_or(usize::MAX), c))
         })
         .collect();
     scored.sort_unstable();

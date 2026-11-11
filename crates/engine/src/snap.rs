@@ -8,7 +8,7 @@
 //! threshold with the zoom (`8 px / zoom`). Results carry [`SnapLine`]s so the UI can draw what
 //! was snapped to (smart guides are the layer-to-layer subset of these, drawn in magenta).
 
-use photocraft_doc::{Document, LayerContent, LayerId};
+use lienzo_doc::{Document, LayerContent, LayerId};
 use serde::Serialize;
 
 /// What a snap target came from.
@@ -88,22 +88,22 @@ pub fn layer_rect(doc: &Document, id: LayerId) -> Option<[f64; 4]> {
     rect_of(doc, doc.layer(id)?)
 }
 
-fn rect_of(doc: &Document, l: &photocraft_doc::Layer) -> Option<[f64; 4]> {
+fn rect_of(doc: &Document, l: &lienzo_doc::Layer) -> Option<[f64; 4]> {
     snappable(l).then(|| crate::transform_cmds::transform_bounds(doc, l)).and_then(to_rect)
 }
 
 /// Bounds of a layer as a Snap To Layers target: all of its content, whatever the selection
 /// holds of it (#6290: clipped to the selection, every layer's edges and centre were the
 /// selection's, so a moved selection snapped back to where it started).
-fn target_rect_of(doc: &Document, l: &photocraft_doc::Layer) -> Option<[f64; 4]> {
+fn target_rect_of(doc: &Document, l: &lienzo_doc::Layer) -> Option<[f64; 4]> {
     snappable(l).then(|| crate::transform_cmds::whole_layer_bounds(doc, l)).and_then(to_rect)
 }
 
-fn snappable(l: &photocraft_doc::Layer) -> bool {
+fn snappable(l: &lienzo_doc::Layer) -> bool {
     !(l.is_group() || (matches!(l.content, LayerContent::Adjustment(_)) && l.mask.is_none()))
 }
 
-fn to_rect(b: photocraft_geom::Rect) -> Option<[f64; 4]> {
+fn to_rect(b: lienzo_geom::Rect) -> Option<[f64; 4]> {
     (!b.is_empty()).then_some([b.x0 as f64, b.y0 as f64, b.x1 as f64, b.y1 as f64])
 }
 
@@ -282,7 +282,7 @@ pub fn union(rects: impl IntoIterator<Item = [f64; 4]>) -> Option<[f64; 4]> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
+    use lienzo_doc::{Color, ColorMode, Layer, SampleType, Size};
 
     fn targets() -> SnapTargets {
         let mut t = SnapTargets { extent: [0.0, 0.0, 400.0, 300.0], ..Default::default() };
@@ -371,7 +371,7 @@ mod tests {
         let mut doc = Document::with_background("s", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
         doc.guides.vertical.push(40.0);
         let mut l = Layer::raster("box", doc.pixel_format());
-        l.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(10, 20, 30, 60), &[1.0, 0.0, 0.0, 1.0]);
+        l.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(10, 20, 30, 60), &[1.0, 0.0, 0.0, 1.0]);
         let id = doc.insert_above(None, l);
         let opts = SnapOptions::default();
         let t = SnapTargets::from_document(&doc, &opts, &[]);
@@ -384,8 +384,8 @@ mod tests {
         assert!(!t.x.iter().any(|t| t.kind == SnapKind::Guide || (t.kind == SnapKind::LayerEdge && t.pos == 30.0)));
         assert_eq!(layer_rect(&doc, id), Some([10.0, 20.0, 30.0, 60.0]));
         // #6290: a selection doesn't move the layers' targets onto its own bounds.
-        let mut sel = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
-        sel.fill_rect(photocraft_geom::Rect::new(64, 66, 124, 86), &[1.0]);
+        let mut sel = lienzo_raster::Surface::new(lienzo_color::PixelFormat::GRAY8);
+        sel.fill_rect(lienzo_geom::Rect::new(64, 66, 124, 86), &[1.0]);
         doc.selection = Some(sel);
         let t = SnapTargets::from_document(&doc, &SnapOptions { selection: false, ..opts }, &[]);
         assert!(t.x.iter().any(|t| t.kind == SnapKind::LayerEdge && t.pos == 30.0));
@@ -403,9 +403,8 @@ mod tests {
     fn an_artboard_offers_its_own_edges() {
         let mut doc = Document::with_background("s", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
         let mut board = Layer::group("Artboard 1", vec![]);
-        if let photocraft_doc::LayerContent::Group(g) = &mut board.content {
-            g.artboard =
-                Some(photocraft_doc::Artboard { rect: photocraft_geom::Rect::new(20, 10, 120, 90), background: Default::default(), preset: String::new() });
+        if let lienzo_doc::LayerContent::Group(g) = &mut board.content {
+            g.artboard = Some(lienzo_doc::Artboard { rect: lienzo_geom::Rect::new(20, 10, 120, 90), background: Default::default(), preset: String::new() });
         }
         let id = doc.insert_above(None, board);
         let opts = SnapOptions::default();

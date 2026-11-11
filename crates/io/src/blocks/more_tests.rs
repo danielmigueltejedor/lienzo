@@ -59,7 +59,7 @@ fn plld_id_and_corners() {
 #[test]
 fn plld_corners_frame_a_spilled_custom_warp_like_sold() {
     use crate::smart_map::{PlacedSpec, parse_sold, plld_bytes, sold_bytes};
-    use photocraft_geom::warp::{BezierMesh, Warp};
+    use lienzo_geom::warp::{BezierMesh, Warp};
     let bounds = [0.0, 0.0, 50.0, 25.0];
     let mut mesh = BezierMesh::identity(bounds, 1, 1);
     mesh.points[0] = [-10.0, -5.0];
@@ -120,7 +120,7 @@ fn plld_malformed_is_none() {
 #[test]
 fn plld_warps_round_trip() {
     use crate::smart_map::{PlacedSpec, plld_bytes};
-    use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
+    use lienzo_geom::warp::{BezierMesh, Warp, WarpStyle};
     let bounds = [0.0, 0.0, 60.0, 30.0];
     let mut arc = Warp::preset(WarpStyle::Arc, 40.0, bounds);
     arc.vertical = true;
@@ -151,7 +151,7 @@ fn plld_warps_round_trip() {
 #[test]
 fn plld_unreadable_warps() {
     use crate::smart_map::{PlacedSpec, plld_bytes};
-    use photocraft_geom::warp::{Warp, WarpStyle};
+    use lienzo_geom::warp::{Warp, WarpStyle};
     let arc = Warp::preset(WarpStyle::Arc, 40.0, [0.0, 0.0, 4.0, 4.0]);
     let spec =
         PlacedSpec { idnt: "id", placed: "", transform: Affine::IDENTITY, perspective: None, size: (4.0, 4.0), dpi: 72.0, warp: Some(&arc), filter_fx: None };
@@ -183,7 +183,7 @@ fn plld_unreadable_warps() {
 /// `SoLd` data with a 50 × 25 source, the quad `trnf` and, when given, a custom warp whose
 /// 16 control points are `pts`.
 fn sold_with_warp(trnf: [f64; 8], pts: Option<&[[f64; 2]]>) -> Vec<u8> {
-    use photocraft_psd::descriptor::ObjectArray;
+    use lienzo_psd::descriptor::ObjectArray;
     let e = |t: &str, v: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(v) };
     let mut d = Descriptor::new("null")
         .with("Idnt", Value::Text(UnicodeString::new_nul("uuid-1")))
@@ -214,7 +214,7 @@ fn sold_with_warp(trnf: [f64; 8], pts: Option<&[[f64; 2]]>) -> Vec<u8> {
 /// descriptor with `deformNumCols` × `deformNumRows` control points and the patch boundaries
 /// in `quiltSliceX` / `quiltSliceY`. With `plain_warp`, a `warpNone` `warp` key sits next to it.
 fn sold_with_quilt(trnf: [f64; 8], cols: f64, rows: f64, sx: &[f64], sy: &[f64], pts: &[[f64; 2]], plain_warp: bool) -> Vec<u8> {
-    use photocraft_psd::descriptor::ObjectArray;
+    use lienzo_psd::descriptor::ObjectArray;
     let e = |t: &str, v: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(v) };
     let bounds = || {
         Descriptor::new("Rctn")
@@ -257,7 +257,7 @@ fn sold_with_quilt(trnf: [f64; 8], cols: f64, rows: f64, sx: &[f64], sy: &[f64],
 
 /// A 3 × 2 patch identity grid over the 50 × 25 source with one interior control point pulled.
 fn quilt_points() -> Vec<[f64; 2]> {
-    let mut pts = photocraft_geom::warp::BezierMesh::identity([0.0, 0.0, 50.0, 25.0], 3, 2).points;
+    let mut pts = lienzo_geom::warp::BezierMesh::identity([0.0, 0.0, 50.0, 25.0], 3, 2).points;
     if let Some(p) = pts.get_mut(10 * 3 + 4) {
         p[1] += 3.0;
     }
@@ -323,7 +323,7 @@ fn inconsistent_quilt_warps_are_not_read() {
 /// source rect: a mesh spilling to x = -10, y = -5 and x = 60 frames a 70 × 30 box.
 #[test]
 fn smart_transform_maps_the_warp_control_box_onto_the_quad() {
-    let mut pts = photocraft_geom::warp::BezierMesh::identity([0.0, 0.0, 50.0, 25.0], 1, 1).points;
+    let mut pts = lienzo_geom::warp::BezierMesh::identity([0.0, 0.0, 50.0, 25.0], 1, 1).points;
     pts[0] = [-10.0, -5.0];
     pts[15] = [60.0, 25.0];
     let quad = [100.0, 200.0, 240.0, 200.0, 240.0, 260.0, 100.0, 260.0];
@@ -340,8 +340,8 @@ fn smart_transform_with_a_degenerate_warp_box_uses_the_source_rect() {
     let quad = [100.0, 200.0, 240.0, 200.0, 240.0, 260.0, 100.0, 260.0];
     let (_, a) = parse_smart(b"SoLd", &sold_with_warp(quad, Some(&[[7.0, 7.0]; 16])));
     assert_eq!(a.m, [2.8, 0.0, 0.0, 2.4, 100.0, 200.0]);
-    let mut warp = photocraft_geom::warp::Warp::preset(photocraft_geom::warp::WarpStyle::Custom, 0.0, [0.0, 0.0, 50.0, 25.0]);
-    warp.mesh = Some(photocraft_geom::warp::BezierMesh { us: vec![0.0, 1.0], vs: vec![0.0, 1.0], points: vec![[f64::NAN, 1.0]; 16] });
+    let mut warp = lienzo_geom::warp::Warp::preset(lienzo_geom::warp::WarpStyle::Custom, 0.0, [0.0, 0.0, 50.0, 25.0]);
+    warp.mesh = Some(lienzo_geom::warp::BezierMesh { us: vec![0.0, 1.0], vs: vec![0.0, 1.0], points: vec![[f64::NAN, 1.0]; 16] });
     assert_eq!(placed_frame(Some(&warp), 50.0, 25.0), [0.0, 0.0, 50.0, 25.0]);
     assert_eq!(placed_frame(None, 50.0, 25.0), [0.0, 0.0, 50.0, 25.0]);
 }
@@ -403,7 +403,7 @@ fn perspective_frame_follows_the_warp_parse_placed_warp_reads() {
     data.extend_from_slice(&4u32.to_be_bytes());
     data.extend(VersionedDescriptor::new(d).to_bytes());
     assert_eq!(parse_placed_warp(b"SoLd", &data), None);
-    let h = photocraft_algo::transform::Homography(parse_smart_perspective(b"SoLd", &data).expect("projective"));
+    let h = lienzo_algo::transform::Homography(parse_smart_perspective(b"SoLd", &data).expect("projective"));
     let (px, py) = h.apply(1000.0, 1000.0);
     assert!((px - 400.0).abs() < 1e-6 && (py - 480.0).abs() < 1e-6, "{px},{py}");
 }
@@ -411,7 +411,7 @@ fn perspective_frame_follows_the_warp_parse_placed_warp_reads() {
 /// instead of no warp (which re-rendered the contents flat).
 #[test]
 fn placed_cylinder_warp_is_read() {
-    use photocraft_geom::warp::{Warp, WarpStyle};
+    use lienzo_geom::warp::{Warp, WarpStyle};
     let quad = [0.0, 0.0, 800.0, 0.0, 800.0, 800.0, 0.0, 800.0];
     let want = Warp::cylinder(&CYL, [0.0, 0.0, 1000.0, 1000.0]).unwrap();
     let w = parse_placed_warp(b"SoLd", &sold_placed(quad, cylinder_desc(doubles(&CYL)))).expect("a cylinder");
@@ -452,7 +452,7 @@ fn placed_cylinder_warps_that_cant_be_read() {
 /// frames, for affine corners and for projective ones (`nonAffineTransform`).
 #[test]
 fn placed_cylinder_quad_frames_its_control_box() {
-    use photocraft_geom::warp::Warp;
+    use lienzo_geom::warp::Warp;
     let cb = Warp::cylinder(&CYL, [0.0, 0.0, 1000.0, 1000.0]).unwrap().mesh.unwrap().control_bounds();
     // Affine: the box lands on the quad.
     let quad = [10.0, 20.0, 410.0, 20.0, 410.0, 520.0, 10.0, 520.0];
@@ -468,7 +468,7 @@ fn placed_cylinder_quad_frames_its_control_box() {
     assert!(parse_smart_perspective(b"SoLd", &sold_placed(quad, cylinder_desc(doubles(&CYL)))).is_none(), "affine");
     // Projective: the same box lands on the four corners.
     let quad = [10.0, 20.0, 410.0, 60.0, 400.0, 480.0, 30.0, 520.0];
-    let h = photocraft_algo::transform::Homography(parse_smart_perspective(b"SoLd", &sold_placed(quad, cylinder_desc(doubles(&CYL)))).expect("projective"));
+    let h = lienzo_algo::transform::Homography(parse_smart_perspective(b"SoLd", &sold_placed(quad, cylinder_desc(doubles(&CYL)))).expect("projective"));
     for ((x, y), (qx, qy)) in
         [(cb[0], cb[1]), (cb[2], cb[1]), (cb[2], cb[3]), (cb[0], cb[3])].into_iter().zip(quad.as_chunks::<2>().0.iter().map(|p| (p[0], p[1])))
     {
@@ -477,7 +477,7 @@ fn placed_cylinder_quad_frames_its_control_box() {
     }
     // Without a warp a projective quad still frames the source rect.
     let none = Descriptor::new("warp").with("warpStyle", Value::Enumerated { type_id: Id::new("warpStyle"), value: Id::new("warpNone") });
-    let h = photocraft_algo::transform::Homography(parse_smart_perspective(b"SoLd", &sold_placed(quad, none)).expect("projective"));
+    let h = lienzo_algo::transform::Homography(parse_smart_perspective(b"SoLd", &sold_placed(quad, none)).expect("projective"));
     let (px, py) = h.apply(1000.0, 1000.0);
     assert!((px - 400.0).abs() < 1e-6 && (py - 480.0).abs() < 1e-6);
 }

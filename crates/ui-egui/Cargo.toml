@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-ui-egui"
+name = "lienzo-ui-egui"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,27 +11,27 @@ workspace = true
 chrono = { workspace = true }
 craft-print = { workspace = true }
 craft-ui = { workspace = true }
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-cms = { workspace = true }
-photocraft-raster = { workspace = true }
-photocraft-doc = { workspace = true }
-photocraft-compose = { workspace = true }
-photocraft-gpu = { workspace = true }
-photocraft-engine = { workspace = true }
-photocraft-io = { workspace = true }
-photocraft-plugins = { workspace = true }
-photocraft-algo = { workspace = true }
-photocraft-text = { workspace = true }
-photocraft-vector = { workspace = true }
+lienzo-geom = { workspace = true }
+lienzo-color = { workspace = true }
+lienzo-cms = { workspace = true }
+lienzo-raster = { workspace = true }
+lienzo-doc = { workspace = true }
+lienzo-compose = { workspace = true }
+lienzo-gpu = { workspace = true }
+lienzo-engine = { workspace = true }
+lienzo-io = { workspace = true }
+lienzo-plugins = { workspace = true }
+lienzo-algo = { workspace = true }
+lienzo-text = { workspace = true }
+lienzo-vector = { workspace = true }
 # Only MAX_BRUSH_SIZE: `ui.set brushSize` validates against the Brush Settings range up front.
-photocraft-paint = { workspace = true }
+lienzo-paint = { workspace = true }
 # Reading files to open them (bounded reads, a clear error for files larger than memory).
-photocraft-format = { workspace = true }
-# Decoding the brand mark's PNG (`brand.rs`); already linked through photocraft-io.
-photocraft-codecs = { workspace = true }
+lienzo-format = { workspace = true }
+# Decoding the brand mark's PNG (`brand.rs`); already linked through lienzo-io.
+lienzo-codecs = { workspace = true }
 # Reading embedded thumbnail resources (1036/1033) for recent files in Home screen.
-photocraft-psd = { workspace = true }
+lienzo-psd = { workspace = true }
 egui = { workspace = true }
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 eframe = { workspace = true, features = ["wgpu", "accesskit", "clipboard"] }
@@ -44,7 +44,7 @@ unicode-bidi = "0.3"
 icu_casemap = "2.3"
 icu_locale_core = "2.3"
 base64 = "0.23"
-# Inflating the translation catalogs, stored deflated (build.rs); already linked through photocraft-io.
+# Inflating the translation catalogs, stored deflated (build.rs); already linked through lienzo-io.
 flate2 = { workspace = true }
 web-time = { workspace = true }
 
@@ -63,18 +63,18 @@ sys-locale = "=0.3.2"
 winsafe = { version = "=0.0.29", default-features = false, features = ["kernel", "dxgi", "advapi"] }
 
 [dev-dependencies]
-photocraft-io = { workspace = true, features = ["testgen"] }
+lienzo-io = { workspace = true, features = ["testgen"] }
 # egui's own default fonts in tests: the oracle for egui_fonts.rs, and contexts made with
 # `Context::default()` (no install_fonts) can lay out text.
 egui = { workspace = true, features = ["default_fonts", "monochrome_emoji_fonts"] }
 # Synthetic raw files for the open-time Camera Raw dialog tests.
-photocraft-raw = { workspace = true, features = ["testgen"] }
+lienzo-raw = { workspace = true, features = ["testgen"] }
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot", "eframe"] }
 # Benchmark helpers for the `--json` benches `cargo xtask perf` runs (in-process RSS, percentiles).
-photocraft-testkit = { workspace = true }
+lienzo-testkit = { workspace = true }
 # examples/perf_scenarios.rs (a 500-brush .abr for the #210 import row) and large_file_bench.rs
 # (the generated 2 GB PSD and 4.4 GB PSB of P20, `fixtures`).
-photocraft-psd = { workspace = true, features = ["testgen"] }
+lienzo-psd = { workspace = true, features = ["testgen"] }
 # Isolated, self-cleaning folders for filesystem tests (the LUT folder, #6558).
 tempfile = "3"
 

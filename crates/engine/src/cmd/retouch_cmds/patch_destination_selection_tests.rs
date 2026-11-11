@@ -14,7 +14,7 @@ fn session() -> Session {
             for x in b.x0..b.x1 {
                 let v = if (x / 8 + y / 8) % 2 == 0 { 0.2 } else { 0.8 };
                 let px = if x >= 400 { [0.1, 0.6, 0.2, 1.0] } else { [v, v, v, 1.0] };
-                data.extend(photocraft_raster::from_rgba(&fmt, px));
+                data.extend(lienzo_raster::from_rgba(&fmt, px));
             }
         }
         surf.write_region(b, &data);
@@ -198,6 +198,6 @@ fn hard_rect_check_is_capped_and_scans_every_band() {
     // A hole in the third band must still be found.
     let mut holed = sel.clone();
     let fmt = holed.format();
-    holed.write_region(Rect::new(120, 240, 121, 241), &photocraft_raster::from_rgba(&fmt, [0.0, 0.0, 0.0, 0.0]));
+    holed.write_region(Rect::new(120, 240, 121, 241), &lienzo_raster::from_rgba(&fmt, [0.0, 0.0, 0.0, 0.0]));
     assert!(!is_hard_rect_within(&holed, b, u64::MAX), "a hole past the first band fails the check");
 }

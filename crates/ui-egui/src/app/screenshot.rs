@@ -1,6 +1,6 @@
-use super::PhotocraftApp;
+use super::LienzoApp;
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Issue due screenshot requests. UI phase only: settling counts real layout passes, and the
     /// geometry epoch is that of the pass the image will be rendered from.
     pub(super) fn issue_captures(&mut self, ctx: &egui::Context) {

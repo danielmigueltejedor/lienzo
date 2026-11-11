@@ -4,7 +4,7 @@
 //! way the app creates it; the CPU compositor without an adapter).
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example perf_scenarios -- [--quick] [--json out.json] [--only text] [--group layered] [--reps N] [--cpu] [--no-composite-reuse]
+//! cargo run --release -p lienzo-ui-egui --example perf_scenarios -- [--quick] [--json out.json] [--only text] [--group layered] [--reps N] [--cpu] [--no-composite-reuse]
 //! ```
 //!
 //! `cargo xtask perf` runs this and maps the rows to scenario ids in `perf/budgets.toml`, so
@@ -21,13 +21,13 @@
 use std::time::Instant;
 
 use eframe::egui_wgpu::RenderState;
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, ProxyImage, auto_cell};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
-use photocraft_testkit::perf::{RssSampler, Summary, report, row, write_report};
-use photocraft_ui_egui::gpu_canvas::GpuCanvas;
+use lienzo_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, ProxyImage, auto_cell};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
+use lienzo_testkit::perf::{RssSampler, Summary, report, row, write_report};
+use lienzo_ui_egui::gpu_canvas::GpuCanvas;
 use serde_json::{Value, json};
 
 type Res<T> = Result<T, String>;
@@ -67,14 +67,13 @@ fn photo_jpeg(w: u32, h: u32) -> Res<Vec<u8>> {
             }
         }
     });
-    let img =
-        photocraft_codecs::Image::from_raw(w, h, photocraft_codecs::ChannelLayout::Rgb, photocraft_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
-    photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())
+    let img = lienzo_codecs::Image::from_raw(w, h, lienzo_codecs::ChannelLayout::Rgb, lienzo_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
+    lienzo_codecs::encode(&img, lienzo_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())
 }
 
 fn open_photo(w: u32, h: u32) -> Res<Session> {
     let jpeg = photo_jpeg(w, h)?;
-    let doc = photocraft_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
+    let doc = lienzo_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
     let mut s = Session::new();
     s.open_document(doc, Some("photo.jpg".into()));
     Ok(s)
@@ -82,13 +81,13 @@ fn open_photo(w: u32, h: u32) -> Res<Session> {
 
 /// How far an edit's composite change reaches beyond its damage (layer effects); mirrors
 /// `canvas::effect_reach`.
-fn reach(layers: &[photocraft_doc::Layer]) -> i32 {
+fn reach(layers: &[lienzo_doc::Layer]) -> i32 {
     layers
         .iter()
         .map(|l| {
-            let own = if photocraft_compose::effects::has_effects(l) { photocraft_compose::effects::margin(l) } else { 0 };
+            let own = if lienzo_compose::effects::has_effects(l) { lienzo_compose::effects::margin(l) } else { 0 };
             let kids = match &l.content {
-                photocraft_doc::LayerContent::Group(g) => reach(&g.children),
+                lienzo_doc::LayerContent::Group(g) => reach(&g.children),
                 _ => 0,
             };
             own + kids
@@ -142,7 +141,7 @@ fn median(v: &[f64]) -> f64 {
 
 /// A GPU refresh's kind and fallback; `refresh_with` reports nothing to draw as `"rect"` (like
 /// the CPU-compositor rect upload), which the bench calls `"none"` as its CPU path does.
-fn gpu_kind(r: &photocraft_ui_egui::gpu_canvas::Refresh) -> (&'static str, Option<&'static str>) {
+fn gpu_kind(r: &lienzo_ui_egui::gpu_canvas::Refresh) -> (&'static str, Option<&'static str>) {
     let fallback = r.fallback.as_ref().map(|f| f.kind());
     (if r.kind == "rect" && r.px == 0 && fallback.is_none() { "none" } else { r.kind }, fallback)
 }
@@ -159,7 +158,7 @@ impl Bench {
 
     /// Re-composite only `r` of the active document: the caller knows the canvas already shows
     /// the rest of the current revision (a stroke's live preview, say).
-    fn refresh_rect(&self, s: &Session, r: photocraft_geom::Rect) -> Res<f64> {
+    fn refresh_rect(&self, s: &Session, r: lienzo_geom::Rect) -> Res<f64> {
         let st = s.active().ok_or("no document")?;
         let doc = &st.doc;
         let r = r.intersect(&doc.bounds());
@@ -171,7 +170,7 @@ impl Bench {
                     let _ = rs.device.poll(eframe::wgpu::PollType::Wait { submission_index: None, timeout: None });
                 }
                 None => {
-                    std::hint::black_box(photocraft_compose::render(doc, r));
+                    std::hint::black_box(lienzo_compose::render(doc, r));
                 }
             }
         }
@@ -223,7 +222,7 @@ impl Bench {
                 };
                 self.last_kind.set((kind, None));
                 if !r.is_empty() {
-                    std::hint::black_box(photocraft_compose::render(doc, r));
+                    std::hint::black_box(lienzo_compose::render(doc, r));
                 }
             }
         }
@@ -246,13 +245,13 @@ impl Bench {
     /// previous frame and where it is now (`move_ui::damage`).
     fn drag_frame(&self, s: &Session, layer: u64, i: usize) -> Res<f64> {
         let doc = s.active().ok_or("no document")?.doc.clone();
-        let id = photocraft_doc::LayerId(layer);
-        let all = photocraft_geom::Rect::new(i32::MIN / 2, i32::MIN / 2, i32::MAX / 2, i32::MAX / 2);
-        let was = doc.layer(id).and_then(|l| photocraft_compose::change_bounds(l, all)).ok_or("no bounds")?;
+        let id = lienzo_doc::LayerId(layer);
+        let all = lienzo_geom::Rect::new(i32::MIN / 2, i32::MIN / 2, i32::MAX / 2, i32::MAX / 2);
+        let was = doc.layer(id).and_then(|l| lienzo_compose::change_bounds(l, all)).ok_or("no bounds")?;
         // Frame i shows offset (d, d / 2); the canvas showed the previous frame's.
         let (d, prev) = (3 * i as i32 + 1, if i == 0 { 0 } else { 3 * i as i32 - 2 });
         let t = Instant::now();
-        let shown = photocraft_engine::layer_multi_cmds::moved(&doc, &[id], d, d / 2).map_err(|e| e.to_string())?;
+        let shown = lienzo_engine::layer_multi_cmds::moved(&doc, &[id], d, d / 2).map_err(|e| e.to_string())?;
         let damage = was.translate(prev, prev / 2).union(&was.translate(d, d / 2)).inflate(1).intersect(&doc.bounds());
         let cmd_ms = ms(t);
         let t = Instant::now();
@@ -265,7 +264,7 @@ impl Bench {
                 gpu_kind(&r)
             }
             None => {
-                std::hint::black_box(photocraft_compose::render(&shown, damage));
+                std::hint::black_box(lienzo_compose::render(&shown, damage));
                 (if damage.is_empty() { "none" } else { "rect" }, None)
             }
         };
@@ -377,7 +376,7 @@ impl Bench {
 
 /// A headless GPU canvas on a device created like the app's.
 fn canvas() -> Option<(GpuCanvas, RenderState)> {
-    let setup = photocraft_ui_egui::gpu_canvas::wgpu_setup();
+    let setup = lienzo_ui_egui::gpu_canvas::wgpu_setup();
     let rs = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| egui_kittest::wgpu::create_render_state(setup, Default::default()))).ok()?;
     eprintln!("adapter: {}", rs.adapter.get_info().name);
     Some((GpuCanvas::new(&rs), rs))
@@ -501,7 +500,7 @@ fn many_layers_doc(w: u32, h: u32, n: usize) -> Res<(Session, u64)> {
 }
 
 /// The first top-level layer of the active document, other than `except`, that `want` accepts.
-fn find_layer(s: &Session, except: u64, want: impl Fn(&photocraft_doc::Layer) -> bool) -> Option<u64> {
+fn find_layer(s: &Session, except: u64, want: impl Fn(&lienzo_doc::Layer) -> bool) -> Option<u64> {
     s.active()?.doc.layers.iter().find(|l| l.id.0 != except && want(l)).map(|l| l.id.0)
 }
 
@@ -727,8 +726,8 @@ fn layered_scenarios(b: &mut Bench, sz: &Sizes) {
 
     // Advanced Blending on one layer sends the whole document to the CPU compositor (#6689):
     // opacity edits on another layer, then the knockout is cleared again.
-    let other = find_layer(&s, target, |l| matches!(l.content, photocraft_doc::LayerContent::Raster(_)) && photocraft_compose::effects::has_effects(l));
-    let adjustment = find_layer(&s, target, |l| matches!(l.content, photocraft_doc::LayerContent::Adjustment(_)));
+    let other = find_layer(&s, target, |l| matches!(l.content, lienzo_doc::LayerContent::Raster(_)) && lienzo_compose::effects::has_effects(l));
+    let adjustment = find_layer(&s, target, |l| matches!(l.content, lienzo_doc::LayerContent::Adjustment(_)));
     match other {
         Some(other) if exec(&mut s, "layer.layerStyle.blendingOptions", json!({"layer": other, "knockout": "shallow"})).is_ok() => {
             let _ = b.refresh(&s, true);
@@ -893,8 +892,8 @@ fn full_canvas_layer_scenarios(b: &mut Bench, sz: &Sizes) {
     if let (Some((g, _)), Some(st)) = (&b.gpu, s.active()) {
         // As the app counts it (`canvas::gpu_budget`).
         let pixels = st.memory_bytes() as u64;
-        let allowance = u64::from(photocraft_engine::prefs::Performance::default().memory_usage_mb) << 20;
-        let budget = photocraft_ui_egui::gpu_canvas::memory_budget(allowance, pixels, photocraft_ui_egui::gpu_canvas::physical_memory(), g.video_memory(), 0);
+        let allowance = u64::from(lienzo_engine::prefs::Performance::default().memory_usage_mb) << 20;
+        let budget = lienzo_ui_egui::gpu_canvas::memory_budget(allowance, pixels, lienzo_ui_egui::gpu_canvas::physical_memory(), g.video_memory(), 0);
         g.set_memory_budget(budget);
         app_budget = Some(budget);
     }
@@ -920,7 +919,7 @@ fn full_canvas_layer_scenarios(b: &mut Bench, sz: &Sizes) {
             // As #6533's repro (`performance.gpuMemoryMb = 512`): the ~3.6 GB working set no longer
             // fits, so a full refresh takes the from-scratch CPU path on every machine.
             if let Some((g, _)) = &b.gpu {
-                g.set_memory_budget(photocraft_ui_egui::gpu_canvas::MIN_GPU_BUDGET);
+                g.set_memory_budget(lienzo_ui_egui::gpu_canvas::MIN_GPU_BUDGET);
             }
             let _ = b.refresh(&s, true);
             // Each run is a from-scratch CPU composite of 150 full-canvas layers. Every timed run
@@ -966,9 +965,9 @@ fn huge_document_scenarios(b: &mut Bench, sz: &Sizes) {
     // One run: each is a from-scratch reduced composite of the whole document.
     b.time(name, &mut s, 1, false, |_, s, _| {
         let doc = &s.active().ok_or("no document")?.doc;
-        let factor = w.max(h).div_ceil(photocraft_ui_egui::canvas::MAX_TEXTURE).max(1);
+        let factor = w.max(h).div_ceil(lienzo_ui_egui::canvas::MAX_TEXTURE).max(1);
         let t = Instant::now();
-        let reduced = photocraft_compose::render_reduced(doc, w / factor, h / factor);
+        let reduced = lienzo_compose::render_reduced(doc, w / factor, h / factor);
         let v = ms(t);
         if reduced.px.is_empty() {
             return Err("the reduced canvas is empty".into());
@@ -1069,7 +1068,7 @@ fn job_scenarios(b: &mut Bench, sz: &Sizes) {
         let (w, h) = sz.layered;
         match layered_doc(w, h).and_then(|(s, _)| {
             let d = s.active().ok_or("no document")?.doc.clone();
-            photocraft_io::export(&d, "layered.psd", &Default::default()).map(|o| o.bytes).map_err(|e| e.to_string())
+            lienzo_io::export(&d, "layered.psd", &Default::default()).map(|o| o.bytes).map_err(|e| e.to_string())
         }) {
             Ok(psd) => {
                 let mut holder = Session::new();
@@ -1080,7 +1079,7 @@ fn job_scenarios(b: &mut Bench, sz: &Sizes) {
                     drop(std::mem::replace(s, Session::new()));
                     b.retain(&[]);
                     let t = Instant::now();
-                    let d = photocraft_io::import("layered.psd", &psd).map_err(|e| e.to_string())?.document;
+                    let d = lienzo_io::import("layered.psd", &psd).map_err(|e| e.to_string())?.document;
                     s.open_document(d, Some("layered.psd".into()));
                     b.after_cmd(s, t, true)
                 });
@@ -1122,7 +1121,7 @@ fn job_scenarios(b: &mut Bench, sz: &Sizes) {
 }
 
 /// Wait (polling like the UI's frame loop) until job `id` has ended.
-fn wait_job(s: &mut Session, id: photocraft_engine::jobs::JobId) -> Res<()> {
+fn wait_job(s: &mut Session, id: lienzo_engine::jobs::JobId) -> Res<()> {
     let t = Instant::now();
     loop {
         if s.poll_jobs().iter().any(|e| e.id == id) {
@@ -1135,10 +1134,10 @@ fn wait_job(s: &mut Session, id: photocraft_engine::jobs::JobId) -> Res<()> {
     }
 }
 
-fn start_job(s: &mut Session, id: &str, p: Value) -> Res<photocraft_engine::jobs::JobId> {
+fn start_job(s: &mut Session, id: &str, p: Value) -> Res<lienzo_engine::jobs::JobId> {
     match s.start(id, p).map_err(|e| format!("{id}: {e}"))? {
-        photocraft_engine::jobs::Started::Job(j) => Ok(j),
-        photocraft_engine::jobs::Started::Done(_) => Err(format!("{id} did not run as a background job")),
+        lienzo_engine::jobs::Started::Job(j) => Ok(j),
+        lienzo_engine::jobs::Started::Done(_) => Err(format!("{id} did not run as a background job")),
     }
 }
 
@@ -1178,7 +1177,7 @@ fn background_job_scenarios(b: &mut Bench, sz: &Sizes) {
     }
     let brushes = "import 500 brushes: longest UI-thread step";
     if b.wanted(brushes) {
-        use photocraft_psd::abr::{AbrSample, LegacyBrush, LegacyTip, write_v12};
+        use lienzo_psd::abr::{AbrSample, LegacyBrush, LegacyTip, write_v12};
         let list: Vec<LegacyBrush> = (0..500)
             .map(|i| {
                 let side = 40 + (i % 60) as u32;
@@ -1193,7 +1192,7 @@ fn background_job_scenarios(b: &mut Bench, sz: &Sizes) {
             .collect();
         match write_v12(2, &list, true) {
             Ok(abr) => {
-                let data = photocraft_engine::paint::tile::b64_encode(&abr);
+                let data = lienzo_engine::paint::tile::b64_encode(&abr);
                 let mut s = Session::new();
                 b.time(brushes, &mut s, reps.min(5), true, |_, s, _| {
                     // The UI thread's work: starting the job, then each frame's poll (the last one
@@ -1262,8 +1261,8 @@ fn full_refresh_frame_scenario(b: &mut Bench, name: &str, w: u32, h: u32) {
         Err(e) => return b.errors.push((name.into(), e)),
     };
     let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(4).build_eframe(move |cc| {
-        photocraft_ui_egui::PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        photocraft_ui_egui::PhotocraftApp::new(s, photocraft_ui_egui::Services::default())
+        lienzo_ui_egui::LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        lienzo_ui_egui::LienzoApp::new(s, lienzo_ui_egui::Services::default())
     });
     harness.run_steps(6);
     b.current = Some(name.to_string());
@@ -1299,8 +1298,8 @@ fn frame_scenario(b: &mut Bench, name: &str, w: u32, h: u32) {
     };
     let doc = std::mem::take(&mut s);
     let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(4).build_eframe(move |cc| {
-        photocraft_ui_egui::PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = photocraft_ui_egui::PhotocraftApp::new(doc, photocraft_ui_egui::Services::default());
+        lienzo_ui_egui::LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = lienzo_ui_egui::LienzoApp::new(doc, lienzo_ui_egui::Services::default());
         app.background_jobs = true;
         app
     });
@@ -1412,7 +1411,7 @@ fn algorithm_scenarios(b: &mut Bench, sz: &Sizes) {
         let _ = b.refresh(&s, true);
         let reps = b.reps.min(5);
         b.time(release, &mut s, reps, false, |b, s, i| {
-            use photocraft_engine::paint::StrokePoint;
+            use lienzo_engine::paint::StrokePoint;
             let (fw, fh) = (f64::from(w), f64::from(h));
             let pts: Vec<[f64; 3]> = (0..600)
                 .map(|k| {
@@ -1421,7 +1420,7 @@ fn algorithm_scenarios(b: &mut Bench, sz: &Sizes) {
                 })
                 .collect();
             let mut p = json!({"points": [pts[0]], "size": 200, "hardness": 0.0, "color": "#c03020", "smoothing": 0.0});
-            let mut live = photocraft_engine::brush_cmds::LiveStroke::begin(s, &p).map_err(|e| e.to_string())?;
+            let mut live = lienzo_engine::brush_cmds::LiveStroke::begin(s, &p).map_err(|e| e.to_string())?;
             for c in pts[1..].chunks(4) {
                 let sp: Vec<StrokePoint> = c.iter().map(|q| StrokePoint::new(q[0], q[1], q[2] as f32)).collect();
                 live.push(&sp).map_err(|e| e.to_string())?;
@@ -1436,7 +1435,7 @@ fn algorithm_scenarios(b: &mut Bench, sz: &Sizes) {
                 return Err("the release rendered the stroke again".into());
             }
             // The canvas already shows every step of the stroke: nothing left to re-composite.
-            Ok(ms(t) + b.refresh_rect(s, photocraft_geom::Rect::EMPTY)?)
+            Ok(ms(t) + b.refresh_rect(s, lienzo_geom::Rect::EMPTY)?)
         });
     }
 }
@@ -1454,8 +1453,8 @@ fn huge_new_scenario(b: &mut Bench, sz: &Sizes) {
         let t = Instant::now();
         exec(s, "file.new", json!({"width": w, "height": h, "resolution": 200, "background": "white"}))?;
         let doc = &s.active().ok_or("no document")?.doc;
-        let factor = w.max(h).div_ceil(photocraft_ui_egui::canvas::MAX_TEXTURE).max(1);
-        let reduced = photocraft_compose::render_reduced(doc, w / factor, h / factor);
+        let factor = w.max(h).div_ceil(lienzo_ui_egui::canvas::MAX_TEXTURE).max(1);
+        let reduced = lienzo_compose::render_reduced(doc, w / factor, h / factor);
         if reduced.px.first() != Some(&[1.0; 4]) {
             return Err("the new document is not white".into());
         }
@@ -1537,14 +1536,14 @@ fn liquify_preview_scenario(b: &mut Bench) {
 }
 
 /// The share of the canvas `r` covers.
-fn coverage(doc: &photocraft_doc::Document, r: Rect) -> f64 {
+fn coverage(doc: &lienzo_doc::Document, r: Rect) -> f64 {
     r.intersect(&doc.bounds()).size().area() as f64 / doc.bounds().size().area().max(1) as f64
 }
 
 /// The content bounds of `layer`'s pixels.
 fn layer_bounds(s: &Session, layer: u64) -> Res<Rect> {
     let doc = &s.active().ok_or("no document")?.doc;
-    doc.layer(photocraft_doc::LayerId(layer)).and_then(|l| l.surface()).map(|p| p.content_bounds()).ok_or_else(|| "layer has no pixels".to_string())
+    doc.layer(lienzo_doc::LayerId(layer)).and_then(|l| l.surface()).map(|p| p.content_bounds()).ok_or_else(|| "layer has no pixels".to_string())
 }
 
 /// A document with one painted layer covering the whole canvas; returns it and the layer.
@@ -1571,7 +1570,7 @@ fn top_index(s: &Session, layer: u64) -> Res<usize> {
 /// The composite pixel at (`x`, `y`).
 fn composite_px(s: &Session, x: i32, y: i32) -> Res<Vec<f32>> {
     let doc = &s.active().ok_or("no document")?.doc;
-    Ok(photocraft_compose::render(doc, Rect::new(x, y, x + 1, y + 1)).px.first().ok_or("empty render")?.to_vec())
+    Ok(lienzo_compose::render(doc, Rect::new(x, y, x + 1, y + 1)).px.first().ok_or("empty render")?.to_vec())
 }
 
 /// #9329 PR B: the layered document with a Curves above panel 2, masked to a small rect inside
@@ -1589,7 +1588,7 @@ fn masked_curves_doc(w: u32, h: u32) -> Res<(Session, u64, (i32, i32))> {
     if above < 4 {
         return Err(format!("path check: {above} layers above the Curves, not >= 4 (the prefix cache would cover it)"));
     }
-    let mask = doc.layer(photocraft_doc::LayerId(curves)).and_then(|l| l.mask.as_ref()).ok_or("path check: the Curves has no mask")?;
+    let mask = doc.layer(lienzo_doc::LayerId(curves)).and_then(|l| l.mask.as_ref()).ok_or("path check: the Curves has no mask")?;
     let share = coverage(&doc, mask.surface.content_bounds());
     if mask.value(0, 0) != 0.0 || share > 0.05 {
         return Err(format!("path check: the mask reveals {:.2} % of the canvas, not <= 5 %", share * 100.0));
@@ -1654,7 +1653,7 @@ fn redraw_area_scenarios(b: &mut Bench, sz: &Sizes) {
                     let took = b.after_cmd(s, t, false)?;
                     b.px.borrow_mut().push(b.last_px.get());
                     let after = s.active().ok_or("no document")?.doc.clone();
-                    if photocraft_engine::layer_multi_cmds::step_damage(&before, &after).is_some_and(|r| r.is_empty()) {
+                    if lienzo_engine::layer_multi_cmds::step_damage(&before, &after).is_some_and(|r| r.is_empty()) {
                         return Err("path check: the undo changed no pixels".into());
                     }
                     Ok(took)
@@ -1691,7 +1690,7 @@ fn redraw_area_scenarios(b: &mut Bench, sz: &Sizes) {
                     let took = b.after_cmd(s, t, false)?;
                     b.px.borrow_mut().push(b.last_px.get());
                     let after = s.active().ok_or("no document")?.doc.clone();
-                    if photocraft_engine::layer_multi_cmds::step_damage(&before, &after).is_some_and(|r| r.is_empty()) {
+                    if lienzo_engine::layer_multi_cmds::step_damage(&before, &after).is_some_and(|r| r.is_empty()) {
                         return Err("path check: the fill changed no pixels".into());
                     }
                     Ok(took)
@@ -1770,8 +1769,8 @@ fn paste_into_frame_scenario(b: &mut Bench, name: &str, w: u32, h: u32) {
     };
     let doc = std::mem::take(&mut s);
     let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(4).build_eframe(move |cc| {
-        photocraft_ui_egui::PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        photocraft_ui_egui::PhotocraftApp::new(doc, photocraft_ui_egui::Services::default())
+        lienzo_ui_egui::LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        lienzo_ui_egui::LienzoApp::new(doc, lienzo_ui_egui::Services::default())
     });
     // Warm up: first frames build the canvas cache of the 24 MP document.
     harness.run_steps(6);
@@ -1780,12 +1779,12 @@ fn paste_into_frame_scenario(b: &mut Bench, name: &str, w: u32, h: u32) {
     b.px.borrow_mut().clear();
     let mut samples = Vec::new();
     let run = (|| -> Res<()> {
-        let layers = |h: &egui_kittest::Harness<'_, photocraft_ui_egui::PhotocraftApp>| h.state().session.active().map(|d| d.doc.layers.len());
+        let layers = |h: &egui_kittest::Harness<'_, lienzo_ui_egui::LienzoApp>| h.state().session.active().map(|d| d.doc.layers.len());
         let base_layers = layers(&harness);
-        let past = |h: &egui_kittest::Harness<'_, photocraft_ui_egui::PhotocraftApp>| h.state().session.active().map(|d| d.history.past_len());
+        let past = |h: &egui_kittest::Harness<'_, lienzo_ui_egui::LienzoApp>| h.state().session.active().map(|d| d.history.past_len());
         let base_past = past(&harness);
         for i in 0..=b.reps.max(1) {
-            let rev = |h: &egui_kittest::Harness<'_, photocraft_ui_egui::PhotocraftApp>| h.state().session.active().map(|d| d.revision);
+            let rev = |h: &egui_kittest::Harness<'_, lienzo_ui_egui::LienzoApp>| h.state().session.active().map(|d| d.revision);
             // Untimed: Paste Into turns the selection into the pasted layer's
             // mask, so each sample re-creates the same ~5 % selection (the
             // clipboard is not consumed), and shows it for a frame, as the app

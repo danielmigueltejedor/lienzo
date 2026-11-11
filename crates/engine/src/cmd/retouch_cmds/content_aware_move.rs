@@ -15,7 +15,7 @@
 //! * **Color** 0 pastes the content as it is; higher values bring its level towards the new
 //!   surroundings by up to about `0.04 · color` (Patch Tool, content 42 and 102 levels brighter:
 //!   3 shifts it 32 and 31 levels, 10 shifts it 35 and 95), a limited gain and bias
-//!   ([`photocraft_algo::content_aware::color_amount`]).
+//!   ([`lienzo_algo::content_aware::color_amount`]).
 //!
 //! The selection moves with the content, as in Photoshop. A soft selection counts wherever it is
 //! above zero (as the Patch Tool's); the band does the blending. The fills are PatchMatch
@@ -30,8 +30,8 @@
 //! transformed with it. A transformed patch may reach past the canvas edge (Photoshop lets the
 //! box go there): what lands outside is dropped.
 
-use photocraft_algo::content_aware::{FillOptions, color_amount, color_level, fill_with, level_transform};
-use photocraft_algo::transform::{Homography, Interp};
+use lienzo_algo::content_aware::{FillOptions, color_amount, color_level, fill_with, level_transform};
+use lienzo_algo::transform::{Homography, Interp};
 
 use super::patch::{coverage, offset, selection_area, target_layer};
 use super::{
@@ -632,7 +632,7 @@ fn shift(dx: f64, dy: f64) -> Homography {
 /// rounding the scaled offset doesn't shift it. Writes into `doc` (a copy) and returns the
 /// rectangle it changed.
 fn run_scaled(doc: &mut Document, sel: &Surface, plan: &Plan, p: &Value, scale: f64, ctx: &crate::jobs::JobCtx) -> Result<Rect> {
-    use photocraft_algo::resample::{Resample, resize_surface_in_canvas, scaled_rect};
+    use lienzo_algo::resample::{Resample, resize_surface_in_canvas, scaled_rect};
     let f = scale;
     if !(f > 0.0 && f < 1.0) {
         return Err(EngineError::Other("internal error: a coarse preview needs a scale below 1".into()));
@@ -658,13 +658,13 @@ fn run_scaled(doc: &mut Document, sel: &Surface, plan: &Plan, p: &Value, scale: 
     let small = resize_surface_in_canvas(&src, f, f, Resample::Bilinear, plan.canvas);
     // The selection is scaled in 32-bit float: in 8 bits a faint, sparse one (scattered 1/255
     // pixels) averages to 0 and the scaled solve would find nothing selected.
-    let sel_f32 = photocraft_color::PixelFormat { sample: photocraft_color::SampleType::F32, ..sel.format() };
+    let sel_f32 = lienzo_color::PixelFormat { sample: lienzo_color::SampleType::F32, ..sel.format() };
     let small_sel = resize_surface_in_canvas(&crop(sel, reach_rect).convert(sel_f32), f, f, Resample::Bilinear, plan.canvas);
     ctx.check()?;
     let canvas = scaled_rect(plan.canvas, f, f);
-    let size = photocraft_geom::Size { width: canvas.width(), height: canvas.height() };
+    let size = lienzo_geom::Size { width: canvas.width(), height: canvas.height() };
     let mut mini = Document::new("Content-Aware Move preview", size, doc.mode, doc.depth);
-    let layer = photocraft_doc::Layer::new("preview", LayerContent::Raster(small));
+    let layer = lienzo_doc::Layer::new("preview", LayerContent::Raster(small));
     let id = layer.id;
     mini.layers.push(layer);
 
@@ -735,7 +735,7 @@ mod tests {
             for y in b.y0..b.y1 {
                 for x in b.x0..b.x1 {
                     let v = ((x * 7 + y * 13) % 17) as f32 / 17.0;
-                    data.extend(photocraft_raster::from_rgba(&fmt, [v, 1.0 - v, 0.5, 1.0]));
+                    data.extend(lienzo_raster::from_rgba(&fmt, [v, 1.0 - v, 0.5, 1.0]));
                 }
             }
             surf.write_region(b, &data);
@@ -779,7 +779,7 @@ mod tests {
         // sample below half an 8-bit level, reproducing the loss without a 0.77 MP solve.
         let mut s = textured(600, 600);
         s.edit("faint selection", |doc, _| {
-            let mut sel = Surface::new(photocraft_color::PixelFormat::GRAY8);
+            let mut sel = Surface::new(lienzo_color::PixelFormat::GRAY8);
             let r = Rect::new(20, 20, 536, 536);
             let data: Vec<f32> = (r.y0..r.y1).flat_map(|y| (r.x0..r.x1).map(move |x| if x % 4 == 0 && y % 4 == 0 { 1.0 / 255.0 } else { 0.0 })).collect();
             sel.write_region(r, &data);

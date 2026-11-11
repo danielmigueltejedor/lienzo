@@ -4,18 +4,18 @@
 use egui::{Key, Modifiers};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::panels::toolbar::{TOOL_SECTIONS, toolbar_position};
 use crate::state::Tool;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 20, "height": 10})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app
 }
 
-fn shift_press(app: &mut PhotocraftApp, key: Key) {
+fn shift_press(app: &mut LienzoApp, key: Key) {
     let modifiers = Modifiers::SHIFT;
     let ctx = egui::Context::default();
     let raw = egui::RawInput {

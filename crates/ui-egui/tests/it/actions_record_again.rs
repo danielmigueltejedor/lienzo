@@ -2,13 +2,13 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_engine::{EngineError, Session, actions_cmds::Action};
-use photocraft_ui_egui::{PhotocraftApp, actions, canvas, dialogs, state::DialogKind};
+use lienzo_engine::{EngineError, Session, actions_cmds::Action};
+use lienzo_ui_egui::{LienzoApp, actions, canvas, dialogs, state::DialogKind};
 use serde_json::{Value, json};
 
 /// Draw the actual panel and dialogs over one selected command, without a GPU or file service.
-fn harness(command: &str, params: Value) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(Session::new(), Default::default());
+fn harness(command: &str, params: Value) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(Session::new(), Default::default());
     app.background_jobs = false;
     app.run("file.new", json!({"width":8,"height":6})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -25,20 +25,20 @@ fn harness(command: &str, params: Value) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(3);
     h
 }
 
 /// Open by clicking the panel entry, preserving its selected-step and enablement checks.
-fn open(h: &mut Harness<'static, PhotocraftApp>) -> u64 {
+fn open(h: &mut Harness<'static, LienzoApp>) -> u64 {
     h.get_by_role_and_label(egui::accesskit::Role::Button, "Record Again").click();
     h.run_steps(3);
     h.state().ui.dialogs.last().unwrap().id
 }
 
 /// A resize with different recorded and document sizes exposes seeding from the wrong source.
-fn sizing() -> Harness<'static, PhotocraftApp> {
+fn sizing() -> Harness<'static, LienzoApp> {
     harness("image.imageSize", json!({"width":4,"height":3,"resample":"nearest"}))
 }
 
@@ -73,12 +73,12 @@ fn seeded_editor_cancels_or_updates_only_the_original_step() {
     assert_eq!(action.steps[0].1["width"].as_f64(), Some(6.0));
     assert!(action.disabled.contains(&0));
     assert!(action.dialogs.contains(&0));
-    assert_eq!(h.state().session.active().unwrap().doc.size, photocraft_engine::doc::Size::new(6, 5));
+    assert_eq!(h.state().session.active().unwrap().doc.size, lienzo_engine::doc::Size::new(6, 5));
     assert!(h.state().session.active().unwrap().doc.selection.is_none());
 }
 
 /// Permit initial settings while denying a later edit even if the current gate is removed.
-fn limited_resize(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn limited_resize(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if id == "image.imageSize" && params.get("width").and_then(Value::as_f64).is_some_and(|w| w >= 10.0) {
         Err(EngineError::Other("resize denied".into()))
     } else {
@@ -135,13 +135,13 @@ fn another_dialog_cannot_consume_the_selected_step() {
     let fake = h.state_mut().ui.open_dialog(DialogKind::Command, fields);
     dialogs::cancel(h.state_mut(), fake).unwrap();
     dialogs::confirm(h.state_mut(), real).unwrap();
-    assert_eq!(h.state().session.active().unwrap().doc.size, photocraft_engine::doc::Size::new(4, 3));
+    assert_eq!(h.state().session.active().unwrap().doc.size, lienzo_engine::doc::Size::new(4, 3));
 }
 
 static PREVIEW_CHECKS: AtomicUsize = AtomicUsize::new(0);
 
 /// Count actual preview authorization and refuse LUT paths or edited blur and gamma settings.
-fn preview_gate(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn preview_gate(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if matches!(id, "filter.blur.gaussianBlur" | "image.adjustments.levels" | "image.adjustments.colorLookup") {
         PREVIEW_CHECKS.fetch_add(1, Ordering::SeqCst);
         if params.get("file").is_some() || ["radius", "gamma"].iter().any(|key| params.get(key).and_then(Value::as_f64).is_some_and(|v| v > 2.0)) {
@@ -158,9 +158,8 @@ fn filter_and_adjustment_previews_retain_permissions_before_evaluation() {
         let params = if command.starts_with("filter.") {
             json!({"radius":1})
         } else {
-            photocraft_engine::adjust_params::to_params(
-                &photocraft_engine::adjust_params::default_for(command.strip_prefix("image.adjustments.").unwrap(), photocraft_engine::doc::ColorMode::Rgb)
-                    .unwrap(),
+            lienzo_engine::adjust_params::to_params(
+                &lienzo_engine::adjust_params::default_for(command.strip_prefix("image.adjustments.").unwrap(), lienzo_engine::doc::ColorMode::Rgb).unwrap(),
             )
         };
         let mut h = harness(command, params);

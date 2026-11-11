@@ -63,7 +63,7 @@ pub fn layer_bounds(layer: &Layer, canvas: Rect) -> Rect {
 /// has no pixels of its own that would cover it.
 fn frame_stroke_bounds(layer: &Layer, canvas: Rect) -> Rect {
     shape_split::frame_shape(layer)
-        .and_then(|sh| photocraft_vector::CompiledShape::new(&sh, photocraft_vector::DEFAULT_TOLERANCE, canvas).bounds())
+        .and_then(|sh| lienzo_vector::CompiledShape::new(&sh, lienzo_vector::DEFAULT_TOLERANCE, canvas).bounds())
         .map_or(Rect::EMPTY, |r| r.intersect(&canvas))
 }
 
@@ -100,9 +100,9 @@ pub fn effect_source_bounds(layer: &Layer, canvas: Rect) -> Rect {
 /// layers, shapes without fill, empty and inverted paths, and shapes whose vector stroke reaches
 /// past the path (their pixels give the outline: psd-tools double-stroke-effects), and shapes
 /// with a density or feather.
-pub fn effect_outline(layer: &Layer) -> Option<&photocraft_doc::vector::Path> {
+pub fn effect_outline(layer: &Layer) -> Option<&lienzo_doc::vector::Path> {
     let LayerContent::Shape(sh) = &layer.content else { return None };
-    let stroke_inside = sh.stroke.as_ref().is_none_or(|s| s.width <= 0.0 || s.align == photocraft_doc::vector::StrokeAlign::Inside);
+    let stroke_inside = sh.stroke.as_ref().is_none_or(|s| s.width <= 0.0 || s.align == lienzo_doc::vector::StrokeAlign::Inside);
     // A soft (feathered or less dense) fill's own alpha is its outline.
     (sh.fill.is_some() && stroke_inside && !sh.path.is_empty() && !sh.path.inverted && !sh.has_soft_mask()).then_some(&sh.path)
 }
@@ -125,7 +125,7 @@ pub(crate) fn effect_shape(layer: &Layer, rect: Rect, cx: &Ctx) -> Vec<f32> {
     };
     // Unmasked: the masks scale the shape, they aren't the fill's transparency.
     let a: Vec<f32> = layer.surface().map(|s| surface_to_buffer(s, rect).px.iter().map(|p| p[3]).collect()).unwrap_or_else(|| vec![0.0; n]);
-    let cov = photocraft_vector::path_coverage(path, rect);
+    let cov = lienzo_vector::path_coverage(path, rect);
     let mv = mask_vals(layer, rect, cx);
     let (w, h) = (rect.width() as usize, rect.height() as usize);
     let mut out = vec![0.0; n];
@@ -197,7 +197,7 @@ pub fn relayout_damage(a: &Document, b: &Document) -> Rect {
 
 /// The bounding box of a shape layer's path and stroke, ignoring its Density and Feather: its
 /// path control bounds plus stroke width (a conservative reach for any alignment, cap and join).
-pub fn hard_shape_bounds(sh: &photocraft_doc::ShapeLayer) -> Option<Rect> {
+pub fn hard_shape_bounds(sh: &lienzo_doc::ShapeLayer) -> Option<Rect> {
     if sh.fill.is_none() && sh.stroke.as_ref().is_none_or(|s| s.width <= 0.0 || s.opacity <= 0.0) {
         return None;
     }
@@ -214,11 +214,11 @@ pub fn hard_shape_bounds(sh: &photocraft_doc::ShapeLayer) -> Option<Rect> {
 /// Photoshop a shape's transform frame follows its path and stroke whatever its mask Density and
 /// Feather, #5846). An inverted path's frame is its own outline, not the whole canvas. Renders
 /// only the strips along the edges of the rasterizers' (1 px conservative) bounds.
-pub fn soft_shape_frame(sh: &photocraft_doc::ShapeLayer, format: photocraft_color::PixelFormat, canvas: Rect) -> Option<Rect> {
+pub fn soft_shape_frame(sh: &lienzo_doc::ShapeLayer, format: lienzo_color::PixelFormat, canvas: Rect) -> Option<Rect> {
     let mut path = sh.path.clone();
     path.inverted = false;
-    let hard = photocraft_doc::ShapeLayer { density: 1.0, feather: 0.0, path, fill: sh.fill.clone(), stroke: sh.stroke.clone(), ..Default::default() };
-    let shape = photocraft_vector::CompiledShape::new(&hard, photocraft_vector::DEFAULT_TOLERANCE, canvas);
+    let hard = lienzo_doc::ShapeLayer { density: 1.0, feather: 0.0, path, fill: sh.fill.clone(), stroke: sh.stroke.clone(), ..Default::default() };
+    let shape = lienzo_vector::CompiledShape::new(&hard, lienzo_vector::DEFAULT_TOLERANCE, canvas);
     let r = shape.bounds()?.intersect(&canvas);
     trim_to_painted(r, |strip| shape.render(format, strip).content_bounds())
 }
@@ -278,14 +278,14 @@ pub(crate) fn trim_to_painted(mut r: Rect, mut painted: impl FnMut(Rect) -> Rect
 
 /// The bounding box of a shape layer's vector content: its path control bounds plus stroke width
 /// (and the reach of a soft fill).
-pub fn shape_bounds(sh: &photocraft_doc::ShapeLayer) -> Option<Rect> {
+pub fn shape_bounds(sh: &lienzo_doc::ShapeLayer) -> Option<Rect> {
     let r = hard_shape_bounds(sh)?;
     // A soft fill reaches past the path: by its feather, or everywhere below 100 % density.
     if sh.fill.is_some() && sh.has_soft_mask() {
         if sh.density.is_finite() && sh.density < 1.0 {
             return Some(Rect::new(i32::MIN / 4, i32::MIN / 4, i32::MAX / 4, i32::MAX / 4));
         }
-        return Some(r.union(&photocraft_vector::feather::path_area(&sh.path, masks::feather_sigma(sh.feather))));
+        return Some(r.union(&lienzo_vector::feather::path_area(&sh.path, masks::feather_sigma(sh.feather))));
     }
     Some(r)
 }
@@ -297,13 +297,13 @@ pub(crate) fn mask_vals(layer: &Layer, rect: Rect, cx: &Ctx) -> Option<Vec<f32>>
     if masks::has_feather(layer)
         && let Some(s) = masks::combined_mask(layer, cx.canvas)
     {
-        let mut v = photocraft_raster::scratch::take_cap(rect.width() as usize * rect.height() as usize);
+        let mut v = lienzo_raster::scratch::take_cap(rect.width() as usize * rect.height() as usize);
         s.read_region_into(rect, &mut v);
         return Some(v);
     }
     let vector = layer.vector_mask.as_ref().map(|vm| cx.vector_masks.values(vm, rect));
     let Some(m) = layer.mask.as_ref() else { return vector };
-    let mut v = photocraft_raster::scratch::take_cap(rect.width() as usize * rect.height() as usize);
+    let mut v = lienzo_raster::scratch::take_cap(rect.width() as usize * rect.height() as usize);
     m.values_into(rect, &mut v);
     if let Some(vm) = vector {
         for (a, b) in v.iter_mut().zip(vm) {
@@ -316,7 +316,7 @@ pub(crate) fn mask_vals(layer: &Layer, rect: Rect, cx: &Ctx) -> Option<Vec<f32>>
 /// Hand a [`mask_vals`] result back to the scratch pool once its tile is done.
 pub(crate) fn recycle_mask(m: Option<Vec<f32>>) {
     if let Some(v) = m {
-        photocraft_raster::scratch::give(v);
+        lienzo_raster::scratch::give(v);
     }
 }
 
@@ -329,7 +329,7 @@ pub(crate) fn mask_k(m: &Option<Vec<f32>>, i: usize) -> f32 {
 /// contribute outside the stroke reach from the layer's pixels. Other `tsly=0` effects can cover
 /// the full layer, and advanced blending can change the backdrop independently of those pixels.
 pub(crate) fn shapeless_stroke_bounds(layer: &Layer) -> Option<Rect> {
-    use photocraft_doc::Knockout;
+    use lienzo_doc::Knockout;
 
     if layer.advanced.transparency_shapes
         || layer.advanced.knockout != Knockout::None
@@ -346,7 +346,7 @@ pub(crate) fn shapeless_stroke_bounds(layer: &Layer) -> Option<Rect> {
 
     if !layer.effects.enabled
         || !layer.effects.items.iter().any(|e| e.enabled())
-        || layer.effects.items.iter().any(|e| e.enabled() && !matches!(e, photocraft_doc::Effect::Stroke(_)))
+        || layer.effects.items.iter().any(|e| e.enabled() && !matches!(e, lienzo_doc::Effect::Stroke(_)))
     {
         return None;
     }
@@ -460,7 +460,7 @@ fn join(a: Rect, b: Rect) -> Rect {
 /// adjustment it covers the layers beneath it (or its clip base), which don't move with it, so it
 /// must never be translated, as a Move drag preview would. Use the context-free [`change_bounds`],
 /// which moves with the layer, for that.
-pub fn change_bounds_in(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: photocraft_color::SampleType, canvas: Rect) -> Option<Rect> {
+pub fn change_bounds_in(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: lienzo_color::SampleType, canvas: Rect) -> Option<Rect> {
     let layer = layers.get(k)?;
     if layer.clipped && matches!(layer.content, LayerContent::Adjustment(_)) {
         let base = layers.get(..k)?.iter().rev().find(|l| !l.clipped)?;
@@ -508,9 +508,9 @@ pub fn change_bounds_in(layers: &[Layer], k: usize, ancestors: &Ancestors, depth
 /// the whole backdrop to its levels after every visible adjustment layer, masked or not (#9033),
 /// so there the mask bounds nothing. Layers clipped to an adjustment composite atop the adjusted
 /// backdrop wherever they draw, and a knockout reveals what lies beneath it: both stay `None`.
-pub fn adjustment_reach(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: photocraft_color::SampleType, canvas: Rect) -> Option<Rect> {
+pub fn adjustment_reach(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: lienzo_color::SampleType, canvas: Rect) -> Option<Rect> {
     let layer = layers.get(k)?;
-    if layers.get(k + 1).is_some_and(|above| above.clipped) || layer.advanced.knockout != photocraft_doc::Knockout::None {
+    if layers.get(k + 1).is_some_and(|above| above.clipped) || layer.advanced.knockout != lienzo_doc::Knockout::None {
         return None;
     }
     let mask = adjustment_quantum(depth).is_none().then(|| adjustment_mask_bounds(layer)).flatten();
@@ -543,10 +543,10 @@ fn adjustment_mask_bounds(layer: &Layer) -> Option<Rect> {
     if !m.surface.default_pixel().first().is_some_and(|v| *v <= 0.0) {
         return None;
     }
-    let vector = layer.vector_mask.as_ref().filter(|v| v.enabled).map_or(0.0, |v| photocraft_vector::feather::feather_sigma(v.feather));
-    let sigma = photocraft_vector::feather::feather_sigma(m.feather).max(vector);
+    let vector = layer.vector_mask.as_ref().filter(|v| v.enabled).map_or(0.0, |v| lienzo_vector::feather::feather_sigma(v.feather));
+    let sigma = lienzo_vector::feather::feather_sigma(m.feather).max(vector);
     let tiles = m.surface.tile_bounds();
-    Some(if sigma > 0.0 { photocraft_vector::feather::grow(tiles, sigma) } else { tiles })
+    Some(if sigma > 0.0 { lienzo_vector::feather::grow(tiles, sigma) } else { tiles })
 }
 
 /// The union of [`composite_bounds`] of the visible layers below `layers[k]`, continuing below a
@@ -578,8 +578,8 @@ fn beneath(layers: &[Layer], k: usize, ancestors: &Ancestors, canvas: Rect) -> O
 pub type Placement<'a> = (&'a [Layer], usize, Vec<(&'a [Layer], usize)>);
 
 /// Where layer `id` sits in `doc` ([`Placement`]).
-pub fn siblings_of(doc: &Document, id: photocraft_doc::LayerId) -> Option<Placement<'_>> {
-    fn find<'a>(layers: &'a [Layer], id: photocraft_doc::LayerId, path: &mut Vec<(&'a [Layer], usize)>) -> Option<(&'a [Layer], usize)> {
+pub fn siblings_of(doc: &Document, id: lienzo_doc::LayerId) -> Option<Placement<'_>> {
+    fn find<'a>(layers: &'a [Layer], id: lienzo_doc::LayerId, path: &mut Vec<(&'a [Layer], usize)>) -> Option<(&'a [Layer], usize)> {
         for (k, l) in layers.iter().enumerate() {
             if l.id == id {
                 return Some((layers, k));
@@ -602,7 +602,7 @@ pub fn siblings_of(doc: &Document, id: photocraft_doc::LayerId) -> Option<Placem
 /// [`change_bounds_in`] of layer `id` where it sits in `doc`, grown by the reach of the effects
 /// of the groups around it (a parent's drop shadow), or `None` for anywhere (or no such layer).
 /// An in-place bound: never translate it (see [`change_bounds_in`]).
-pub fn layer_change_bounds(doc: &Document, id: photocraft_doc::LayerId) -> Option<Rect> {
+pub fn layer_change_bounds(doc: &Document, id: lienzo_doc::LayerId) -> Option<Rect> {
     let (layers, k, ancestors) = siblings_of(doc, id)?;
     let reach = ancestors.iter().filter_map(|(ls, g)| ls.get(*g)).filter(|l| effects::has_effects(l)).fold(0i32, |r, l| r.saturating_add(effects::margin(l)));
     // Bounded within that reach of the canvas, not on it: a layer just off the canvas still

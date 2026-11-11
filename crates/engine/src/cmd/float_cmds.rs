@@ -17,9 +17,9 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, PixelFormat};
-use photocraft_doc::{Document, LayerContent, LayerId};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat};
+use lienzo_doc::{Document, LayerContent, LayerId};
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -33,7 +33,7 @@ pub struct CutParts {
     pub layer: LayerId,
     rest: Surface,
     piece: Surface,
-    piece_bounds: photocraft_geom::Rect,
+    piece_bounds: lienzo_geom::Rect,
     /// The selection the moved pixels take, unmoved: the alpha the piece took, the selection
     /// limited to the layer's transparency (Photoshop shrinks the marching ants to the piece as the
     /// drag starts, #7538). `None` keeps the selection: a mask has no transparency, and an empty
@@ -146,10 +146,10 @@ impl CutParts {
 
 /// Extract the selected pixels of `base` over `b` into a `with_alpha` surface, tile by tile in
 /// parallel. Fully selected tiles on an alpha surface share `base`'s `Arc<Tile>` directly.
-fn cut_piece(base: &Surface, sel: &Surface, b: photocraft_geom::Rect, with_alpha: PixelFormat) -> Result<Surface> {
-    use photocraft_color::{SampleType, read_sample};
-    use photocraft_geom::{TILE_SIZE, TileCoord};
-    use photocraft_raster::Tile;
+fn cut_piece(base: &Surface, sel: &Surface, b: lienzo_geom::Rect, with_alpha: PixelFormat) -> Result<Surface> {
+    use lienzo_color::{SampleType, read_sample};
+    use lienzo_geom::{TILE_SIZE, TileCoord};
+    use lienzo_raster::Tile;
     use rayon::prelude::*;
 
     let mut piece = Surface::new(with_alpha);
@@ -226,7 +226,7 @@ fn cut_piece(base: &Surface, sel: &Surface, b: photocraft_geom::Rect, with_alpha
                     if px[a] <= 0.0 {
                         continue;
                     }
-                    photocraft_raster::encode_pixel(&with_alpha, &px[..n], dst_px);
+                    lienzo_raster::encode_pixel(&with_alpha, &px[..n], dst_px);
                     let non_zero = match with_alpha.sample {
                         SampleType::U8 => dst_px.get(alpha_off) != Some(&0) || dst_px.iter().any(|&v| v != 0),
                         SampleType::U16 => dst_px.get(alpha_off..dst_bpp) != Some(&[0, 0]) || dst_px.iter().any(|&v| v != 0),
@@ -293,7 +293,7 @@ fn can_float(s: &Session) -> std::result::Result<(), String> {
 
 /// Do `l`'s locks (its own, or a locked group's: `effective_locks`) stop its selected pixels
 /// floating? The Background is position-locked, but its selected pixels move (Photoshop).
-pub fn locked_for_float(doc: &Document, l: &photocraft_doc::Layer) -> bool {
+pub fn locked_for_float(doc: &Document, l: &lienzo_doc::Layer) -> bool {
     let locks = doc.effective_locks(l.id);
     locks.all || (locks.position && !doc.is_background(l.id))
 }
@@ -342,7 +342,7 @@ pub fn drop_floating(s: &mut Session) -> Result<Value> {
     s.edit(&name, |doc, _| {
         f.parts.place(doc, dx, dy)?;
         let sel = f.parts.outline().or(doc.selection.as_ref());
-        doc.selection = sel.map(|sel| photocraft_algo::resample::translate_surface(sel, dx, dy));
+        doc.selection = sel.map(|sel| lienzo_algo::resample::translate_surface(sel, dx, dy));
         Ok(())
     })?;
     Ok(json!({"dropped": true, "offset": [dx, dy]}))

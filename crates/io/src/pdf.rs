@@ -9,8 +9,8 @@
 
 use std::io::Write as _;
 
-use photocraft_color::{ColorMode, PixelFormat};
-use photocraft_doc::Document;
+use lienzo_color::{ColorMode, PixelFormat};
+use lienzo_doc::Document;
 
 use crate::{ExportResult, IoError};
 
@@ -121,7 +121,7 @@ fn marks_ops(m: Marks, (x, y, w, h): (f64, f64, f64, f64)) -> String {
 
 /// A one-page PDF.
 pub fn print_pdf(page: &PrintPage) -> Vec<u8> {
-    print_pdf_pages(std::slice::from_ref(page), &[String::new()], &selection::SelectionFont::default(), &photocraft_raster::Interrupt::NONE).unwrap_or_default()
+    print_pdf_pages(std::slice::from_ref(page), &[String::new()], &selection::SelectionFont::default(), &lienzo_raster::Interrupt::NONE).unwrap_or_default()
 }
 
 /// A PDF with one page per entry; `vectors[i]` (when present) is drawn over page `i`.
@@ -129,7 +129,7 @@ fn print_pdf_pages(
     pages: &[PrintPage],
     vectors: &[String],
     selection_font: &selection::SelectionFont,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &lienzo_raster::Interrupt,
 ) -> std::result::Result<Vec<u8>, IoError> {
     if ctl.check().is_err() {
         return Err(IoError::Cancelled);
@@ -267,7 +267,7 @@ fn collect_vectors(doc: &Document) -> (Vec<(usize, String)>, selection::Selectio
             if !layer.visible {
                 continue;
             }
-            if layer.blend != photocraft_color::BlendMode::Normal
+            if layer.blend != lienzo_color::BlendMode::Normal
                 || layer.opacity != 1.0
                 || layer.fill_opacity != 1.0
                 || layer.clipped
@@ -282,11 +282,11 @@ fn collect_vectors(doc: &Document) -> (Vec<(usize, String)>, selection::Selectio
                 break;
             }
             let candidate = match &layer.content {
-                photocraft_doc::LayerContent::Shape(shape) => match shapes::shape_path(shape, doc.mode) {
+                lienzo_doc::LayerContent::Shape(shape) => match shapes::shape_path(shape, doc.mode) {
                     Some(ops) => Candidate::Ops(ops),
                     None => break,
                 },
-                photocraft_doc::LayerContent::Text(text_layer) => {
+                lienzo_doc::LayerContent::Text(text_layer) => {
                     let Some(prepared) = text::prepare(text_layer, doc.mode, doc.resolution_dpi) else { break };
                     for ch in text_layer.text.chars() {
                         repertoire.insert(ch);
@@ -324,7 +324,7 @@ fn collect_vectors(doc: &Document) -> (Vec<(usize, String)>, selection::Selectio
 }
 
 /// Pixels in `rect`, saturating on overflow.
-fn rect_pixels(rect: photocraft_geom::Rect) -> u64 {
+fn rect_pixels(rect: lienzo_geom::Rect) -> u64 {
     u64::from(rect.width()).saturating_mul(u64::from(rect.height()))
 }
 
@@ -332,7 +332,7 @@ fn rect_pixels(rect: photocraft_geom::Rect) -> u64 {
 /// (pixels ÷ resolution × 72 pt). One page per artboard when the document has artboards, else one
 /// page for the whole document. Layers and transparency are dropped — the warning says so — and
 /// the embedded profile travels with the images.
-pub fn export(doc: &Document, ctl: &photocraft_raster::Interrupt) -> std::result::Result<ExportResult, IoError> {
+pub fn export(doc: &Document, ctl: &lienzo_raster::Interrupt) -> std::result::Result<ExportResult, IoError> {
     ctl.check().map_err(|_| IoError::Cancelled)?;
     let (w, h) = (usize::try_from(doc.size.width).unwrap_or(0), usize::try_from(doc.size.height).unwrap_or(0));
     if w == 0 || h == 0 {
@@ -390,7 +390,7 @@ pub fn export(doc: &Document, ctl: &photocraft_raster::Interrupt) -> std::result
             one.layers.clear();
             one.layers.push(group);
             // Render only this artboard's rect; the surface never holds the whole document.
-            let surface = photocraft_compose::composite_to_surface(&one, rect, PixelFormat::new(fmt.mode, fmt.sample, true), None);
+            let surface = lienzo_compose::composite_to_surface(&one, rect, PixelFormat::new(fmt.mode, fmt.sample, true), None);
             let values = surface.read_region(rect);
             let mut data = Vec::with_capacity((aw as usize * ah as usize).saturating_mul(device));
             for px in values.chunks(n) {
@@ -422,7 +422,7 @@ pub fn export(doc: &Document, ctl: &photocraft_raster::Interrupt) -> std::result
         let vectors = vec![String::new(); pages.len()];
         return Ok(ExportResult { bytes: print_pdf_pages(&pages, &vectors, &selection::SelectionFont::default(), ctl)?, warnings });
     }
-    let canvas = photocraft_geom::Rect::new(0, 0, w as i32, h as i32);
+    let canvas = lienzo_geom::Rect::new(0, 0, w as i32, h as i32);
     // Simple topmost shapes and text layers can be drawn over the flattened backdrop without changing
     // compositing. Stop at the first unsupported visible layer, since it may depend on the
     // backdrop (adjustments, blend modes, masks, effects, or clipping).
@@ -433,7 +433,7 @@ pub fn export(doc: &Document, ctl: &photocraft_raster::Interrupt) -> std::result
             layer.visible = false;
         }
     }
-    let surface = photocraft_compose::flatten_to_surface(&backdrop, PixelFormat::new(fmt.mode, fmt.sample, true), None);
+    let surface = lienzo_compose::flatten_to_surface(&backdrop, PixelFormat::new(fmt.mode, fmt.sample, true), None);
     let values = surface.read_region(canvas);
     // Straight alpha, composited here over paper: white in RGB/Gray (1 = full light), zero ink
     // in CMYK (0 = paper).

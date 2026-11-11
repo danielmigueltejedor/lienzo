@@ -2,8 +2,8 @@ use super::controls::{pointer, tool_icon, tool_tip};
 use super::lifecycle::{apply, bounds, cancel, commit, fill_edit, report, reset, set_sampling};
 use super::preview::{drive_preview, rebase, refresh};
 use super::{
-    Align2, BAR_H, CafTool, CafWorkspace, Color32, ERect, FontId, LEFT_W, PANEL_W, PREVIEW_W, PhotocraftApp, Pos2, Rect, Sense, Stroke, Tokens, ToolEvent,
-    Value, json, pos2, vec2, widgets,
+    Align2, BAR_H, CafTool, CafWorkspace, Color32, ERect, FontId, LEFT_W, LienzoApp, PANEL_W, PREVIEW_W, Pos2, Rect, Sense, Stroke, Tokens, ToolEvent, Value,
+    json, pos2, vec2, widgets,
 };
 
 /// A view: screen px per document px and the document point at the centre of `area`.
@@ -75,7 +75,7 @@ fn caf_options_bar(bui: &mut egui::Ui, w: &mut CafWorkspace, fill_btn: &mut Opti
     }
 }
 
-fn upload(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn upload(app: &mut LienzoApp, ctx: &egui::Context) {
     let need_image = app.distort.caf.as_ref().is_some_and(|w| w.image_tex.is_none());
     if need_image {
         let img = view_image(app);
@@ -106,10 +106,10 @@ fn upload(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// The document as the view shows it: the visible layers composited, as on the canvas (so an
 /// Apply to a new layer shows), reduced to the proxy.
-pub(super) fn view_image(app: &PhotocraftApp) -> Option<egui::ColorImage> {
+pub(super) fn view_image(app: &LienzoApp) -> Option<egui::ColorImage> {
     let w = app.distort.caf.as_ref()?;
     let st = app.session.active()?;
-    let buf = photocraft_compose::render_reduced(&st.doc, w.pw as u32, w.ph as u32);
+    let buf = lienzo_compose::render_reduced(&st.doc, w.pw as u32, w.ph as u32);
     let (display, _) = crate::canvas::canvas_display(app, &st.doc, None);
     Some(crate::canvas::display_image(display.as_deref(), &buf))
 }
@@ -262,7 +262,7 @@ fn caf_preview_panel(ui: &mut egui::Ui, painter: &egui::Painter, t: &Tokens, w: 
 }
 
 /// Draws the workspace (a full-window layer over the app).
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     // An Apply (or anything else) changed the document: refresh.
     let rev = app.session.active().map(|s| s.revision);
     if app.distort.caf.as_ref().is_some_and(|w| Some(w.revision) != rev) {

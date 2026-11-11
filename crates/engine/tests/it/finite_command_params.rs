@@ -1,5 +1,5 @@
 //! #6424: rejecting an overflowing f32 parameter must leave a saveable document and history.
-use photocraft_engine::{EngineError, Session};
+use lienzo_engine::{EngineError, Session};
 use serde_json::{Value, json};
 
 fn fresh(mode: &str, depth: u32) -> Session {
@@ -10,7 +10,7 @@ fn fresh(mode: &str, depth: u32) -> Session {
 }
 
 fn saved(s: &Session) -> Vec<u8> {
-    photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
+    lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
 }
 
 fn rejected(cases: Vec<(&str, Value)>) {
@@ -20,7 +20,7 @@ fn rejected(cases: Vec<(&str, Value)>) {
         let before = saved(&s);
         let undo = s.active().unwrap().history.undo_label().map(str::to_owned);
         let result = s.execute(id, p.clone());
-        let save = photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default());
+        let save = lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default());
         if !matches!(result, Err(EngineError::BadParams { .. })) {
             failures.push(format!("{id} {p}: result={result:?}, save error={:?}", save.as_ref().err()));
             continue;
@@ -104,14 +104,14 @@ fn valid_color_and_style_edits_still_save_and_undo_at_each_depth() {
             assert_eq!(saved(&s), edited);
             s.execute("layer.newFillLayer.solidColor", json!({"color": "#4080c0"})).unwrap();
             let bytes = saved(&s);
-            photocraft_format::load_from_bytes(&bytes).unwrap();
+            lienzo_format::load_from_bytes(&bytes).unwrap();
         }
     }
 }
 
 #[test]
 fn effect_snapshots_cannot_bypass_numeric_validation() {
-    let mut fx = serde_json::to_value(photocraft_engine::layer_style::effect_from_params("dropShadow", &json!({})).unwrap()).unwrap();
+    let mut fx = serde_json::to_value(lienzo_engine::layer_style::effect_from_params("dropShadow", &json!({})).unwrap()).unwrap();
     fx["DropShadow"]["angle"] = json!(1e39);
     rejected(vec![(
         "layer.layerStyle.replace",
@@ -124,11 +124,11 @@ fn effect_snapshots_cannot_bypass_numeric_validation() {
 
 #[test]
 fn direct_effect_helpers_do_not_introduce_infinity() {
-    let original = photocraft_engine::layer_style::effect_from_params("dropShadow", &json!({})).unwrap();
+    let original = lienzo_engine::layer_style::effect_from_params("dropShadow", &json!({})).unwrap();
     for p in [json!({"angle": 1e39}), json!({"color": [0, -1e39, 0]})] {
-        assert!(photocraft_engine::layer_style::effect_from_params("dropShadow", &p).is_none());
+        assert!(lienzo_engine::layer_style::effect_from_params("dropShadow", &p).is_none());
         let mut edited = original.clone();
-        photocraft_engine::layer_style::overlay_effect(&mut edited, &p);
+        lienzo_engine::layer_style::overlay_effect(&mut edited, &p);
         assert_eq!(edited, original);
     }
 }
@@ -147,8 +147,8 @@ fn finite_hdr_colors_are_preserved_without_unit_clamping() {
     let mut s = fresh("rgb", 32);
     let id = s.execute("layer.newFillLayer.solidColor", json!({"color": [4.0, -0.5, 0.25]})).unwrap()["layer"].as_u64().unwrap();
     let bytes = saved(&s);
-    let reopened = photocraft_format::load_from_bytes(&bytes).unwrap();
-    let layer = reopened.layer(photocraft_doc::LayerId(id)).unwrap();
-    let photocraft_doc::LayerContent::Fill(photocraft_doc::Fill::Solid(c)) = &layer.content else { panic!("expected a solid fill") };
+    let reopened = lienzo_format::load_from_bytes(&bytes).unwrap();
+    let layer = reopened.layer(lienzo_doc::LayerId(id)).unwrap();
+    let lienzo_doc::LayerContent::Fill(lienzo_doc::Fill::Solid(c)) = &layer.content else { panic!("expected a solid fill") };
     assert_eq!(c.to_rgb(), [4.0, -0.5, 0.25]);
 }

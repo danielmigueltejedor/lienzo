@@ -26,7 +26,7 @@ shrink by the same area ratio. These are buffer sizes, not measured peak RSS.
 On a CI runner, run:
 
 ```sh
-RAYON_NUM_THREADS=4 cargo test --release -p photocraft-engine --lib color_range_release_comparison -- --ignored --nocapture
+RAYON_NUM_THREADS=4 cargo test --release -p lienzo-engine --lib color_range_release_comparison -- --ignored --nocapture
 ```
 
 Or dispatch `ci.yml` with `color_range=true`. It runs the Linux release comparison,

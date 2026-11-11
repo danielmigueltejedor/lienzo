@@ -4,7 +4,7 @@
 //! way an agent would, and checks the outcome through `doc_inspect`, `document.pixel` or the
 //! exported files, never engine internals.
 
-use photocraft_automation::{AuthorizedWorkspace, PhotocraftMcp};
+use lienzo_automation::{AuthorizedWorkspace, LienzoMcp};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};
@@ -25,7 +25,7 @@ async fn connect(root: &std::path::Path) -> (Conn, Server) {
     let (s, c) = tokio::io::duplex(1 << 20);
     let workspace = AuthorizedWorkspace::new(Some(root), Some(root)).expect("test workspace");
     let server = tokio::spawn(async move {
-        if let Ok(running) = PhotocraftMcp::headless_with_workspace(workspace).serve(s).await {
+        if let Ok(running) = LienzoMcp::headless_with_workspace(workspace).serve(s).await {
             let _ = running.waiting().await;
         }
     });

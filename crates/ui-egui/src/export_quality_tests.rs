@@ -3,7 +3,7 @@
 //! only for a JPEG with Custom on: left alone, an export writes what the command writes with no
 //! quality (the source JPEG's own quality, else the encoder default), a WebP stays lossless and
 //! PNG has none.
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use egui::accesskit::Role;
 use egui::vec2;
 use egui_kittest::Harness;
@@ -13,10 +13,10 @@ use serde_json::{Value, json};
 const ARTBOARDS: &str = "file.export.artboardsToFiles";
 const EXPORTS: [&str; 3] = [ARTBOARDS, "file.export.layersToFiles", "file.export.layerCompsToFiles"];
 
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(photocraft_engine::Session::new(), Default::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(lienzo_engine::Session::new(), Default::default())
     });
     let app = h.state_mut();
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
@@ -30,7 +30,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn open(h: &mut Harness<'_, PhotocraftApp>, id: &str, dir: &str, format: &str) -> u64 {
+fn open(h: &mut Harness<'_, LienzoApp>, id: &str, dir: &str, format: &str) -> u64 {
     let ctx = h.ctx.clone();
     let dialog = crate::menus::invoke(h.state_mut(), &ctx, id, json!({})).unwrap()["dialog"].as_u64().unwrap();
     let fields = &mut h.state_mut().ui.dialog_mut(dialog).unwrap().fields;
@@ -41,17 +41,17 @@ fn open(h: &mut Harness<'_, PhotocraftApp>, id: &str, dir: &str, format: &str) -
     dialog
 }
 
-fn params(h: &mut Harness<'_, PhotocraftApp>, dialog: u64) -> Value {
+fn params(h: &mut Harness<'_, LienzoApp>, dialog: u64) -> Value {
     crate::filter_dialog::params_of(&h.state_mut().ui.dialog_mut(dialog).unwrap().fields)
 }
 
-fn exported(h: &mut Harness<'_, PhotocraftApp>, dialog: u64) -> Vec<u8> {
+fn exported(h: &mut Harness<'_, LienzoApp>, dialog: u64) -> Vec<u8> {
     let r = crate::dialogs::confirm(h.state_mut(), dialog).unwrap();
     std::fs::read(r["files"][0].as_str().unwrap()).unwrap()
 }
 
 /// The same export run straight through the command, into `dir`.
-fn direct(h: &mut Harness<'_, PhotocraftApp>, dir: &str, format: &str, quality: Option<i64>) -> Vec<u8> {
+fn direct(h: &mut Harness<'_, LienzoApp>, dir: &str, format: &str, quality: Option<i64>) -> Vec<u8> {
     let mut p = json!({"dir": dir, "prefix": "out", "format": format});
     if let Some(q) = quality {
         p["quality"] = json!(q);
@@ -61,7 +61,7 @@ fn direct(h: &mut Harness<'_, PhotocraftApp>, dir: &str, format: &str, quality: 
 }
 
 /// Whether the Quality number field (not its row label) takes input.
-fn quality_enabled(h: &Harness<'_, PhotocraftApp>) -> bool {
+fn quality_enabled(h: &Harness<'_, LienzoApp>) -> bool {
     let fields: Vec<bool> =
         h.query_all_by_label("Quality").filter(|n| n.accesskit_node().role() != Role::Label).map(|n| !n.accesskit_node().is_disabled()).collect();
     assert!(!fields.is_empty(), "the dialog shows a Quality field");
@@ -70,22 +70,22 @@ fn quality_enabled(h: &Harness<'_, PhotocraftApp>) -> bool {
 }
 
 /// Whether the Custom checkbox is ticked.
-fn custom_ticked(h: &Harness<'_, PhotocraftApp>) -> bool {
+fn custom_ticked(h: &Harness<'_, LienzoApp>) -> bool {
     h.get_by_role_and_label(Role::CheckBox, "Custom").accesskit_node().toggled() == Some(egui::accesskit::Toggled::True)
 }
 
 /// The value the Quality field shows.
-fn shown_quality(h: &Harness<'_, PhotocraftApp>) -> Option<f64> {
+fn shown_quality(h: &Harness<'_, LienzoApp>) -> Option<f64> {
     h.get_by_role_and_label(Role::SpinButton, "Quality").accesskit_node().numeric_value()
 }
 
-fn tick_custom(h: &mut Harness<'_, PhotocraftApp>) {
+fn tick_custom(h: &mut Harness<'_, LienzoApp>) {
     h.get_by_role_and_label(Role::CheckBox, "Custom").click();
     h.run_steps(2);
 }
 
 /// Types `text` into the Quality field and commits it with Tab, as a user does.
-fn type_quality(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
+fn type_quality(h: &mut Harness<'_, LienzoApp>, text: &str) {
     h.get_by_role_and_label(Role::SpinButton, "Quality").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -99,7 +99,7 @@ fn type_quality(h: &mut Harness<'_, PhotocraftApp>, text: &str) {
 }
 
 /// Holds Alt, which turns Cancel into Reset, and clicks it.
-fn alt_reset(h: &mut Harness<'_, PhotocraftApp>) {
+fn alt_reset(h: &mut Harness<'_, LienzoApp>) {
     let alt = egui::Modifiers::ALT;
     h.event(egui::Event::ModifiersChanged(alt));
     h.run_steps(2);

@@ -1,8 +1,8 @@
 //! Public-API regressions for the dialog-event and Batch review findings.
-use photocraft_doc::LayerContent;
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
+use lienzo_doc::LayerContent;
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
 use serde_json::{Value, json};
 
 /// A bounded synthetic document for command and channel comparisons.
@@ -61,7 +61,7 @@ fn mesh_three_value_shaper_is_applied() {
                 }
             }
         }
-        let lut = photocraft_cms::lutfile::parse_3dl(&text).unwrap();
+        let lut = lienzo_cms::lutfile::parse_3dl(&text).unwrap();
         let mid = ((lut.size / 2 * lut.size + lut.size / 2) * lut.size + lut.size / 2) * 3;
         assert!((lut.data[mid] - expected).abs() < 0.002, "{shaper}: {}", lut.data[mid]);
     }
@@ -151,12 +151,12 @@ fn custom_supported_representations_map_and_save_losslessly() {
         let commands: Vec<_> = played.journal.iter().filter(|(id, _)| id == "filter.other.custom").collect();
         assert!(!commands.is_empty());
         assert!(commands.iter().all(|(_, params)| params.get("__atnCustom").is_none()));
-        let (id, last) = photocraft_engine::filters::last_filter(&played).unwrap();
+        let (id, last) = lienzo_engine::filters::last_filter(&played).unwrap();
         assert_eq!(id, "filter.other.custom");
         assert!(last.get("__atnCustom").is_none());
         assert!(played.actions.list[0].steps[0].1.get("__atnCustom").is_some());
         assert_eq!(exported(&played.actions.list[0]), d, "Save Actions still owns the original descriptor");
-        assert_eq!(photocraft_compose::flatten(&played.active().unwrap().doc).px, photocraft_compose::flatten(&native.active().unwrap().doc).px);
+        assert_eq!(lienzo_compose::flatten(&played.active().unwrap().doc).px, lienzo_compose::flatten(&native.active().unwrap().doc).px);
         action.steps[0].1["scale"] = json!(4);
         assert_eq!(exported(&action).get("Scl "), Some(&D::Integer(4)), "editing must not reuse stale original metadata");
     }
@@ -194,10 +194,10 @@ fn calculations_uncached_shape_matches_cached_pixels() {
             s.edit("Source shape", |doc, _| {
                 let fmt = doc.pixel_format();
                 let area = doc.bounds();
-                let layer = doc.layer_mut(photocraft_doc::LayerId(id)).unwrap();
+                let layer = doc.layer_mut(lienzo_doc::LayerId(id)).unwrap();
                 layer.name.clear();
                 if let LayerContent::Shape(shape) = &mut layer.content {
-                    shape.cache = if drop_cache { None } else { Some(photocraft_vector::render_shape(shape, fmt, area)) };
+                    shape.cache = if drop_cache { None } else { Some(lienzo_vector::render_shape(shape, fmt, area)) };
                 }
                 Ok(())
             })
@@ -231,12 +231,12 @@ fn named_batch_resolves_recorded_layer_targets() {
     let mut source = session("rgb");
     source.execute("layer.new.layer", json!({"name":"Target"})).unwrap();
     source.execute("layer.new.layer", json!({"name":"Active"})).unwrap();
-    std::fs::write(&input, photocraft_format::save_to_bytes(&source.active().unwrap().doc, &Default::default()).unwrap()).unwrap();
+    std::fs::write(&input, lienzo_format::save_to_bytes(&source.active().unwrap().doc, &Default::default()).unwrap()).unwrap();
     let mut s = Session::new();
     s.actions.list.push(Action::new("Hide", vec![("layer.setProps".into(), json!({"visible":false,"_actionLayer":{"name":"Target","ordinal":0}}))]));
     let result = s.execute("file.automate.batch", json!({"input":[input],"output":dir.path().join("out"),"format":"pcraft","action":"Hide"})).unwrap();
     assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-    let saved = photocraft_io::import("saved.pcraft", &std::fs::read(dir.path().join("out/layers.pcraft")).unwrap()).unwrap().document;
+    let saved = lienzo_io::import("saved.pcraft", &std::fs::read(dir.path().join("out/layers.pcraft")).unwrap()).unwrap().document;
     assert!(!saved.walk().iter().find(|(_, _, l)| l.name == "Target").unwrap().2.visible);
     assert!(saved.walk().iter().find(|(_, _, l)| l.name == "Active").unwrap().2.visible);
 }
@@ -313,15 +313,11 @@ fn batch_save_close_refuses_changed_exr_windows() {
             assert_eq!(result["files"].as_array().unwrap().len(), usize::from(accepted), "{result}");
             if accepted {
                 let after = std::fs::read(&input).unwrap();
-                let info = photocraft_codecs::exr_info(&after, &Default::default()).unwrap();
+                let info = lienzo_codecs::exr_info(&after, &Default::default()).unwrap();
                 assert_eq!(info[0].data_window, (0, 0, 2, 2));
                 assert_eq!(info[0].display_window, info[0].data_window);
                 let rgba = |bytes: &[u8]| {
-                    photocraft_codecs::decode(bytes)
-                        .unwrap()
-                        .convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::F32)
-                        .to_f32_samples()
-                        .unwrap()
+                    lienzo_codecs::decode(bytes).unwrap().convert(lienzo_codecs::ChannelLayout::Rgba, lienzo_codecs::SampleType::F32).to_f32_samples().unwrap()
                 };
                 assert_eq!(rgba(&after), rgba(&before));
             } else {
@@ -340,16 +336,16 @@ fn batch_save_close_refuses_changed_exr_windows() {
 /// Targa alpha remains source data even when its descriptor omits the alpha flag.
 #[test]
 fn batch_save_close_refuses_targa_24_alpha_loss() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image};
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("alpha.tga");
     for (alpha, descriptor_alpha) in [([0, 173], true), ([0, 0], true), ([0, 173], false)] {
         let image = Image::from_u8(2, 1, ChannelLayout::Rgba, vec![11, 22, 33, alpha[0], 77, 88, 99, alpha[1]]).unwrap();
-        let mut before = photocraft_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap();
+        let mut before = lienzo_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap();
         if !descriptor_alpha {
             before[17] &= 0xf0;
         }
-        let opened = photocraft_io::import("alpha.tga", &before).unwrap().document;
+        let opened = lienzo_io::import("alpha.tga", &before).unwrap().document;
         assert_eq!(opened.channels.len(), 1, "the fixture must retain its imported alpha plane");
         for snapshot in [false, true] {
             std::fs::write(&input, &before).unwrap();
@@ -368,17 +364,17 @@ fn batch_save_close_refuses_targa_24_alpha_loss() {
 /// Automatic/32-bit Targa keeps hidden RGB and alpha; separate 24-bit output reports the loss.
 #[test]
 fn batch_targa_preservation_and_export_warnings() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image};
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("alpha.tga");
     let pixels = vec![11, 22, 33, 0, 77, 88, 99, 173];
     let image = Image::from_u8(2, 1, ChannelLayout::Rgba, pixels.clone()).unwrap();
-    let before = photocraft_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap();
+    let before = lienzo_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap();
     for bits in [Value::Null, json!(32)] {
         std::fs::write(&input, &before).unwrap();
         let result = Session::new().execute("file.automate.batch", json!({"input":[input],"destination":"saveAndClose","tgaBits":bits,"steps":[]})).unwrap();
         assert_eq!(result["files"], json!([input]), "{result}");
-        assert_eq!(photocraft_codecs::decode(&std::fs::read(&input).unwrap()).unwrap().data(), pixels);
+        assert_eq!(lienzo_codecs::decode(&std::fs::read(&input).unwrap()).unwrap().data(), pixels);
     }
     for snapshot in [false, true] {
         std::fs::write(&input, &before).unwrap();
@@ -388,7 +384,7 @@ fn batch_targa_preservation_and_export_warnings() {
             .unwrap();
         assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
         let output = result["files"][0].as_str().unwrap();
-        assert_eq!(photocraft_codecs::decode(&std::fs::read(output).unwrap()).unwrap().data(), &[11, 22, 33, 77, 88, 99]);
+        assert_eq!(lienzo_codecs::decode(&std::fs::read(output).unwrap()).unwrap().data(), &[11, 22, 33, 77, 88, 99]);
         assert!(
             result["notices"]
                 .as_array()
@@ -404,24 +400,24 @@ fn batch_targa_preservation_and_export_warnings() {
 /// Explicit 24-bit options do not reject opaque RGB or the grayscale Targa option bypass.
 #[test]
 fn batch_targa_24_keeps_opaque_and_gray_alpha_results() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image};
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("allowed.tga");
     for (layout, pixels) in [(ChannelLayout::Rgb, vec![11, 22, 33, 77, 88, 99]), (ChannelLayout::GrayA, vec![0, 0, 96, 255])] {
         let image = Image::from_u8(2, 1, layout, pixels.clone()).unwrap();
-        std::fs::write(&input, photocraft_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap()).unwrap();
+        std::fs::write(&input, lienzo_codecs::encode(&image, Format::Tga, &EncodeOptions::default()).unwrap()).unwrap();
         let result = Session::new().execute("file.automate.batch", json!({"input":[input],"destination":"saveAndClose","tgaBits":24,"steps":[]})).unwrap();
         assert_eq!(result["files"], json!([input]), "{result}");
-        assert_eq!(photocraft_codecs::decode(&std::fs::read(&input).unwrap()).unwrap().data(), pixels);
+        assert_eq!(lienzo_codecs::decode(&std::fs::read(&input).unwrap()).unwrap().data(), pixels);
     }
 }
 
 /// A tiny flat TIFF with real composite transparency and an optional retained alpha plane.
 fn batch_tiff_alpha_fixture(extra: bool, opaque: bool) -> Vec<u8> {
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::{AlphaChannel, Document, Layer};
-    use photocraft_geom::{Rect, Size};
-    use photocraft_raster::Surface;
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_doc::{AlphaChannel, Document, Layer};
+    use lienzo_geom::{Rect, Size};
+    use lienzo_raster::Surface;
     let mut doc = Document::new("alpha", Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
     let mut pixels = Surface::new(doc.pixel_format());
     pixels.fill_rect(if opaque { Rect::new(0, 0, 2, 2) } else { Rect::new(1, 1, 2, 2) }, &[1.0, 0.0, 0.0, 1.0]);
@@ -431,7 +427,7 @@ fn batch_tiff_alpha_fixture(extra: bool, opaque: bool) -> Vec<u8> {
         mask.fill_rect(Rect::new(0, 0, 1, 2), &[1.0]);
         doc.channels.push(AlphaChannel::new("Mask", mask));
     }
-    photocraft_io::export(&doc, "alpha.tif", &photocraft_io::ExportOptions { tiff_transparency: Some(true), ..Default::default() }).unwrap().bytes
+    lienzo_io::export(&doc, "alpha.tif", &lienzo_io::ExportOptions { tiff_transparency: Some(true), ..Default::default() }).unwrap().bytes
 }
 
 /// The actual flat path refuses explicit and auxiliary-plane matting before replacing the source.
@@ -476,8 +472,8 @@ fn batch_tiff_alpha_guard_keeps_legitimate_results() {
             .unwrap();
         assert_eq!(result["files"], json!([input]), "{result}");
         let bytes = std::fs::read(&input).unwrap();
-        assert_eq!(photocraft_codecs::tiff_photoshop_tags(&bytes).1.is_some(), layered);
-        let back = photocraft_io::import("allowed.tif", &bytes).unwrap().document;
+        assert_eq!(lienzo_codecs::tiff_photoshop_tags(&bytes).1.is_some(), layered);
+        let back = lienzo_io::import("allowed.tif", &bytes).unwrap().document;
         assert_eq!(back.channels.len(), 1);
         assert_eq!(back.channels[0].surface.pixel(0, 0)[0], 1.0);
         assert_eq!(back.channels[0].surface.pixel(1, 1)[0], 0.0);
@@ -485,8 +481,8 @@ fn batch_tiff_alpha_guard_keeps_legitimate_results() {
             let LayerContent::Raster(surface) = &back.layers[0].content else { panic!("the saved layer must remain raster") };
             assert_eq!(surface.pixel(0, 0).last().copied(), Some(0.0));
         } else {
-            let actual = photocraft_codecs::decode(&bytes).unwrap();
-            let original = photocraft_codecs::decode(&before).unwrap();
+            let actual = lienzo_codecs::decode(&bytes).unwrap();
+            let original = lienzo_codecs::decode(&before).unwrap();
             assert_eq!(actual.data(), original.data());
         }
     }
@@ -499,13 +495,13 @@ fn cancel_largest_custom_shape(smart: bool) -> (std::time::Duration, std::time::
     if smart {
         s.execute("filter.convertForSmartFilters", json!({})).unwrap();
     }
-    let before = photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
+    let before = lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
     assert!(s.execute("filter.blur.shapeBlur", json!({"radius":5,"shapePath":{"subpaths":[]}})).is_err());
-    assert_eq!(photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
+    assert_eq!(lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
     let knots: Vec<_> = (0..2048).map(|i| json!([if i % 2 == 0 { 0 } else { 1000 }, (i * 617) % 1001])).collect();
     let params = json!({"radius":1000,"shapePath":{"subpaths":[{"closed":true,"knots":knots}]}});
     let start = std::time::Instant::now();
-    let photocraft_engine::jobs::Started::Job(job) = s.start("filter.blur.shapeBlur", params).unwrap() else { panic!("background filter job") };
+    let lienzo_engine::jobs::Started::Job(job) = s.start("filter.blur.shapeBlur", params).unwrap() else { panic!("background filter job") };
     let admitted = start.elapsed();
     assert!(s.cancel_job(job));
     s.join_cancelled_jobs();
@@ -517,8 +513,8 @@ fn cancel_largest_custom_shape(smart: bool) -> (std::time::Duration, std::time::
         assert!(start.elapsed() < std::time::Duration::from_secs(60), "the cancelled job never reported");
         std::thread::sleep(std::time::Duration::from_millis(2));
     };
-    assert_eq!(outcome, photocraft_engine::jobs::JobOutcome::Cancelled, "smart={smart}");
-    assert_eq!(photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
+    assert_eq!(outcome, lienzo_engine::jobs::JobOutcome::Cancelled, "smart={smart}");
+    assert_eq!(lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
     (admitted, drained)
 }
 
@@ -534,7 +530,7 @@ fn custom_shape_preparation_yields_a_cancellable_job() {
 #[test]
 // Wall-clock timing depends on machine load (the release corpus job runs every test), so it is
 // opt-in, like `cancel_takes_effect_within_200_ms_on_24_mp`.
-#[ignore = "timing: cargo test --release -p photocraft-engine --test it custom_shape_preparation_cancels_quickly -- --ignored"]
+#[ignore = "timing: cargo test --release -p lienzo-engine --test it custom_shape_preparation_cancels_quickly -- --ignored"]
 fn custom_shape_preparation_cancels_quickly() {
     for smart in [false, true] {
         let (admitted, drained) = cancel_largest_custom_shape(smart);
@@ -547,8 +543,8 @@ fn custom_shape_preparation_cancels_quickly() {
 /// Source-preservation inspection must follow the recorded Open's authorization gate.
 #[test]
 fn batch_exr_preservation_does_not_preempt_open_authorization() {
-    fn deny_open(id: &str, _: &Value) -> photocraft_engine::Result<()> {
-        if id == "file.openExrParts" { Err(photocraft_engine::EngineError::Other("recorded Open denied".into())) } else { Ok(()) }
+    fn deny_open(id: &str, _: &Value) -> lienzo_engine::Result<()> {
+        if id == "file.openExrParts" { Err(lienzo_engine::EngineError::Other("recorded Open denied".into())) } else { Ok(()) }
     }
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("unreadable.exr");
@@ -611,9 +607,9 @@ fn batch_naming_components_rebuild_without_original_descriptor() {
 }
 
 /// Tiny encoded sources keep Batch tests independent of external image assets.
-fn small_image(format: photocraft_codecs::Format) -> Vec<u8> {
-    let image = photocraft_codecs::Image::from_u8(2, 2, photocraft_codecs::ChannelLayout::Rgba, [32, 64, 128, 255].repeat(4)).unwrap();
-    photocraft_codecs::encode(&image, format, &Default::default()).unwrap()
+fn small_image(format: lienzo_codecs::Format) -> Vec<u8> {
+    let image = lienzo_codecs::Image::from_u8(2, 2, lienzo_codecs::ChannelLayout::Rgba, [32, 64, 128, 255].repeat(4)).unwrap();
+    lienzo_codecs::encode(&image, format, &Default::default()).unwrap()
 }
 
 /// A real one-name Batch import follows its own renamed action, never a same-name existing action.
@@ -622,7 +618,7 @@ fn imported_batch_references_follow_collision_renames_once_and_keep_other_sets()
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("input.png");
     let output = dir.path().join("out");
-    std::fs::write(&input, small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(&input, small_image(lienzo_codecs::Format::Png)).unwrap();
     let d = Descriptor::new("Btch")
         .with("null", path(dir.path().to_str().unwrap()))
         .with("T   ", path(output.to_str().unwrap()))
@@ -641,7 +637,7 @@ fn imported_batch_references_follow_collision_renames_once_and_keep_other_sets()
     let mut old = Action::new("Child", vec![("select.deselect".into(), json!({}))]);
     old.set = Some("Other".into());
     s.actions.list.push(old);
-    let loaded = s.execute("actions.load", json!({"data":photocraft_paint::tile::b64_encode(&atn::write(&file).unwrap()),"replace":false})).unwrap();
+    let loaded = s.execute("actions.load", json!({"data":lienzo_paint::tile::b64_encode(&atn::write(&file).unwrap()),"replace":false})).unwrap();
     let own_name = loaded["actions"][1].as_str().unwrap();
     let imported = &s.actions.list[1];
     assert_eq!(imported.steps[0].1["action"], own_name);
@@ -650,8 +646,8 @@ fn imported_batch_references_follow_collision_renames_once_and_keep_other_sets()
     let batch = imported.steps[0].1.clone();
     let result = s.execute("file.automate.batch", batch).unwrap();
     assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-    let doc = photocraft_io::import("output.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
-    assert_eq!(doc.size, photocraft_doc::Size::new(3, 1), "the renamed imported child ran");
+    let doc = lienzo_io::import("output.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+    assert_eq!(doc.size, lienzo_doc::Size::new(3, 1), "the renamed imported child ran");
 }
 
 /// Null is the optional default set, while invalid typed and explicit set values remain distinct.
@@ -680,7 +676,7 @@ fn batch_null_set_exports_like_absent_and_preserves_explicit_sets() {
 #[test]
 fn batch_unqualified_export_keeps_cross_set_resolution() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("input.png"), small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(dir.path().join("input.png"), small_image(lienzo_codecs::Format::Png)).unwrap();
     for edited in [false, true] {
         let p = json!({"input":dir.path(),"output":dir.path().join(format!("out-{edited}")),"action":"Child","stopOnError":true,"includeNonImages":true,"namingComponents":[{"component":"name"},{"component":"extension"}]});
         let mut parent = Action::new("Parent", vec![("file.automate.batch".into(), p)]);
@@ -697,8 +693,8 @@ fn batch_unqualified_export_keeps_cross_set_resolution() {
         s.actions.list.push(child);
         let result = s.execute("file.automate.batch", batch).unwrap();
         assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-        let doc = photocraft_io::import("out.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
-        assert_eq!(doc.size, photocraft_doc::Size::new(3, 1));
+        let doc = lienzo_io::import("out.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+        assert_eq!(doc.size, lienzo_doc::Size::new(3, 1));
     }
 }
 
@@ -706,7 +702,7 @@ fn batch_unqualified_export_keeps_cross_set_resolution() {
 #[test]
 fn batch_load_override_preserves_original_set_identity_and_foreign_references() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("input.png"), small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(dir.path().join("input.png"), small_image(lienzo_codecs::Format::Png)).unwrap();
     for (foreign, collision) in [(false, false), (false, true), (true, true)] {
         let params = json!({"input":dir.path(),"output":dir.path().join(format!("out-{foreign}-{collision}")),"action":"Child","set":if foreign {"Destination"} else {"Original"},"stopOnError":true,"includeNonImages":true,"namingComponents":[{"component":"name"},{"component":"extension"}]});
         let parent = Action::new("Parent", vec![("file.automate.batch".into(), params)]);
@@ -718,7 +714,7 @@ fn batch_load_override_preserves_original_set_identity_and_foreign_references() 
             old.set = Some("Destination".into());
             s.actions.list.push(old);
         }
-        let loaded = s.execute("actions.load", json!({"data":photocraft_paint::tile::b64_encode(&bytes),"set":"Destination","replace":false})).unwrap();
+        let loaded = s.execute("actions.load", json!({"data":lienzo_paint::tile::b64_encode(&bytes),"set":"Destination","replace":false})).unwrap();
         let parent = s.actions.list.iter().find(|a| a.name == loaded["actions"][0].as_str().unwrap()).unwrap();
         let batch = parent.steps[0].1.clone();
         assert_eq!(batch["set"], "Destination");
@@ -728,14 +724,14 @@ fn batch_load_override_preserves_original_set_identity_and_foreign_references() 
         assert_eq!(saved.actions[0].steps[0].1["action"], batch["action"]);
         let result = s.execute("file.automate.batch", batch).unwrap();
         assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-        let doc = photocraft_io::import("out.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
-        assert_eq!(doc.size, photocraft_doc::Size::new(if foreign { 5 } else { 3 }, 1));
+        let doc = lienzo_io::import("out.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+        assert_eq!(doc.size, lienzo_doc::Size::new(if foreign { 5 } else { 3 }, 1));
     }
 }
 
 /// A real one-bit transparency-mask IFD, skipped by default TIFF decoding, retains separate data.
 fn tiff_with_separate_mask() -> Vec<u8> {
-    let mut bytes = small_image(photocraft_codecs::Format::Tiff);
+    let mut bytes = small_image(lienzo_codecs::Format::Tiff);
     assert_eq!(&bytes[..2], b"II");
     let first = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize;
     let count = u16::from_le_bytes(bytes[first..first + 2].try_into().unwrap()) as usize;
@@ -766,7 +762,7 @@ fn tiff_with_separate_mask() -> Vec<u8> {
     }
     bytes.extend_from_slice(&0u32.to_le_bytes());
     bytes.extend_from_slice(&[0x80, 0x40]);
-    assert!(photocraft_codecs::tiff_info(&bytes).unwrap().pages.iter().any(|p| p.kind == photocraft_codecs::TiffPageKind::Mask));
+    assert!(lienzo_codecs::tiff_info(&bytes).unwrap().pages.iter().any(|p| p.kind == lienzo_codecs::TiffPageKind::Mask));
     bytes
 }
 
@@ -820,17 +816,17 @@ fn tiff_with_aux_channels(extras: usize, alpha: bool) -> Vec<u8> {
 #[test]
 fn batch_save_close_preserves_additional_images_and_allows_single_images() {
     let dir = tempfile::tempdir().unwrap();
-    let still = small_image(photocraft_codecs::Format::Gif);
+    let still = small_image(lienzo_codecs::Format::Gif);
     let flags = still[10];
     let blocks = 13 + if flags & 0x80 != 0 { 3usize << ((flags & 7) + 1) } else { 0 };
     let mut animated = still[..still.len() - 1].to_vec();
     animated.extend_from_slice(&still[blocks..]);
-    assert_eq!(photocraft_codecs::decode_gif_frames(&animated, &Default::default()).unwrap().len(), 2);
-    let dpx = small_image(photocraft_codecs::Format::Dpx);
+    assert_eq!(lienzo_codecs::decode_gif_frames(&animated, &Default::default()).unwrap().len(), 2);
+    let dpx = small_image(lienzo_codecs::Format::Dpx);
     let mut elements = dpx.clone();
     elements[770..772].copy_from_slice(&2u16.to_be_bytes());
     elements.extend_from_slice(b"distinct second DPX element payload");
-    let dds = small_image(photocraft_codecs::Format::Dds);
+    let dds = small_image(lienzo_codecs::Format::Dds);
     let mut slices = dds.clone();
     slices[24..28].copy_from_slice(&2u32.to_le_bytes());
     let mut second = dds[128..].to_vec();
@@ -839,13 +835,13 @@ fn batch_save_close_preserves_additional_images_and_allows_single_images() {
     let mut faces = slices.clone();
     faces[24..28].copy_from_slice(&0u32.to_le_bytes());
     faces[112..116].copy_from_slice(&0xc00u32.to_le_bytes());
-    let rgb = photocraft_codecs::Image::from_u8(2, 2, photocraft_codecs::ChannelLayout::Rgb, [32, 64, 128].repeat(4)).unwrap();
-    let mut options = photocraft_codecs::EncodeOptions::default();
+    let rgb = lienzo_codecs::Image::from_u8(2, 2, lienzo_codecs::ChannelLayout::Rgb, [32, 64, 128].repeat(4)).unwrap();
+    let mut options = lienzo_codecs::EncodeOptions::default();
     options.dds.mipmaps = true;
-    let mut mipmaps = photocraft_codecs::encode(&rgb, photocraft_codecs::Format::Dds, &options).unwrap();
+    let mut mipmaps = lienzo_codecs::encode(&rgb, lienzo_codecs::Format::Dds, &options).unwrap();
     let flags = u32::from_le_bytes(mipmaps[8..12].try_into().unwrap());
     mipmaps[8..12].copy_from_slice(&(flags & !0x0002_0000).to_le_bytes());
-    let fits = photocraft_codecs::encode(&rgb, photocraft_codecs::Format::Fits, &Default::default()).unwrap();
+    let fits = lienzo_codecs::encode(&rgb, lienzo_codecs::Format::Fits, &Default::default()).unwrap();
     let mut hdu = fits.clone();
     hdu[..80].fill(b' ');
     hdu[..17].copy_from_slice(b"XTENSION= 'IMAGE'");
@@ -887,10 +883,10 @@ fn batch_save_close_preserves_additional_images_and_allows_single_images() {
         ("tiff", tiff_with_separate_mask()),
     ];
     for alpha in [false, true] {
-        cases.push(("tiff", tiff_with_aux_channels(photocraft_codecs::MAX_EXTRA_SAMPLES + 1, alpha)));
+        cases.push(("tiff", tiff_with_aux_channels(lienzo_codecs::MAX_EXTRA_SAMPLES + 1, alpha)));
     }
     for (index, (extension, multiple)) in cases.into_iter().enumerate() {
-        photocraft_codecs::decode(&multiple).unwrap();
+        lienzo_codecs::decode(&multiple).unwrap();
         let input = dir.path().join(format!("source.{extension}"));
         for steps in [
             json!([]),
@@ -911,12 +907,12 @@ fn batch_save_close_preserves_additional_images_and_allows_single_images() {
         assert!(std::path::Path::new(result["files"][0].as_str().unwrap()).is_file());
         assert_eq!(std::fs::read(&input).unwrap(), multiple);
     }
-    for (extension, bytes) in [("gif", still), ("dpx", dpx), ("dds", dds), ("fits", fits), ("tiff", small_image(photocraft_codecs::Format::Tiff))] {
+    for (extension, bytes) in [("gif", still), ("dpx", dpx), ("dds", dds), ("fits", fits), ("tiff", small_image(lienzo_codecs::Format::Tiff))] {
         let input = dir.path().join(format!("still.{extension}"));
         std::fs::write(&input, bytes).unwrap();
         let result = Session::new().execute("file.automate.batch", json!({"input":[input],"destination":"saveAndClose","steps":[]})).unwrap();
         assert_eq!(result["files"].as_array().unwrap().len(), 1, "{extension}: {result}");
-        assert!(!photocraft_codecs::has_unretained_source_data(&std::fs::read(input).unwrap()).unwrap());
+        assert!(!lienzo_codecs::has_unretained_source_data(&std::fs::read(input).unwrap()).unwrap());
     }
 }
 
@@ -925,15 +921,15 @@ fn batch_save_close_preserves_additional_images_and_allows_single_images() {
 fn batch_save_close_preserves_aux_channels_at_the_supported_cap() {
     let dir = tempfile::tempdir().unwrap();
     for alpha in [false, true] {
-        for extras in [photocraft_codecs::MAX_EXTRA_SAMPLES - 1, photocraft_codecs::MAX_EXTRA_SAMPLES] {
+        for extras in [lienzo_codecs::MAX_EXTRA_SAMPLES - 1, lienzo_codecs::MAX_EXTRA_SAMPLES] {
             let bytes = tiff_with_aux_channels(extras, alpha);
-            let expected = photocraft_codecs::decode(&bytes).unwrap().meta.extra_samples;
+            let expected = lienzo_codecs::decode(&bytes).unwrap().meta.extra_samples;
             assert_eq!(expected.len(), extras);
             let input = dir.path().join(format!("{alpha}-{extras}.tiff"));
             std::fs::write(&input, bytes).unwrap();
             let result = Session::new().execute("file.automate.batch", json!({"input":[input],"destination":"saveAndClose","steps":[]})).unwrap();
             assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-            let saved = photocraft_codecs::decode(&std::fs::read(input).unwrap()).unwrap();
+            let saved = lienzo_codecs::decode(&std::fs::read(input).unwrap()).unwrap();
             assert_eq!(saved.meta.extra_samples, expected, "alpha={alpha} extras={extras}");
         }
     }
@@ -944,7 +940,7 @@ fn batch_save_close_preserves_aux_channels_at_the_supported_cap() {
 fn called_actions_packages_explicit_batch_children_and_replays_them() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("input.png");
-    std::fs::write(&input, small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(&input, small_image(lienzo_codecs::Format::Png)).unwrap();
     let list = vec![Action::new("Decoy", vec![]), Action::new("Child", vec![("image.imageSize".into(), json!({"width":3,"height":1,"resample":"nearest"}))])];
     for field in ["steps", "action"] {
         for shape in 0..3 {
@@ -959,7 +955,7 @@ fn called_actions_packages_explicit_batch_children_and_replays_them() {
                 params["action"] = json!(0);
             }
             let mut steps = vec![("file.automate.batch".into(), params)];
-            let captured = photocraft_engine::actions_cmds::called_actions(&list, &mut steps);
+            let captured = lienzo_engine::actions_cmds::called_actions(&list, &mut steps);
             assert_eq!(captured.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["Child"]);
             let rewritten = &steps[0].1[field][0];
             let params = if shape == 0 { &rewritten[1] } else { &rewritten["params"] };
@@ -971,8 +967,8 @@ fn called_actions_packages_explicit_batch_children_and_replays_them() {
             s.actions.list = captured;
             let result = s.execute(&steps[0].0, steps[0].1.clone()).unwrap();
             assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
-            let doc = photocraft_io::import("saved.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
-            assert_eq!(doc.size, photocraft_doc::Size::new(3, 1));
+            let doc = lienzo_io::import("saved.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+            assert_eq!(doc.size, lienzo_doc::Size::new(3, 1));
         }
     }
 }
@@ -982,7 +978,7 @@ fn called_actions_packages_explicit_batch_children_and_replays_them() {
 fn called_actions_packages_shared_descendants_at_the_shallowest_depth() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("input.png");
-    std::fs::write(&input, small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(&input, small_image(lienzo_codecs::Format::Png)).unwrap();
     let mut list = vec![
         Action::new("Shared", vec![("actions.play".into(), json!({"action":1}))]),
         Action::new("Child", vec![("image.imageSize".into(), json!({"width":3,"height":1,"resample":"nearest"}))]),
@@ -996,7 +992,7 @@ fn called_actions_packages_shared_descendants_at_the_shallowest_depth() {
             "file.automate.batch".into(),
             json!({"input":[input],"output":dir.path().join(condition),"steps":[["actions.conditional",{"if":condition,"then":then,"else":otherwise}]]}),
         )];
-        let captured = photocraft_engine::actions_cmds::called_actions(&list, &mut steps);
+        let captured = lienzo_engine::actions_cmds::called_actions(&list, &mut steps);
         assert_eq!(captured.iter().map(|a| &a.name).collect::<Vec<_>>(), list.iter().map(|a| &a.name).collect::<Vec<_>>());
         assert_eq!(captured[0].steps[0].1["action"], "Child");
         let mut s = Session::new();
@@ -1005,8 +1001,8 @@ fn called_actions_packages_shared_descendants_at_the_shallowest_depth() {
         assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
         assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
         let saved = std::fs::read(result["files"][0].as_str().unwrap()).unwrap();
-        let doc = photocraft_io::import("saved.png", &saved).unwrap().document;
-        assert_eq!(doc.size, photocraft_doc::Size::new(3, 1));
+        let doc = lienzo_io::import("saved.png", &saved).unwrap().document;
+        assert_eq!(doc.size, lienzo_doc::Size::new(3, 1));
     }
 }
 
@@ -1022,7 +1018,7 @@ fn called_actions_nested_batch_shapes_keep_cycle_and_action_depth_bounds() {
         step = json!({"id":"file.automate.batch","params":params});
     }
     let mut steps = vec![("file.automate.batch".into(), json!({"steps":[step]}))];
-    let captured = photocraft_engine::actions_cmds::called_actions(&cycle, &mut steps);
+    let captured = lienzo_engine::actions_cmds::called_actions(&cycle, &mut steps);
     assert_eq!(captured.len(), 1);
     assert_eq!(captured[0].steps[0].1["action"], "Child");
     let mut node = &steps[0].1["steps"][0];
@@ -1035,10 +1031,10 @@ fn called_actions_nested_batch_shapes_keep_cycle_and_action_depth_bounds() {
     let chain: Vec<_> =
         (0..17).map(|i| Action::new(format!("A{i}"), if i == 16 { vec![] } else { vec![("actions.play".into(), json!({"action":i+1}))] })).collect();
     let mut steps = vec![("file.automate.batch".into(), json!({"steps":[["actions.play",{"action":0}]]}))];
-    assert_eq!(photocraft_engine::actions_cmds::called_actions(&chain, &mut steps).len(), 16);
+    assert_eq!(lienzo_engine::actions_cmds::called_actions(&chain, &mut steps).len(), 16);
     let mut invalid = vec![("file.automate.batch".into(), json!({"steps":null,"action":0}))];
     let before = invalid.clone();
-    assert!(photocraft_engine::actions_cmds::called_actions(&chain, &mut invalid).is_empty());
+    assert!(lienzo_engine::actions_cmds::called_actions(&chain, &mut invalid).is_empty());
     assert_eq!(invalid, before, "malformed explicit steps must not fall back to a named action");
 }
 
@@ -1047,9 +1043,9 @@ fn called_actions_nested_batch_shapes_keep_cycle_and_action_depth_bounds() {
 fn batch_carries_script_limits_and_restores_balanced_depth() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("source.png");
-    std::fs::write(&input, small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(&input, small_image(lienzo_codecs::Format::Png)).unwrap();
     let step = json!({"command":"file.scripts.browse","params":{"steps":[{"command":"select.all"}]}});
-    for (depth, spending, allowed) in [(16, 0, false), (1, photocraft_engine::actions_cmds::MAX_PLAYBACK_STEPS - 1, false), (1, 2, true)] {
+    for (depth, spending, allowed) in [(16, 0, false), (1, lienzo_engine::actions_cmds::MAX_PLAYBACK_STEPS - 1, false), (1, 2, true)] {
         let mut s = Session::new();
         s.actions.script_depth = depth;
         s.actions.script_steps = spending;
@@ -1069,7 +1065,7 @@ fn batch_carries_script_limits_and_restores_balanced_depth() {
 fn structured_batch_override_open_saves_default_same_signature() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("source.png");
-    std::fs::write(&input, small_image(photocraft_codecs::Format::Png)).unwrap();
+    std::fs::write(&input, small_image(lienzo_codecs::Format::Png)).unwrap();
     let result=Session::new().execute("file.automate.batch",json!({"input":[input],"output":dir.path().join("out"),"overrideOpen":true,"namingComponents":[{"component":"name"},{"component":"extension"}],"steps":[{"command":"file.openAs","params":{"path":"recorded.jpg"}}]})).unwrap();
     assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
     let output = result["files"][0].as_str().unwrap();

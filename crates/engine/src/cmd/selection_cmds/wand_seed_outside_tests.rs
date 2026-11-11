@@ -31,8 +31,8 @@ fn wand_global(s: &mut Session, x: i32, tolerance: f64, mode: &str) {
 /// column in between must be selected too, so a hole in the run fails the test.
 fn selected(s: &Session) -> Option<(i32, i32)> {
     let doc = &s.active().unwrap().doc;
-    let row = photocraft_geom::Rect::new(0, 400, 800, 401);
-    let m = photocraft_algo::selection::mask_from_surface(doc.selection.as_ref(), row);
+    let row = lienzo_geom::Rect::new(0, 400, 800, 401);
+    let m = lienzo_algo::selection::mask_from_surface(doc.selection.as_ref(), row);
     let first = m.iter().position(|v| *v >= 0.5)?;
     let last = m.iter().rposition(|v| *v >= 0.5)?;
     assert!(m[first..=last].iter().all(|v| *v >= 0.5), "a hole in the selected run {first}..={last}");
@@ -99,8 +99,8 @@ fn without_a_selection_subtract_and_intersect_select_nothing() {
 
 #[test]
 fn the_fill_passes_only_pixels_at_least_half_selected() {
-    use photocraft_algo::selection::wand_region_within;
-    use photocraft_geom::Rect;
+    use lienzo_algo::selection::wand_region_within;
+    use lienzo_geom::Rect;
     // One flat grey row of four pixels; only the coverage limit decides the region.
     let img = [[128u8, 128, 128, 255]; 4];
     let area = Rect::new(0, 0, 4, 1);

@@ -4,10 +4,10 @@ use base64::Engine as _;
 use std::sync::Arc;
 use std::time::Duration;
 
-use photocraft_doc::{DocId, LayerContent, LayerId, SmartSource};
+use lienzo_doc::{DocId, LayerContent, LayerId, SmartSource};
 use serde_json::{Value, json};
 
-use crate::{ExternalSvgEditor, ExternalSvgSession, PhotocraftApp};
+use crate::{ExternalSvgEditor, ExternalSvgSession, LienzoApp};
 
 const MAX_SESSIONS: usize = 8;
 const MAX_SVG_BYTES: usize = 16 * 1024 * 1024;
@@ -62,13 +62,13 @@ fn tr(source: &str) -> &str {
 }
 
 /// Surface a non-fatal editing or sync failure in the status bar; the document is unchanged.
-fn report(app: &mut PhotocraftApp, error: String) {
+fn report(app: &mut LienzoApp, error: String) {
     app.ui.status = error;
     app.ui.status_error = true;
 }
 
 /// Automation retains the engine's internal Edit Contents path; it never launches a program.
-pub(crate) fn intercept(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub(crate) fn intercept(app: &mut LienzoApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id != "layer.smartObjects.editContents" {
         return None;
     }
@@ -86,14 +86,13 @@ pub(crate) fn intercept(app: &mut PhotocraftApp, id: &str, params: &Value) -> Op
     let LayerContent::Smart(smart) = &st.doc.layer(layer)?.content else { return None };
     let bytes = match &smart.source {
         SmartSource::Embedded { bytes, .. } => bytes.as_slice(),
-        SmartSource::Linked { path } => photocraft_io::linked::embedded_payload(&st.doc.metadata, path)?.1,
+        SmartSource::Linked { path } => lienzo_io::linked::embedded_payload(&st.doc.metadata, path)?.1,
     };
-    if !(photocraft_io::svg::is_svg(bytes) || bytes.starts_with(b"%PDF-") || bytes.starts_with(b"%!PS-Adobe-") || bytes.starts_with(&[0xc5, 0xd0, 0xd3, 0xc6]))
-    {
+    if !(lienzo_io::svg::is_svg(bytes) || bytes.starts_with(b"%PDF-") || bytes.starts_with(b"%!PS-Adobe-") || bytes.starts_with(&[0xc5, 0xd0, 0xd3, 0xc6])) {
         return None;
     }
     let doc = st.doc.id;
-    // Contents already open in PhotoCraft's own editor: the engine switches to that document.
+    // Contents already open in Lienzo's own editor: the engine switches to that document.
     if app.session.smart_links.iter().any(|link| link.parent == doc && link.contents_id == smart.contents_id) {
         return None;
     }
@@ -136,13 +135,13 @@ pub(crate) fn intercept(app: &mut PhotocraftApp, id: &str, params: &Value) -> Op
 }
 
 /// Saves apply only while the target's document is active, never by switching documents.
-fn same_target(app: &PhotocraftApp, target: &Target) -> bool {
+fn same_target(app: &LienzoApp, target: &Target) -> bool {
     app.session.active().is_some_and(|st| st.doc.id == target.doc)
 }
 
 /// The update command must be enabled and no layer sharing these contents (every placed
 /// instance changes together) may be fully or pixel locked.
-fn writable_target(app: &PhotocraftApp, target: &Target) -> bool {
+fn writable_target(app: &LienzoApp, target: &Target) -> bool {
     let Some(st) = app.session.active().filter(|st| st.doc.id == target.doc) else { return false };
     if !app.session.is_enabled_with("layer.smartObjects.updateSvg", &json!({"document":target.doc.0,"layer":target.layer.0})) {
         return false;
@@ -160,7 +159,7 @@ fn writable_target(app: &PhotocraftApp, target: &Target) -> bool {
 /// Act on the dialog's choice after re-exporting to confirm the fingerprint and contents id
 /// still match: run the internal editor, or start (or replace) one external session per
 /// shared contents, at most [`MAX_SESSIONS`]. Errors leave the document unchanged.
-fn confirm(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn confirm(app: &mut LienzoApp) -> Result<Value, String> {
     let Some(pending) = app.smart_svg.pending.take() else { return Ok(json!({"cancelled": true})) };
     if !safe_to_apply(app) {
         return Err("Finish the current edit or dialog before editing this SVG Smart Object".into());
@@ -216,7 +215,7 @@ fn confirm(app: &mut PhotocraftApp) -> Result<Value, String> {
 
 /// Ask the user for one local executable; the answer applies only if the same pending target
 /// is still open. Executable validation happens when the session starts.
-fn choose_program(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn choose_program(app: &mut LienzoApp) -> Result<Value, String> {
     let pending = app.smart_svg.pending.as_ref().ok_or("The SVG editor choice was cancelled")?;
     let doc = pending.target.doc;
     let layer = pending.target.layer;
@@ -251,7 +250,7 @@ fn choose_program(app: &mut PhotocraftApp) -> Result<Value, String> {
 
 /// Draw the editor-choice dialog while a choice is pending. The internal editor is offered
 /// only for SVG; "Stop syncing" ends a running session for the same contents.
-pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let file_dialog_open = app.file_dialog_open();
     let can_pick = app.services.file_dialog.is_some() && !file_dialog_open;
     let Some(pending) = app.smart_svg.pending.as_mut() else { return };
@@ -284,7 +283,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
             (Editor::VectorCraft, "VectorCraft"),
             (Editor::Illustrator, "Adobe Illustrator"),
             (Editor::Program, "Other application"),
-            (Editor::Internal, "PhotoCraft (internal editor)"),
+            (Editor::Internal, "Lienzo (internal editor)"),
         ] {
             // The desktop shell discovers Illustrator installations only on Windows and macOS.
             if choice == Editor::Illustrator && !cfg!(any(windows, target_os = "macos")) {
@@ -303,9 +302,9 @@ pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
         ui.add_space(8.0);
         ui.label(
             egui::RichText::new(tr(if pending.target.extension == "svg" {
-                "Save to the opened SVG file. Each saved change becomes one undo step in PhotoCraft."
+                "Save to the opened SVG file. Each saved change becomes one undo step in Lienzo."
             } else {
-                "Save to the opened original-format file. Each saved change becomes one undo step in PhotoCraft."
+                "Save to the opened original-format file. Each saved change becomes one undo step in Lienzo."
             }))
             .small()
             .color(tokens.text_dim),
@@ -349,7 +348,7 @@ pub(crate) fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// True only when no save, dialog, mask/channel target, transform, preview or drag is in
 /// progress, so an external save cannot land in the middle of another edit.
-fn safe_to_apply(app: &PhotocraftApp) -> bool {
+fn safe_to_apply(app: &LienzoApp) -> bool {
     !app.automation_input
         && !app.saving()
         && !app.save_options_open()
@@ -361,7 +360,7 @@ fn safe_to_apply(app: &PhotocraftApp) -> bool {
         && app.session.active().is_some_and(|st| {
             st.doc.quick_mask.is_none()
                 && st.channel_view.layer_mask.is_none()
-                && st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::Composite
+                && st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::Composite
                 && app.session.job_on(st.doc.id).is_none()
         })
         && app.ui.dialogs.is_empty()
@@ -398,7 +397,7 @@ fn safe_to_apply(app: &PhotocraftApp) -> bool {
 }
 
 /// Poll platform snapshots without changing the active document or selection.
-pub(crate) fn poll(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn poll(app: &mut LienzoApp, ctx: &egui::Context) {
     if app
         .smart_svg
         .pending

@@ -1,9 +1,9 @@
 //! PSD (testgen / builder) → Document → PSD structural equality.
 
-use photocraft_doc::LayerContent;
-use photocraft_io::*;
-use photocraft_psd::testgen;
-use photocraft_psd::{ColorMode, Compression, LayerNode, PsdFile, SectionType, Version};
+use lienzo_doc::LayerContent;
+use lienzo_io::*;
+use lienzo_psd::testgen;
+use lienzo_psd::{ColorMode, Compression, LayerNode, PsdFile, SectionType, Version};
 
 /// Sample of a layer channel in document coordinates (0 outside the rect).
 fn sample(f: &PsdFile, li: usize, id: i16, x: i32, y: i32, cache: &mut std::collections::HashMap<(usize, i16), Vec<u8>>) -> Vec<u8> {
@@ -56,7 +56,7 @@ fn assert_structurally_equal(a: &PsdFile, b: &PsdFile) {
         let (ra, rb) = (&a.layers()[ia], &b.layers()[ib]);
         let n = ra.name();
         assert_eq!(n, rb.name());
-        let blend = if matches!(ra.blend_mode, photocraft_psd::BlendMode::Unknown(_)) { photocraft_psd::BlendMode::Normal } else { ra.blend_mode };
+        let blend = if matches!(ra.blend_mode, lienzo_psd::BlendMode::Unknown(_)) { lienzo_psd::BlendMode::Normal } else { ra.blend_mode };
         if ra.section_type().is_folder() {
             assert_eq!(ra.section_divider().and_then(|s| s.blend_mode), rb.section_divider().and_then(|s| s.blend_mode), "{n}");
         } else {
@@ -71,7 +71,7 @@ fn assert_structurally_equal(a: &PsdFile, b: &PsdFile) {
             continue;
         }
         // Pixels: compare every channel over the union of both rects.
-        let u = |r: photocraft_psd::Rect, s: photocraft_psd::Rect| (r.left.min(s.left), r.top.min(s.top), r.right.max(s.right), r.bottom.max(s.bottom));
+        let u = |r: lienzo_psd::Rect, s: lienzo_psd::Rect| (r.left.min(s.left), r.top.min(s.top), r.right.max(s.right), r.bottom.max(s.bottom));
         let mut ids: Vec<i16> = (-1..cc).collect();
         if ra.layer_mask().is_some() && (ra.channel(-2).is_some() || ra.channel(-3).is_some()) {
             ids.push(-2);
@@ -142,7 +142,7 @@ fn testgen_import_details() {
     let outer = d.layers.iter().find(|l| l.name == "Outer").expect("outer");
     let LayerContent::Group(g) = &outer.content else { panic!() };
     assert!(g.expanded);
-    assert_eq!(outer.blend, photocraft_color::BlendMode::PassThrough);
+    assert_eq!(outer.blend, lienzo_color::BlendMode::PassThrough);
     let inner = g.children.iter().find(|l| l.name == "Inner").unwrap();
     let LayerContent::Group(gi) = &inner.content else { panic!() };
     assert!(!gi.expanded);
@@ -170,7 +170,7 @@ fn fallback_modes_import_flattened() {
         let (d, w) = psd_to_document(&f);
         assert_eq!(d.layers.len(), 1, "{mode:?}");
         assert!(!w.is_empty(), "{mode:?} should warn");
-        assert_eq!(d.depth, photocraft_color::SampleType::U8);
+        assert_eq!(d.depth, lienzo_color::SampleType::U8);
         // Re-export produces a valid PSD.
         let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
         assert!(PsdFile::from_bytes(&out.bytes).is_ok());
@@ -197,16 +197,16 @@ fn palette_and_duotone_modes_are_written_in_their_own_mode() {
 }
 
 #[test]
-fn a_duotone_made_in_photocraft_is_written_with_its_inks() {
-    use photocraft_doc::{Duotone, DuotoneInk};
-    let mut d = photocraft_doc::Document::with_background(
+fn a_duotone_made_in_lienzo_is_written_with_its_inks() {
+    use lienzo_doc::{Duotone, DuotoneInk};
+    let mut d = lienzo_doc::Document::with_background(
         "d",
-        photocraft_doc::Size::new(4, 2),
-        photocraft_color::ColorMode::Grayscale,
-        photocraft_color::SampleType::U8,
-        photocraft_color::Color::rgba(0.5, 0.5, 0.5, 1.0),
+        lienzo_doc::Size::new(4, 2),
+        lienzo_color::ColorMode::Grayscale,
+        lienzo_color::SampleType::U8,
+        lienzo_color::Color::rgba(0.5, 0.5, 0.5, 1.0),
     );
-    d.mode = photocraft_color::ColorMode::Duotone;
+    d.mode = lienzo_color::ColorMode::Duotone;
     d.duotone = Some(Duotone { inks: vec![DuotoneInk::new("Black", [0.0; 3]), DuotoneInk::new("Orange", [1.0, 0.5, 0.0])], psd_raw: None });
     let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
     assert!(out.warnings.iter().all(|w| !w.contains("written as")), "{:?}", out.warnings);
@@ -222,16 +222,16 @@ fn a_duotone_made_in_photocraft_is_written_with_its_inks() {
     assert_eq!(again.color_mode_data, f.color_mode_data);
 }
 
-fn duotone_doc(sample: photocraft_color::SampleType) -> photocraft_doc::Document {
-    use photocraft_doc::{Duotone, DuotoneInk};
-    let mut d = photocraft_doc::Document::with_background(
+fn duotone_doc(sample: lienzo_color::SampleType) -> lienzo_doc::Document {
+    use lienzo_doc::{Duotone, DuotoneInk};
+    let mut d = lienzo_doc::Document::with_background(
         "d",
-        photocraft_doc::Size::new(4, 2),
-        photocraft_color::ColorMode::Grayscale,
+        lienzo_doc::Size::new(4, 2),
+        lienzo_color::ColorMode::Grayscale,
         sample,
-        photocraft_color::Color::rgba(0.5, 0.5, 0.5, 1.0),
+        lienzo_color::Color::rgba(0.5, 0.5, 0.5, 1.0),
     );
-    d.mode = photocraft_color::ColorMode::Duotone;
+    d.mode = lienzo_color::ColorMode::Duotone;
     d.duotone = Some(Duotone { inks: vec![DuotoneInk::new("Black", [0.0; 3]), DuotoneInk::new("Orange", [1.0, 0.5, 0.0])], psd_raw: None });
     d
 }
@@ -239,7 +239,7 @@ fn duotone_doc(sample: photocraft_color::SampleType) -> photocraft_doc::Document
 #[test]
 fn a_16_bit_duotone_is_written_as_grayscale() {
     // Photoshop has only 8-bit Duotone and refuses to open a 16-bit Duotone PSD.
-    let out = export(&duotone_doc(photocraft_color::SampleType::U16), "x.psd", &ExportOptions::default()).unwrap();
+    let out = export(&duotone_doc(lienzo_color::SampleType::U16), "x.psd", &ExportOptions::default()).unwrap();
     let f = PsdFile::from_bytes(&out.bytes).unwrap();
     assert_eq!((f.header.color_mode, f.header.depth), (ColorMode::Grayscale, 16));
     assert!(out.warnings.iter().any(|w| w == "Duotone document written as Grayscale"), "{:?}", out.warnings);
@@ -249,10 +249,10 @@ fn a_16_bit_duotone_is_written_as_grayscale() {
 fn a_layered_duotone_keeps_its_image_without_maximize_compatibility() {
     // A Duotone opens flattened from its merged image (its layer records are not read), so that
     // image is written in full even when Maximize Compatibility is off, never the placeholder.
-    let mut d = duotone_doc(photocraft_color::SampleType::U8);
-    let mut top = photocraft_doc::Layer::new("Dark", LayerContent::Raster(photocraft_raster::Surface::new(d.pixel_format())));
+    let mut d = duotone_doc(lienzo_color::SampleType::U8);
+    let mut top = lienzo_doc::Layer::new("Dark", LayerContent::Raster(lienzo_raster::Surface::new(d.pixel_format())));
     if let LayerContent::Raster(s) = &mut top.content {
-        s.fill_rect(photocraft_geom::Rect::new(0, 0, 2, 2), &photocraft_raster::from_rgba(&d.pixel_format(), [0.0, 0.0, 0.0, 1.0]));
+        s.fill_rect(lienzo_geom::Rect::new(0, 0, 2, 2), &lienzo_raster::from_rgba(&d.pixel_format(), [0.0, 0.0, 0.0, 1.0]));
     }
     d.layers.push(top);
     let opts = ExportOptions { psd_maximize_compatibility: false, ..Default::default() };
@@ -272,7 +272,7 @@ fn a_layered_duotone_keeps_its_image_without_maximize_compatibility() {
 
 #[test]
 fn a_colour_book_ink_shows_its_lab_equivalent_or_the_grey_plate() {
-    let out = export(&duotone_doc(photocraft_color::SampleType::U8), "x.psd", &ExportOptions::default()).unwrap();
+    let out = export(&duotone_doc(lienzo_color::SampleType::U8), "x.psd", &ExportOptions::default()).unwrap();
     let mut f = PsdFile::from_bytes(&out.bytes).unwrap();
     // The second ink becomes PANTONE 327 CVC, stored by its book key as Photoshop does.
     f.color_mode_data[14..24].copy_from_slice(&[0, 3, 0x20, 0x20, 0x33, 0x32, 0x37, 0x43, 0, 0]);
@@ -283,7 +283,7 @@ fn a_colour_book_ink_shows_its_lab_equivalent_or_the_grey_plate() {
     assert!(w.iter().any(|w| w.contains("shown as grayscale")), "{w:?}");
     // With Photoshop's Lab equivalents (black, then the PANTONE teal) it shows in colour.
     let lab = vec![0, 1, 0, 2, 0, 7, 0x03, 0xB9, 0x01, 0xF2, 0x01, 0xA9, 0, 0, 0, 7, 0x11, 0xC5, 0xE6, 0x38, 0xFE, 0x0C, 0, 0];
-    f.resources.push(photocraft_psd::ImageResource::new(1066, lab));
+    f.resources.push(lienzo_psd::ImageResource::new(1066, lab));
     let (d, w) = psd_to_document(&f);
     assert!(w.iter().all(|w| !w.contains("duotone")), "{w:?}");
     let duo = d.duotone.as_ref().unwrap();
@@ -296,24 +296,24 @@ fn a_colour_book_ink_shows_its_lab_equivalent_or_the_grey_plate() {
 #[test]
 fn a_layered_duotone_tiff_says_its_inks_are_dropped() {
     // TIFF has no Duotone: a layered one is written in its grey plate, and says so.
-    let mut d = duotone_doc(photocraft_color::SampleType::U8);
+    let mut d = duotone_doc(lienzo_color::SampleType::U8);
     let adj = d.duotone.as_ref().unwrap().display_adjustment();
-    d.layers.push(photocraft_doc::Layer::new("Map", LayerContent::Adjustment(adj)));
+    d.layers.push(lienzo_doc::Layer::new("Map", LayerContent::Adjustment(adj)));
     let out = export(&d, "x.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).unwrap();
     assert!(out.warnings.iter().any(|w| w == "Duotone document written as Grayscale"), "{:?}", out.warnings);
 }
 
 #[test]
 fn indexed_psd_keeps_the_table_length_and_transparent_entry() {
-    use photocraft_doc::ColorTable;
-    let mut d = photocraft_doc::Document::with_background(
+    use lienzo_doc::ColorTable;
+    let mut d = lienzo_doc::Document::with_background(
         "i",
-        photocraft_doc::Size::new(4, 2),
-        photocraft_color::ColorMode::Rgb,
-        photocraft_color::SampleType::U8,
-        photocraft_color::Color::rgba(1.0, 0.0, 0.0, 1.0),
+        lienzo_doc::Size::new(4, 2),
+        lienzo_color::ColorMode::Rgb,
+        lienzo_color::SampleType::U8,
+        lienzo_color::Color::rgba(1.0, 0.0, 0.0, 1.0),
     );
-    d.mode = photocraft_color::ColorMode::Indexed;
+    d.mode = lienzo_color::ColorMode::Indexed;
     d.color_table = Some(ColorTable { colors: vec![[0, 0, 0], [255, 0, 0], [0, 0, 255]], transparent: Some(2) });
     let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
     let f = PsdFile::from_bytes(&out.bytes).unwrap();
@@ -326,30 +326,24 @@ fn indexed_psd_keeps_the_table_length_and_transparent_entry() {
 }
 
 /// A 4x2 document filled with `fill` in Indexed Color mode with `colors` and `transparent`.
-fn indexed_doc(fill: photocraft_color::Color, colors: Vec<[u8; 3]>, transparent: Option<u8>) -> photocraft_doc::Document {
-    let mut d = photocraft_doc::Document::with_background(
-        "i",
-        photocraft_doc::Size::new(4, 2),
-        photocraft_color::ColorMode::Rgb,
-        photocraft_color::SampleType::U8,
-        fill,
-    );
-    d.mode = photocraft_color::ColorMode::Indexed;
-    d.color_table = Some(photocraft_doc::ColorTable { colors, transparent });
+fn indexed_doc(fill: lienzo_color::Color, colors: Vec<[u8; 3]>, transparent: Option<u8>) -> lienzo_doc::Document {
+    let mut d = lienzo_doc::Document::with_background("i", lienzo_doc::Size::new(4, 2), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8, fill);
+    d.mode = lienzo_color::ColorMode::Indexed;
+    d.color_table = Some(lienzo_doc::ColorTable { colors, transparent });
     d
 }
 
 #[test]
 fn indexed_psd_never_writes_an_opaque_pixel_as_the_transparent_entry() {
     // The transparent entry duplicates opaque black (common in PNG-8 files) and comes first.
-    let d = indexed_doc(photocraft_color::Color::rgba(0.0, 0.0, 0.0, 1.0), vec![[0, 0, 0], [0, 0, 0], [255, 255, 255]], Some(0));
+    let d = indexed_doc(lienzo_color::Color::rgba(0.0, 0.0, 0.0, 1.0), vec![[0, 0, 0], [0, 0, 0], [255, 255, 255]], Some(0));
     let f = PsdFile::from_bytes(&export(&d, "x.psd", &ExportOptions::default()).unwrap().bytes).unwrap();
     assert_eq!(f.decode_merged().unwrap(), vec![1; 8], "opaque black is entry 1, not the transparent entry 0");
 }
 
 #[test]
 fn indexed_psd_transparency_survives_a_round_trip() {
-    let d = indexed_doc(photocraft_color::Color::rgba(1.0, 0.0, 0.0, 0.0), vec![[255, 0, 0], [255, 255, 255]], Some(1));
+    let d = indexed_doc(lienzo_color::Color::rgba(1.0, 0.0, 0.0, 0.0), vec![[255, 0, 0], [255, 255, 255]], Some(1));
     let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
     let f = PsdFile::from_bytes(&out.bytes).unwrap();
     assert_eq!(f.decode_merged().unwrap(), vec![1; 8]);
@@ -362,7 +356,7 @@ fn indexed_psd_transparency_survives_a_round_trip() {
 
 #[test]
 fn indexed_psd_without_a_transparent_entry_flattens_over_white() {
-    let d = indexed_doc(photocraft_color::Color::rgba(0.0, 0.0, 0.0, 0.0), vec![[0, 0, 0], [255, 255, 255]], None);
+    let d = indexed_doc(lienzo_color::Color::rgba(0.0, 0.0, 0.0, 0.0), vec![[0, 0, 0], [255, 255, 255]], None);
     let f = PsdFile::from_bytes(&export(&d, "x.psd", &ExportOptions::default()).unwrap().bytes).unwrap();
     assert_eq!(f.decode_merged().unwrap(), vec![1; 8], "empty areas are white, as Photoshop flattens them");
 }
@@ -376,7 +370,7 @@ fn indexed_psd_keeps_the_icc_profile() {
         p
     };
     for (space, kept) in [(b"RGB ", true), (b"GRAY", false)] {
-        let mut d = indexed_doc(photocraft_color::Color::rgba(1.0, 0.0, 0.0, 1.0), vec![[255, 0, 0]], None);
+        let mut d = indexed_doc(lienzo_color::Color::rgba(1.0, 0.0, 0.0, 1.0), vec![[255, 0, 0]], None);
         d.icc_profile = Some(std::sync::Arc::new(profile(space)));
         let f = PsdFile::from_bytes(&export(&d, "x.psd", &ExportOptions::default()).unwrap().bytes).unwrap();
         assert_eq!(f.header.color_mode, ColorMode::Indexed);
@@ -387,7 +381,7 @@ fn indexed_psd_keeps_the_icc_profile() {
 #[test]
 fn indexed_document_whose_only_entry_is_transparent_is_not_written_as_indexed() {
     // Every opaque pixel would have to take the transparent entry and vanish: written as RGB.
-    let d = indexed_doc(photocraft_color::Color::rgba(1.0, 0.0, 0.0, 1.0), vec![[255, 0, 0]], Some(0));
+    let d = indexed_doc(lienzo_color::Color::rgba(1.0, 0.0, 0.0, 1.0), vec![[255, 0, 0]], Some(0));
     let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
     let f = PsdFile::from_bytes(&out.bytes).unwrap();
     assert_eq!(f.header.color_mode, ColorMode::Rgb, "{:?}", out.warnings);
@@ -398,18 +392,18 @@ fn indexed_document_whose_only_entry_is_transparent_is_not_written_as_indexed() 
 fn indexed_save_warns_whenever_flattening_loses_a_layer() {
     // One plain visible pixel layer is the merged image: no warning. A single hidden, masked,
     // half-opaque or type layer, or a second layer, is lost in the flat file, so the save says so.
-    let flat = |d: &photocraft_doc::Document| {
+    let flat = |d: &lienzo_doc::Document| {
         let out = export(d, "x.psd", &ExportOptions::default()).unwrap();
         assert_eq!(PsdFile::from_bytes(&out.bytes).unwrap().header.color_mode, ColorMode::Indexed);
         out.warnings.iter().any(|w| w.contains("written flattened"))
     };
-    let plain = indexed_doc(photocraft_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255], [0, 0, 0]], None);
+    let plain = indexed_doc(lienzo_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255], [0, 0, 0]], None);
     assert!(!flat(&plain), "a single plain layer flattens losslessly");
-    let changes: [fn(&mut photocraft_doc::Layer); 4] = [
+    let changes: [fn(&mut lienzo_doc::Layer); 4] = [
         |l| l.visible = false,
         |l| l.opacity = 0.5,
-        |l| l.mask = Some(photocraft_doc::LayerMask::hide_all()),
-        |l| l.content = LayerContent::Text(photocraft_doc::TextLayer::default()),
+        |l| l.mask = Some(lienzo_doc::LayerMask::hide_all()),
+        |l| l.content = LayerContent::Text(lienzo_doc::TextLayer::default()),
     ];
     for (i, change) in changes.iter().enumerate() {
         let mut d = plain.clone();
@@ -423,12 +417,12 @@ fn indexed_save_warns_whenever_flattening_loses_a_layer() {
 
 #[test]
 fn indexed_and_bitmap_documents_with_channels_keep_them() {
-    // PhotoCraft does not read extra channels of a palette-mode PSD back, so these documents keep
+    // Lienzo does not read extra channels of a palette-mode PSD back, so these documents keep
     // the RGB / Grayscale file that holds their alpha channels and Quick Mask.
-    for mode in [photocraft_color::ColorMode::Indexed, photocraft_color::ColorMode::Bitmap] {
-        let mut d = indexed_doc(photocraft_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255]], None);
+    for mode in [lienzo_color::ColorMode::Indexed, lienzo_color::ColorMode::Bitmap] {
+        let mut d = indexed_doc(lienzo_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255]], None);
         d.mode = mode;
-        let alpha = || photocraft_doc::AlphaChannel::new("Alpha 1", photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8));
+        let alpha = || lienzo_doc::AlphaChannel::new("Alpha 1", lienzo_raster::Surface::new(lienzo_color::PixelFormat::GRAY8));
         d.channels.push(alpha());
         d.quick_mask = Some(alpha());
         let out = export(&d, "x.psd", &ExportOptions::default()).unwrap();
@@ -439,8 +433,8 @@ fn indexed_and_bitmap_documents_with_channels_keep_them() {
 
 #[test]
 fn layerless_psd_never_keeps_psb_only_block_signatures() {
-    for mode in [photocraft_color::ColorMode::Indexed, photocraft_color::ColorMode::Bitmap, photocraft_color::ColorMode::Multichannel] {
-        let mut d = indexed_doc(photocraft_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255]], None);
+    for mode in [lienzo_color::ColorMode::Indexed, lienzo_color::ColorMode::Bitmap, lienzo_color::ColorMode::Multichannel] {
+        let mut d = indexed_doc(lienzo_color::Color::rgba(1.0, 1.0, 1.0, 1.0), vec![[255, 255, 255]], None);
         d.mode = mode;
         d.metadata.psd_global_blocks.push((*b"8B64", *b"FMsk", std::sync::Arc::new(vec![0; 12])));
         let f = PsdFile::from_bytes(&export(&d, "x.psd", &ExportOptions::default()).unwrap().bytes).unwrap();
@@ -454,7 +448,7 @@ fn multichannel_imports_ink_channels() {
     for depth in testgen::mode_depths(ColorMode::Multichannel) {
         let f = testgen::merged_only(Version::Psd, ColorMode::Multichannel, *depth, Compression::Rle, 9, 5);
         let (d, _) = psd_to_document(&f);
-        assert_eq!(d.mode, photocraft_color::ColorMode::Multichannel);
+        assert_eq!(d.mode, lienzo_color::ColorMode::Multichannel);
         assert!(d.layers.is_empty());
         assert_eq!(d.channels.len(), usize::from(f.header.channels));
         assert!(d.channels.iter().all(|c| c.spot.is_some()));
@@ -493,7 +487,7 @@ fn flattened_psd_becomes_background() {
     let (d, _) = psd_to_document(&f);
     assert_eq!(d.layers.len(), 1);
     assert_eq!(d.layers[0].name, "Background");
-    assert_eq!(d.depth, photocraft_color::SampleType::U16);
+    assert_eq!(d.depth, lienzo_color::SampleType::U16);
     let s = d.layers[0].surface().unwrap();
     let merged = f.decode_merged().unwrap();
     let v = u16::from_be_bytes([merged[0], merged[1]]);
@@ -502,7 +496,7 @@ fn flattened_psd_becomes_background() {
 
 #[test]
 fn builder_psd_imports() {
-    use photocraft_psd::{GroupSpec, LayerSpec, MaskSpec, PixelData, PsdBuilder, Rect};
+    use lienzo_psd::{GroupSpec, LayerSpec, MaskSpec, PixelData, PsdBuilder, Rect};
     let mut b = PsdBuilder::new(4, 4);
     let mut s = LayerSpec::new("a", 0, 0, 2, 2, PixelData::Rgba8(vec![255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 9, 9, 9, 9]));
     s.mask = Some(MaskSpec { rect: Rect::from_xywh(0, 0, 1, 1), data: vec![100], default_color: 255, disabled: true });
@@ -527,7 +521,7 @@ fn builder_psd_imports() {
 
 #[test]
 fn group_nesting_past_the_cap_is_rejected() {
-    use photocraft_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
+    use lienzo_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
     let mut b = PsdBuilder::new(4, 4);
     for _ in 0..101 {
         b.begin_group(GroupSpec::new("g"));
@@ -541,14 +535,14 @@ fn group_nesting_past_the_cap_is_rejected() {
     assert!(err.to_string().contains("nested deeper than 100"), "{err}");
     // The never-fail converter still returns a document — capped, with a warning
     // about the part that was not imported (it used to recurse to the file's depth).
-    let (d, warnings) = psd_to_document(&photocraft_psd::PsdFile::from_bytes(&bytes).unwrap());
+    let (d, warnings) = psd_to_document(&lienzo_psd::PsdFile::from_bytes(&bytes).unwrap());
     assert_eq!(d.max_group_depth(), 100);
     assert!(warnings.iter().any(|w| w.contains("deeper than 100")), "{warnings:?}");
 }
 
 #[test]
 fn group_nesting_at_the_cap_imports() {
-    use photocraft_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
+    use lienzo_psd::{GroupSpec, LayerSpec, PixelData, PsdBuilder};
     let mut b = PsdBuilder::new(4, 4);
     for _ in 0..100 {
         b.begin_group(GroupSpec::new("g"));
@@ -564,7 +558,7 @@ fn group_nesting_at_the_cap_imports() {
 
 #[test]
 fn layered_import_skips_the_unused_merged_composite() {
-    use photocraft_psd::{LayerSpec, PixelData, PsdBuilder};
+    use lienzo_psd::{LayerSpec, PixelData, PsdBuilder};
     // A layered file whose merged composite carries nothing behind the colour channels never
     // decodes it - that composite is roughly half a Photoshop save's bytes. Here its data is
     // garbage: the layered import does not touch it, while a file with an extra channel does
@@ -572,7 +566,7 @@ fn layered_import_skips_the_unused_merged_composite() {
     let mut b = PsdBuilder::new(4, 4);
     b.push_layer(LayerSpec::new("a", 0, 0, 2, 2, PixelData::Rgba8(vec![7u8; 16])));
     b.composite(PixelData::Rgba8(vec![128; 64]));
-    let mut f = photocraft_psd::PsdFile::from_bytes(&b.to_bytes().unwrap()).unwrap();
+    let mut f = lienzo_psd::PsdFile::from_bytes(&b.to_bytes().unwrap()).unwrap();
     f.image_data.data.clear();
     f.layer_info.as_mut().unwrap().merged_alpha = true;
     let (d, warnings) = psd_to_document(&f);
@@ -587,22 +581,22 @@ fn layered_import_skips_the_unused_merged_composite() {
 
 #[test]
 fn locks_and_labels_from_psd() {
-    use photocraft_psd::TaggedBlock;
+    use lienzo_psd::TaggedBlock;
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     f.layers_mut()[0].blocks.push(TaggedBlock::protection(0b101));
     f.layers_mut()[0].blocks.push(TaggedBlock::sheet_color(3));
     let (d, _) = psd_to_document(&f);
     let l = &d.layers[0];
     assert!(l.locks.transparency && l.locks.position && !l.locks.pixels);
-    assert_eq!(l.label, photocraft_doc::LabelColor::Yellow);
+    assert_eq!(l.label, lienzo_doc::LabelColor::Yellow);
 }
 
 #[test]
 fn artboard_lock_round_trips_byte_for_byte() {
     // Reference files write a Background layer's locks as lspf = 0x0D (transparency + position +
-    // the bit-3 lock). PhotoCraft read the artboard lock at bit 4, so 0x0D came back as 0x05
+    // the bit-3 lock). Lienzo read the artboard lock at bit 4, so 0x0D came back as 0x05
     // and the lock bytes drifted on every re-save.
-    use photocraft_psd::TaggedBlock;
+    use lienzo_psd::TaggedBlock;
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     f.layers_mut()[0].blocks.push(TaggedBlock::protection(0x0D));
     let g = via_doc(&f);
@@ -612,7 +606,7 @@ fn artboard_lock_round_trips_byte_for_byte() {
 
 #[test]
 fn adjustment_and_fill_layers_from_psd() {
-    use photocraft_psd::{LayerRecord, TaggedBlock};
+    use lienzo_psd::{LayerRecord, TaggedBlock};
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     let mk = |name: &str, key: &[u8; 4], data: Vec<u8>| LayerRecord {
         name: name.as_bytes().to_vec(),
@@ -620,7 +614,7 @@ fn adjustment_and_fill_layers_from_psd() {
         ..Default::default()
     };
     let soco = {
-        use photocraft_psd::descriptor::*;
+        use lienzo_psd::descriptor::*;
         let c = Descriptor::new("RGBC").with("Rd  ", Value::Double(255.0)).with("Grn ", Value::Double(0.0)).with("Bl  ", Value::Double(0.0));
         VersionedDescriptor::new(Descriptor::new("null").with("Clr ", Value::Descriptor(c))).to_bytes()
     };
@@ -630,7 +624,7 @@ fn adjustment_and_fill_layers_from_psd() {
     f.layers_mut().push(mk("red", b"SoCo", soco));
     let (d, _) = psd_to_document(&f);
     let n = d.layers.len();
-    use photocraft_doc::{Adjustment, Fill};
+    use lienzo_doc::{Adjustment, Fill};
     assert!(matches!(d.layers[n - 4].content, LayerContent::Adjustment(Adjustment::Invert)));
     assert!(matches!(d.layers[n - 3].content, LayerContent::Adjustment(Adjustment::Posterize { levels: 4 })));
     assert!(matches!(&d.layers[n - 2].content, LayerContent::Adjustment(Adjustment::Unsupported { psd_key, raw }) if psd_key == "selc" && **raw == [1, 2, 3]));
@@ -639,7 +633,7 @@ fn adjustment_and_fill_layers_from_psd() {
 
 #[test]
 fn unmodelled_blocks_are_preserved() {
-    use photocraft_psd::TaggedBlock;
+    use lienzo_psd::TaggedBlock;
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     f.layers_mut()[0].blocks.push(TaggedBlock::new(*b"vmsk", vec![0; 8]));
     let (d, _) = psd_to_document(&f);
@@ -650,10 +644,10 @@ fn unmodelled_blocks_are_preserved() {
 
 #[test]
 fn fill_layer_keeps_photoshop_pixels() {
-    use photocraft_psd::{ChannelData, LayerRecord, TaggedBlock};
+    use lienzo_psd::{ChannelData, LayerRecord, TaggedBlock};
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     let soco = {
-        use photocraft_psd::descriptor::*;
+        use lienzo_psd::descriptor::*;
         let c = Descriptor::new("RGBC").with("Rd  ", Value::Double(255.0)).with("Grn ", Value::Double(0.0)).with("Bl  ", Value::Double(0.0));
         VersionedDescriptor::new(Descriptor::new("null").with("Clr ", Value::Descriptor(c))).to_bytes()
     };
@@ -664,7 +658,7 @@ fn fill_layer_keeps_photoshop_pixels() {
         c.id = i as i16 - 1;
     }
     f.layers_mut().push(LayerRecord {
-        rect: photocraft_psd::Rect::from_xywh(0, 0, 2, 2),
+        rect: lienzo_psd::Rect::from_xywh(0, 0, 2, 2),
         name: b"fill".to_vec(),
         channels: chans,
         blocks: vec![TaggedBlock::unicode_name("fill"), TaggedBlock::new(*b"SoCo", soco)],
@@ -676,24 +670,24 @@ fn fill_layer_keeps_photoshop_pixels() {
     let fc = l.fill_cache.as_ref().expect("cache");
     assert_eq!(fc.surface.pixel(1, 1), vec![10.0 / 255.0, 20.0 / 255.0, 30.0 / 255.0, 1.0]);
     // The compositor uses the cache while the fill is unchanged.
-    let flat = photocraft_compose::flatten(&d);
+    let flat = lienzo_compose::flatten(&d);
     let p = flat.get(1, 1);
     assert!((p[0] - 10.0 / 255.0).abs() < 1e-3, "{p:?}");
     // Editing the fill invalidates the cache.
     let mut d2 = d.clone();
     let n = d2.layers.len();
-    d2.layers[n - 1].content = LayerContent::Fill(photocraft_doc::Fill::Solid(photocraft_color::Color::rgb(0.0, 0.0, 1.0)));
-    let p = photocraft_compose::flatten(&d2).get(1, 1);
+    d2.layers[n - 1].content = LayerContent::Fill(lienzo_doc::Fill::Solid(lienzo_color::Color::rgb(0.0, 0.0, 1.0)));
+    let p = lienzo_compose::flatten(&d2).get(1, 1);
     assert!(p[2] > 0.99 && p[0] < 0.01, "{p:?}");
 }
 
 #[test]
 fn text_and_smart_detected() {
-    use photocraft_psd::{LayerRecord, TaggedBlock};
+    use lienzo_psd::{LayerRecord, TaggedBlock};
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     for (name, key) in [("t", b"TySh"), ("s", b"PlLd"), ("sh", b"vscg")] {
         // Type identification needs readable type data, not an eight-byte malformed stub.
-        let data = if key == b"TySh" { photocraft_text::psd::build_tysh(&photocraft_doc::TextLayer::default(), 72.0, None) } else { vec![0; 8] };
+        let data = if key == b"TySh" { lienzo_text::psd::build_tysh(&lienzo_doc::TextLayer::default(), 72.0, None) } else { vec![0; 8] };
         f.layers_mut().push(LayerRecord {
             name: name.as_bytes().to_vec(),
             blocks: vec![TaggedBlock::unicode_name(name), TaggedBlock::new(*key, data)],
@@ -709,17 +703,13 @@ fn text_and_smart_detected() {
 
 #[test]
 fn guides_and_alpha_names_roundtrip() {
-    let mut d = photocraft_doc::Document::new("g", photocraft_geom::Size::new(8, 8), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut d = lienzo_doc::Document::new("g", lienzo_geom::Size::new(8, 8), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     d.guides.horizontal = vec![1.0, 2.5];
     d.guides.vertical = vec![7.03125];
     for name in ["Spot \u{e9}", "Alpha 2"] {
-        d.channels.push(photocraft_doc::AlphaChannel::new(
+        d.channels.push(lienzo_doc::AlphaChannel::new(
             name,
-            photocraft_raster::Surface::new(photocraft_color::PixelFormat::new(
-                photocraft_color::ColorMode::Grayscale,
-                photocraft_color::SampleType::U8,
-                false,
-            )),
+            lienzo_raster::Surface::new(lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Grayscale, lienzo_color::SampleType::U8, false)),
         ));
     }
     let f = document_to_psd(&d);
@@ -734,10 +724,10 @@ fn guides_and_alpha_names_roundtrip() {
 #[test]
 fn resolution_info_cm_display_unit_stays_pixels_per_inch() {
     let mut f = testgen::small(Version::Psd, Compression::Raw);
-    let mut ri = photocraft_psd::ResolutionInfo::from_dpi(300.0);
+    let mut ri = lienzo_psd::ResolutionInfo::from_dpi(300.0);
     ri.h_res_unit = 2;
     ri.v_res_unit = 2;
-    f.resources[0] = photocraft_psd::ImageResource::new(1005, ri.to_bytes());
+    f.resources[0] = lienzo_psd::ImageResource::new(1005, ri.to_bytes());
     let (d, _) = psd_to_document(&f);
     assert!((d.resolution_dpi - 300.0).abs() < 1e-3, "{}", d.resolution_dpi);
     let out = document_to_psd(&d);
@@ -750,7 +740,7 @@ fn resolution_info_cm_display_unit_stays_pixels_per_inch() {
 fn stale_index_resources_dropped() {
     let mut f = testgen::small(Version::Psd, Compression::Raw);
     for id in [1024u16, 1026, 1036, 1057, 1069, 1072] {
-        f.resources.push(photocraft_psd::ImageResource::new(id, vec![0, 0]));
+        f.resources.push(lienzo_psd::ImageResource::new(id, vec![0, 0]));
     }
     let (d, _) = psd_to_document(&f);
     assert!(d.metadata.psd_resources.iter().all(|r| ![1024u16, 1026, 1036, 1057, 1069, 1072].contains(&r.0)));
@@ -762,7 +752,7 @@ fn merged_composite_unmattes_photoshop_white() {
     let mut f = testgen::merged_only(Version::Psd, ColorMode::Rgb, 8, Compression::Raw, 1, 1);
     f.header.channels = 4;
     // straight red at alpha 0.5, matted: r = 1, g = b = 0.5
-    f.image_data = photocraft_psd::ImageData::new(Compression::Raw, vec![255, 128, 128, 128]);
+    f.image_data = lienzo_psd::ImageData::new(Compression::Raw, vec![255, 128, 128, 128]);
     let m = merged_composite(&f).unwrap();
     assert!((m[0][0] - 1.0).abs() < 0.01 && m[0][1] < 0.01 && m[0][2] < 0.01, "{:?}", m[0]);
     let (d, _) = psd_to_document(&f);
@@ -772,27 +762,27 @@ fn merged_composite_unmattes_photoshop_white() {
     // HDR and negative straight samples must survive the actual F32 PSD import boundary.
     let mut hdr = testgen::merged_only(Version::Psd, ColorMode::Rgb, 32, Compression::Raw, 1, 1);
     hdr.header.channels = 4;
-    hdr.image_data = photocraft_psd::ImageData::new(Compression::Raw, [1.5_f32, 0.25, 0.5, 0.5].into_iter().flat_map(f32::to_be_bytes).collect());
+    hdr.image_data = lienzo_psd::ImageData::new(Compression::Raw, [1.5_f32, 0.25, 0.5, 0.5].into_iter().flat_map(f32::to_be_bytes).collect());
     assert_eq!(merged_composite(&hdr).unwrap(), vec![[2.0, -0.5, 0.0, 0.5]]);
     let mut deep = testgen::merged_only(Version::Psd, ColorMode::Rgb, 16, Compression::Raw, 1, 1);
     deep.header.channels = 4;
     deep.image_data.data = [65535_u16, 65535, 65535, 65500].into_iter().flat_map(u16::to_be_bytes).collect();
     assert_eq!(merged_composite(&deep).unwrap()[0][3], 65500.0 / 65535.0);
     let imported = import("hdr.psd", &hdr.to_bytes().unwrap()).unwrap().document;
-    assert_eq!(imported.depth, photocraft_color::SampleType::F32);
+    assert_eq!(imported.depth, lienzo_color::SampleType::F32);
     assert_eq!(imported.layers[0].surface().unwrap().pixel(0, 0), vec![2.0, -0.5, 0.0, 0.5]);
 }
 
 #[test]
 fn vector_rendered_mask_not_doubled_on_shapes() {
-    use photocraft_psd::{LayerRecord, TaggedBlock};
+    use lienzo_psd::{LayerRecord, TaggedBlock};
     let mut f = testgen::small(Version::Psd, Compression::Raw);
-    let mut mask = photocraft_psd::LayerMask::new(photocraft_psd::Rect::default(), 0, 8);
+    let mut mask = lienzo_psd::LayerMask::new(lienzo_psd::Rect::default(), 0, 8);
     mask.flags = 8;
     f.layers_mut().push(LayerRecord {
         name: b"shape".to_vec(),
-        mask: photocraft_psd::MaskData::Mask(mask),
-        channels: vec![photocraft_psd::ChannelData::new(-2, Some(Compression::Raw), vec![])],
+        mask: lienzo_psd::MaskData::Mask(mask),
+        channels: vec![lienzo_psd::ChannelData::new(-2, Some(Compression::Raw), vec![])],
         blocks: vec![TaggedBlock::unicode_name("shape"), TaggedBlock::new(*b"SoCo", vec![]), TaggedBlock::new(*b"vmsk", vec![0; 8])],
         ..Default::default()
     });
@@ -802,9 +792,9 @@ fn vector_rendered_mask_not_doubled_on_shapes() {
     assert!(l.mask.is_none());
 
     let record = f.layers_mut().last_mut().unwrap();
-    let photocraft_psd::MaskData::Mask(mask) = &mut record.mask else { panic!("fixture has a mask") };
-    mask.real = Some(photocraft_psd::RealMask { flags: 0, background: 255, rect: photocraft_psd::Rect { top: 0, left: 0, bottom: 1, right: 1 } });
-    record.channels.push(photocraft_psd::ChannelData::new(-3, Some(Compression::Raw), vec![64]));
+    let lienzo_psd::MaskData::Mask(mask) = &mut record.mask else { panic!("fixture has a mask") };
+    mask.real = Some(lienzo_psd::RealMask { flags: 0, background: 255, rect: lienzo_psd::Rect { top: 0, left: 0, bottom: 1, right: 1 } });
+    record.channels.push(lienzo_psd::ChannelData::new(-3, Some(Compression::Raw), vec![64]));
     let (imported, _) = psd_to_document(&f);
     assert_eq!(imported.layers.last().unwrap().content.kind_name(), "Shape");
     let mask = imported.layers.last().unwrap().mask.as_ref().expect("selected real mask must survive synthetic cleanup");
@@ -816,10 +806,10 @@ fn vector_rendered_mask_not_doubled_on_shapes() {
 
 #[test]
 fn every_blend_mode_maps_both_ways() {
-    for m in std::iter::once(photocraft_color::BlendMode::PassThrough).chain(photocraft_color::BlendMode::LAYER_MODES) {
-        let k = photocraft_psd::BlendMode::from_key(m.psd_key());
-        assert!(!matches!(k, photocraft_psd::BlendMode::Unknown(_)), "{m:?}");
-        assert_eq!(photocraft_color::BlendMode::from_psd_key(k.key()), Some(m));
+    for m in std::iter::once(lienzo_color::BlendMode::PassThrough).chain(lienzo_color::BlendMode::LAYER_MODES) {
+        let k = lienzo_psd::BlendMode::from_key(m.psd_key());
+        assert!(!matches!(k, lienzo_psd::BlendMode::Unknown(_)), "{m:?}");
+        assert_eq!(lienzo_color::BlendMode::from_psd_key(k.key()), Some(m));
     }
 }
 
@@ -827,9 +817,9 @@ fn every_blend_mode_maps_both_ways() {
 fn layer_bounds_without_channel_data_allocate_nothing() {
     // A record can declare a 300000x300000 rectangle in a few bytes. With no channel data to
     // back it, import used to interleave a ~360 GB buffer and abort on the allocation (#755).
-    use photocraft_psd::LayerRecord;
+    use lienzo_psd::LayerRecord;
     let mut f = testgen::small(Version::Psd, Compression::Raw);
-    f.layers_mut().push(LayerRecord { rect: photocraft_psd::Rect::from_xywh(0, 0, 300_000, 300_000), name: b"huge".to_vec(), ..Default::default() });
+    f.layers_mut().push(LayerRecord { rect: lienzo_psd::Rect::from_xywh(0, 0, 300_000, 300_000), name: b"huge".to_vec(), ..Default::default() });
     let (d, warnings) = psd_to_document(&f);
     let l = d.layers.last().unwrap();
     assert!(matches!(&l.content, LayerContent::Raster(s) if s.tile_count() == 0));

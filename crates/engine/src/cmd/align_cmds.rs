@@ -1,11 +1,11 @@
 //! Edit › Auto-Align Layers and Auto-Blend Layers, on the selected pixel layers.
 //!
-//! Both share Photomerge's registration and blending ([`photocraft_algo::panorama`] via
+//! Both share Photomerge's registration and blending ([`lienzo_algo::panorama`] via
 //! `photo_cmds`). Auto-Align matches Harris / steered-BRIEF features between every pair of
 //! layers, chains the verified pairs from the reference layer (maximum spanning tree) and
 //! bundle-adjusts all of them, then warps each layer. Layers that nearly coincide (a focus or
 //! exposure bracket) have nothing to match and register by intensity instead
-//! ([`photocraft_algo::direct`], `registration`: auto falls back to it, or ask for it). Projections: Auto, Perspective
+//! ([`lienzo_algo::direct`], `registration`: auto falls back to it, or ask for it). Projections: Auto, Perspective
 //! (homography), Cylindrical and Spherical (rigid motion on the cylinder / sphere, focal length
 //! from the homographies or EXIF), Collage (similarity) and Reposition (translation). The
 //! reference stays put in the planar projections.
@@ -18,16 +18,16 @@
 //! ([`pyramid::fuse_stack`]; `haloControl` keeps a bright object's defocused glow out of the
 //! coarse levels).
 //! Stack Images can also add a hidden Depth layer, the layer each pixel is sharpest in by depth
-//! from focus ([`photocraft_algo::dff`]): black = the bottom layer, white = the top, so that once
+//! from focus ([`lienzo_algo::dff`]): black = the bottom layer, white = the top, so that once
 //! on a layer mask it drives Lens Blur's depth map.
 
-use photocraft_algo::panorama::Layout;
-use photocraft_algo::pyramid;
-use photocraft_algo::transform::Interp;
-use photocraft_algo::warp::warp_mesh_gray;
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, to_rgba};
+use lienzo_algo::panorama::Layout;
+use lienzo_algo::pyramid;
+use lienzo_algo::transform::Interp;
+use lienzo_algo::warp::warp_mesh_gray;
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, to_rgba};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -78,7 +78,7 @@ fn auto_align(s: &mut Session, p: &Value) -> Result<Value> {
     let area = doc.bounds();
     let surfs: Vec<&Surface> = ids.iter().map(|id| doc.layer(*id).and_then(|l| l.surface()).ok_or(EngineError::NoLayer(*id))).collect::<Result<_>>()?;
     let images: Vec<(&Surface, Rect)> = surfs.iter().map(|s| (*s, area)).collect();
-    let focal35 = doc.metadata.exif.as_ref().and_then(|e| photocraft_algo::exif::read(e).focal_length_35mm);
+    let focal35 = doc.metadata.exif.as_ref().and_then(|e| lienzo_algo::exif::read(e).focal_length_35mm);
     let geometric = p.get("geometricCorrection").and_then(Value::as_bool).unwrap_or(false);
     let registration = p.get("registration").and_then(Value::as_str).unwrap_or("auto");
     if !matches!(registration, "auto" | "features" | "intensity") {
@@ -240,7 +240,7 @@ fn auto_blend(s: &mut Session, p: &Value) -> Result<Value> {
             lv[i] = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
             av[i] = c[3];
         }
-        if fmt.is_some_and(|g: photocraft_color::PixelFormat| g != f) {
+        if fmt.is_some_and(|g: lienzo_color::PixelFormat| g != f) {
             return Err(EngineError::Other("the layers have different pixel formats".into()));
         }
         fmt = Some(f);
@@ -285,12 +285,12 @@ fn auto_blend(s: &mut Session, p: &Value) -> Result<Value> {
             None => (0..w * h).map(|i| luma.iter().zip(&weights).map(|(l, wt)| l[i] * wt[i]).sum()).collect(),
         };
         let refs: Vec<&[f32]> = luma.iter().map(Vec::as_slice).collect();
-        let dm = photocraft_algo::dff::depth_from_focus(&refs, &guide, w, h, &photocraft_algo::dff::DepthParams::default());
+        let dm = lienzo_algo::dff::depth_from_focus(&refs, &guide, w, h, &lienzo_algo::dff::DepthParams::default());
         let scale = 1.0 / (ids.len() - 1).max(1) as f32;
         let mut out = vec![0.0f32; w * h * n];
         for (i, d) in dm.depth.iter().enumerate() {
             let g = (d * scale).clamp(0.0, 1.0);
-            photocraft_raster::from_rgba_into(&fmt, [g, g, g, 1.0], &mut out[i * n..(i + 1) * n]);
+            lienzo_raster::from_rgba_into(&fmt, [g, g, g, 1.0], &mut out[i * n..(i + 1) * n]);
         }
         out
     });

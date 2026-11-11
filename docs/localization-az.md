@@ -27,7 +27,7 @@ quality or include untranslated engine errors.
 | Light (Camera Raw) | İşıq |
 | Light (font weight) | İncə |
 
-Google Translate supplied drafts of PhotoCraft's English labels. Core terminology, contexts
+Google Translate supplied drafts of Lienzo's English labels. Core terminology, contexts
 and plural messages were edited with OpenAI Codex. No proprietary localization resources were
 used. The translations are MIT OR Apache-2.0, with attribution in `ATTRIBUTION.md` and
 `crates/ui-egui/src/i18n/LICENSE-translations.txt`.

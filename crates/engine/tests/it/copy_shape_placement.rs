@@ -1,6 +1,6 @@
 //! Copy placement must use source-space bounds before destination cache clipping.
-use photocraft_doc::LayerContent;
-use photocraft_engine::Session;
+use lienzo_doc::LayerContent;
+use lienzo_engine::Session;
 use serde_json::json;
 
 /// Cover source clipping, groups, missing caches, destination depth, placement and Undo/Redo.
@@ -54,7 +54,7 @@ fn copying_shapes_to_smaller_documents_preserves_requested_center() {
                             .collect();
                         assert_eq!(shapes.len(), if grouped { 2 } else { 1 });
                         for shape in shapes {
-                            let fresh = photocraft_vector::render_shape(shape, st.doc.pixel_format(), st.doc.bounds());
+                            let fresh = lienzo_vector::render_shape(shape, st.doc.pixel_format(), st.doc.bounds());
                             assert!(
                                 shape.cache.as_ref() == Some(&fresh),
                                 "cache mismatch: x={x}, grouped={grouped}, cache missing={missing_cache}, depth={depth}, at={at:?}"

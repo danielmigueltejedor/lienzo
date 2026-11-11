@@ -249,12 +249,12 @@ pub(super) fn jstr<'a>(p: &'a Value, k: &str) -> Option<&'a str> {
 
 /// A recorded D50 Lab colour converted through the CMS to sRGB `#rrggbb`.
 pub(super) fn lab_color_hex(c: &Descriptor) -> Option<String> {
-    use photocraft_cms::{Builtin, TransformOptions};
+    use lienzo_cms::{Builtin, TransformOptions};
     if !c.class_id.is("LbCl") {
         return None;
     }
     let (l, a, b) = (get_num(c, "Lmnc")?, get_num(c, "A   ")?, get_num(c, "B   ")?);
-    let transform = photocraft_cms::cached(Builtin::LabD50.profile(), Builtin::Srgb.profile(), TransformOptions { bpc: false, ..Default::default() }).ok()?;
+    let transform = lienzo_cms::cached(Builtin::LabD50.profile(), Builtin::Srgb.profile(), TransformOptions { bpc: false, ..Default::default() }).ok()?;
     // ICC v4 Lab device values are normalized, unlike the recorded L*, a*, b*.
     let input = [(l / 100.0) as f32, ((a + 128.0) / 255.0) as f32, ((b + 128.0) / 255.0) as f32];
     let mut rgb = [0.0; 3];

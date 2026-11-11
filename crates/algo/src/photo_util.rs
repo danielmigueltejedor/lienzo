@@ -334,7 +334,7 @@ pub(crate) fn hash01(x: i64, y: i64, seed: u64) -> f32 {
     (z >> 40) as f32 / (1u64 << 24) as f32
 }
 
-pub(crate) use photocraft_color::convert::{linear_to_srgb, srgb_to_linear};
+pub(crate) use lienzo_color::convert::{linear_to_srgb, srgb_to_linear};
 
 /// Bilinear sample of channel `c` of a `w × h × ch` buffer, clamped to the edges.
 pub(crate) fn bilinear(buf: &[f32], w: usize, h: usize, ch: usize, c: usize, x: f32, y: f32) -> f32 {

@@ -28,12 +28,12 @@ pub struct ToolOptions {
     /// true = "Classic gradient" (paints the pixels).
     pub gradient_classic: bool,
     /// Blend mode used by both live and classic gradient drags.
-    pub gradient_blend_mode: photocraft_color::BlendMode,
+    pub gradient_blend_mode: lienzo_color::BlendMode,
     pub fill_opacity: f32,
     /// Paint Bucket fill source: false = Foreground colour, true = Pattern (Patterns panel selection).
     pub bucket_fill_pattern: bool,
     /// Paint Bucket › Mode (any layer mode; Clear is `bucket_clear`).
-    pub bucket_blend_mode: photocraft_color::BlendMode,
+    pub bucket_blend_mode: lienzo_color::BlendMode,
     /// Paint Bucket › Mode: Clear, which erases the filled area (see `brush_clear`).
     pub bucket_clear: bool,
     /// Type tool: family, style name, size (pt), anti-aliasing and paragraph alignment.
@@ -109,8 +109,8 @@ pub struct ToolOptions {
     pub shape_stroke: crate::shape_stroke_ui::StrokeOptions,
     /// Shape tools: the gradient the next shape's fill / stroke takes (the swatches' Gradient
     /// tab) instead of the foreground / background colour; `None` = the colour.
-    pub shape_fill_gradient: Option<photocraft_doc::Fill>,
-    pub shape_stroke_gradient: Option<photocraft_doc::Fill>,
+    pub shape_fill_gradient: Option<lienzo_doc::Fill>,
+    pub shape_stroke_gradient: Option<lienzo_doc::Fill>,
     pub corner_radius: f32,
     pub polygon_sides: u32,
     pub line_weight: f32,
@@ -134,7 +134,7 @@ pub struct ToolOptions {
     pub marquee_width: f32,
     #[serde(default = "one")]
     pub marquee_height: f32,
-    /// The unit Fixed Size's Width and Height show (a [`photocraft_engine::prefs::Unit`] name,
+    /// The unit Fixed Size's Width and Height show (a [`lienzo_engine::prefs::Unit`] name,
     /// picked by right-clicking them); the size itself stays in pixels (#7910).
     #[serde(default = "default_marquee_unit")]
     pub marquee_unit: String,
@@ -176,7 +176,7 @@ pub struct ToolOptions {
     pub transform_relative_position: bool,
     /// Last interpolation selected in the Transform options bar; unset follows General's default.
     #[serde(default)]
-    pub transform_interpolation: Option<photocraft_engine::prefs::Interpolation>,
+    pub transform_interpolation: Option<lienzo_engine::prefs::Interpolation>,
     /// Crop options bar: aspect ratio ("" = Ratio/unconstrained, "w:h", or "original") and
     /// Delete Cropped Pixels.
     #[serde(default)]
@@ -279,7 +279,7 @@ pub struct ToolOptions {
     #[serde(default = "fifty")]
     pub red_eye_darken: f32,
     /// Eyedropper › Sample Size: 1 = Point Sample, else the side of the averaged square (3, 5,
-    /// 11, 31, 51, 101; `photocraft_engine::sample_cmds::SAMPLE_SIZES`). Shared, as in Photoshop,
+    /// 11, 31, 51, 101; `lienzo_engine::sample_cmds::SAMPLE_SIZES`). Shared, as in Photoshop,
     /// with the ⌥-click eyedropper of the painting tools, the dialog eyedroppers and the Info panel.
     #[serde(default = "one_u32")]
     pub eyedropper_size: u32,
@@ -348,16 +348,16 @@ pub(super) fn default_brush_tool() -> Tool {
     Tool::Brush
 }
 
-pub(super) fn default_layer_filter_mode() -> photocraft_color::BlendMode {
-    photocraft_color::BlendMode::Normal
+pub(super) fn default_layer_filter_mode() -> lienzo_color::BlendMode {
+    lienzo_color::BlendMode::Normal
 }
 
 /// A stored Mode filter set to Pass Through, which the Mode list offered until #10878, loads as
 /// Normal: Pass Through isn't a mode the filter lists any more.
-pub(super) fn layer_filter_mode_or_normal<'de, D: serde::Deserializer<'de>>(d: D) -> Result<photocraft_color::BlendMode, D::Error> {
+pub(super) fn layer_filter_mode_or_normal<'de, D: serde::Deserializer<'de>>(d: D) -> Result<lienzo_color::BlendMode, D::Error> {
     use serde::Deserialize;
-    let mode = photocraft_color::BlendMode::deserialize(d)?;
-    Ok(if mode == photocraft_color::BlendMode::PassThrough { photocraft_color::BlendMode::Normal } else { mode })
+    let mode = lienzo_color::BlendMode::deserialize(d)?;
+    Ok(if mode == lienzo_color::BlendMode::PassThrough { lienzo_color::BlendMode::Normal } else { mode })
 }
 
 fn one_u32() -> u32 {
@@ -449,10 +449,10 @@ impl Default for ToolOptions {
             gradient_reverse: false,
             gradient_dither: true,
             gradient_classic: false,
-            gradient_blend_mode: photocraft_color::BlendMode::Normal,
+            gradient_blend_mode: lienzo_color::BlendMode::Normal,
             fill_opacity: 100.0,
             bucket_fill_pattern: false,
-            bucket_blend_mode: photocraft_color::BlendMode::Normal,
+            bucket_blend_mode: lienzo_color::BlendMode::Normal,
             bucket_clear: false,
             type_font: "Inter".into(),
             type_style: "Regular".into(),

@@ -1,27 +1,27 @@
 //! Move tool transform controls through the control channel (#11105).
 
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::control::{ControlRequest, Outcome};
 use crate::state::Tool;
 
-fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn call(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (request, _receiver) = ControlRequest::new(method, params);
     let Outcome::Done(reply) = crate::control::handle(app, ctx, &request) else { panic!("expected an immediate {method} reply") };
     reply
 }
 
-fn accepted(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) {
+fn accepted(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) {
     let reply = call(app, ctx, method, params);
     assert_eq!(reply["ok"], true, "{method}: {reply}");
 }
 
 /// Two selected shapes share the measured controls frame (100,100)..(800,500).
-fn fixture() -> (PhotocraftApp, egui::Context, [LayerId; 2]) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn fixture() -> (LienzoApp, egui::Context, [LayerId; 2]) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 1000, "height": 700, "background": "white"})).unwrap();
     let mut layers = Vec::new();
     for rect in [[100, 100, 200, 100], [600, 400, 200, 100]] {
@@ -39,16 +39,16 @@ fn fixture() -> (PhotocraftApp, egui::Context, [LayerId; 2]) {
     (app, ctx, [layers[0], layers[1]])
 }
 
-fn bounds(app: &PhotocraftApp, id: LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: LayerId) -> Rect {
     let state = app.session.active().unwrap();
-    photocraft_engine::transform_cmds::transform_bounds(&state.doc, state.doc.layer(id).unwrap())
+    lienzo_engine::transform_cmds::transform_bounds(&state.doc, state.doc.layer(id).unwrap())
 }
 
-fn pointer(app: &mut PhotocraftApp, ctx: &egui::Context, kind: &str, at: [f64; 2]) {
+fn pointer(app: &mut LienzoApp, ctx: &egui::Context, kind: &str, at: [f64; 2]) {
     accepted(app, ctx, "ui.pointer", json!({"events": [{"kind": kind, "x": at[0], "y": at[1]}]}));
 }
 
-fn enter(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn enter(app: &mut LienzoApp, ctx: &egui::Context) {
     let (request, _receiver) = ControlRequest::new("ui.key", json!({"key": "Enter"}));
     assert!(matches!(crate::control::handle(app, ctx, &request), Outcome::AfterInput));
     let events = app.take_synthetic_step();
@@ -57,7 +57,7 @@ fn enter(app: &mut PhotocraftApp, ctx: &egui::Context) {
     output.textures_delta.clear(); // This CPU-only helper deliberately has no texture uploader.
 }
 
-fn assert_one_transform(app: &PhotocraftApp, steps: usize) {
+fn assert_one_transform(app: &LienzoApp, steps: usize) {
     assert!(app.ui.transform.is_none(), "Enter closes Free Transform");
     let state = app.session.active().unwrap();
     assert_eq!(state.history.past_len(), steps + 1);
@@ -109,7 +109,7 @@ fn rotation_zone_uses_the_existing_transform_gesture() {
     assert_ne!(rotated.quad, initial);
     assert_eq!(rotated.layers, layers.map(|id| id.0));
     assert!((rotated.quad[1][1] - rotated.quad[0][1]).abs() > 1.0, "the upper edge rotates");
-    let preview = photocraft_algo::transform::Homography::rect_to_quad(rotated.rect, rotated.quad).unwrap();
+    let preview = lienzo_algo::transform::Homography::rect_to_quad(rotated.rect, rotated.quad).unwrap();
     let expected = old.map(|r| {
         let points = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]].map(|[x, y]| preview.apply(f64::from(x), f64::from(y)));
         points
@@ -420,7 +420,7 @@ fn move_pointer_still_samples_into_the_color_picker() {
 /// A full-window editor receives its own stroke instead of a Move or Free Transform gesture.
 #[test]
 fn move_pointer_still_reaches_the_liquify_workspace() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 80, "depth": 8})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.sync_views();
@@ -492,7 +492,7 @@ fn modal_dialogs_block_a_command_held_move_from_another_tool() {
 }
 
 /// The smart guide segments `snap_ui::draw` paints on the canvas.
-fn drawn_snap_lines(app: &mut PhotocraftApp) -> usize {
+fn drawn_snap_lines(app: &mut LienzoApp) -> usize {
     let xf = crate::canvas::ViewXform {
         rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1400.0, 900.0)),
         zoom: 1.0,

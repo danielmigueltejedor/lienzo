@@ -12,7 +12,7 @@
 # Combined from the community Arabic catalogs in #2505, #4520, #4569, #5593, #5915, #6092 and
 # #6287: each row takes the best of their translations, with one term per concept across the UI.
 # Modern Standard Arabic; menu commands use verbal nouns (فتح، حفظ باسم…). Product and technology
-# names (PhotoCraft, ArtCraft, GPU, CMYK, OpenType …) and key names stay in Latin letters; the
+# names (Lienzo, ArtCraft, GPU, CMYK, OpenType …) and key names stay in Latin letters; the
 # trailing "…" of dialog commands is kept. Clean-room: written from the plain meaning of the English
 # labels; no proprietary localisation resource was consulted. Plural rule (CLDR):
 # zero|one|two|few|many|other. Reviewed for consistency by an AI model; native-speaker review of
@@ -831,9 +831,9 @@
 	Pin bar position	تثبيت موضع الشريط
 	Move bar	نقل الشريط
 	More options	مزيد من الخيارات
-	About PhotoCraft	حول PhotoCraft
-	PhotoCraft Website	موقع PhotoCraft
-	PhotoCraft on GitHub	PhotoCraft على GitHub
+	About Lienzo	حول Lienzo
+	Lienzo Website	موقع Lienzo
+	Lienzo on GitHub	Lienzo على GitHub
 	ArtCraft Website	موقع ArtCraft
 	Join the ArtCraft Discord…	الانضمام إلى ArtCraft على Discord…
 	Report an Issue…	الإبلاغ عن مشكلة…
@@ -887,7 +887,7 @@
 	All Caps	جميع الأحرف كبيرة
 	All Slices	كل الشرائح
 	All User Slices	كل شرائح المستخدم
-	All shortcuts reset to PhotoCraft defaults.	تمت إعادة تعيين جميع الاختصارات إلى إعدادات PhotoCraft الافتراضية.
+	All shortcuts reset to Lienzo defaults.	تمت إعادة تعيين جميع الاختصارات إلى إعدادات Lienzo الافتراضية.
 	Alt	Alt
 	Always use pressure for opacity	استخدام الضغط دائمًا للعتامة
 	Always use pressure for size	استخدام الضغط دائمًا للحجم
@@ -1145,8 +1145,8 @@
 	Drop an image or PSD anywhere to open it.	أفلت صورة أو ملف PSD في أي مكان لفتحه.
 	Native file drag-and-drop is unavailable	السحب والإفلات الأصلي للملفات غير متاح
 	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or copy the image in your file manager and paste it with {paste}.	السحب والإفلات الأصلي للملفات غير مدعوم على Wayland بعد. استخدم ملف › فتح، أو انسخ الصورة في مدير الملفات والصقها باستخدام {paste}.
-	To drop files, start PhotoCraft under XWayland: `{command}`	لإفلات الملفات، شغّل PhotoCraft تحت XWayland: `{command}`
-	Or set Preferences › Performance › Linux display server to X11: PhotoCraft then always starts under XWayland.	أو اضبط التفضيلات › الأداء › خادم عرض Linux على X11: عندها يبدأ PhotoCraft دائمًا تحت XWayland.
+	To drop files, start Lienzo under XWayland: `{command}`	لإفلات الملفات، شغّل Lienzo تحت XWayland: `{command}`
+	Or set Preferences › Performance › Linux display server to X11: Lienzo then always starts under XWayland.	أو اضبط التفضيلات › الأداء › خادم عرض Linux على X11: عندها يبدأ Lienzo دائمًا تحت XWayland.
 	Edit › Paste	تحرير › لصق
 	Duplicate Layers…	تكرار الطبقات…
 	Duplicate style	تكرار النمط
@@ -1396,9 +1396,9 @@
 	Perspective Warp is not active	التواء المنظور غير نشط
 	Perspective Warp: draw planes along the image's perspective, then switch to Warp	التواء المنظور: ارسم مستويات وفق منظور الصورة، ثم انتقل إلى الالتواء
 	Photo Filter	فلتر الصور
-	PhotoCraft	PhotoCraft
-	PhotoCraft Manages Colors	PhotoCraft يدير الألوان
-	PhotoCraft — an open-source, native image editor written in Rust.	PhotoCraft — محرر صور أصلي ومفتوح المصدر مكتوب بلغة Rust.
+	Lienzo	Lienzo
+	Lienzo Manages Colors	Lienzo يدير الألوان
+	Lienzo — an open-source, native image editor written in Rust.	Lienzo — محرر صور أصلي ومفتوح المصدر مكتوب بلغة Rust.
 	Pin Depth:	عمق الدبوس:
 	Pixel Length:	الطول بالبكسل:
 	Pixels/Centimeter	بكسل/سنتيمتر
@@ -1473,11 +1473,11 @@
 	Import Shortcuts…	استيراد الاختصارات…
 	Load a keyboard shortcut set saved as .kys	تحميل مجموعة اختصارات لوحة مفاتيح محفوظة بتنسيق .kys
 	Imported {n} shortcuts from {file}. Click OK to keep them.	تم استيراد {n} من الاختصارات من {file}. انقر «موافق» للاحتفاظ بها.
-	{n} commands are not in PhotoCraft.	{n} من الأوامر غير موجودة في PhotoCraft.
+	{n} commands are not in Lienzo.	{n} من الأوامر غير موجودة في Lienzo.
 	Keyboard shortcuts imported	تم استيراد اختصارات لوحة المفاتيح
 	Your keyboard shortcut set {set} is in use here: {n} shortcuts differ from the defaults. Edit › Keyboard Shortcuts shows them; Reset All to Defaults undoes this.	مجموعة اختصارات لوحة المفاتيح {set} الخاصة بك قيد الاستخدام هنا: {n} من الاختصارات تختلف عن الافتراضيات. يعرضها «تحرير › اختصارات لوحة المفاتيح»؛ ويتراجع «إعادة تعيين الكل إلى الافتراضيات» عن ذلك.
 	Import keyboard shortcuts?	هل تريد استيراد اختصارات لوحة المفاتيح؟
-	PhotoCraft found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from PhotoCraft's. Import it?	عثر PhotoCraft على مجموعة اختصارات لوحة المفاتيح {set} الخاصة بك من محرر صور آخر على هذا الكمبيوتر: {n} من اختصاراتها تختلف عن اختصارات PhotoCraft. هل تريد استيرادها؟
+	Lienzo found your keyboard shortcut set {set} from another image editor on this computer: {n} of its shortcuts differ from Lienzo's. Import it?	عثر Lienzo على مجموعة اختصارات لوحة المفاتيح {set} الخاصة بك من محرر صور آخر على هذا الكمبيوتر: {n} من اختصاراتها تختلف عن اختصارات Lienzo. هل تريد استيرادها؟
 	Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import.	تحرير › اختصارات لوحة المفاتيح › إعادة تعيين الكل إلى الافتراضيات يؤدي إلى التراجع عن الاستيراد.
 	Don't Import	عدم الاستيراد
 	The keyboard shortcut set was not imported: {error}	لم يتم استيراد مجموعة اختصارات لوحة المفاتيح: {error}
@@ -1702,7 +1702,7 @@
 	Current Tool	الأداة الحالية
 	Custom Shape Tool	أداة الشكل المخصص
 	Cyans	درجات السماوي
-	Default PhotoCraft Size	حجم PhotoCraft الافتراضي
+	Default Lienzo Size	حجم Lienzo الافتراضي
 	Delete Workspace	حذف مساحة العمل
 	Diamond	ماسي
 	Dimensions:	الأبعاد:
@@ -1814,7 +1814,7 @@
 	Pen Tool	أداة القلم
 	Convert Point Tool	أداة تحويل النقطة
 	Photo	صورة فوتوغرافية
-	PhotoCraft website	موقع PhotoCraft
+	Lienzo website	موقع Lienzo
 	Picas	بيكا
 	Pillow Emboss	نقش وسادي
 	Pixel Replacement	استبدال البكسل
@@ -2149,7 +2149,7 @@
 	System Info	معلومات النظام
 	More panels	المزيد من اللوحات
 	More documents	المزيد من المستندات
-	These settings aren't available in PhotoCraft yet.	هذه الإعدادات غير متاحة في PhotoCraft بعد.
+	These settings aren't available in Lienzo yet.	هذه الإعدادات غير متاحة في Lienzo بعد.
 	Graphics	الرسومات
 	Reset GPU Backend	إعادة تعيين واجهة GPU الخلفية
 	Applies at next launch.	يُطبّق عند التشغيل التالي.
@@ -2364,7 +2364,7 @@
 	Automatic uses GPU acceleration when available and falls back to CPU rendering on errors.	يستخدم الوضع التلقائي تسريع GPU عند توفره ويعود إلى تصيير CPU عند حدوث أخطاء.
 	Switched to CPU rendering	تم التبديل إلى تصيير CPU
 	GPU acceleration could not continue. Your documents are unchanged.	تعذّر استمرار تسريع GPU. مستنداتك لم تتغير.
-	PhotoCraft is using the CPU image compositor. The window may still use your graphics adapter.	يستخدم PhotoCraft مركب الصور على CPU. قد تظل النافذة تستخدم محول الرسومات لديك.
+	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	يستخدم Lienzo مركب الصور على CPU. قد تظل النافذة تستخدم محول الرسومات لديك.
 	Retry GPU requires a restart. Save your work first.	تتطلب إعادة محاولة GPU إعادة التشغيل. احفظ عملك أولًا.
 	Retry GPU tries the graphics processor again now.	تؤدي إعادة محاولة GPU إلى تجربة معالج الرسومات مرة أخرى الآن.
 	GPU acceleration resumed.	تم استئناف تسريع GPU.
@@ -2604,7 +2604,7 @@ fontWeight	Italic	مائل
 	Color to Alpha…	اللون إلى ألفا…
 	Transparency Threshold	عتبة الشفافية
 	Opacity Threshold	عتبة العتامة
-	PhotoCraft — Screen Color Picker	PhotoCraft — منتقي ألوان الشاشة
+	Lienzo — Screen Color Picker	Lienzo — منتقي ألوان الشاشة
 
 	Rasterize svg groups deeper than	تنقيط مجموعات SVG إذا كانت أعمق من
 	0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized.	0 يعطّل هذه العتبة؛ تُنقَّط مجموعات SVG المتداخلة بعمق أكبر من 100 مستوى دائمًا.
@@ -3282,7 +3282,7 @@ curves	Smooth	تنعيم
 	{name} (Photoshop)	{name} (Photoshop)
 	{message} ({note})	{message} ({note})
 @plural	Loaded {n} action from {file}|Loaded {n} actions from {file}	تم تحميل {n} إجراء من {file}|تم تحميل {n} إجراء من {file}|تم تحميل {n} إجراءين من {file}|تم تحميل {n} إجراءات من {file}|تم تحميل {n} إجراءً من {file}|تم تحميل {n} إجراء من {file}
-@plural	{n} step has no PhotoCraft equivalent yet|{n} steps have no PhotoCraft equivalent yet	{n} خطوة ليس لها مكافئ في PhotoCraft بعد|{n} خطوة ليس لها مكافئ في PhotoCraft بعد|{n} خطوتان ليس لهما مكافئ في PhotoCraft بعد|{n} خطوات ليس لها مكافئ في PhotoCraft بعد|{n} خطوةً ليس لها مكافئ في PhotoCraft بعد|{n} خطوة ليس لها مكافئ في PhotoCraft بعد
+@plural	{n} step has no Lienzo equivalent yet|{n} steps have no Lienzo equivalent yet	{n} خطوة ليس لها مكافئ في Lienzo بعد|{n} خطوة ليس لها مكافئ في Lienzo بعد|{n} خطوتان ليس لهما مكافئ في Lienzo بعد|{n} خطوات ليس لها مكافئ في Lienzo بعد|{n} خطوةً ليس لها مكافئ في Lienzo بعد|{n} خطوة ليس لها مكافئ في Lienzo بعد
 @plural	Saved {n} action to {file}|Saved {n} actions to {file}	تم حفظ {n} إجراء في {file}|تم حفظ {n} إجراء في {file}|تم حفظ {n} إجراءين في {file}|تم حفظ {n} إجراءات في {file}|تم حفظ {n} إجراءً في {file}|تم حفظ {n} إجراء في {file}
 @plural	{n} step with no Photoshop equivalent left out|{n} steps with no Photoshop equivalent left out	تم استبعاد {n} خطوة ليس لها مكافئ في Photoshop|تم استبعاد {n} خطوة ليس لها مكافئ في Photoshop|تم استبعاد {n} خطوتين ليس لهما مكافئ في Photoshop|تم استبعاد {n} خطوات ليس لها مكافئ في Photoshop|تم استبعاد {n} خطوةً ليس لها مكافئ في Photoshop|تم استبعاد {n} خطوة ليس لها مكافئ في Photoshop
 @plural	{n} action file loaded|{n} action files loaded	تم تحميل {n} ملف إجراءات|تم تحميل {n} ملف إجراءات|تم تحميل {n} ملفي إجراءات|تم تحميل {n} ملفات إجراءات|تم تحميل {n} ملفًا للإجراءات|تم تحميل {n} ملف إجراءات
@@ -3354,7 +3354,7 @@ curves	Smooth	تنعيم
 	Could not write {name}: {error}	تعذرت كتابة {name}: {error}
 	Kept {name}: written by another application	تم الاحتفاظ بـ {name}: تمت كتابته بواسطة تطبيق آخر
 	Shadow Tint	صبغة الظلال
-# PhotoCraft release checks.
+# Lienzo release checks.
 	Check for Updates…	التحقق من وجود تحديثات…
 	Open the release page to choose an installer for your system.	افتح صفحة الإصدار لاختيار برنامج التثبيت المناسب لنظامك.
 	Automatically Check for Updates	التحقق من وجود تحديثات تلقائيًا
@@ -3396,12 +3396,12 @@ curves	Smooth	تنعيم
 	Bicubic Smoother	ثنائي التكعيب أكثر نعومة
 	Bicubic Sharper	ثنائي التكعيب أكثر حدة
 	Pasting from other apps is unavailable	اللصق من التطبيقات الأخرى غير متاح
-	PhotoCraft can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	لا يستطيع PhotoCraft الوصول إلى حافظة النظام في هذه الجلسة. على Wayland، يُخفي صندوق الحماية Flatpak البروتوكول الذي تُقرأ عبره الصور من التطبيقات الأخرى.
-	To paste from other apps, start PhotoCraft under XWayland: `{command}`	للصق من التطبيقات الأخرى، شغّل PhotoCraft ضمن XWayland: `{command}`
-	Nothing to paste: PhotoCraft can't read the system clipboard here	لا يوجد شيء للصق: لا يستطيع PhotoCraft قراءة حافظة النظام هنا
+	Lienzo can't reach the system clipboard in this session. On Wayland, a Flatpak sandbox hides the protocol that images from other apps are read through.	لا يستطيع Lienzo الوصول إلى حافظة النظام في هذه الجلسة. على Wayland، يُخفي صندوق الحماية Flatpak البروتوكول الذي تُقرأ عبره الصور من التطبيقات الأخرى.
+	To paste from other apps, start Lienzo under XWayland: `{command}`	للصق من التطبيقات الأخرى، شغّل Lienzo ضمن XWayland: `{command}`
+	Nothing to paste: Lienzo can't read the system clipboard here	لا يوجد شيء للصق: لا يستطيع Lienzo قراءة حافظة النظام هنا
 	Delete this set	حذف هذه المجموعة
 	New Set…	مجموعة جديدة…
-	PhotoCraft Defaults	الإعدادات الافتراضية لـ PhotoCraft
+	Lienzo Defaults	الإعدادات الافتراضية لـ Lienzo
 	Save a list of these shortcuts as a web page	حفظ قائمة بهذه الاختصارات كصفحة ويب
 	Save the changes to this set	حفظ التغييرات في هذه المجموعة
 	Save these shortcuts as a .kys file	حفظ هذه الاختصارات كملف .kys

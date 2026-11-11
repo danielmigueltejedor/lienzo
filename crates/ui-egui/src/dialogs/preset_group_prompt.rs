@@ -13,7 +13,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 
 const MARK: &str = "__presetGroupClash";
@@ -32,7 +32,7 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 
 /// How many of the user's presets a group named `group` holds in the library `cmd` imports to
 /// (built-in brushes are never replaced, so they don't count).
-fn clashing(app: &PhotocraftApp, cmd: &str, group: &str) -> usize {
+fn clashing(app: &LienzoApp, cmd: &str, group: &str) -> usize {
     match cmd {
         "brush.presets.importAbr" => app.session.tools.presets.iter().filter(|x| !x.builtin && x.group == group).count(),
         "gradient.presets.importGrd" => app.session.presets.gradients.iter().filter(|g| g.name == group).map(|g| g.items.len()).sum(),
@@ -41,7 +41,7 @@ fn clashing(app: &PhotocraftApp, cmd: &str, group: &str) -> usize {
 }
 
 /// Opens the prompt for `held` when its group clashes; otherwise hands `held` back to import now.
-pub(crate) fn intercept(app: &mut PhotocraftApp, held: Held) -> Result<Option<Held>, String> {
+pub(crate) fn intercept(app: &mut LienzoApp, held: Held) -> Result<Option<Held>, String> {
     let n = clashing(app, held.cmd, &held.stem);
     if n == 0 {
         return Ok(Some(held));
@@ -86,13 +86,13 @@ pub fn body(ui: &mut egui::Ui, fields: &Map<String, Value>) {
 }
 
 /// The held import: as a new group, or replacing the group when `choice` is "replace".
-pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, fields: &Map<String, Value>) -> Result<Value, String> {
     let Held { cmd, what, stem, mut params } = app.held_preset_import.take().ok_or(tl!("No import is waiting. Import the file again."))?;
     params["replace"] = json!(fields.get("choice").and_then(Value::as_str) == Some("replace"));
     crate::preset_files_ui::run_import(app, cmd, what, &stem, params).map(|()| Value::Null)
 }
 
 /// Cancel: nothing is imported.
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     app.held_preset_import = None;
 }

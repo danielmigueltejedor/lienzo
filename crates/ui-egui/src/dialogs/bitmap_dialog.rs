@@ -12,7 +12,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 pub(crate) const COMMAND: &str = "image.mode.bitmap";
@@ -43,11 +43,11 @@ pub(crate) fn owns(f: &Map<String, Value>) -> bool {
 
 /// Open defaults: Output starts at the document's resolution (Input, as in Photoshop), Custom
 /// Pattern at the Patterns panel's pattern.
-pub(crate) fn defaults(app: &PhotocraftApp, f: &mut Map<String, Value>) {
+pub(crate) fn defaults(app: &LienzoApp, f: &mut Map<String, Value>) {
     let input = app.session.active().map_or(72.0, |d| d.doc.resolution_dpi);
     f.insert("__inputResolution".into(), json!(input));
     f.insert("resolution".into(), json!(input));
-    match photocraft_engine::pattern_cmds::resolve(&app.session, "") {
+    match lienzo_engine::pattern_cmds::resolve(&app.session, "") {
         Some(p) => f.insert("pattern".into(), json!(p.id)),
         None => f.remove("pattern"),
     };
@@ -88,7 +88,7 @@ fn per_unit_row(ui: &mut egui::Ui, f: &mut Map<String, Value>, field: &str, name
 }
 
 /// The dialog body.
-pub(crate) fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(crate) fn body(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     ui.spacing_mut().item_spacing.y = 6.0;
     let res_units = [("ppi", tl!("Pixels/Inch")), ("ppcm", tl!("Pixels/Centimeter"))];

@@ -4,11 +4,11 @@
 use std::fs;
 use std::sync::{Arc, Mutex};
 
-use photocraft_automation::workspace::AuthorizedWorkspace;
-use photocraft_automation::{Headless, files};
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{DocId, Document, Rect, Size};
-use photocraft_io::{BandRenderer, CpuRenderer, ExportOptions, IoError, RenderBand, RenderError};
+use lienzo_automation::workspace::AuthorizedWorkspace;
+use lienzo_automation::{Headless, files};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{DocId, Document, Rect, Size};
+use lienzo_io::{BandRenderer, CpuRenderer, ExportOptions, IoError, RenderBand, RenderError};
 
 struct FailingRenderer;
 
@@ -18,7 +18,7 @@ impl BandRenderer for FailingRenderer {
         _doc: &Document,
         _rect: Rect,
         _band_rows: i32,
-        _ctl: &photocraft_raster::Interrupt<'_>,
+        _ctl: &lienzo_raster::Interrupt<'_>,
         _sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         Err(RenderError::Execution("forced renderer failure".into()))
@@ -27,7 +27,7 @@ impl BandRenderer for FailingRenderer {
 
 #[test]
 fn failed_renderer_save_preserves_prior_file() {
-    let dir = std::env::temp_dir().join(format!("photocraft-renderer-save-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-renderer-save-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let target = dir.join("existing.png");
@@ -56,7 +56,7 @@ impl BandRenderer for ForgetRecordingRenderer {
         _doc: &Document,
         _rect: Rect,
         _band_rows: i32,
-        _ctl: &photocraft_raster::Interrupt<'_>,
+        _ctl: &lienzo_raster::Interrupt<'_>,
         _sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         Ok(())
@@ -108,7 +108,7 @@ impl BandRenderer for DiagnosingRenderer {
         doc: &Document,
         rect: Rect,
         band_rows: i32,
-        ctl: &photocraft_raster::Interrupt<'_>,
+        ctl: &lienzo_raster::Interrupt<'_>,
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         self.push_diagnostic("renderer diagnostic survives a failed write".into());
@@ -129,7 +129,7 @@ impl BandRenderer for DiagnosingRenderer {
 
 #[test]
 fn failed_atomic_write_keeps_renderer_diagnostics_for_the_caller() {
-    let dir = std::env::temp_dir().join(format!("photocraft-renderer-write-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-renderer-write-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     // A directory at the destination makes the final atomic rename fail after encoding.
@@ -151,7 +151,7 @@ fn failed_atomic_write_keeps_renderer_diagnostics_for_the_caller() {
 
 #[test]
 fn failed_workspace_write_keeps_export_diagnostics_for_the_caller() {
-    let dir = std::env::temp_dir().join(format!("photocraft-workspace-save-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-workspace-save-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let root = dir.join("root");
     fs::create_dir_all(&root).unwrap();
@@ -187,7 +187,7 @@ impl BandRenderer for DrainOnlyRenderer {
         doc: &Document,
         rect: Rect,
         band_rows: i32,
-        ctl: &photocraft_raster::Interrupt<'_>,
+        ctl: &lienzo_raster::Interrupt<'_>,
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         let mut cpu = CpuRenderer;
@@ -201,7 +201,7 @@ impl BandRenderer for DrainOnlyRenderer {
 
 #[test]
 fn failed_workspace_write_keeps_export_warnings_with_a_drain_only_renderer() {
-    let dir = std::env::temp_dir().join(format!("photocraft-workspace-warnings-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-workspace-warnings-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let root = dir.join("root");
     fs::create_dir_all(&root).unwrap();
@@ -231,7 +231,7 @@ fn failed_workspace_write_keeps_export_warnings_with_a_drain_only_renderer() {
 
 #[test]
 fn failed_local_write_keeps_export_warnings_with_a_drain_only_renderer() {
-    let dir = std::env::temp_dir().join(format!("photocraft-local-warnings-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-local-warnings-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     // A directory at the destination makes the final atomic rename fail after encoding.

@@ -1,8 +1,8 @@
 //! Deleting the last anchor of a path (#12764): a saved path may end up empty, everything else
 //! keeps refusing it.
 
-use photocraft_doc::{Path, Subpath};
-use photocraft_geom::Rect;
+use lienzo_doc::{Path, Subpath};
+use lienzo_geom::Rect;
 
 use super::*;
 

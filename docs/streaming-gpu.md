@@ -13,7 +13,7 @@ A document whose texture set doesn't fit used to fall back to the CPU canvas
 
 - Pages are 512 texels square at a power-of-two reduction chosen so a texel covers at most one
   screen pixel; a view asks for at most 256 pages and coarsens beyond that. Each page is rendered
-  from its core plus a one-texel apron (`photocraft_compose::viewport`), so independently rendered
+  from its core plus a one-texel apron (`lienzo_compose::viewport`), so independently rendered
   pages filter their shared edges identically; the shader discards the apron.
 - Two background workers render pages (over all documents), centre of the view first. At a
   reduction, a faithful document shows a quick nearest-sample preview of every page in view first,

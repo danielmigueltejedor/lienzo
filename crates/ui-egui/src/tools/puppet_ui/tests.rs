@@ -1,7 +1,7 @@
 use super::*;
 
-fn puppet_app(ctx: &egui::Context) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn puppet_app(ctx: &egui::Context) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 100, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -15,12 +15,12 @@ fn puppet_app(ctx: &egui::Context) -> PhotocraftApp {
     app
 }
 
-fn gesture(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn gesture(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     pointer(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, egui::Modifiers::NONE);
     pointer(app, ToolEvent::Up { x: to[0], y: to[1] }, egui::Modifiers::NONE);
 }
 
-fn press(app: &mut PhotocraftApp, ctx: &egui::Context, key: egui::Key, modifiers: egui::Modifiers) {
+fn press(app: &mut LienzoApp, ctx: &egui::Context, key: egui::Key, modifiers: egui::Modifiers) {
     let events = [true, false].map(|pressed| egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers }).to_vec();
     let input = egui::RawInput { events, ..Default::default() };
     ctx.run_ui(input, |ui| crate::shortcuts::handle(app, ui.ctx())).textures_delta.clear();
@@ -161,8 +161,8 @@ fn delete_keys_in_a_text_field_do_not_remove_pins() {
     }
 }
 
-fn long_puppet(ctx: &egui::Context, mode: PuppetMode, density: PuppetDensity) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn long_puppet(ctx: &egui::Context, mode: PuppetMode, density: PuppetDensity) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 1000, "height": 300, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -192,7 +192,7 @@ fn assert_same_mesh(a: &[[f64; 2]], b: &[[f64; 2]]) {
 
 #[test]
 fn drag_preview_matches_release_history_and_committed_geometry() {
-    use photocraft_algo::puppet::{deform, render};
+    use lienzo_algo::puppet::{deform, render};
     for mode in [PuppetMode::Rigid, PuppetMode::Normal, PuppetMode::Distort] {
         for density in [PuppetDensity::Fewer, PuppetDensity::Normal, PuppetDensity::More] {
             let ctx = egui::Context::default();
@@ -219,7 +219,7 @@ fn drag_preview_matches_release_history_and_committed_geometry() {
             assert!(s.redo());
             assert_same_mesh(&preview, &s.deformed);
             // Use the engine's interpolation to isolate geometry from GPU texture sampling.
-            let expected = render(&s.surface, s.bounds, &s.mesh, &preview, &order, photocraft_algo::transform::Interp::Bicubic);
+            let expected = render(&s.surface, s.bounds, &s.mesh, &preview, &order, lienzo_algo::transform::Interp::Bicubic);
             let layer = s.layer;
             assert_eq!(app.session.active().unwrap().history.past_len(), past);
             commit(&mut app);
@@ -256,7 +256,7 @@ fn drag_preview_is_independent_of_pointer_path_and_honors_release_coordinates() 
         pointer(&mut app, ToolEvent::Up { x: 720.0, y: 90.0 }, egui::Modifiers::NONE);
         let s = app.distort.puppet.as_ref().unwrap();
         assert_eq!(s.warp.pins[2].dst, [720.0, 90.0]);
-        let (_, canonical, _) = photocraft_algo::puppet::deform(&s.surface, s.bounds, &s.warp, ITERATIONS);
+        let (_, canonical, _) = lienzo_algo::puppet::deform(&s.surface, s.bounds, &s.warp, ITERATIONS);
         assert_same_mesh(&s.deformed, &canonical);
     }
 }
@@ -265,7 +265,7 @@ fn drag_preview_is_independent_of_pointer_path_and_honors_release_coordinates() 
 #[test]
 fn session_is_dropped_when_another_document_becomes_active() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 100, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -301,7 +301,7 @@ fn session_is_dropped_when_another_document_becomes_active() {
 #[test]
 fn pin_edits_undo_and_redo_inside_the_session() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 100, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -312,8 +312,8 @@ fn pin_edits_undo_and_redo_inside_the_session() {
         .unwrap();
     app.sync_views();
     crate::distort_ui::menu(&mut app, &ctx, "edit.puppetWarp", &json!({})).unwrap().unwrap();
-    let ev = |app: &mut PhotocraftApp, e| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
-    let pins = |app: &PhotocraftApp| app.distort.puppet.as_ref().unwrap().warp.pins.iter().map(|p| p.dst).collect::<Vec<_>>();
+    let ev = |app: &mut LienzoApp, e| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
+    let pins = |app: &LienzoApp| app.distort.puppet.as_ref().unwrap().warp.pins.iter().map(|p| p.dst).collect::<Vec<_>>();
     ev(&mut app, ToolEvent::Down { x: 25.0, y: 40.0, pressure: 1.0 });
     ev(&mut app, ToolEvent::Up { x: 25.0, y: 40.0 });
     ev(&mut app, ToolEvent::Down { x: 75.0, y: 40.0, pressure: 1.0 });
@@ -327,7 +327,7 @@ fn pin_edits_undo_and_redo_inside_the_session() {
     crate::distort_ui::pointer(&mut app, ToolEvent::Down { x: 25.0, y: 40.0, pressure: 1.0 }, egui::Modifiers { alt: true, ..Default::default() });
     assert_eq!(pins(&app), [[75.0, 20.0]]);
     // ⌘Z, through the keyboard: the removed pin comes back, then the drag is undone.
-    let press = |app: &mut PhotocraftApp, modifiers: egui::Modifiers| {
+    let press = |app: &mut LienzoApp, modifiers: egui::Modifiers| {
         let ev = egui::Event::Key { key: egui::Key::Z, physical_key: None, pressed: true, repeat: false, modifiers };
         let input = egui::RawInput { events: vec![ev], ..Default::default() };
         ctx.run_ui(input, |ui| assert!(crate::distort_ui::keys(app, ui.ctx()))).textures_delta.clear();
@@ -358,7 +358,7 @@ fn pin_edits_undo_and_redo_inside_the_session() {
 #[test]
 fn pins_drag_and_commit_through_the_engine() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 100, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
@@ -369,7 +369,7 @@ fn pins_drag_and_commit_through_the_engine() {
         .unwrap();
     app.sync_views();
     crate::distort_ui::menu(&mut app, &ctx, "edit.puppetWarp", &json!({})).unwrap().unwrap();
-    let ev = |app: &mut PhotocraftApp, e| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
+    let ev = |app: &mut LienzoApp, e| crate::distort_ui::pointer(app, e, egui::Modifiers::NONE);
     // Two pins: hold the left end, drag the right end up.
     ev(&mut app, ToolEvent::Down { x: 25.0, y: 40.0, pressure: 1.0 });
     ev(&mut app, ToolEvent::Up { x: 25.0, y: 40.0 });
@@ -403,7 +403,7 @@ fn an_expansion_that_empties_the_mesh_is_refused() {
     // #951: remeshing to no vertices rebound the pins to a vertex that doesn't exist and
     // panicked. -50 is the options bar's minimum and also empties this 20 px tall bar.
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.session.execute("file.new", json!({"width": 100, "height": 80, "depth": 8})).unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session

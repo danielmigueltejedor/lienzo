@@ -1,13 +1,13 @@
 use egui::Modifiers;
-use photocraft_doc::LayerContent;
+use lienzo_doc::LayerContent;
 use serde_json::json;
 
 use super::*;
 use crate::canvas::{ToolEvent, tool_event};
 
 /// A document whose active layer is a `kind` layer over a white Background.
-pub(super) fn app_with(kind: Kind) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+pub(super) fn app_with(kind: Kind) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 120, "height": 80})).unwrap();
     match kind {
         Kind::Type => app.run("type.create", json!({"x": 10, "y": 40, "text": "Hello"})).map(|_| ()),
@@ -28,21 +28,21 @@ pub(super) fn app_with(kind: Kind) -> PhotocraftApp {
     app
 }
 
-pub(super) fn active_content(app: &PhotocraftApp) -> &'static str {
+pub(super) fn active_content(app: &LienzoApp) -> &'static str {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().content.kind_name()
 }
 
-pub(super) fn past(app: &PhotocraftApp) -> usize {
+pub(super) fn past(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-pub(super) fn click(app: &mut PhotocraftApp, x: f64, y: f64) {
+pub(super) fn click(app: &mut LienzoApp, x: f64, y: f64) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x, y }, Modifiers::NONE);
 }
 
-pub(super) fn prompt(app: &PhotocraftApp) -> Option<&crate::state::Dialog> {
+pub(super) fn prompt(app: &LienzoApp) -> Option<&crate::state::Dialog> {
     app.ui.dialogs.iter().find(|d| owns(&d.fields))
 }
 
@@ -164,7 +164,7 @@ fn the_control_channel_sees_and_confirms_the_prompt() {
     let mut app = app_with(Kind::Shape);
     let ctx = egui::Context::default();
     app.ui.tool = Tool::Pencil;
-    let call = |app: &mut PhotocraftApp, method: &str, params: serde_json::Value| {
+    let call = |app: &mut LienzoApp, method: &str, params: serde_json::Value| {
         let (req, _rx) = crate::control::ControlRequest::new(method, params);
         match crate::control::handle(app, &ctx, &req) {
             crate::control::Outcome::Done(v) => v,
@@ -180,17 +180,17 @@ fn the_control_channel_sees_and_confirms_the_prompt() {
 
 pub(super) const BLUR: &str = "filter.blur.gaussianBlur";
 
-pub(super) fn menu(app: &mut PhotocraftApp, id: &str) -> Result<serde_json::Value, String> {
+pub(super) fn menu(app: &mut LienzoApp, id: &str) -> Result<serde_json::Value, String> {
     crate::menus::invoke(app, &egui::Context::default(), id, json!({}))
 }
 
 /// Answers the filter prompt, then the frame runs the queued filter.
-pub(super) fn answer(app: &mut PhotocraftApp, id: u64) {
+pub(super) fn answer(app: &mut LienzoApp, id: u64) {
     crate::dialogs::confirm(app, id).unwrap();
     run_pending(app, &egui::Context::default());
 }
 
-fn filter_dialog(app: &PhotocraftApp) -> Option<u64> {
+fn filter_dialog(app: &LienzoApp) -> Option<u64> {
     app.ui.dialogs.iter().find(|d| d.fields.get("__command") == Some(&json!(BLUR)) && !owns(&d.fields)).map(|d| d.id)
 }
 
@@ -276,7 +276,7 @@ fn filters_stay_grey_where_rasterizing_would_not_help() {
 }
 
 /// The dialogs, and the filter a prompt queued, frame by frame.
-pub(super) fn harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+pub(super) fn harness(app: LienzoApp) -> egui_kittest::Harness<'static, LienzoApp> {
     let h = egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).build_ui_state(
         |ui, app| {
             crate::dialogs::show(app, ui.ctx());
@@ -284,7 +284,7 @@ pub(super) fn harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, Phot
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h
 }
 
@@ -320,7 +320,7 @@ fn the_convert_button_converts_to_a_smart_object() {
 /// The filters with their own window or mode open on the rasterized layer, or on the Smart Object.
 #[test]
 fn filters_with_their_own_window_open_after_the_prompt() {
-    type IsOpen = fn(&PhotocraftApp) -> bool;
+    type IsOpen = fn(&LienzoApp) -> bool;
     let open: [(&str, IsOpen); 4] = [
         ("filter.liquify", |a| a.distort.liquify.is_some()),
         ("filter.filterGallery", |a| a.distort.gallery.is_some()),

@@ -1,6 +1,6 @@
 use super::options::{draws_path, solid_paint};
 use super::overlay::path_lines;
-use super::{Affine, Color32, PhotocraftApp, Tokens, Tool, ToolOptions, Value, ViewXform, json, paint_param};
+use super::{Affine, Color32, LienzoApp, Tokens, Tool, ToolOptions, Value, ViewXform, json, paint_param};
 
 pub fn is_shape_tool(t: Tool) -> bool {
     matches!(t, Tool::Rectangle | Tool::EllipseShape | Tool::Triangle | Tool::Polygon | Tool::Star | Tool::Line | Tool::CustomShape)
@@ -16,7 +16,7 @@ pub(super) fn hex(c: [f32; 4]) -> String {
     format!("#{:02x}{:02x}{:02x}", c.r(), c.g(), c.b())
 }
 
-pub(super) fn stroke_param(app: &PhotocraftApp) -> Value {
+pub(super) fn stroke_param(app: &LienzoApp) -> Value {
     let o = &app.ui.tool_options;
     if o.stroke_width <= 0.0 {
         return Value::Null;
@@ -29,18 +29,18 @@ pub(super) fn stroke_param(app: &PhotocraftApp) -> Value {
 
 /// The paint the next shape's fill (`stroke` false) or stroke takes: the options bar's gradient,
 /// else the foreground / background colour.
-fn tool_paint(app: &PhotocraftApp, stroke: bool) -> photocraft_doc::Fill {
+fn tool_paint(app: &LienzoApp, stroke: bool) -> lienzo_doc::Fill {
     let (gradient, color) = tool_paint_source(app, stroke);
     gradient.clone().unwrap_or_else(|| solid_paint(color))
 }
 
 /// [`tool_paint`] as `shape.create` takes it.
-fn tool_paint_param(app: &PhotocraftApp, stroke: bool) -> Value {
+fn tool_paint_param(app: &LienzoApp, stroke: bool) -> Value {
     let (gradient, color) = tool_paint_source(app, stroke);
     gradient.as_ref().map_or_else(|| json!(color), paint_param)
 }
 
-fn tool_paint_source(app: &PhotocraftApp, stroke: bool) -> (&Option<photocraft_doc::Fill>, [f32; 4]) {
+fn tool_paint_source(app: &LienzoApp, stroke: bool) -> (&Option<lienzo_doc::Fill>, [f32; 4]) {
     let o = &app.ui.tool_options;
     if stroke { (&o.shape_stroke_gradient, app.session.tools.background) } else { (&o.shape_fill_gradient, app.session.tools.foreground) }
 }
@@ -80,7 +80,7 @@ pub(super) fn shape_geometry(o: &ToolOptions, tool: Tool, start: [f64; 2], end: 
             Tool::Rectangle | Tool::CustomShape => json!({"kind": "rect", "rect": rect}),
             Tool::EllipseShape => json!({"kind": "ellipse", "rect": rect}),
             Tool::Triangle => json!({"kind": "polygon", "rect": rect, "sides": 3}),
-            // PhotoCraft's star defaults; the Star Tool's own options are not measured yet (#11377).
+            // Lienzo's star defaults; the Star Tool's own options are not measured yet (#11377).
             Tool::Star => json!({"kind": "star", "rect": rect, "sides": 5, "starRatio": 0.5}),
             _ => json!({"kind": "polygon", "rect": rect, "sides": o.polygon_sides.max(3)}),
         }
@@ -101,7 +101,7 @@ pub fn shape_bounds(o: &ToolOptions, tool: Tool, start: [f64; 2], end: [f64; 2],
 }
 
 /// Finish a Shape-tool drag: ⇧ constrains proportions, ⌥ draws from the centre.
-pub fn finish_shape(app: &mut PhotocraftApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
+pub fn finish_shape(app: &mut LienzoApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
     if draws_path(&app.ui.tool_options) {
         // Path mode: the outline joins the work path (one more subpath), and no layer is made.
         let Some(outline) = shape_outline(app, tool, start, end, mods) else { return };
@@ -112,10 +112,10 @@ pub fn finish_shape(app: &mut PhotocraftApp, tool: Tool, start: [f64; 2], end: [
             .session
             .active()
             .and_then(|st| st.doc.work_path.clone())
-            .unwrap_or_else(|| photocraft_doc::vector::Path { fill_rule: outline.fill_rule, ..Default::default() });
+            .unwrap_or_else(|| lienzo_doc::vector::Path { fill_rule: outline.fill_rule, ..Default::default() });
         let outline = as_one_component(&outline, path.fill_rule).unwrap_or(outline);
         path.subpaths.extend(outline.subpaths);
-        let r = app.run("path.set", json!({"name": "work", "path": photocraft_engine::vector_cmds::path_json(&path)}));
+        let r = app.run("path.set", json!({"name": "work", "path": lienzo_engine::vector_cmds::path_json(&path)}));
         match r {
             Ok(_) => app.ui.selected_path = Some("work".into()),
             Err(e) => {
@@ -140,13 +140,13 @@ pub fn finish_shape(app: &mut PhotocraftApp, tool: Tool, start: [f64; 2], end: [
     }
 }
 
-pub(super) fn fill_param(app: &PhotocraftApp) -> Value {
+pub(super) fn fill_param(app: &LienzoApp) -> Value {
     if app.ui.tool_options.shape_fill { tool_paint_param(app, false) } else { Value::Null }
 }
 
 /// Create a shape layer from `shape.create` geometry with the options bar's fill and stroke: the
 /// end of a drag, and the Create Rectangle / Ellipse / … dialogs (`shape_dialog`).
-pub fn create_shape(app: &mut PhotocraftApp, mut geometry: Value) -> Result<Value, String> {
+pub fn create_shape(app: &mut LienzoApp, mut geometry: Value) -> Result<Value, String> {
     geometry["fill"] = fill_param(app);
     geometry["stroke"] = stroke_param(app);
     app.run("shape.create", geometry)
@@ -157,11 +157,11 @@ pub fn create_shape(app: &mut PhotocraftApp, mut geometry: Value) -> Result<Valu
 /// the shape only and not the work path under it. `None` for a single subpath, and when joined
 /// it would cover a different area (an intersect or exclude subpath, or a cut reaching past
 /// the shape, like the Crescent Moon's).
-fn as_one_component(outline: &photocraft_doc::vector::Path, rule: photocraft_doc::vector::FillRule) -> Option<photocraft_doc::vector::Path> {
-    use photocraft_doc::vector::{Path, PathOp, Subpath};
+fn as_one_component(outline: &lienzo_doc::vector::Path, rule: lienzo_doc::vector::FillRule) -> Option<lienzo_doc::vector::Path> {
+    use lienzo_doc::vector::{Path, PathOp, Subpath};
     // Clockwise on screen (y down) or not, from the flattened outline's signed area.
     let clockwise = |s: &Subpath| {
-        let pts = photocraft_vector::flatten_subpath(s, 0.25).pts;
+        let pts = lienzo_vector::flatten_subpath(s, 0.25).pts;
         let twice_area: f64 = pts.iter().zip(pts.iter().cycle().skip(1)).map(|(p, q)| p.0 * q.1 - q.0 * p.1).sum();
         twice_area > 0.0
     };
@@ -188,32 +188,32 @@ fn as_one_component(outline: &photocraft_doc::vector::Path, rule: photocraft_doc
     }
     // Compare the two areas at a small fixed size.
     const SIDE: f64 = 128.0;
-    let rect = photocraft_geom::Rect::from_xywh(0, 0, SIDE as u32, SIDE as u32);
-    let cover = |p: &Path| photocraft_vector::path_coverage(&photocraft_engine::presets::shapes::fit(p, [0.0, 0.0, SIDE, SIDE], true), rect);
+    let rect = lienzo_geom::Rect::from_xywh(0, 0, SIDE as u32, SIDE as u32);
+    let cover = |p: &Path| lienzo_vector::path_coverage(&lienzo_engine::presets::shapes::fit(p, [0.0, 0.0, SIDE, SIDE], true), rect);
     let same = cover(outline).iter().zip(cover(&joined)).all(|(a, b)| (a - b).abs() <= 0.5);
     same.then_some(joined)
 }
 
 /// The outline a Shape-tool drag draws, as a path (a custom shape fitted to the drag's box).
-fn shape_outline(app: &PhotocraftApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) -> Option<photocraft_doc::vector::Path> {
+fn shape_outline(app: &LienzoApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) -> Option<lienzo_doc::vector::Path> {
     let geometry = shape_geometry(&app.ui.tool_options, tool, start, end, mods)?;
     if tool == Tool::CustomShape {
         let rect = geometry.get("rect").and_then(|r| serde_json::from_value::<[f64; 4]>(r.clone()).ok())?;
-        let groups = photocraft_engine::presets::shapes::all_groups(&app.session);
+        let groups = lienzo_engine::presets::shapes::all_groups(&app.session);
         let shape = groups.iter().flat_map(|g| &g.items).find(|s| s.name == app.ui.presets_ui.shape())?;
-        Some(photocraft_engine::presets::shapes::fit(&shape.path, rect, mods.shift))
+        Some(lienzo_engine::presets::shapes::fit(&shape.path, rect, mods.shift))
     } else {
-        photocraft_engine::vector_cmds::shape_path(&geometry).ok()
+        lienzo_engine::vector_cmds::shape_path(&geometry).ok()
     }
 }
 
 /// The preview and command both use the full float tool colours, including transparent paint.
 /// In Path mode only the outline shows, as the drag draws no layer.
-pub(super) fn shape_preview(app: &PhotocraftApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) -> Option<photocraft_doc::ShapeLayer> {
+pub(super) fn shape_preview(app: &LienzoApp, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) -> Option<lienzo_doc::ShapeLayer> {
     let o = &app.ui.tool_options;
     let path = shape_outline(app, tool, start, end, mods)?;
     let paint = !draws_path(o);
-    Some(photocraft_doc::ShapeLayer {
+    Some(lienzo_doc::ShapeLayer {
         path,
         fill: (paint && o.shape_fill).then(|| tool_paint(app, false)),
         stroke: (paint && o.stroke_width > 0.0).then(|| o.shape_stroke.stroke(o.stroke_width, tool_paint(app, true))),
@@ -222,7 +222,7 @@ pub(super) fn shape_preview(app: &PhotocraftApp, tool: Tool, start: [f64; 2], en
 }
 
 /// Shape-tool drag preview using the same path and vector stroke geometry as the commit.
-pub fn draw_shape_preview(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
+pub fn draw_shape_preview(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform, tool: Tool, start: [f64; 2], end: [f64; 2], mods: egui::Modifiers) {
     let Some(mut shape) = shape_preview(app, tool, start, end, mods) else { return };
     let path = shape.path.clone();
     let origin = xf.to_screen(0.0, 0.0);

@@ -14,10 +14,10 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use egui::{Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_doc::{DocId, Document};
+use lienzo_doc::{DocId, Document};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 use crate::theme::Tokens;
 use crate::widgets;
@@ -87,8 +87,8 @@ pub fn controls(f: &Map<String, Value>) -> Controls {
 
 /// Open the dialog with Photoshop's defaults (Sampled Colors, Fuzziness 40, the foreground colour
 /// as the sample until the eyedropper picks one).
-pub fn open(app: &mut PhotocraftApp) -> u64 {
-    let label = photocraft_engine::commands::find(COMMAND).map_or(tl!("Color Range…"), |c| c.label);
+pub fn open(app: &mut LienzoApp) -> u64 {
+    let label = lienzo_engine::commands::find(COMMAND).map_or(tl!("Color Range…"), |c| c.label);
     let mut f = Map::new();
     f.insert("__colorRange".into(), json!(true));
     f.insert("__label".into(), json!(label));
@@ -159,7 +159,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
 }
 
 /// OK: run the command on the document (one history step).
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     app.color_range = None;
     app.run(COMMAND, params(f))
 }
@@ -186,7 +186,7 @@ fn hash(text: &str) -> u64 {
     text.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3))
 }
 
-fn query_key(app: &PhotocraftApp, params: &Value) -> u64 {
+fn query_key(app: &LienzoApp, params: &Value) -> u64 {
     let mut key = std::collections::hash_map::DefaultHasher::new();
     params.to_string().hash(&mut key);
     let foreground = app.session.tools.foreground;
@@ -211,7 +211,7 @@ fn scope_preview(proxy: &Document, params: &Value, mask: &mut [f32]) {
         return;
     }
     if let Some(selection) = proxy.selection.as_ref() {
-        let prior = photocraft_algo::selection::mask_from_surface(Some(selection), proxy.bounds());
+        let prior = lienzo_algo::selection::mask_from_surface(Some(selection), proxy.bounds());
         for (value, bound) in mask.iter_mut().zip(prior) {
             *value = value.min(bound);
         }
@@ -220,12 +220,12 @@ fn scope_preview(proxy: &Document, params: &Value, mask: &mut [f32]) {
 
 /// The selection mask `params` would make, on the proxy: the engine command run on a scratch
 /// session (Out Of Gamut uses the document's own proof setup).
-fn proxy_mask(app: &PhotocraftApp, proxy: &Document, k: u32, params: &Value) -> Result<Vec<f32>, String> {
+fn proxy_mask(app: &LienzoApp, proxy: &Document, k: u32, params: &Value) -> Result<Vec<f32>, String> {
     let area = proxy.bounds();
     if params.get("select").and_then(Value::as_str).unwrap_or("sampledColors") == "sampledColors" {
         // Pick on the original document, not the thumbnail's nearest retained pixel. The
         // prepared Lab query is the same one the command uses at full resolution.
-        let query = photocraft_engine::selection_cmds::ColorRangeSamples::new(&app.session, params).map_err(|e| e.to_string())?;
+        let query = lienzo_engine::selection_cmds::ColorRangeSamples::new(&app.session, params).map_err(|e| e.to_string())?;
         // Like the command (and OK): `sampleAllLayers: false` judges the active layer's own
         // pixels, otherwise the composite.
         let all_layers = params.get("sampleAllLayers").and_then(Value::as_bool).unwrap_or(true);
@@ -236,7 +236,7 @@ fn proxy_mask(app: &PhotocraftApp, proxy: &Document, k: u32, params: &Value) -> 
                 surf.read_rgba_into(area, &mut px);
                 px
             }
-            _ => photocraft_compose::render(proxy, area).into_px(),
+            _ => lienzo_compose::render(proxy, area).into_px(),
         };
         let invert = params.get("invert").and_then(Value::as_bool).unwrap_or(false);
         let mut mask: Vec<f32> = query
@@ -253,7 +253,7 @@ fn proxy_mask(app: &PhotocraftApp, proxy: &Document, k: u32, params: &Value) -> 
     }
     if params.get("select").and_then(Value::as_str) == Some("outOfGamut") {
         let pv = app.session.color.proof(proxy.id);
-        let (m, _) = photocraft_engine::color_cmds::gamut_mask(proxy, &pv.setup, pv.gamut_threshold).map_err(|e| e.to_string())?;
+        let (m, _) = lienzo_engine::color_cmds::gamut_mask(proxy, &pv.setup, pv.gamut_threshold).map_err(|e| e.to_string())?;
         let invert = params.get("invert").and_then(Value::as_bool).unwrap_or(false);
         let mut mask: Vec<f32> = m.iter().map(|v| f32::from(*v) / 255.0).map(|v| if invert { 1.0 - v } else { v }).collect();
         scope_preview(proxy, params, &mut mask);
@@ -276,7 +276,7 @@ fn proxy_mask(app: &PhotocraftApp, proxy: &Document, k: u32, params: &Value) -> 
             }
         }
     }
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.tools = app.session.tools.clone();
     // Preserve the proxy's pre-existing selection so preview and OK use the same scope.
     s.add_document(proxy.clone(), None);
@@ -285,11 +285,11 @@ fn proxy_mask(app: &PhotocraftApp, proxy: &Document, k: u32, params: &Value) -> 
     }
     s.execute(COMMAND, p).map_err(|e| e.to_string())?;
     let d = s.active().ok_or("no preview document")?;
-    Ok(photocraft_algo::selection::mask_from_surface(d.doc.selection.as_ref(), area))
+    Ok(lienzo_algo::selection::mask_from_surface(d.doc.selection.as_ref(), area))
 }
 
 /// Record why the preview failed (logged once per new reason), or clear it.
-fn report(app: &mut PhotocraftApp, error: Option<String>) {
+fn report(app: &mut LienzoApp, error: Option<String>) {
     let Some(p) = app.color_range.as_mut() else { return };
     if p.error != error {
         if let Some(e) = &error {
@@ -301,7 +301,7 @@ fn report(app: &mut PhotocraftApp, error: Option<String>) {
 
 /// Refresh the cached proxy / textures for the active document and the dialog's params. Returns
 /// (texture to show, its size in proxy pixels, k).
-fn preview(app: &mut PhotocraftApp, ctx: &egui::Context, f: &Map<String, Value>) -> Option<(egui::TextureId, [usize; 2], u32)> {
+fn preview(app: &mut LienzoApp, ctx: &egui::Context, f: &Map<String, Value>) -> Option<(egui::TextureId, [usize; 2], u32)> {
     let (doc_id, revision, doc) = {
         let st = app.session.active()?;
         (st.doc.id, st.revision, st.doc.clone())
@@ -334,7 +334,7 @@ fn preview(app: &mut PhotocraftApp, ctx: &egui::Context, f: &Map<String, Value>)
     let (w, h) = (proxy.size.width as usize, proxy.size.height as usize);
     if image_view {
         if app.color_range.as_ref().is_some_and(|p| p.image.is_none()) {
-            let buf = photocraft_compose::thumbnail_buffer(&proxy, proxy.size.width.max(proxy.size.height));
+            let buf = lienzo_compose::thumbnail_buffer(&proxy, proxy.size.width.max(proxy.size.height));
             let thumb = match app.session.color.canvas_display(&proxy) {
                 Ok(display) => display.to_rgba8(&buf),
                 Err(e) => {
@@ -417,7 +417,7 @@ fn set_points(f: &mut Map<String, Value>, k: &str, pts: &[[f64; 2]]) {
 }
 
 /// Dialog body.
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let c = controls(f);
     let select = s(f, "select", "sampledColors").to_string();
@@ -591,7 +591,7 @@ fn overlay_pixel(mode: &str, coverage: f32) -> Color32 {
 
 /// Photoshop's Selection Preview on the image, shared by CPU/GPU canvases and all platforms.
 /// This never edits the real selection, image, channels or history; closing the dialog removes it.
-pub(crate) fn paint_selection_preview(app: &mut PhotocraftApp, ctx: &egui::Context, painter: &egui::Painter, doc: DocId, image: Rect, flip: bool) {
+pub(crate) fn paint_selection_preview(app: &mut LienzoApp, ctx: &egui::Context, painter: &egui::Painter, doc: DocId, image: Rect, flip: bool) {
     let Some(fields) = app.ui.dialogs.last().filter(|d| owns(&d.fields)).map(|d| d.fields.clone()) else { return };
     let mode = s(&fields, "__selectionPreview", "none");
     if mode == "none" || !app.session.active().is_some_and(|st| st.doc.id == doc) {
@@ -636,14 +636,14 @@ pub(crate) fn paint_selection_preview(app: &mut PhotocraftApp, ctx: &egui::Conte
 }
 
 /// The top dialog's fields when it is Color Range in a mode that takes eyedropper samples.
-fn sampling_top(app: &PhotocraftApp) -> Option<Map<String, Value>> {
+fn sampling_top(app: &LienzoApp) -> Option<Map<String, Value>> {
     app.ui.dialogs.last().map(|d| &d.fields).filter(|f| owns(f) && controls(f).sampling).cloned()
 }
 
 /// The dialog's eyedropper on the canvas: with Color Range › Sampled Colors as the top dialog,
 /// picks the colour at document point `at` (Shift adds to the sample, Alt subtracts), as a click
 /// on the image does in Photoshop. Returns whether it picked.
-pub fn pick_top(app: &mut PhotocraftApp, at: [f64; 2], mods: egui::Modifiers) -> bool {
+pub fn pick_top(app: &mut LienzoApp, at: [f64; 2], mods: egui::Modifiers) -> bool {
     let Some(mut f) = sampling_top(app) else { return false };
     let Some(doc) = app.session.active().map(|st| &st.doc) else { return false };
     if !at[0].is_finite() || !at[1].is_finite() || at[0] < 0.0 || at[1] < 0.0 || at[0] >= f64::from(doc.size.width) || at[1] >= f64::from(doc.size.height) {
@@ -662,7 +662,7 @@ pub fn pick_top(app: &mut PhotocraftApp, at: [f64; 2], mods: egui::Modifiers) ->
 /// The canvas under an open Color Range dialog is its eyedropper (Photoshop): the pointer `over`
 /// shows the dialog's eyedropper (+ / − while Shift / Alt add or subtract), and a press at document
 /// point `press` takes a sample. False when Color Range isn't the top dialog.
-pub fn canvas_eyedropper(app: &mut PhotocraftApp, ctx: &egui::Context, over: egui::Pos2, press: Option<[f64; 2]>) -> bool {
+pub fn canvas_eyedropper(app: &mut LienzoApp, ctx: &egui::Context, over: egui::Pos2, press: Option<[f64; 2]>) -> bool {
     let Some(f) = sampling_top(app) else { return false };
     let mods = ctx.input(|i| i.modifiers);
     let tool = if mods.shift {
@@ -672,7 +672,7 @@ pub fn canvas_eyedropper(app: &mut PhotocraftApp, ctx: &egui::Context, over: egu
     } else {
         s(&f, "__tool", "sample")
     };
-    if app.session.prefs().cursors.other == photocraft_engine::prefs::OtherCursor::Precise {
+    if app.session.prefs().cursors.other == lienzo_engine::prefs::OtherCursor::Precise {
         ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
     } else {
         // The tip of the icon's pipette is at (2, 22) of its 24-unit box (as the Color Picker's).
@@ -700,7 +700,7 @@ pub fn canvas_eyedropper(app: &mut PhotocraftApp, ctx: &egui::Context, over: egu
 
 /// An eyedropper click at document pixel `at`: the plain eyedropper replaces the samples, the
 /// + one (or Shift) adds one, the − one (or Alt) subtracts one.
-pub fn pick(app: &PhotocraftApp, f: &mut Map<String, Value>, at: [f64; 2], mods: egui::Modifiers) {
+pub fn pick(app: &LienzoApp, f: &mut Map<String, Value>, at: [f64; 2], mods: egui::Modifiers) {
     let Some(st) = app.session.active() else { return };
     let (w, h) = (f64::from(st.doc.size.width.max(1)), f64::from(st.doc.size.height.max(1)));
     let [x, y] = at;

@@ -12,10 +12,10 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use egui::{Color32, Pos2, Stroke, vec2};
-use photocraft_engine::paint::MAX_BRUSH_SIZE;
+use lienzo_engine::paint::MAX_BRUSH_SIZE;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::Tool;
 
@@ -69,7 +69,7 @@ pub fn resized(start: (f32, f32), dx: f64, dy: f64, zoom: f32) -> (f32, f32) {
 /// Route a tool event: true when it belongs to a resize drag (begun here with Control+Alt held,
 /// or an Alt+right-drag `armed` for this press, or already in progress), so the tool never sees
 /// it.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers, armed: bool) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers, armed: bool) -> bool {
     static KEY: AtomicU64 = AtomicU64::new(0);
     match ev {
         ToolEvent::Down { x, y, .. } => {
@@ -105,13 +105,13 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers, ar
 
 /// End an Alt+right-drag resize whose button is no longer down (its release went elsewhere, e.g.
 /// outside the window), so it can't swallow the next stroke.
-pub fn release_stale(app: &mut PhotocraftApp, secondary_down: bool) {
+pub fn release_stale(app: &mut LienzoApp, secondary_down: bool) {
     if !secondary_down && app.brush_resize.is_some_and(|r| r.secondary) {
         app.brush_resize = None;
     }
 }
 
-fn update(app: &mut PhotocraftApp, r: Resize, x: f64, y: f64) {
+fn update(app: &mut LienzoApp, r: Resize, x: f64, y: f64) {
     // Screen-relative, as in Photoshop (#4228): right is bigger and down harder on screen, however
     // the view is rotated or flipped. The screen delta over the zoom is in document pixels at 0°.
     let (dx, dy, zoom) = match ViewXform::active(app) {
@@ -140,7 +140,7 @@ fn update(app: &mut PhotocraftApp, r: Resize, x: f64, y: f64) {
 /// Draw the resize feedback: the brush circle at the anchor, filled with the brush preview
 /// colour as a dab of the brush's hardness covers (Photoshop's), and the readout beside the pointer.
 /// Returns true while a resize is in progress (the canvas then hides its cursor).
-pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) -> bool {
+pub fn draw(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) -> bool {
     let Some(r) = app.brush_resize else { return false };
     let b = &app.session.tools.brush;
     let c = xf.to_screen(r.anchor[0] as f32, r.anchor[1] as f32);
@@ -162,7 +162,7 @@ pub fn draw(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) -> boo
 
 /// The tip preview's tint: Preferences ▸ Cursors ▸ Brush Preview colour (red by default, as in
 /// Photoshop), at the overlay's alpha. Unreadable values keep the red.
-fn preview_tint(app: &PhotocraftApp) -> Color32 {
+fn preview_tint(app: &LienzoApp) -> Color32 {
     let alpha = 110;
     crate::color_picker_ui::parse_hex(&app.session.prefs().cursors.brush_preview_color).map_or(Color32::from_rgba_unmultiplied(255, 0, 0, alpha), |c| {
         Color32::from_rgba_unmultiplied((c[0] * 255.0).round() as u8, (c[1] * 255.0).round() as u8, (c[2] * 255.0).round() as u8, alpha)
@@ -210,8 +210,8 @@ fn tip_preview(painter: &egui::Painter, c: Pos2, radius: f32, zoom: f32, hardnes
     if !(radius.is_finite() && zoom.is_finite() && radius > 0.0 && zoom > 0.0) {
         return;
     }
-    let (core, _) = photocraft_paint::tip_shape(radius, hardness);
-    let reach = photocraft_paint::tip_reach(radius, hardness).max(core);
+    let (core, _) = lienzo_paint::tip_shape(radius, hardness);
+    let reach = lienzo_paint::tip_reach(radius, hardness).max(core);
     let outer = reach * zoom;
     let clip = painter.clip_rect();
     if !clip.expand(outer).contains(c) {
@@ -224,7 +224,7 @@ fn tip_preview(painter: &egui::Painter, c: Pos2, radius: f32, zoom: f32, hardnes
     for k in 0..=RINGS {
         let d = core + (reach - core) * k as f32 / RINGS as f32;
         // The last ring is the reach, where the falloff has run out.
-        let tint = if k == RINGS { Color32::TRANSPARENT } else { color.gamma_multiply(photocraft_paint::tip_falloff(d, radius, hardness)) };
+        let tint = if k == RINGS { Color32::TRANSPARENT } else { color.gamma_multiply(lienzo_paint::tip_falloff(d, radius, hardness)) };
         for j in 0..n {
             let a = j as f32 / n as f32 * std::f32::consts::TAU;
             mesh.colored_vertex(c + vec2(a.cos(), a.sin()) * d * zoom, tint);

@@ -2,7 +2,7 @@
 //! and embedded-font text into text layers.
 //!
 //! Solid fills and strokes become [`ShapeLayer`]s in document pixels; embedded fonts whose glyphs
-//! carry Unicode and a PostScript name become [`photocraft_doc::TextLayer`]s, with the font bytes
+//! carry Unicode and a PostScript name become [`lienzo_doc::TextLayer`]s, with the font bytes
 //! registered in the app's shared text engine. A page-sized axis-aligned clip that contains the
 //! artboard is a no-op and is accepted. Images, other clipping paths, transparency groups,
 //! patterns, soft masks, annotations and unsupported text mark the page unsupported, and the
@@ -30,12 +30,12 @@ use craft_pdf::interpret::{
 };
 use craft_pdf::syntax::page::Page;
 use kurbo::{Affine as KurboAffine, BezPath, Cap, Join, PathEl};
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::text::{CharStyle, TextRun};
-use photocraft_doc::vector::{FillRule, Knot, LineCap, LineJoin, Path, PathOp, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
-use photocraft_doc::{Fill, Layer, LayerContent, TextLayer};
-use photocraft_geom::{Affine, Point, Rect, TILE_SIZE};
-use photocraft_raster::Interrupt;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::text::{CharStyle, TextRun};
+use lienzo_doc::vector::{FillRule, Knot, LineCap, LineJoin, Path, PathOp, ShapeLayer, ShapeStroke, StrokeAlign, Subpath};
+use lienzo_doc::{Fill, Layer, LayerContent, TextLayer};
+use lienzo_geom::{Affine, Point, Rect, TILE_SIZE};
+use lienzo_raster::Interrupt;
 
 /// Most layers one editable page may create; past it the page falls back to raster.
 const MAX_LAYERS: usize = 20_000;
@@ -278,7 +278,7 @@ fn text_layers(
         if !text.is_empty() && has_ink(&text) {
             let layer = text_layer(text, first, out.len(), &family);
             if let LayerContent::Text(text) = &layer.content {
-                let shared = photocraft_text::shared();
+                let shared = lienzo_text::shared();
                 let mut engine = shared.lock().unwrap_or_else(|error| error.into_inner());
                 let layout = engine.layout(text, dpi as f32);
                 // PDF spacing is already in the glyph origins. A word-gap heuristic cannot
@@ -335,7 +335,7 @@ fn text_layer(text: String, run: &GlyphRun, number: usize, family: &str) -> Laye
         italic: run.font.italic,
         faux_bold: run.fake_bold,
         // PDF positions already contain kerning; applying font kerning again moves glyphs.
-        kerning: photocraft_doc::text::Kerning::Off,
+        kerning: lienzo_doc::text::Kerning::Off,
         size_pt: run.size_pt as f32,
         color: run.color,
         ..CharStyle::default()
@@ -355,7 +355,7 @@ fn text_layer(text: String, run: &GlyphRun, number: usize, family: &str) -> Laye
 /// Registers each embedded face with the shared engine under its content-keyed family and returns
 /// the family each font key must use.
 fn register_fonts(fonts: &[(u128, String, String, FontData)]) -> Result<std::collections::HashMap<u128, String>, EditableError> {
-    let shared = photocraft_text::shared();
+    let shared = lienzo_text::shared();
     let mut families = std::collections::HashMap::new();
     for (key, postscript, derived, data) in fonts {
         // Copy before taking the engine lock; parsing still happens under it, but the UI's
@@ -387,7 +387,7 @@ fn register_fonts(fonts: &[(u128, String, String, FontData)]) -> Result<std::col
 
 /// Renders the text caches so the page is complete before the engine refreshes it.
 fn render_text_caches(layers: &mut [Layer], dpi: f64, fmt: PixelFormat, ctl: &Interrupt, cached: &mut u64) -> Result<(), EditableError> {
-    let shared = photocraft_text::shared();
+    let shared = lienzo_text::shared();
     for layer in layers {
         if ctl.check().is_err() {
             return Err(EditableError::Cancelled);
@@ -399,9 +399,9 @@ fn render_text_caches(layers: &mut [Layer], dpi: f64, fmt: PixelFormat, ctl: &In
             // whole cache-render loop.
             let mut engine = shared.lock().unwrap_or_else(|error| error.into_inner());
             let layout = engine.layout(text, dpi as f32);
-            let area = photocraft_text::render::ink_rect(&layout, &text.transform);
+            let area = lienzo_text::render::ink_rect(&layout, &text.transform);
             admit_cache(cached, area, fmt)?;
-            let rendered = photocraft_text::render::rasterize(&layout, &text.transform, fmt, text.antialias);
+            let rendered = lienzo_text::render::rasterize(&layout, &text.transform, fmt, text.antialias);
             let rect = rendered.rect;
             text.cache = Some(rendered.surface);
             if rect.width() == 0 || rect.height() == 0 {
@@ -567,7 +567,7 @@ impl PathDevice<'_> {
         let mut shape = ShapeLayer { path, fill, stroke, ..ShapeLayer::default() };
         // Use the renderer's actual ink bounds, including miter tips, and reuse the compilation.
         // Control-point bounds expanded by one stroke width can clip acute joins.
-        let compiled = photocraft_vector::CompiledShape::new(&shape, photocraft_vector::DEFAULT_TOLERANCE, self.clip);
+        let compiled = lienzo_vector::CompiledShape::new(&shape, lienzo_vector::DEFAULT_TOLERANCE, self.clip);
         let area = compiled.bounds().unwrap_or(Rect::EMPTY).intersect(&self.clip);
         if area.width() > 0 && area.height() > 0 {
             if let Err(EditableError::Unsupported(reason)) = admit_cache(&mut self.cached, area, self.fmt) {
@@ -957,7 +957,7 @@ fn uniform_transform(transform: &KurboAffine) -> bool {
     same && square
 }
 
-/// A PDF colour as a straight-alpha PhotoCraft colour.
+/// A PDF colour as a straight-alpha Lienzo colour.
 fn to_color(color: &HayroColor) -> Color {
     let rgba = color.to_rgba();
     // `AlphaColor` components are straight (not premultiplied), despite the raster path being
@@ -966,13 +966,13 @@ fn to_color(color: &HayroColor) -> Color {
     Color::rgba(r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0), a.clamp(0.0, 1.0))
 }
 
-/// A kurbo affine as PhotoCraft's affine (same `[a, b, c, d, e, f]` layout).
+/// A kurbo affine as Lienzo's affine (same `[a, b, c, d, e, f]` layout).
 fn knots_affine(transform: &KurboAffine) -> Affine {
     let [a, b, c, d, e, f] = transform.as_coeffs();
     Affine { m: [a, b, c, d, e, f] }
 }
 
-/// A Hayro stroke as PhotoCraft's stroke: width in pixels, dashes in multiples of the width.
+/// A Hayro stroke as Lienzo's stroke: width in pixels, dashes in multiples of the width.
 fn to_stroke(stroke: &craft_pdf::interpret::StrokeProps, color: Color, scale: f64) -> Option<ShapeStroke> {
     if !stroke.line_width.is_finite() || stroke.line_width < 0.0 || !scale.is_finite() || scale <= 0.0 {
         return None;
@@ -1010,7 +1010,7 @@ fn to_stroke(stroke: &craft_pdf::interpret::StrokeProps, color: Color, scale: f6
     })
 }
 
-/// Converts a kurbo path to PhotoCraft's cubic knot model. `None` once `knots` passes the cap.
+/// Converts a kurbo path to Lienzo's cubic knot model. `None` once `knots` passes the cap.
 fn to_path(bez: &BezPath, transform: &Affine, knots: &mut usize) -> Option<Path> {
     let mut subpaths = Vec::new();
     let mut current: Option<Subpath> = None;
@@ -1227,7 +1227,7 @@ mod tests {
     }
 
     /// The artboard group's children.
-    fn children(document: &photocraft_doc::Document) -> &[Layer] {
+    fn children(document: &lienzo_doc::Document) -> &[Layer] {
         match &document.layers.first().expect("a page group").content {
             LayerContent::Group(group) => &group.children,
             _ => panic!("the page is not a group"),
@@ -1235,7 +1235,7 @@ mod tests {
     }
 
     /// The first text layer of `document`.
-    fn text_layer(document: &photocraft_doc::Document) -> &TextLayer {
+    fn text_layer(document: &lienzo_doc::Document) -> &TextLayer {
         children(document)
             .iter()
             .find_map(|layer| match &layer.content {
@@ -1301,8 +1301,8 @@ mod tests {
         )
         .expect("an editable import");
         let fmt = editable.document.pixel_format();
-        let a = photocraft_compose::flatten_to_surface(&editable.document, fmt, None);
-        let b = photocraft_compose::flatten_to_surface(&raster.document, fmt, None);
+        let a = lienzo_compose::flatten_to_surface(&editable.document, fmt, None);
+        let b = lienzo_compose::flatten_to_surface(&raster.document, fmt, None);
         let rect = editable.document.bounds();
         let av = a.read_region(rect);
         let bv = b.read_region(rect);
@@ -1358,7 +1358,7 @@ mod tests {
         let imported = import_with_options_and_interrupt("text.pdf", &bytes, &options, &Interrupt::NONE).expect("an editable text import");
         let mut text = text_layer(&imported.document).clone();
         text.cache = None;
-        let shared = photocraft_text::shared();
+        let shared = lienzo_text::shared();
         let mut engine = shared.lock().unwrap_or_else(|error| error.into_inner());
         assert!(engine.has_family(&text.font_family), "the app engine must know the imported family");
         let rect = engine.render_layer(&mut text, 72.0, PixelFormat::new(ColorMode::Rgb, SampleType::U8, true));
@@ -1402,7 +1402,7 @@ mod tests {
         let fa = text_layer(&first.document).font_family.clone();
         let fb = text_layer(&second.document).font_family.clone();
         assert_ne!(fa, fb, "the two embedded faces must not share an alias");
-        let shared = photocraft_text::shared();
+        let shared = lienzo_text::shared();
         let mut engine = shared.lock().unwrap_or_else(|error| error.into_inner());
         assert!(engine.has_family(&fa) && engine.has_family(&fb));
     }
@@ -1555,8 +1555,8 @@ mod tests {
         )
         .expect("an editable import");
         let fmt = editable.document.pixel_format();
-        let a = photocraft_compose::flatten_to_surface(&editable.document, fmt, None);
-        let b = photocraft_compose::flatten_to_surface(&raster.document, fmt, None);
+        let a = lienzo_compose::flatten_to_surface(&editable.document, fmt, None);
+        let b = lienzo_compose::flatten_to_surface(&raster.document, fmt, None);
         let rect = editable.document.bounds();
         let av = a.read_region(rect);
         let bv = b.read_region(rect);
@@ -1738,7 +1738,7 @@ mod tests {
         let layer = children(&imported.document).first().unwrap();
         let LayerContent::Shape(shape) = &layer.content else { panic!("expected an editable stroke") };
         let board = Rect::from_xywh(0, 0, 200, 100);
-        let expected = photocraft_vector::render_shape(shape, imported.document.pixel_format(), board);
+        let expected = lienzo_vector::render_shape(shape, imported.document.pixel_format(), board);
         assert!(shape.cache.as_ref().unwrap().read_region(board) == expected.read_region(board), "bounds must include the pointed join");
     }
 
@@ -1781,8 +1781,8 @@ mod tests {
         let mut text = text_layer(&imported.document).clone();
         text.cache = None;
         let fmt = imported.document.pixel_format();
-        let layout = photocraft_text::shared().lock().unwrap().layout(&text, 72.0);
-        let area = photocraft_text::render::ink_rect(&layout, &text.transform);
+        let layout = lienzo_text::shared().lock().unwrap().layout(&text, 72.0);
+        let area = lienzo_text::render::ink_rect(&layout, &text.transform);
         let mut one_cache = 0;
         admit_cache(&mut one_cache, area, fmt).unwrap();
         assert!(one_cache > 0);

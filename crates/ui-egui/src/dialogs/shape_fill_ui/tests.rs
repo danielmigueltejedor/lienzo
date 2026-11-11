@@ -1,11 +1,11 @@
 use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
 use egui_kittest::Harness;
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use lienzo_doc::{Fill, LayerContent, LayerId};
 use serde_json::json;
 
 use super::*;
 
-fn double_click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
+fn double_click(h: &mut Harness<'_, LienzoApp>, at: Pos2) {
     h.run_steps(40);
     for _ in 0..2 {
         h.hover_at(at);
@@ -18,7 +18,7 @@ fn double_click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
     }
 }
 
-fn fill(app: &PhotocraftApp, id: LayerId) -> Option<Fill> {
+fn fill(app: &LienzoApp, id: LayerId) -> Option<Fill> {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Shape(sh) => sh.fill.clone(),
         _ => None,
@@ -29,13 +29,13 @@ fn fill(app: &PhotocraftApp, id: LayerId) -> Option<Fill> {
 /// canvas previews the pick, Cancel changes nothing and OK is one undoable `shape.edit`.
 #[test]
 fn shape_thumbnail_double_click_picks_the_fill_colour() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     let id = LayerId(s.execute("shape.create", json!({"rect": [8, 8, 40, 30], "fill": "#336699"})).unwrap()["layer"].as_u64().unwrap());
     s.execute("layer.new.layer", json!({"name": "Other"})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (r, _) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -75,14 +75,14 @@ fn shape_thumbnail_double_click_picks_the_fill_colour() {
 /// gracefully (never panics) when its target goes stale or its fields are garbage.
 #[test]
 fn stroke_picker_previews_commits_and_rejects_stale_or_bad_targets() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     let id = LayerId(
         app.run("shape.create", json!({"rect": [8, 8, 40, 30], "fill": "#336699", "stroke": {"width": 4, "color": [1.0, 0.0, 0.0, 0.5]}})).unwrap()["layer"]
             .as_u64()
             .unwrap(),
     );
-    let stroke = |app: &PhotocraftApp| match &app.session.active().unwrap().doc.layer(id).unwrap().content {
+    let stroke = |app: &LienzoApp| match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Shape(sh) => sh.stroke.clone(),
         _ => None,
     };
@@ -123,7 +123,7 @@ fn stroke_picker_previews_commits_and_rejects_stale_or_bad_targets() {
 #[test]
 fn stroke_picker_previews_a_stroke_that_is_off_as_ok_turns_it_on() {
     for stroke in [json!(null), json!({"width": 0, "color": "#ff0000"})] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         let id = LayerId(app.run("shape.create", json!({"rect": [8, 8, 40, 30], "fill": "#336699", "stroke": stroke})).unwrap()["layer"].as_u64().unwrap());
         let dialog = open_paint(&mut app, Paint::Stroke, Some(id), false, [0.0, 0.0, 0.0, 1.0]).unwrap();
@@ -142,7 +142,7 @@ fn stroke_picker_previews_a_stroke_that_is_off_as_ok_turns_it_on() {
 /// paint on, and edits no document.
 #[test]
 fn tool_only_picker_sets_the_next_shapes_colour() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     app.ui.tool_options.shape_fill = false;
     let history = app.session.active().unwrap().history.past_len();
@@ -158,7 +158,7 @@ fn tool_only_picker_sets_the_next_shapes_colour() {
 /// With no document open, the options bar's Color Picker still sets the next shape's colour.
 #[test]
 fn tool_only_picker_works_without_a_document() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(app.session.active().is_none());
     for which in [Paint::Fill, Paint::Stroke] {
         let dialog = open_paint(&mut app, which, None, true, [0.1, 0.2, 0.3, 1.0]).unwrap();
@@ -180,7 +180,7 @@ fn tool_only_picker_works_without_a_document() {
 #[test]
 fn locked_shape_refuses_the_options_bar_picker_without_changing_the_next_shapes_colour() {
     for lock in ["all", "pixels"] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         let id = LayerId(app.run("shape.create", json!({"rect": [8, 8, 40, 30], "fill": "#336699"})).unwrap()["layer"].as_u64().unwrap());
         app.run("layer.lockLayers", json!({lock: true})).unwrap();
@@ -204,7 +204,7 @@ fn a_refused_shape_edit_leaves_the_next_shapes_colour_alone() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
     for which in [Paint::Fill, Paint::Stroke] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         let id = LayerId(app.run("shape.create", json!({"rect": [8, 8, 40, 30], "fill": "#336699"})).unwrap()["layer"].as_u64().unwrap());
         let (tools, options) = (app.session.tools.clone(), app.ui.tool_options.clone());
@@ -230,7 +230,7 @@ fn a_refused_shape_edit_leaves_the_next_shapes_colour_alone() {
                 |_, ()| Ok(json!({})),
             )
             .unwrap();
-        let photocraft_engine::jobs::Started::Job(job) = started else { panic!("the job ran inline") };
+        let lienzo_engine::jobs::Started::Job(job) = started else { panic!("the job ran inline") };
         assert!(confirm(&mut app, &f).unwrap_err().contains("still running"), "{which:?}");
         assert_eq!(app.session.tools.foreground, tools.foreground, "{which:?}: the next shape's colours are unchanged");
         assert_eq!(app.session.tools.background, tools.background);

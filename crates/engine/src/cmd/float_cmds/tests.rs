@@ -1,4 +1,4 @@
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
 use super::*;
@@ -152,7 +152,7 @@ fn a_copy_leaves_the_original_at_every_depth_in_one_undo_step() {
     }
 }
 
-/// `cargo test --release -p photocraft-engine float_drag_bench -- --ignored --nocapture`
+/// `cargo test --release -p lienzo-engine float_drag_bench -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn float_drag_bench() {
@@ -191,7 +191,7 @@ fn float_with_the_mask_target_moves_the_mask_not_the_layer() {
     let (mut s, id) = session();
     s.edit("mask", |doc, _| {
         let l = doc.layer_mut(id).unwrap();
-        let mut m = photocraft_doc::LayerMask::reveal_all();
+        let mut m = lienzo_doc::LayerMask::reveal_all();
         m.surface.fill_rect(Rect::new(10, 10, 30, 30), &[0.0]);
         l.mask = Some(m);
         Ok(())
@@ -211,7 +211,7 @@ fn float_with_the_mask_target_moves_the_mask_not_the_layer() {
 fn cutting_an_untouched_part_of_the_mask_moves_it_and_leaves_the_background_colour() {
     let (mut s, id) = session();
     s.edit("mask", |doc, _| {
-        let mut m = photocraft_doc::LayerMask::hide_all();
+        let mut m = lienzo_doc::LayerMask::hide_all();
         m.surface.fill_rect(Rect::new(50, 10, 70, 30), &[1.0]);
         doc.layer_mut(id).unwrap().mask = Some(m);
         Ok(())
@@ -300,8 +300,8 @@ fn float_shares_interior_tiles_on_cut_and_place() {
     let st = s.active().unwrap();
     let orig = st.doc.layer(id).unwrap().surface().unwrap();
     let parts = &floating(st).unwrap().parts;
-    let tc1 = photocraft_geom::TileCoord { tx: 1, ty: 1 };
-    let tc2 = photocraft_geom::TileCoord { tx: 2, ty: 2 };
+    let tc1 = lienzo_geom::TileCoord { tx: 1, ty: 1 };
+    let tc2 = lienzo_geom::TileCoord { tx: 2, ty: 2 };
     // Interior tiles of `piece` share the original layer's Arc<Tile>.
     assert!(Arc::ptr_eq(orig.tile(tc1).unwrap(), parts.piece.tile(tc1).unwrap()));
     assert!(Arc::ptr_eq(orig.tile(tc2).unwrap(), parts.piece.tile(tc2).unwrap()));
@@ -310,7 +310,7 @@ fn float_shares_interior_tiles_on_cut_and_place() {
     // Moving by a whole tile (256, 0) shares the interior tile directly in the preview document.
     let shown = displayed(st, (256, 0)).unwrap();
     let shown_surf = shown.layer(id).unwrap().surface().unwrap();
-    let moved_tc = photocraft_geom::TileCoord { tx: 2, ty: 1 };
+    let moved_tc = lienzo_geom::TileCoord { tx: 2, ty: 1 };
     assert!(Arc::ptr_eq(orig.tile(tc1).unwrap(), shown_surf.tile(moved_tc).unwrap()));
 }
 
@@ -417,7 +417,7 @@ fn the_selection_just_moves_without_transparency_to_shrink_to() {
     // The mask: it has no transparency of its own.
     let (mut s, id) = session();
     s.edit("mask", |doc, _| {
-        doc.layer_mut(id).unwrap().mask = Some(photocraft_doc::LayerMask::reveal_all());
+        doc.layer_mut(id).unwrap().mask = Some(lienzo_doc::LayerMask::reveal_all());
         Ok(())
     })
     .unwrap();

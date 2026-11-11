@@ -1,8 +1,8 @@
 //! Styled shape group translation: synchronized frame time and effect-map rebuild counters.
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Fill, Layer, LayerContent, Path, ShapeLayer, Subpath};
-use photocraft_geom::{Affine, Size};
-use photocraft_gpu::Compositor;
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Fill, Layer, LayerContent, Path, ShapeLayer, Subpath};
+use lienzo_geom::{Affine, Size};
+use lienzo_gpu::Compositor;
 use std::time::Instant;
 
 /// Translate the fixture's paths and raster caches together, as a group drag preview does.
@@ -13,7 +13,7 @@ fn moved(base: &Document, offset: i32) -> Document {
             if let LayerContent::Shape(shape) = &mut layer.content {
                 shape.path = shape.path.transform(&Affine::translate(f64::from(offset), f64::from(offset)));
                 if let Some(cache) = &mut shape.cache {
-                    *cache = cache.translated(offset, offset, photocraft_compose::bounds::content_bounds(cache));
+                    *cache = cache.translated(offset, offset, lienzo_compose::bounds::content_bounds(cache));
                 }
             }
         }
@@ -36,9 +36,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fill: Some(Fill::Solid(Color::rgb(0.2, 0.4, 0.8))),
             ..Default::default()
         };
-        shape.cache = Some(photocraft_vector::render_shape(&shape, doc.pixel_format(), doc.bounds()));
+        shape.cache = Some(lienzo_vector::render_shape(&shape, doc.pixel_format(), doc.bounds()));
         let mut layer = Layer::new(format!("shape {i}"), LayerContent::Shape(shape));
-        layer.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        layer.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         children.push(layer);
     }
     doc.layers.push(Layer::group("group", children));
@@ -69,9 +69,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("warm_median_ms={:.3}", samples.get(samples.len() / 2).copied().unwrap_or_default());
     if quick {
         let current = moved(&doc, 21);
-        let warm = photocraft_gpu::render_to_vec(&mut comp, &device, &queue, &current, current.bounds())?;
+        let warm = lienzo_gpu::render_to_vec(&mut comp, &device, &queue, &current, current.bounds())?;
         let mut fresh = Compositor::try_new_with_format(&device, Compositor::preferred_acc_format(&adapter))?;
-        let expected = photocraft_gpu::render_to_vec(&mut fresh, &device, &queue, &current, current.bounds())?;
+        let expected = lienzo_gpu::render_to_vec(&mut fresh, &device, &queue, &current, current.bounds())?;
         let difference = warm.iter().zip(&expected).flat_map(|(a, b)| a.iter().zip(b).map(|(a, b)| (a - b).abs())).fold(0.0f32, f32::max);
         println!("fresh_render_max_difference={difference}");
         if difference >= 1.0 / 255.0 {

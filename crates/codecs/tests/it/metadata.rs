@@ -2,7 +2,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 fn rich_image(layout: ChannelLayout) -> Image {
     let mut img = test_image(layout, SampleType::U8);
@@ -11,7 +11,7 @@ fn rich_image(layout: ChannelLayout) -> Image {
         exif: Some(sample_exif()),
         xmp: Some(SAMPLE_XMP.to_owned()),
         dpi: Some((300.0, 150.0)),
-        text: vec![("Description".into(), "synthetic test image".into()), ("Software".into(), "photocraft".into())],
+        text: vec![("Description".into(), "synthetic test image".into()), ("Software".into(), "lienzo".into())],
         ..Default::default()
     };
     img
@@ -41,7 +41,7 @@ fn check_format(format: Format) {
     } else if c.exif && format == Format::WebP {
         // WebP's resolution lives in EXIF, so the block comes back with resolution tags added.
         let back_exif = back.meta.exif.as_deref().unwrap_or_else(|| panic!("{format:?} lost exif"));
-        assert_eq!(photocraft_codecs::resolution::exif_resolution(back_exif).map(|(x, y)| (x.round(), y.round())), Some((300.0, 150.0)));
+        assert_eq!(lienzo_codecs::resolution::exif_resolution(back_exif).map(|(x, y)| (x.round(), y.round())), Some((300.0, 150.0)));
         // The rest of the block survives too: the Orientation tag (0x0112, little-endian).
         assert!(back_exif.windows(2).any(|w| w == b"\x12\x01"), "{format:?} lost Orientation");
     } else if c.exif {

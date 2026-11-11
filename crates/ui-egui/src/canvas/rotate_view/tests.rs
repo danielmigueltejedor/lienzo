@@ -149,7 +149,7 @@ fn view_xform_roundtrip_and_ninety_degrees() {
 }
 
 /// Screen angle, about the canvas centre, of the document point that was under `p0` at the press.
-fn followed_angle(h: &Harness<'static, PhotocraftApp>, p0: Pos2, start_rotation: f32) -> f32 {
+fn followed_angle(h: &Harness<'static, LienzoApp>, p0: Pos2, start_rotation: f32) -> f32 {
     let st = h.state();
     let (rect, v, flip) = (st.last_canvas_rect, &st.ui.views[0], st.ui.view.flip_horizontal);
     let before = ViewXform { rect, zoom: 1.0, center: v.center, flip, rotation: start_rotation, aspect: 1.0 };
@@ -191,8 +191,8 @@ fn screen_delta_mirrors_only_in_a_flipped_view() {
     assert_eq!(snap_deg(0.0 + screen_delta(-40.0, true), SNAP_DEG), 45.0);
 }
 
-fn app_docs(n: usize) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_docs(n: usize) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     for i in 0..n {
         app.run("file.new", json!({"width": 200 + i as u32 * 10, "height": 100})).unwrap();
     }
@@ -203,7 +203,7 @@ fn app_docs(n: usize) -> PhotocraftApp {
 #[test]
 fn commands_rotate_reset_and_reject_without_a_document() {
     let ctx = egui::Context::default();
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert_eq!(crate::menus::invoke(&mut empty, &ctx, "view.rotateView", json!({"angle": 30})).unwrap_err(), "no document open");
     assert_eq!(crate::menus::invoke(&mut empty, &ctx, "view.resetView", json!({})).unwrap_err(), "no document open");
 
@@ -244,7 +244,7 @@ fn ui_set_selects_the_tool_and_sets_rotation() {
     let crate::control::Outcome::Done(bad) = crate::control::handle(&mut app, &ctx, &req) else { panic!("nan") };
     assert_eq!(bad["ok"], false);
     assert_eq!(app.ui.views[0].rotation, 30.0);
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let (req, _) = crate::control::ControlRequest::new("ui.set", json!({"tool": "RotateView"}));
     let crate::control::Outcome::Done(ok) = crate::control::handle(&mut empty, &ctx, &req) else { panic!("tool") };
     assert_eq!(ok["ok"], true, "{ok}");
@@ -272,14 +272,14 @@ fn match_rotation_copies_the_angle_and_needs_two_documents() {
     assert!(app.ui.views.iter().all(|v| (v.rotation - 12.0).abs() < 1e-4 && (v.zoom - 2.0).abs() < 1e-4));
 }
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = crate::state::Tool::RotateView;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -287,12 +287,12 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn press(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, pressed: bool, shift: bool) {
+fn press(h: &mut Harness<'static, LienzoApp>, p: Pos2, pressed: bool, shift: bool) {
     let modifiers = egui::Modifiers { shift, ..Default::default() };
     h.event(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed, modifiers });
     h.step();
@@ -347,7 +347,7 @@ fn rotated_view_keeps_engine_selection_in_document_space() {
     app.ui.views[0].rotation = 30.0;
     app.run("select.rect", json!({"x": 10, "y": 20, "width": 40, "height": 10})).unwrap();
     let st = app.session.active().unwrap();
-    let b = st.doc.selection.as_ref().and_then(|s| photocraft_compose::bounds::content_bounds(s).into()).expect("selection");
+    let b = st.doc.selection.as_ref().and_then(|s| lienzo_compose::bounds::content_bounds(s).into()).expect("selection");
     // Axis-aligned in the file: the outline is drawn rotated via ViewXform.
     assert!(b.width() >= 40 && b.height() >= 10, "{b:?}");
     let xf =

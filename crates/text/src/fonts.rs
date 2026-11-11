@@ -37,7 +37,7 @@ pub static INTER_MEDIUM: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundl
 pub static INTER_SEMIBOLD: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("Inter-SemiBold.ttf")));
 pub static JETBRAINS_MONO_REGULAR: LazyLock<Vec<u8>> = LazyLock::new(|| inflate_font(bundled_font!("JetBrainsMono-Regular.ttf")));
 
-/// Fonts shipped with PhotoCraft (OFL; licences in `assets/fonts`).
+/// Fonts shipped with Lienzo (OFL; licences in `assets/fonts`).
 pub static BUNDLED: [(&str, &LazyLock<Vec<u8>>); 4] = [
     ("Inter-Regular.ttf", &INTER_REGULAR),
     ("Inter-Medium.ttf", &INTER_MEDIUM),
@@ -518,7 +518,7 @@ impl FontDb {
     /// ("Bahnschrift-LightCondensed"): that face is selected and the instance's axis values are
     /// added to the style's variations, keeping any axis the style sets itself (#8797). Faces are
     /// tried in this order: exact PostScript name, named instance, then style, weight and italic.
-    pub(crate) fn select_named_face(&mut self, style: &mut photocraft_doc::text::CharStyle) {
+    pub(crate) fn select_named_face(&mut self, style: &mut lienzo_doc::text::CharStyle) {
         let family = style.font_family.clone();
         let faces = self.faces(&family);
         let index = style.postscript_name.as_ref().and_then(|ps| faces.iter().position(|f| f.postscript_name.as_ref() == Some(ps)));
@@ -531,7 +531,7 @@ impl FontDb {
         if let Some((_, axes)) = &instance {
             for (axis, value) in axes {
                 if !style.variations.iter().any(|v| &v.axis == axis) {
-                    style.variations.push(photocraft_doc::text::FontVariation { axis: axis.clone(), value: *value });
+                    style.variations.push(lienzo_doc::text::FontVariation { axis: axis.clone(), value: *value });
                 }
             }
         }
@@ -553,7 +553,7 @@ impl FontDb {
             let Some(font) = info.fonts().get(index) else { return };
             let Some(blob) = font.load(Some(&mut self.fcx.source_cache)) else { return };
             let Some(blob) = isolated_face(blob, font.index()) else { return };
-            let alias = format!(".PhotoCraft-face-{}-{index}", info.id().to_u64());
+            let alias = format!(".Lienzo-face-{}-{index}", info.id().to_u64());
             self.fcx.collection.register_fonts(blob, Some(FontInfoOverride { family_name: Some(&alias), ..Default::default() }));
             self.face_aliases.insert(key, alias.clone());
             alias
@@ -1116,7 +1116,7 @@ mod tests {
     #[test]
     fn font_files_of_lists_each_font_file_once() {
         use super::{Blob, Collection, CollectionOptions};
-        let dir = std::env::temp_dir().join(format!("photocraft-font-files-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("lienzo-font-files-{}", std::process::id()));
         let activated = dir.join("activated");
         std::fs::create_dir_all(&activated).unwrap();
         let (inter, mono) = (dir.join("inter.ttf"), activated.join("mono.ttf"));
@@ -1171,7 +1171,7 @@ mod tests {
     #[test]
     fn missing_font_dirs_are_skipped() {
         let mut files = Vec::new();
-        super::collect_font_files(std::path::Path::new("/nonexistent/photocraft/fonts"), 0, &mut files);
+        super::collect_font_files(std::path::Path::new("/nonexistent/lienzo/fonts"), 0, &mut files);
         assert!(files.is_empty());
     }
 }

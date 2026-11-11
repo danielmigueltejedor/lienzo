@@ -1,4 +1,4 @@
-use photocraft_doc::BlendMode;
+use lienzo_doc::BlendMode;
 
 use super::enabled::{check_all_unlocked, is_mask_target, paint_surface};
 use super::layer_params::{layer_param, mask_new_layer};

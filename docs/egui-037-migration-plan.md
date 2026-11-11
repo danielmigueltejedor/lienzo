@@ -1,4 +1,4 @@
-# PhotoCraft: egui 0.37 migration plan
+# Lienzo: egui 0.37 migration plan
 
 Status update (2026-10-25): local implementation includes main `b278ff72459cbf9754863365edd822ba2248aa07`, preserving its JPEG dependency, Affinity import and raster changes. All nine CI stages passed: 11,590 passing test executions, zero failed, 91 ignored across 93 summaries; the ignored panic hunt, strict lint and WASM compilation passed. The current-main integration received independent review. Native/browser GUI, native IME, PRIMARY, packaged WASM size, real-world 0.36 settings and paired application performance remain open. Publication requires separate explicit approval; human review and human merge are required.
 
@@ -25,7 +25,7 @@ WASM size, broad visual/accessibility sweeps and paired app performance remain o
 settings fixtures qualify migration rules, not a captured real-world 0.36 save. Human review
 and human merge are required.
 Revision 2 (2026-10-23): resolves the independent review at
-`plan-reviews/photocraft-v1.md`, incorporates the shared E21b/W15P contracts and the
+`plan-reviews/lienzo-v1.md`, incorporates the shared E21b/W15P contracts and the
 lifecycle source audit, and removes the superseded sampling, PRIMARY, screenshot and
 rollback wording. The reviewed v1 document hash is retained in the evidence ledger;
 this revision needs its own independent review before publication.
@@ -47,7 +47,7 @@ final published revisions.
 
 Research basis: upstream tag `0.37.0` source and changelogs in the read-only
 checkout `/home/codex/work/CraftApps/egui037-migration-20261022/egui`, the
-candidate fork commits and `PATCHES.md`, and the PhotoCraft source at the
+candidate fork commits and `PATCHES.md`, and the Lienzo source at the
 baseline SHA. No web research was needed for the API facts below; upstream
 release notes and source are the primary evidence. Historical fork/audit notes
 were used only to locate refs, not as acceptance evidence.
@@ -65,7 +65,7 @@ in-flight and completed images together.
 ## 1. Decision summary
 
 1. Move directly to 0.37.0; do not port 0.36.2 patches to a new 0.36.x branch.
-2. Keep the existing `App::logic` / `App::ui` split. PhotoCraft already uses it
+2. Keep the existing `App::logic` / `App::ui` split. Lienzo already uses it
    (`crates/ui-egui/src/lib.rs:2244` and `:2371`), so there is no blanket
    `Context`-bridge migration. The work is preserving the split across hidden
    windows, screenshots, control input and multiple passes.
@@ -73,7 +73,7 @@ in-flight and completed images together.
    `[patch]` section does not propagate to dependency manifests, so the root
    workspace must patch every family crate it resolves.
 4. Keep the existing `eframe` opt-out from default features. Add only the features
-   PhotoCraft actually needs: `wgpu`, `accesskit`, `wayland`, `x11`, `persistence`,
+   Lienzo actually needs: `wgpu`, `accesskit`, `wayland`, `x11`, `persistence`,
    and the new `clipboard`. Add `monochrome_emoji_fonts` to the
    `epaint_default_fonts` build-dependency. Do not enable `system_fonts` in the first
    cut; the existing `cjk_fonts` system-provider path is measured separately (#8512).
@@ -100,9 +100,9 @@ in-flight and completed images together.
    pre-reorder text once E5 is active. This stage also adopts E21b: `IMEOutput`
    gains a bounded logical surrounding-text payload, and the Type tool supplies a
    real model adapter. E21b is new work, not existing E21/W27 capability.
-9. Treat E11 as optional. PhotoCraft does not enable `epaint/multithreading`; the
+9. Treat E11 as optional. Lienzo does not enable `epaint/multithreading`; the
    patch's forced single-threaded glyph context is a suite fix for Servo/VectorCraft,
-   not a PhotoCraft requirement.
+   not a Lienzo requirement.
 10. No PR may contain an absolute `path` patch. Final production manifests pin the
     reviewed, published `storytold` full 40-hex SHAs for the whole family and winit,
     including E21b and W15P. Stock 0.37.0 and the aiongg candidate revisions are
@@ -128,7 +128,7 @@ in-flight and completed images together.
 `Cargo.toml:55-59` pins `eframe`, `egui`, `egui_kittest` at `0.36`;
 `crates/ui-egui/Cargo.toml:33` pins `egui_extras` `0.36`;
 `crates/ui-egui/Cargo.toml:73` pins `epaint_default_fonts` `0.36`;
-winit is `=0.30.13` (`apps/photocraft/Cargo.toml:86`) and the lock resolves
+winit is `=0.30.13` (`apps/lienzo/Cargo.toml:86`) and the lock resolves
 egui-family `0.36.2`, winit `0.30.13`, wgpu `30.0.1`, accesskit `0.24.1`.
 `craft-ui` is pinned to `5c874d51eeb3de70e735c8ce87a59a7dedd47675`,
 `craft-print` to `3d37da389a3618ab9b76109da11416e9ca4ea719`, and
@@ -173,17 +173,17 @@ Pin identities are deliberately split:
 
 | Target | Package / binary | egui work |
 |---|---|---|
-| Desktop app | `photocraft` binary (`apps/photocraft`) | eframe 0.37 native, wgpu, accesskit, wayland, x11, persistence, clipboard; no `default_fonts`, no `system_fonts` in the first cut |
-| Browser app | `photocraft-web` binary (`apps/photocraft-web`) | eframe web 0.37, wgpu (WebGPU + WebGL2), accesskit; browser glyph rasterizer; `web_file` |
-| Browser bootstrap | `photocraft-web-boot` binary | no egui dependency; only wasm-bindgen/web-sys; keep out of the UI changes |
-| Headless CLI | `photocraft-cli` | no egui dependency; control bridge/MCP only |
-| UI library | `photocraft-ui-egui` | egui 0.37, eframe 0.37 (wgpu + accesskit + clipboard), `egui_extras` 0.37 (svg), `craft-ui` at the reviewed PR 199 port |
-| Tests/benches | `crates/ui-egui/tests/it`, `examples/*`, `photocraft-testkit` | kittest 0.37 (wgpu, snapshot, eframe), `snapshot`, `perf_scenarios`, `interactive_bench`, `fx_bench`, `bevel_bench`, `camera_raw_bench`, `type_bench`, `large_image_bench`, `large_file_bench` |
-| Platform helper | `photocraft-tablet` | no egui dependency; keep its winit-independent X11/AppKit/Windows path; E1 is only an enabler for a future native Wayland pen |
+| Desktop app | `lienzo` binary (`apps/lienzo`) | eframe 0.37 native, wgpu, accesskit, wayland, x11, persistence, clipboard; no `default_fonts`, no `system_fonts` in the first cut |
+| Browser app | `lienzo-web` binary (`apps/lienzo-web`) | eframe web 0.37, wgpu (WebGPU + WebGL2), accesskit; browser glyph rasterizer; `web_file` |
+| Browser bootstrap | `lienzo-web-boot` binary | no egui dependency; only wasm-bindgen/web-sys; keep out of the UI changes |
+| Headless CLI | `lienzo-cli` | no egui dependency; control bridge/MCP only |
+| UI library | `lienzo-ui-egui` | egui 0.37, eframe 0.37 (wgpu + accesskit + clipboard), `egui_extras` 0.37 (svg), `craft-ui` at the reviewed PR 199 port |
+| Tests/benches | `crates/ui-egui/tests/it`, `examples/*`, `lienzo-testkit` | kittest 0.37 (wgpu, snapshot, eframe), `snapshot`, `perf_scenarios`, `interactive_bench`, `fx_bench`, `bevel_bench`, `camera_raw_bench`, `type_bench`, `large_image_bench`, `large_file_bench` |
+| Platform helper | `lienzo-tablet` | no egui dependency; keep its winit-independent X11/AppKit/Windows path; E1 is only an enabler for a future native Wayland pen |
 
-`apps/photocraft` is the only target with the direct Linux `winit` dependency
+`apps/lienzo` is the only target with the direct Linux `winit` dependency
 (`=0.30.13`, x11 feature, for `EventLoopBuilderExtX11`). It must resolve to the
-same patched winit revision as eframe. `apps/photocraft-web` must not add a
+same patched winit revision as eframe. `apps/lienzo-web` must not add a
 native winit dependency.
 
 ### 2.4 Manifest and workspace audit
@@ -196,7 +196,7 @@ native winit dependency.
   `rg` after the bump.
 - `examples/plugins/invert-rs/Cargo.toml` is a separate `[workspace]` for a
   wasm plugin and has no UI dependency.
-- `apps/photocraft-web-boot` and `apps/photocraft-cli` have no egui dependency.
+- `apps/lienzo-web-boot` and `apps/lienzo-cli` have no egui dependency.
 - There is no `vendor/` directory, `[source]` replacement, or machine-local
   `.cargo/config.toml` patch in this checkout. The only `.cargo/config.toml`
   defines the `xtask` alias. Do not introduce a vendor tree for this migration.
@@ -214,7 +214,7 @@ Publication gates, in order:
 3. `storytold/craft-libs` revision on `main` containing only the reviewed port
    hunks (`8614e4a`/`1764bca`) applied to current `main`. Do not pin a PR ref or
    merge the stale `b68de8c`/`ec8840a` trees.
-4. PhotoCraft PRs below, each with a `Cargo.lock` generated by `--locked` resolution
+4. Lienzo PRs below, each with a `Cargo.lock` generated by `--locked` resolution
    from the public revisions.
 
 Rollback is the previous coherent pair: old `Cargo.lock` plus the 0.36.2 registry
@@ -242,33 +242,33 @@ Reachability checks before publication:
 
 ### 3.1 Native entry point
 
-`apps/photocraft/src/main.rs:720` calls `eframe::run_native`. The app creator
-installs fonts/theme through `PhotocraftApp::setup_context`
+`apps/lienzo/src/main.rs:720` calls `eframe::run_native`. The app creator
+installs fonts/theme through `LienzoApp::setup_context`
 (`crates/ui-egui/src/lib.rs:2850`), attaches the GPU canvas, control server,
 native menu, single-instance service and platform services, then returns
-`PhotocraftApp`.
+`LienzoApp`.
 
-`native_options` (`apps/photocraft/src/main.rs:104`) sets a custom viewport,
+`native_options` (`apps/lienzo/src/main.rs:104`) sets a custom viewport,
 `persistence_path` `ui.ron`, and a `window_builder` hook `restored_window`
 (`:132`) that enforces minimum size and disables restored fullscreen.
 `options.centered` is decided from `ui_state::has_saved_position`
-(`apps/photocraft/src/main.rs:667`, `apps/photocraft/src/ui_state.rs:33`).
+(`apps/lienzo/src/main.rs:667`, `apps/lienzo/src/ui_state.rs:33`).
 
 `gpu_startup` configures `options.wgpu_options`; `presentation` applies present
 mode and frame-latency overrides. `eframe::Error::Wgpu(_)` is the signal for the
-CPU-retry path (`apps/photocraft/src/main.rs:934`,
-`apps/photocraft/src/gpu_startup.rs:477`). E2/E3 add `WgpuError::ConfigureSurface`
+CPU-retry path (`apps/lienzo/src/main.rs:934`,
+`apps/lienzo/src/gpu_startup.rs:477`). E2/E3 add `WgpuError::ConfigureSurface`
 and `CreateRenderer`; the existing `Error::Wgpu(_)` match keeps working, but the
 retry decision must be tested with the new variants.
 
 ### 3.2 Web entry point
 
-`apps/photocraft-web/src/web.rs:47` starts `eframe::WebRunner`. `WebShell`
+`apps/lienzo-web/src/web.rs:47` starts `eframe::WebRunner`. `WebShell`
 implements `raw_input_hook`, `logic` and `ui` (`:325`, `:332`, `:362`); its
 `logic` drains dropped files, serves fonts, calls the app's `logic`, and saves
 presets. Its `ui` adds a browser preset-storage banner and calls the app's `ui`.
 
-`apps/photocraft-web/index.html` is Trunk-based and the wasm is gzipped and split
+`apps/lienzo-web/index.html` is Trunk-based and the wasm is gzipped and split
 into parts by `packaging/web/package.sh`. Its 24 MiB limit applies to **each shipped
 file**, not to the raw wasm; the boot module inflates the parts. 0.37 adds
 `send_wrapper` and changes `epaint`/`vello_cpu`; the raw wasm and the gzipped total
@@ -297,9 +297,9 @@ against 0.37.0:
   regression proving normal hidden calls still run; it must not suppress fresh
   async results, control commands or widget actions.
 
-Consequences for PhotoCraft:
+Consequences for Lienzo:
 
-`PhotocraftApp::logic` (`crates/ui-egui/src/lib.rs:2244`) does stateful work that
+`LienzoApp::logic` (`crates/ui-egui/src/lib.rs:2244`) does stateful work that
 must survive a hidden window: frame accounting, `sync_views`, GPU checks, control
 drain, native menu, commit/end operations, screenshot issue/collect, preferences
 tick, monitor polling, i18n sync, work-area fit, close guard, job tick, shortcuts,
@@ -309,7 +309,7 @@ second pass with no new input. `self.frame += 1` (`:2257`) is a logic-pass count
 not a rendered-frame identity; screenshot settling and GPU startup checks must use
 `ctx.cumulative_frame_nr()` (or an equivalent UI-phase rendered-frame counter).
 
-`PhotocraftApp::ui` (`:2371`) draws panels, windows, dialogs, notices and the
+`LienzoApp::ui` (`:2371`) draws panels, windows, dialogs, notices and the
 central canvas, and does UI-local persistence (`brush_picker::persist`,
 `last_brush::persist`, `tool_memory::persist`, `view_cmds::persist`) plus
 `native_menu::sync`, `gpu_status::check_window`, and the current synthetic-input
@@ -322,12 +322,12 @@ legacy pinch, pen-hold, titlebar resize and stroke tracing. It runs for the root
 and deferred viewports, not immediate viewports (unless E1 is installed), and it
 also runs before a hidden `run_logic`. `take_synthetic_step` (`:2356`) removes
 events from the app queue even on a logic-only tick; eframe preserves the events it
-appends in `pending_raw_input`, but PhotoCraft must set a `synthetic_in_flight`
+appends in `pending_raw_input`, but Lienzo must set a `synthetic_in_flight`
 flag in the hook and send `RequestPaintWhileHidden` from `logic` (which runs
 after the hook in the same tick) so a UI pass consumes them. Do not start stroke
 tracing or interpret fresh input as if a paint occurred: either gate it on that
 flag or move the start to `App::ui`. `egui-winit` turns
-Cmd/Ctrl+C/X/V into `Event::Copy`/`Cut`/`Paste`; PhotoCraft maps those back to key
+Cmd/Ctrl+C/X/V into `Event::Copy`/`Cut`/`Paste`; Lienzo maps those back to key
 presses in `shortcuts::clipboard_keys` (`crates/ui-egui/src/shortcuts.rs:282`).
 
 ### 3.4 Panels, docking and the root Ui
@@ -337,7 +337,7 @@ The root Ui is passed to `App::ui`; panels are shown on it:
 `options_bar` (`:969`), `status_bar` (`:1726`), `toolbar` (`:93`),
 `right_dock` (`:1792`), and `dock_panels` (`:1866`). The custom docking surface
 uses `craft_ui::docking::DockArea` with the stable ID
-`photocraft-panel-docking` (`crates/ui-egui/src/panel_docking.rs:424`) and an
+`lienzo-panel-docking` (`crates/ui-egui/src/panel_docking.rs:424`) and an
 `egui::Panel::right("shared-panel-dock")` (`:448`).
 
 `craft_ui` is a real runtime dependency (`panel_docking.rs:4-5`,
@@ -353,7 +353,7 @@ adds named `medium`/`semibold` families, scales faces with `UiFontSizePlugin`
 (`crates/ui-egui/src/cjk_fonts.rs:352`, `:375`). The fallback is app-specific:
 script order follows the UI locale, reads at most one system font per frame, and
 tracks its own `tried`/`loaded` state. It reads system fonts even when eframe's
-`system_fonts` feature is off, so #8512's discovery cost is still on PhotoCraft's
+`system_fonts` feature is off, so #8512's discovery cost is still on Lienzo's
 startup/first-use path and must be measured separately.
 
 `cjk_fonts::add_to_all_families` reads `FontData.font` as bytes
@@ -364,7 +364,7 @@ uses do not type-check as written.
 
 ### 3.6 Screenshots and control
 
-`control.rs:1265` handles `ui.screenshot`; `PhotocraftApp::drain_control`
+`control.rs:1265` handles `ui.screenshot`; `LienzoApp::drain_control`
 (`lib.rs:2156`) queues `(token, earliest_time, frames)` in
 `queued_screenshots`; `issue_screenshots` (`:2183`) sends
 `ViewportCommand::Screenshot(UserData::new(token))`; `collect_screenshots`
@@ -384,7 +384,7 @@ slot and an explicit timeout drain.
 - eframe window geometry, restored by `egui_winit::WindowSettings`;
 - egui memory, including `PanelState` entries and persisted widget data.
 
-`apps/photocraft/src/ui_state.rs` sanitizes the file before eframe reads it and
+`apps/lienzo/src/ui_state.rs` sanitizes the file before eframe reads it and
 decides whether a saved position exists. `saved_position` is platform-dependent:
 macOS looks for `inner_position_pixels`, everywhere else for
 `outer_position_pixels` (`ui_state.rs:41-44`). 0.37 replaces the flat
@@ -401,7 +401,7 @@ explicit pre-load rewrite and the new platform-independent position key.
 `ctx.viewport_id().root_ui_id().with(salt)`. Existing saved panel widths are under
 the old IDs and will not be restored unless migrated. Tests that read
 `PanelState::load(&ctx, Id::unique("dock"))` also break
-(`apps/photocraft/src/main.rs:1004`, `crates/ui-egui/src/panels.rs:6604`,
+(`apps/lienzo/src/main.rs:1004`, `crates/ui-egui/src/panels.rs:6604`,
 `:6934`, `crates/ui-egui/src/workspace_ui.rs:594`,
 `crates/ui-egui/src/panel_docking_tests.rs:569`). `Id::unique(name)` has the same
 hash as the old `Id::new(name)`, so the old key can still be read.
@@ -424,7 +424,7 @@ The repository already has the right harnesses:
   rows with enough samples), peak RSS, GPU bytes and load averages.
 - `crates/ui-egui/tests/it` has wgpu kittest tests for canvas, GPU loss,
   color management, exports and workspace presets.
-- `apps/photocraft/tests/mac_menu_appkit.rs` is the existing real-macOS menu
+- `apps/lienzo/tests/mac_menu_appkit.rs` is the existing real-macOS menu
   check; it is not a substitute for IME/focus testing.
 
 There are 481 `Harness::builder()` uses (source count at
@@ -437,13 +437,13 @@ fixture sweep.
 
 ### 3.9 Multiple viewports
 
-PhotoCraft creates extra document windows with
+Lienzo creates extra document windows with
 `ctx.show_viewport_immediate(ViewportId::from_hash_of(("docwin", w.id)), ...)`
 (`crates/ui-egui/src/canvas.rs:6551`). These are immediate viewports, not deferred
 ones. The implications are:
 
 - `App::raw_input_hook` does not run for immediate viewports; E1's
-  `ViewportHooks::raw_input` is the only per-viewport hook that does. PhotoCraft
+  `ViewportHooks::raw_input` is the only per-viewport hook that does. Lienzo
   has no consumer today, but the extra-window path must be tested with E1 present
   and absent.
 - The root-only services (`tool_cursor`, `monitor_status`, `caps_lock`, screenshot
@@ -451,14 +451,14 @@ ones. The implications are:
   (`tool_cursor.rs:103`, `monitor_status.rs:274`); do not accidentally make them
   viewport-global.
 - #8748 (hidden-parent deferred children) is **closed and unmerged**, so it is not
-  behavior in 0.37.0. PhotoCraft has no `show_viewport_deferred` call sites
+  behavior in 0.37.0. Lienzo has no `show_viewport_deferred` call sites
   (`canvas.rs:6551`, `screen_picker.rs:296`, `camera_raw_ui.rs:1224` are all
   `show_viewport_immediate`), so the upstream deferred-child bug is not directly
   applicable. Still test the hidden/occluded root plus an immediate child's
-  open/update/close, because that is the path PhotoCraft actually uses.
+  open/update/close, because that is the path Lienzo actually uses.
 - `ui.screenshot` is documented as main-window only (`docs/control-protocol.md`);
   do not promise child-window screenshots in 0.37.
-- Extra windows use the same `PhotocraftApp` state; a pass for a child viewport
+- Extra windows use the same `LienzoApp` state; a pass for a child viewport
   may call `canvas_view` while the root UI is not being drawn. Keep document
   mutation and undo transactions inside `logic` or the existing single-window
   paths; test open/close of an extra window during a stroke, a dialog and a
@@ -471,79 +471,79 @@ boundaries need an explicit check:
 
 - Native-only: `sys-locale`, `rayon`, `winsafe`, `xcap`, `x11rb`, `wl-clipboard-rs`,
   `zbus`, `muda`, `dispatch2`, `fmv-macos-events`, `core-graphics2` in
-  `apps/photocraft` and `crates/ui-egui`.
+  `apps/lienzo` and `crates/ui-egui`.
 - macOS: `apple_events`, `mac_menu`, `mac_window`, `muda`, `dispatch2`,
-  `objc2*`, `photocraft-tablet::macos`, `tests/mac_menu_appkit.rs`.
-- Windows: `window_frame`, `cursor`, `photocraft-tablet::windows`,
-  `photocraft-ipp`, `winsafe`.
+  `objc2*`, `lienzo-tablet::macos`, `tests/mac_menu_appkit.rs`.
+- Windows: `window_frame`, `cursor`, `lienzo-tablet::windows`,
+  `lienzo-ipp`, `winsafe`.
 - Linux: `portal_save`, `print_portal`, `icon_theme`, `tablet::spawn_x11`,
   `linux_libs`, `winit` x11 event-loop builder.
-- wasm32: `apps/photocraft-web/src/web.rs`, `cjk_fonts::Sources::system` (no
+- wasm32: `apps/lienzo-web/src/web.rs`, `cjk_fonts::Sources::system` (no
   system fonts), `file_ui/web_preview.rs`, `gpu_canvas` web adapter limits,
-  `photocraft-web-boot`.
+  `lienzo-web-boot`.
 
 At minimum run `cargo check --target wasm32-unknown-unknown` (`cargo xtask
 wasm`), Linux native, Windows native and macOS native for the changed crates.
 Do not treat a Linux-only compile as platform acceptance.
 
-## 4. 0.37 breaking changes mapped to PhotoCraft
+## 4. 0.37 breaking changes mapped to Lienzo
 
-| Change | PhotoCraft impact and exact work | Count / anchor |
+| Change | Lienzo impact and exact work | Count / anchor |
 |---|---|---|
 | `WidgetType` is now a deprecated alias of `accesskit::Role`; many variants were renamed (`SelectableLabel→Button`, `Checkbox→CheckBox`, `ColorButton→ColorWell`, `CollapsingHeader→DisclosureTriangle`, `Other→Unknown`) | Mechanical mapping. `Button→Button`, `SelectableLabel→Button`, `CheckBox→CheckBox`, `RadioButton→RadioButton`, `Label→Label`, `Image→Image`, `CollapsingHeader→DisclosureTriangle`, `ComboBox→ComboBox`, `ColorButton→ColorWell`, `Slider→Slider`, `Other→Unknown`. Keep selection in `WidgetInfo::selected`. | 114 uses in 43 files, e.g. `shape_stroke_ui/editor.rs:47`, `props_layout.rs:73`; PR 199's mapping is the reference |
 | `Id::new` deprecated | `Id::new` → `Id::unique` (same hash; persisted IDs stay stable). | 394 uses in 121 files |
 | `Ui::id` deprecated | `ui.id()` → `ui.scope_id()` (a rename of the old id). Do **not** substitute `Ui::unique_id`: that is a new globally unique but unstable id used for auto ids and AccessKit identity. | 93 uses |
 | `Panel` constructors take `AsIdSalt`; IDs become parent-scoped | `direction.rs:71/76` currently takes `impl Into<egui::Id>` and passes it to `Panel::left`; change to `impl egui::AsIdSalt`. Add `panels::panel_state_id(ctx, salt) = ctx.viewport_id().root_ui_id().with(salt)` (`Id::with`, because `with_salt` takes an `IdSalt`). Migrate old `PanelState` keys in the first compatible PR and keep the old key readable. | 11 direct panel constructors; 5 `PanelState::load` sites |
-| `UiBuilder::id` → `scope_id` | No PhotoCraft call sites; `craft_ui` PR 199 has two. | `craft_ui/docking/surface.rs` |
+| `UiBuilder::id` → `scope_id` | No Lienzo call sites; `craft_ui` PR 199 has two. | `craft_ui/docking/surface.rs` |
 | `TextEdit::hint_text` requires `IntoAtoms<'static>` | `widgets::text_field`/`text_field_ex` take `hint: &str` and pass it directly; `crop_size::text_field` does too. Convert to owned atoms once (`hint.to_owned()`) or change the helper parameter to `impl IntoAtoms<'static>` and update callers. | `widgets.rs:848`, `crop_size.rs:282` |
 | `FontData.font` is a `Blob` (`Arc<dyn AsRef<[u8]>>`) | Use `data.bytes()` or `data.font.as_ref().as_ref()`; update pointer test. | `cjk_fonts.rs:354`, `:355`, `:358`, `:879` |
 | `ViewportCommand::Screenshot` callback; `Event::Screenshot`/`UserData` removed | Replace `issue_screenshots` with a bounded, cancelable per-request completion slot (section 9.3), not an unbounded `mpsc` channel. The callback holds only a weak slot reference, stores only the image, and may run on an arbitrary callback thread. Collect in `logic`; use rendered-frame identity plus a monotonic settle deadline; keep token correlation. `clipping_indicator_tests.rs:94/:99` also use the removed API and must be migrated in the same PR. | `lib.rs:2183`, `:2196`, `:2214`; `control.rs:1265`; `clipping_indicator_tests.rs:94`, `:99` |
-| `Event::PasteImage` new | egui-winit now emits image paste when the clipboard has no text. PhotoCraft's `clipboard_press` only maps `Event::Paste(_)`. Adopt it as the document paste shortcut through the existing `import_os_clipboard`/session path, never a second clipboard read; a test asserts one import and no text-paste double handling. | `shortcuts.rs:221`, `:282` |
-| `Event::MiddleClickPaste` new | Text fields handle it; verify PhotoCraft's canvas/field interaction does not double-handle it. | `shortcuts::clipboard_keys` |
+| `Event::PasteImage` new | egui-winit now emits image paste when the clipboard has no text. Lienzo's `clipboard_press` only maps `Event::Paste(_)`. Adopt it as the document paste shortcut through the existing `import_os_clipboard`/session path, never a second clipboard read; a test asserts one import and no text-paste double handling. | `shortcuts.rs:221`, `:282` |
+| `Event::MiddleClickPaste` new | Text fields handle it; verify Lienzo's canvas/field interaction does not double-handle it. | `shortcuts::clipboard_keys` |
 | `ScrollAreaState.offset` field private; `offset()` deprecated | Replace reads with `clamped_offset()`/`unclamped_offset()`. Replace the direct write `st.offset.y = target` with a request passed to `ScrollArea::vertical_scroll_offset` on the next frame, then clear the request. | `menu_nav.rs:504`, `:535`; `field_wheel.rs:173-174` |
-| `egui-winit` clipboard feature is no longer implicit in eframe when default features are off | Add `clipboard` to the `eframe` feature list in the app and ui-egui. Without it, OS copy/paste silently falls back to an in-app-only clipboard. | `apps/photocraft/Cargo.toml:32`, `crates/ui-egui/Cargo.toml:34` |
+| `egui-winit` clipboard feature is no longer implicit in eframe when default features are off | Add `clipboard` to the `eframe` feature list in the app and ui-egui. Without it, OS copy/paste silently falls back to an in-app-only clipboard. | `apps/lienzo/Cargo.toml:32`, `crates/ui-egui/Cargo.toml:34` |
 | `system_font_fallback` defaults true | Workspace `eframe` has default features off, so the provider is only the "missing system fonts" warning. Set `NativeOptions::system_font_fallback = false` explicitly to preserve the existing CJK plugin and deterministic rendering; evaluate `system_fonts` separately. | `main.rs:104` |
 | `default_fonts` is no longer default; emoji fonts are feature-gated; `egui-icons` is new | Add `monochrome_emoji_fonts` to the `epaint_default_fonts` build-dependency; deflate `EGUI_ICONS`; rebuild the family stack exactly as 0.37 does (Ubuntu-Light, egui-icons, NotoEmoji, emoji-icon-font; Hack first for monospace). Update the equality test. No new font file is committed; verify `ATTRIBUTION.md` needs no row, and add one in the same PR if a packaged asset is added. | `build.rs:37-45`, `egui_fonts.rs:47-56`, `:79` |
 | `Ui::id`/`Id` semantics in tests | kittest queries by IDs still work after `Id::unique`; panel-state queries do not. `Ui::unique_id` is unstable and must not become a persisted/test key. | see persistence above |
 | `AccessKit` role/label checks in kittest | Add `Response::labelled_by`/`accessible_name` where a field has no hint; keep `check_accessibility` on. These minimal name fixes are in the first green PR because the default check runs on every harness. | all 481 harnesses |
 | `MissingGlyphPolicy::Panic` in kittest | Audit special characters (`✓`, `▲▼`, `▶◀`, `×`, `…`, `⏵`, `⋮`, `egui::special_emojis`) and add a deterministic fallback or `allow_missing_glyphs()` only where tofu is intentional. Enable `monochrome_emoji_fonts`/`EGUI_ICONS` and add the glyph-coverage test in the first green PR. | 481 harnesses |
 | `#8763` TextEdit click-away selection loss | Reproduce select-text-then-click-toolbar/context-action. The fork owns the selected fix (with pointer and keyboard regressions) or a tested app workaround preserving range and undo; do not silently accept. | `widgets.rs`, `text_field_menu.rs`, new kittest/native row |
-| `egui` 0.37 style defaults (roomier buttons, larger radii) | PhotoCraft overrides most `Visuals`/`Spacing` fields in `theme::apply`, but atom-based `Button`/`ComboBox` and popup/table internals still change. Pixel fixtures must be regenerated and reviewed, not blindly accepted. | `theme.rs:995` |
-| `ScrollArea` kinetic/rubber-band defaults | New `ScrollStyle::kinetic`; PhotoCraft's thin scrollbars keep their explicit opacity, but menu wheel/arrow scrolling and canvas pan must be re-tested. | `theme.rs:1065`, `menu_nav.rs` |
+| `egui` 0.37 style defaults (roomier buttons, larger radii) | Lienzo overrides most `Visuals`/`Spacing` fields in `theme::apply`, but atom-based `Button`/`ComboBox` and popup/table internals still change. Pixel fixtures must be regenerated and reviewed, not blindly accepted. | `theme.rs:995` |
+| `ScrollArea` kinetic/rubber-band defaults | New `ScrollStyle::kinetic`; Lienzo's thin scrollbars keep their explicit opacity, but menu wheel/arrow scrolling and canvas pan must be re-tested. | `theme.rs:1065`, `menu_nav.rs` |
 
 ## 5. E1–E21 and E21b audit
 
 Base: `841a328b`. The candidate branch is `a4f9a17f`, with one commit per topic
 and `PATCHES.md` at that revision. All rows need a final audit against the
-published commits; the notes below state what PhotoCraft specifically needs.
+published commits; the notes below state what Lienzo specifically needs.
 
-| # | Change | PhotoCraft relevance and decision | Required evidence / removal |
+| # | Change | Lienzo relevance and decision | Required evidence / removal |
 |---|---|---|---|
-| E1 | eframe `NativeOptions::viewport_hooks` (per-viewport window create/destroy and raw input, immediate viewports included) | PhotoCraft does not call it today. Keep in the shared fork because craft-tablet's native Wayland pen path needs it; do not claim pen support until craft-tablet consumes it. Verify the global hook storage does not leak between contexts/tests. | Fork unit test for install/replace; PhotoCraft full-suite run; remove when upstream offers equivalent per-viewport hooks or native Wayland pen is solved another way |
-| E2+E3 | egui-wgpu surface fit to `max_texture_dimension_2d`; configure/renderer errors returned as `WgpuError::ConfigureSurface` / `CreateRenderer` | Directly relevant to multi-monitor/large restored windows and `--safe-gpu` fallback. Adopt. Add a test with a synthetic surface size above the adapter limit and a forced configure error; assert no panic and a recoverable error. | `surface_fit` unit tests; PhotoCraft large-window test; remove when upstream closes emilk/egui#8361 and ships an equivalent |
+| E1 | eframe `NativeOptions::viewport_hooks` (per-viewport window create/destroy and raw input, immediate viewports included) | Lienzo does not call it today. Keep in the shared fork because craft-tablet's native Wayland pen path needs it; do not claim pen support until craft-tablet consumes it. Verify the global hook storage does not leak between contexts/tests. | Fork unit test for install/replace; Lienzo full-suite run; remove when upstream offers equivalent per-viewport hooks or native Wayland pen is solved another way |
+| E2+E3 | egui-wgpu surface fit to `max_texture_dimension_2d`; configure/renderer errors returned as `WgpuError::ConfigureSurface` / `CreateRenderer` | Directly relevant to multi-monitor/large restored windows and `--safe-gpu` fallback. Adopt. Add a test with a synthetic surface size above the adapter limit and a forced configure error; assert no panic and a recoverable error. | `surface_fit` unit tests; Lienzo large-window test; remove when upstream closes emilk/egui#8361 and ships an equivalent |
 | E4 | egui-winit uses winit's Wayland clipboard when available; smithay not started; PRIMARY currently falls back to arboard | Regular clipboard/file drops are relevant on Hyprland and require W15, `wayland` and `clipboard`. Adopt the regular path. **PRIMARY is not accepted through arboard**: the default is the shared W15P winit-owned PRIMARY path on the existing connection/event queue and per-seat lifecycle; arboard is only a measured fallback if W15P cannot meet a proven requirement, with compositor evidence and an explicit unresolved gate. | Regular/image/drop tests; W15P PRIMARY matrix on wlroots/KWin/Mutter; remove when upstream #8657 lands |
 | E5 | epaint bidi shaping, visual row order, marks, end caret/selection; word-motion underflow fix; tests without `default_fonts` | Core for Arabic/Hebrew UI labels. Adopt only with E12/E13/E16 and with `bidi_text.rs` removed or reduced; otherwise text is reversed twice. | Arabic/Hebrew label, mixed LTR/RTL, caret/selection tests; remove when #8577 is released |
 | E6 | `request_focus` on the focused widget no longer interrupts IME | Relevant to every text field and Preferences search. Adopt. | IME preedit/commit across focus requests |
-| E7 | Windows letter keys from virtual-key code on non-Latin layouts | Relevant; PhotoCraft has layout-specific symbol logic. Adopt. | Windows layout matrix (Russian/Arabic/Hebrew/German) |
+| E7 | Windows letter keys from virtual-key code on non-Latin layouts | Relevant; Lienzo has layout-specific symbol logic. Adopt. | Windows layout matrix (Russian/Arabic/Hebrew/German) |
 | E8 | TextEdit no longer clips glyphs above/below the row | Relevant to Thai/Vietnamese/Arabic marks and small fields. Adopt; pixel tests. | Text field row geometry at 1x/1.5x/2x |
-| E9 | `Style::right_to_left` mirrors menus, scrollbars, headers, title bars, combo boxes, checkboxes, popups, resize grips | PhotoCraft already mirrors shell chrome explicitly in `direction.rs`. Enabling E9 while keeping those explicit layouts will double-mirror. Adopt only after a call-site audit; default `right_to_left=false` means it is inert until set. | RTL chrome fixture matrix; remove overlapping `direction` paths |
+| E9 | `Style::right_to_left` mirrors menus, scrollbars, headers, title bars, combo boxes, checkboxes, popups, resize grips | Lienzo already mirrors shell chrome explicitly in `direction.rs`. Enabling E9 while keeping those explicit layouts will double-mirror. Adopt only after a call-site audit; default `right_to_left=false` means it is inert until set. | RTL chrome fixture matrix; remove overlapping `direction` paths |
 | E10 | eframe web: named keys not typed as text; letter keys from `KeyboardEvent.code`; `lang` on hidden input/speech | Relevant to browser shortcuts and IME. Adopt. | Browser keyboard/IME workflow; no wasm size regression |
-| E11 | epaint glyphs rasterized on a single-threaded vello context (fixes `vello_cpu` multithreading panic) | PhotoCraft does not enable `epaint/multithreading`; forcing `num_threads: 0` could slow other consumers. Keep out of PhotoCraft's qualifying revision unless the shared fork requires it; if included, benchmark glyph rasterization and test all fonts. | epaint tests with/without multithreading; perf rows |
-| E12 | `LayoutJob::direction`, RTL right alignment, ellipsis at visual end, UAX #9 L1, linear reorder keeping isolate initiators/PDI/marks | Needed with E5; replaces `bidi_text::visual_ltr` and `elide`. Adopt in the language stage. | Title bar `*صورة.psd — PhotoCraft`, layer-name truncation, bidi controls |
+| E11 | epaint glyphs rasterized on a single-threaded vello context (fixes `vello_cpu` multithreading panic) | Lienzo does not enable `epaint/multithreading`; forcing `num_threads: 0` could slow other consumers. Keep out of Lienzo's qualifying revision unless the shared fork requires it; if included, benchmark glyph rasterization and test all fonts. | epaint tests with/without multithreading; perf rows |
+| E12 | `LayoutJob::direction`, RTL right alignment, ellipsis at visual end, UAX #9 L1, linear reorder keeping isolate initiators/PDI/marks | Needed with E5; replaces `bidi_text::visual_ltr` and `elide`. Adopt in the language stage. | Title bar `*صورة.psd — Lienzo`, layer-name truncation, bidi controls |
 | E13 | caret/hit-test/Delete/Backspace by grapheme cluster | TextEdit and Type tool. Adopt; the Type tool has its own char-based editor (`type_tool.rs:562`, `:751`, `:964`), which must be audited for combining marks/emoji. | Grapheme deletion/movement tests in both TextEdit and Type tool |
-| E14 | `FontTweak::fallback_align`: fallback fonts on primary baseline, rows grow to fit; default unchanged | PhotoCraft already computes `y_offset_factor` manually. Adopt, but do not set `fallback_align` unless the manual metrics are removed; test row height and CJK/Thai/Arabic baselines. | Font fallback baseline fixtures; `cjk_fonts` tests |
-| E15 | `LineBreaker` trait (`SimpleLineBreaker` preserves rules), grapheme-safe emergency breaks, `LayoutJob::language` | Default preserves behavior; the suite uses it for craft-text line breaking, and E20 uses the language. PhotoCraft document text is parley-based, so the app impact is UI text wrapping/truncation. Adopt; test wrapping/truncation. | Wrapping fixtures with Latin/CJK/Thai |
+| E14 | `FontTweak::fallback_align`: fallback fonts on primary baseline, rows grow to fit; default unchanged | Lienzo already computes `y_offset_factor` manually. Adopt, but do not set `fallback_align` unless the manual metrics are removed; test row height and CJK/Thai/Arabic baselines. | Font fallback baseline fixtures; `cjk_fonts` tests |
+| E15 | `LineBreaker` trait (`SimpleLineBreaker` preserves rules), grapheme-safe emergency breaks, `LayoutJob::language` | Default preserves behavior; the suite uses it for craft-text line breaking, and E20 uses the language. Lienzo document text is parley-based, so the app impact is UI text wrapping/truncation. Adopt; test wrapping/truncation. | Wrapping fixtures with Latin/CJK/Thai |
 | E16 | visual cursor movement with affinity, Home/End in reading order, password mask per cluster, neutral paragraphs inherit direction | Needed for RTL and grapheme editing. Adopt with E5/E12/E13. | Caret affinity tests, mixed-direction paragraphs |
-| E17 | `Context::set_language`, `UiBuilder::language`, `Response::accessible_language`, AccessKit root language, one text run per bidi level | PhotoCraft's `i18n::sync_context` (`i18n/mod.rs:409`) must call `set_language`; add AccessKit language assertions. Adopt. | AccessKit root/label language; screen-reader smoke test |
-| E18 | eframe `Frame::set_ui_language` sets `Context::set_language`; web falls back to `Context::language` | Call from `PhotocraftApp::logic` when the preference changes. Adopt. | Live language switch without losing UI state |
+| E17 | `Context::set_language`, `UiBuilder::language`, `Response::accessible_language`, AccessKit root language, one text run per bidi level | Lienzo's `i18n::sync_context` (`i18n/mod.rs:409`) must call `set_language`; add AccessKit language assertions. Adopt. | AccessKit root/label language; screen-reader smoke test |
+| E18 | eframe `Frame::set_ui_language` sets `Context::set_language`; web falls back to `Context::language` | Call from `LienzoApp::logic` when the preference changes. Adopt. | Live language switch without losing UI state |
 | E19 | one letter-key rule across Windows/macOS/Linux; `RawInput::keyboard_layout_is_latin` and `latin_layout_chars` | Relevant to non-Latin shortcuts; requires winit W25. Adopt, but keep `layout_keys.rs`'s Photoshop-specific German bracket table and test that the two rules do not fight. | Layout matrix; `layout_keys` tests |
-| E20 | widget text laid out in the language of its `Ui` | Adopt with E15/E17; PhotoCraft's `tl!` remains the source text. | Translated widget labels in AccessKit and layout |
+| E20 | widget text laid out in the language of its `Ui` | Adopt with E15/E17; Lienzo's `tl!` remains the source text. | Translated widget labels in AccessKit and layout |
 | E21 | `ImeEvent::DeleteSurroundingBytes`: TextEdit deletes exact bytes an IME replaces, in the commit's undo step | Relevant to macOS press-and-hold/dictation and Wayland IME. Requires winit W26/W27. The candidate emits this on macOS and Wayland only; Windows `ime_delete_surrounding` returns `None`. Restrict E21 acceptance to macOS/Wayland. The enum variant is a compile break for exhaustive matches; `type_tool.rs` has a catch-all but must implement the deletion for the Type tool. Adopt. | macOS/Wayland IME replacement tests; undo one step. A Windows IME row is general coverage, not E21. |
-| E21b | `IMEOutput` gains a bounded logical surrounding-text payload (committed text, UTF-8 byte cursor/anchor, owning widget identity; preedit excluded) and egui-winit sends it through W27 on Wayland | **New prerequisite, not existing E21/W27 capability.** The candidate never calls `set_ime_surrounding_text`; `IMEOutput` has no logical text. Adopt with E21. PhotoCraft's custom Type tool must supply a real model adapter, not `None`: `type_tool::draw_overlay` constructs the `IMEOutput`; use the layer's logical text (`current_text`/`layout`), char-to-byte via `byte_of`, exclude the `preedit` char range, clamp to the 4000-byte payload at char boundaries, remap cursor/anchor bytes, and identify the document+layer+viewport so two windows cannot share a payload. Password fields never supply text; focus loss, no IME and unavailable context clear it. | PhotoCraft adapter plus tests: delete+commit and deletion-only, preedit exclusion, reversed selection, emoji/combining/RTL logical order, caret movement, >4000-byte line, two documents, focus/reset/late serial, multipass final output, one undo; native Wayland predictive/Vietnamese trace. Revert with the custom-editor adapters as one API set. |
+| E21b | `IMEOutput` gains a bounded logical surrounding-text payload (committed text, UTF-8 byte cursor/anchor, owning widget identity; preedit excluded) and egui-winit sends it through W27 on Wayland | **New prerequisite, not existing E21/W27 capability.** The candidate never calls `set_ime_surrounding_text`; `IMEOutput` has no logical text. Adopt with E21. Lienzo's custom Type tool must supply a real model adapter, not `None`: `type_tool::draw_overlay` constructs the `IMEOutput`; use the layer's logical text (`current_text`/`layout`), char-to-byte via `byte_of`, exclude the `preedit` char range, clamp to the 4000-byte payload at char boundaries, remap cursor/anchor bytes, and identify the document+layer+viewport so two windows cannot share a payload. Password fields never supply text; focus loss, no IME and unavailable context clear it. | Lienzo adapter plus tests: delete+commit and deletion-only, preedit exclusion, reversed selection, emoji/combining/RTL logical order, caret movement, >4000-byte line, two documents, focus/reset/late serial, multipass final output, one undo; native Wayland predictive/Vietnamese trace. Revert with the custom-editor adapters as one API set. |
 
 The E-patches are **not** a blanket "merge the branch". In particular, E5/E12/E13/E16
 form a dependency cluster; E14/E15/E20 depend on text-layout changes; E9 must not
-be enabled with the current explicit RTL mirroring; E11 has no PhotoCraft consumer.
+be enabled with the current explicit RTL mirroring; E11 has no Lienzo consumer.
 E21b depends on E21/W27 and is a separate reviewed change (egui P7b), not a
 retroactive description of E21.
 
@@ -554,7 +554,7 @@ Base: upstream `v0.30.13` `e9809ef5`; candidate
 work** in the reviewed published revision, not part of the candidate; the final
 production pin must include it.
 
-| # | Change | PhotoCraft decision |
+| # | Change | Lienzo decision |
 |---|---|---|
 | W1 | Windows 11 `WM_DPICHANGED` suggested rect | Adopt; custom title bar and mixed-DPI drags |
 | W2 | Wayland destroy seat text input only when seat is removed | Adopt |
@@ -567,12 +567,12 @@ production pin must include it.
 | W9 | macOS Korean space not duplicated | Adopt |
 | W10 | macOS first Apple Korean key | Adopt |
 | W11 | X11 server DPI before panel physical DPI | Adopt |
-| W12 | macOS `mouseDownCanMoveWindow` from `movable_by_window_background` | PhotoCraft calls `NSWindow::setMovable(false)` (`apps/photocraft/src/mac_window.rs`) and drags only its own gap; keep suite-wide but not PhotoCraft-required. Verify no regression. |
+| W12 | macOS `mouseDownCanMoveWindow` from `movable_by_window_background` | Lienzo calls `NSWindow::setMovable(false)` (`apps/lienzo/src/mac_window.rs`) and drags only its own gap; keep suite-wide but not Lienzo-required. Verify no regression. |
 | W13 | Wayland pixel/continuous scroll phases report `Moved` | Adopt; zoom/pan latch tests |
-| W14 | macOS opt-in cancelable termination | PhotoCraft quits via `NSApplication terminate:` (`mac_window.rs`); not required, harmless if opt-in. |
+| W14 | macOS opt-in cancelable termination | Lienzo quits via `NSApplication terminate:` (`mac_window.rs`); not required, harmless if opt-in. |
 | W15 | Wayland file drops + winit clipboard data device | Adopt; needed by E4 regular clipboard and the app's drop support |
 | W15P | winit-owned PRIMARY selection on the existing connection/event queue, with per-seat `PrimarySelectionManagerState`/device/source/offer lifecycle | **Required shared path.** Distinct PRIMARY protocol object; do not bind a second regular `wl_data_device`. Adopt before E4's PRIMARY acceptance. Keyboard-only focus, serial freshness, owner/seat changes, empty/absent offers, self-paste, canceled/slow transfer, password exclusion and unchanged-selection reclaim policy are native gates on wlroots/KWin/Mutter. |
-| W16 | Wayland pinch/rotation gestures | Defer; PhotoCraft has `wheel_nav::fold_legacy_pinch`, which must be re-tested |
+| W16 | Wayland pinch/rotation gestures | Defer; Lienzo has `wheel_nav::fold_legacy_pinch`, which must be re-tested |
 | W17 | Regression tests for W2/W3/W5–W10/W12/W13 | Adopt with the branch |
 | W18 | Windows hidden system caret for IME | Adopt |
 | W19 | Windows IME `VK_PROCESSKEY` not sent as key press | Adopt |
@@ -580,7 +580,7 @@ production pin must include it.
 | W21 | X11 IME spot after 100 ms quiet | Adopt |
 | W22 | macOS `ImeDocument`, replacement ranges, typed text without composition | Adopt |
 | W23 | macOS ⌘ key names from layout's ⌘ table | Adopt |
-| W24 | `Window::reset_ime()` | Adopt; expose through eframe if a PhotoCraft call site needs it (currently none) |
+| W24 | `Window::reset_ime()` | Adopt; expose through eframe if a Lienzo call site needs it (currently none) |
 | W25 | X11/Wayland `KeyEventExtLatinLayout` | Adopt; required by E19 |
 | W26 | macOS delete replaced text by UTF-8 byte count | Adopt; required by E21 |
 | W27 | Wayland text-input-v3 surrounding text + delete-surrounding | Adopt; required by E21 and E21b. The winit state/serial/payload tests are part of the E21b acceptance, not optional coverage. |
@@ -594,10 +594,10 @@ Compatibility notes:
 - The fork's `rwh_06` and `x11`/`wayland` features must remain compatible with
   `accesskit_winit` and eframe.
 - The app's direct Linux `winit` dependency exists only for
-  `EventLoopBuilderExtX11` (`apps/photocraft/src/main.rs:658`); it must resolve to
+  `EventLoopBuilderExtX11` (`apps/lienzo/src/main.rs:658`); it must resolve to
   the same patched revision as eframe's winit.
 - Do not add `wayland-csd-adwaita` here; it is a suite feature decision, not a
-  PhotoCraft migration requirement.
+  Lienzo migration requirement.
 
 ## 7. craft-libs PR 199
 
@@ -619,11 +619,11 @@ The relevant `craft-ui` port changes are:
   `Id::unique`, `Ui::id` → `scope_id`, `WidgetType` → `Role`.
 - `crates/ui/Cargo.toml`: `egui_extras`/`egui_kittest` 0.37.
 
-PhotoCraft uses `craft_ui::docking::{DockArea, Layout, Node}`,
+Lienzo uses `craft_ui::docking::{DockArea, Layout, Node}`,
 `craft_ui::tabs::{Tab, fit}`, and `craft_ui::layout` in
 `panel_docking.rs`, `tab_strip.rs`, `dock.rs` and `state.rs`. The port must be
-present before PhotoCraft can compile. There is no additional shared UI helper
-needed for the mechanical Role/Id migration: PhotoCraft's `WidgetInfo` calls are
+present before Lienzo can compile. There is no additional shared UI helper
+needed for the mechanical Role/Id migration: Lienzo's `WidgetInfo` calls are
 local and the mappings are direct. Do not invent a compatibility shim in
 `craft-ui`.
 
@@ -633,7 +633,7 @@ port hunks. `craft-print` (`3d37da389a3618ab9b76109da11416e9ca4ea719`) and
 consumers and keep their current pins; bumping all three to one `main` would pull
 the unrelated printer-name/description change between `3d37da3` and the port. If
 the suite later requires one craft-libs revision, audit that diff and run
-PhotoCraft's print tests before changing these pins. Unaffected local vendors
+Lienzo's print tests before changing these pins. Unaffected local vendors
 (`krilla`, `hayro*`, `lopdf`, `vello_common`) and unrelated source fixes are
 preserved.
 
@@ -672,7 +672,7 @@ Do not poll a prior UI event twice in `run_logic`; the events there are stale.
 ### 8.2 Multiple passes
 
 `Context::run_ui` and `Context::run_pass` share the root Ui; plugins run inside
-`root_ui`. PhotoCraft's `setup_context` registers `CursorLifecycle`,
+`root_ui`. Lienzo's `setup_context` registers `CursorLifecycle`,
 `SingleLineDrag`, `TextFieldMenu`, `UiFontSizePlugin`, `CjkFontPlugin`.
 `on_begin_pass`/`on_end_pass` and popup sizing passes can execute content more
 than once per frame. `current_pass_index` is not a durable "first pass" flag: a
@@ -689,7 +689,7 @@ Action playback (`actions.rs`) and autosave (`format::Autosaver` /
 and autosave is a background thread. Still, a playback step must not run twice
 because a menu/popup content closure was re-run, and an autosave request must
 not be duplicated by a repeated `ui` pass. Undo is engine-owned
-(`photocraft-engine` history); the rule is one user action → one command → one
+(`lienzo-engine` history); the rule is one user action → one command → one
 history step, never a command in a sizing pass with no user event.
 
 Add tests for: a forced popup sizing pass (`Popup::sizing_pass`) with unchanged
@@ -774,14 +774,14 @@ macOS checks `inner_position_pixels`, others `outer_position_pixels`
 - `fullscreen`, `maximized`.
 
 The old value does not deserialize into 0.37. Merely "understanding both schemas"
-is insufficient because eframe reads the file before PhotoCraft runs. Add an
+is insufficient because eframe reads the file before Lienzo runs. Add an
 explicit pre-load rewrite in `ui_state::sanitize` (called from
-`apps/photocraft/src/main.rs:664` before `run_native`):
+`apps/lienzo/src/main.rs:664` before `run_native`):
 
 1. Parse the outer map of key -> RON string; leave a non-RON file alone.
 2. If `window` is the old flat schema, write a new `normal_geometry` value:
    preserve valid `Some(inner_size_points)` using pattern matching (never `unwrap`);
-   when missing, use PhotoCraft's existing configured default 1440×900 points (`native_options`, `main.rs:110`) and
+   when missing, use Lienzo's existing configured default 1440×900 points (`native_options`, `main.rs:110`) and
    record that fallback; reject non-finite/oversize values without rewriting,
    `fullscreen`, `maximized`; set `scale_factor = 1.0` for the Windows position
    path. Preserve `outer_position_pixels` only on Windows (physical pixels; 0.37
@@ -809,7 +809,7 @@ reverse-compatibility test using a 0.36-shaped settings struct.
 Replace the UserData/Event path with a **bounded, cancelable per-request
 completion slot**, not one unbounded `mpsc` channel per request. Use the shared
 `craft-ui` capture-slot API at the approved CL-2F revision, a P0/P1 prerequisite.
-There is no local-slot alternative for PhotoCraft. Keep tokens,
+There is no local-slot alternative for Lienzo. Keep tokens,
 paths, settle delays, deadlines and reply schemas app-owned.
 
 Design:
@@ -832,7 +832,7 @@ callback = move |image| {
 
 - The callback holds only `Weak<CaptureSlot>`; the live record holds the `Arc`.
   The slot may hold a `Context` clone for wakeup, but the callback must not hold a
-  `Context`, `PhotocraftApp`, the pending record, or a channel sender. No
+  `Context`, `LienzoApp`, the pending record, or a channel sender. No
   callback -> Context -> callback cycle.
 - Admit at most 4 pending requests, at most 128 MiB of image bytes per request and
   256 MiB in aggregate across reserved in-flight and completed images. Use checked
@@ -885,7 +885,7 @@ readback and viewport pixels; keep ordinary kittest for single-frame rendered ch
 
 ### 9.4 Docking
 
-`craft_ui::docking` remains the owner of the layout tree; PhotoCraft keeps
+`craft_ui::docking` remains the owner of the layout tree; Lienzo keeps
 `UiState.docking` serialization. The 0.37 migration must not change
 `Layout<String>`/`Location<String>` serde. Test:
 
@@ -898,7 +898,7 @@ readback and viewport pixels; keep ordinary kittest for single-frame rendered ch
 
 ### 9.5 GPU resource behavior
 
-PhotoCraft's canvas is a custom `egui_wgpu` paint callback
+Lienzo's canvas is a custom `egui_wgpu` paint callback
 (`crates/ui-egui/src/gpu_canvas.rs`), not an egui image. 0.37 changes the
 surface integration, not the callback contract, but these must be checked:
 
@@ -960,7 +960,7 @@ green PR.
 `system_fonts` is enabled later, remove or reconcile `cjk_fonts` in the same
 change; two providers would produce non-deterministic font choices.
 
-#8512 is still on PhotoCraft's path: `cjk_fonts` reads at most one system font per
+#8512 is still on Lienzo's path: `cjk_fonts` reads at most one system font per
 frame even with `system_fonts` off. Measure font discovery and first-use
 separately from renderer construction: cold/warm startup with `system_fonts`
 off, with the app's lazy CJK fallback, and with an explicitly configured system
@@ -1029,7 +1029,7 @@ the glyph decisions.
   outgoing state until a match; old epochs never edit the new owner. Latest completed
   UI-pass output, including None, is authoritative. Password fields never supply text. Built-in
   `TextEdit` fields inherit the upstream producer. E21b's payload is not
-  `Copy`; audit every `IMEOutput` constructor/destructure in PhotoCraft (the
+  `Copy`; audit every `IMEOutput` constructor/destructure in Lienzo (the
   Type tool is the only custom one) and keep `Clone`/`Eq` semantics.
 - With E5/E12/E13/E16, remove `bidi_text::visual`/`visual_ltr` use
   (`layer_row_ui.rs:132/137`, `panels.rs:719`) and the `unicode-bidi` dependency,
@@ -1038,7 +1038,7 @@ the glyph decisions.
 - With E9, audit `direction.rs` call sites before setting `Style::right_to_left`.
   Do not mirror twice.
 - #8763 selection loss: reproduce "select text, click a toolbar/context action"
-  in PhotoCraft's custom text fields/menu. The fork owns the selected fix with
+  in Lienzo's custom text fields/menu. The fork owns the selected fix with
   pointer and keyboard regressions (fork P7c, prerequisite in P0). A local workaround
   requires a demonstrated app-specific gap and removal condition; it is not an undecided
   alternative to the shared fix.
@@ -1048,14 +1048,14 @@ the glyph decisions.
 
 ## 12. Implementation stages
 
-### P0 — fork qualification (outside PhotoCraft)
+### P0 — fork qualification (outside Lienzo)
 
 Publish/qualify canonical egui and winit revisions, including P2b bounded transfers, P7 key pairing, E21b/P7b with W27 clear/lifecycle,
 W15P and P7c selection/viewport regression fixes, and publish the craft-libs port
 and CL-2F capture helper on current `main`. Acceptance: `PATCHES.md` complete;
 each patch and W15P/E21b/P7c test; native Linux/Windows/macOS compile and targeted
 tests; public immutable full SHAs; no path/branch patches. Stock 0.37 and aiongg
-candidates remain research controls. No PhotoCraft PR can claim 0.37 until this
+candidates remain research controls. No Lienzo PR can claim 0.37 until this
 exists.
 
 ### P0b — baseline harness and measurement (before production)
@@ -1103,8 +1103,8 @@ accessibility, feature and gate checks. It includes:
 
 Acceptance: `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
 `cargo clippy --workspace --all-targets -- -D warnings`, `cargo xtask layers`,
-`cargo xtask wasm`, `cargo test -p photocraft-ui-egui --lib --tests`,
-`cargo test -p photocraft --tests`, the build.rs font equality test, glyph
+`cargo xtask wasm`, `cargo test -p lienzo-ui-egui --lib --tests`,
+`cargo test -p lienzo --tests`, the build.rs font equality test, glyph
 coverage test, explicit expected roles/names on the main screen and every opened dialog,
 `unnamed_widgets` empty as a supplementary check, `Event::PasteImage` one-import regression,
 and `packaging/web/package.sh`
@@ -1133,7 +1133,7 @@ regression.
 
 ### P3 — web browser qualification
 
-Files: `apps/photocraft-web` only if API changes; `WebShell` behavior tests.
+Files: `apps/lienzo-web` only if API changes; `WebShell` behavior tests.
 Acceptance: `cargo xtask wasm`, `packaging/web/package.sh`, browser workflow
 (open/type/paste/drop/screenshot); every shipped file ≤24 MiB and gzipped total
 plus raw wasm within a stated tolerance (+3%) of baseline.
@@ -1169,16 +1169,16 @@ command; do not run these directly as a delegated worker:
 ```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
-cargo test -p photocraft-ui-egui --lib --tests
-cargo test -p photocraft --tests
-cargo test -p photocraft-web
-cargo test -p photocraft-tablet
-cargo test -p photocraft-automation
+cargo test -p lienzo-ui-egui --lib --tests
+cargo test -p lienzo --tests
+cargo test -p lienzo-web
+cargo test -p lienzo-tablet
+cargo test -p lienzo-automation
 cargo xtask layers
 cargo xtask wasm
 cargo xtask parity
 cargo xtask scorecard --check
-cargo test -p photocraft-engine --test panic_hunt -- --ignored
+cargo test -p lienzo-engine --test panic_hunt -- --ignored
 ```
 
 Conditional gates: `cargo xtask test-corpus` if `io`, `psd`, `codecs`, `compose`,
@@ -1224,7 +1224,7 @@ before any P1 production edit is measured.
 
 Use `snapshot --out <png> --size <w>x<h> --scale <s> --system-theme <light|dark|none>
 --script <json>` for each fixture. `--system-theme` only selects the OS
-appearance; select a PhotoCraft theme through the control script, e.g.
+appearance; select a Lienzo theme through the control script, e.g.
 `--script '[["ui.set",{"theme":"studio"}]]'`. Compare baseline and candidate with
 the same wgpu adapter/driver/DPI. Proposed tolerance:
 
@@ -1320,7 +1320,7 @@ callback order:
 - Extra document windows: open two, draw in each, close one during a stroke,
   screenshot the root while a child is open, and confirm control input still
   reaches the root; immediate-viewport raw input must not be duplicated.
-- #8748 is closed/unmerged and PhotoCraft has no deferred viewports: record that
+- #8748 is closed/unmerged and Lienzo has no deferred viewports: record that
   explicit non-applicability, then test hidden/occluded root + immediate child
   open/update/close (including a child left open when the root is hidden).
 
@@ -1397,7 +1397,7 @@ job ID per intentional execution:
 ```sh
 python3 /home/codex/work/maintenance/task.py run \
   --job-id <task>-perf-baseline-01 --kind build --task <task> \
-  --source /home/codex/work/CraftApps/egui037-migration-20261022/photocraft \
+  --source /home/codex/work/CraftApps/egui037-migration-20261022/lienzo \
   --evidence /home/codex/work/ssd2/task-evidence/<task> \
   -- bash -c 'cargo xtask perf --bench perf_scenarios'
 ```
@@ -1447,9 +1447,9 @@ Remaining open gates:
    containing E21b and W15P. Choosing aiongg branches as canonical would make an
    individual fork a required public dependency; choosing storytold requires
    pushing there. No approval is granted in this plan.
-2. **E11 inclusion.** No PhotoCraft consumer enables `epaint/multithreading`.
+2. **E11 inclusion.** No Lienzo consumer enables `epaint/multithreading`.
    Decide whether the shared fork carries E11 for VectorCraft or whether
-   PhotoCraft's qualifying revision excludes it.
+   Lienzo's qualifying revision excludes it.
 3. **E9/`direction.rs` overlap.** Keep explicit shell mirroring and leave
    `Style::right_to_left` off, or switch to E9 and remove overlapping manual
    mirroring. Needs RTL fixtures first.
@@ -1457,7 +1457,7 @@ Remaining open gates:
    `system_fonts`, or enable `system_fonts` (fontique + color fonts) and retire
    the custom CJK fallback. The latter needs a separate design and size/perf
    review; #8512 is measured either way.
-5. **Final winit patch list.** W12/W14/W16 are not PhotoCraft-required.
+5. **Final winit patch list.** W12/W14/W16 are not Lienzo-required.
    Confirm whether the shared published revision includes them; W15P, W26 and
    W27 are required regardless.
 6. **External evidence gates.** Real macOS IME/focus, Windows native GUI and
@@ -1477,7 +1477,7 @@ Remaining open gates:
   every patch, including E21b and W15P, still needs a line-by-line review against
   its upstream PR/proposal and a test audit before publication.
 - E21b has no existing implementation. Its egui payload, TextEdit producer,
-  egui-winit Wayland adapter, PhotoCraft Type-tool adapter and native IME trace
+  egui-winit Wayland adapter, Lienzo Type-tool adapter and native IME trace
   are all future work; no claim of existing surrounding-text support remains.
 - Windows, macOS, Wayland and browser behavior are unverified. Headless kittest
   is not proof of native focus, IME, file pickers or compositor behavior.
@@ -1507,7 +1507,7 @@ Local, uncommitted work only. No build, test, format, clippy, GUI or performance
 was run for this stage; compile and runtime results are pending the parent's managed
 `task.py` jobs. Nothing is published.
 
-Repair round after `egui037-photocraft-postport-review-20261023-root-v1.md`: the test-target
+Repair round after `egui037-lienzo-postport-review-20261023-root-v1.md`: the test-target
 compile findings were fixed (`fonts_mut` for `has_glyphs` checks, the two missing
 `MouseWheelSource` fields, the missing-size window test), together with the runtime findings:
 geometry-change budget revalidation, monotonic epoch comparison across resize-and-back, a
@@ -1530,7 +1530,7 @@ Implemented in this checkout (release 0.15.0 base `e6d6fb45`):
 - **Fonts**: `build.rs` deflates `egui-icons` and the feature-gated emoji faces;
   `egui_fonts.rs` reproduces 0.37's faces, scale tweaks and family order; `cjk_fonts.rs` uses
   `FontData::bytes()`; a glyph test covers `egui::special_emojis` in both families;
-  `NativeOptions::system_font_fallback = false` keeps PhotoCraft's own CJK/craft-fonts
+  `NativeOptions::system_font_fallback = false` keeps Lienzo's own CJK/craft-fonts
   fallback the only provider.
 - **Mechanical 0.37 API port**: `WidgetType` → `egui::Role` (with the renamed variants),
   `Id::new` → `Id::unique` (hash-preserving), `ui.id()` → `ui.scope_id()`,
@@ -1547,7 +1547,7 @@ Implemented in this checkout (release 0.15.0 base `e6d6fb45`):
   rollback resize can still be lost; that ambiguity is documented and tested. Called from the
   first UI pass; tests cover key identity, the copy, the old-key retention, a 0.37 resize after
   migration and a 0.36 rollback resize (`panels.rs`), and panel widths across two restarts
-  (`apps/photocraft/src/main.rs`).
+  (`apps/lienzo/src/main.rs`).
 - **Window settings**: `ui_state::sanitize` now rewrites a 0.36 flat `window` entry to
   0.37's `normal_geometry` before eframe reads it, after a one-time `ui.ron.pre-0.37` backup.
   It preserves a valid size (defaulting to 1440×900 when absent), `fullscreen` and
@@ -1597,7 +1597,7 @@ Implemented in this checkout (release 0.15.0 base `e6d6fb45`):
 
 ### Integration-test selector repair — 2026-10-24 (historical pre-validation record)
 
-The parent's managed `--lib --tests` run (`egui037-photocraft-candidate-20261024-upstream-tests-18`)
+The parent's managed `--lib --tests` run (`egui037-lienzo-candidate-20261024-upstream-tests-18`)
 passed 3847 UI unit tests and 116 integration tests, with 16 integration failures. All 16 were
 kittest/AccessKit selector assumptions, not production behaviour changes:
 
@@ -1620,7 +1620,7 @@ assertions; they add no sleeps, retries or relaxed checks. They do not claim a p
 parent must re-run the managed full tests and lint. The broader 481-harness accessibility
 naming/glyph sweep and visual fixture regeneration remain open.
 
-The `ui.ron` fixtures under `apps/photocraft/tests/fixtures/` are schema probes reconstructed
+The `ui.ron` fixtures under `apps/lienzo/tests/fixtures/` are schema probes reconstructed
 from the documented layouts, not recorded machine saves (see that directory's README); they
 prove the migration rules, not eframe/egui deserialization of a real save.
 

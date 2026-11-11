@@ -1,7 +1,7 @@
 //! Consolidate document history after commands finish their own atomic transactions.
 use super::{EngineError, Result, Session};
-use photocraft_doc::{DocId, Document};
-use photocraft_ops::{History, LayerTarget};
+use lienzo_doc::{DocId, Document};
+use lienzo_ops::{History, LayerTarget};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -146,8 +146,8 @@ fn consolidate(s: &mut Session, group: &ActionHistory) {
         history.preserve_action_clear(&st.history);
         if let Some(source) = history.preserve_action_brush_source(&st.history) {
             let (source, restore_on_clear_undo) = match source {
-                photocraft_ops::ActionBrushSource::Current(source) => (source, false),
-                photocraft_ops::ActionBrushSource::Cleared(source) => (source, true),
+                lienzo_ops::ActionBrushSource::Current(source) => (source, false),
+                lienzo_ops::ActionBrushSource::Cleared(source) => (source, true),
             };
             // The selected row will no longer exist, but the History Brush must still paint its
             // exact pixels. Snapshots already retain source pixels without adding an Undo row.

@@ -18,7 +18,7 @@ fn memory_usage_has_a_dedicated_explanation_and_keeps_its_value() {
 fn the_generator_checkbox_reads_enable_generator() {
     // #9392: the reference application's Plug-ins page says "Enable Generator", not "Generator enabled".
     use egui_kittest::{Harness, kittest::Queryable};
-    let values = serde_json::to_value(photocraft_engine::prefs::PlugIns::default()).unwrap().as_object().unwrap().clone();
+    let values = serde_json::to_value(lienzo_engine::prefs::PlugIns::default()).unwrap().as_object().unwrap().clone();
     let keys: Vec<String> = values.keys().cloned().collect();
     let mut h = Harness::builder()
         .with_size(vec2(680.0, 350.0))
@@ -39,7 +39,7 @@ fn graphics_dropdowns_are_named_for_their_settings() {
     let obj = json!({"gpuBackend": "auto", "gpuAdapter": ""}).as_object().unwrap().clone();
     let mut h = Harness::builder()
         .with_size(vec2(700.0, 500.0))
-        .with_context_setup(|ctx| PhotocraftApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
+        .with_context_setup(|ctx| LienzoApp::setup_context(ctx, crate::theme::ThemeKind::ALL[0]))
         .build_ui_state(|ui, obj| gpu_status_rows(ui, None, None, obj), obj);
     h.run_steps(2);
     h.get_by_label("Advanced").click();
@@ -80,7 +80,7 @@ fn colour_preferences_take_a_typed_hex_value() {
 
 #[test]
 fn quick_export_controls_match_selected_format() {
-    let mut obj = serde_json::to_value(photocraft_engine::prefs::Export::default()).unwrap().as_object().unwrap().clone();
+    let mut obj = serde_json::to_value(lienzo_engine::prefs::Export::default()).unwrap().as_object().unwrap().clone();
     assert!(!export_field_visible(&obj, "jpegQuality"));
     assert!(!export_field_visible(&obj, "webpLossless"));
     assert!(!export_field_visible(&obj, "webpQuality"));
@@ -201,7 +201,7 @@ fn appearance_resolves_both_saved_themes_and_follows_system() {
 #[test]
 fn breeze_themes_are_chosen_by_preference_and_fix_the_matching_mode() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     for (id, kind, mode) in [
         ("breezeLight", ThemeKind::BreezeLight, AppearanceMode::Light),
         ("breezeDark", ThemeKind::BreezeDark, AppearanceMode::Dark),
@@ -234,7 +234,7 @@ fn auto_uses_native_system_theme_when_egui_does_not_report_one() {
 #[test]
 fn appearance_button_cycles_modes_without_losing_theme_choices() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("prefs.set", json!({"values": {"interface.darkTheme": "studio", "interface.lightTheme": "classic"}})).unwrap();
     for (mode, visible) in [(AppearanceMode::Auto, ThemeKind::Studio), (AppearanceMode::Light, ThemeKind::Classic), (AppearanceMode::Dark, ThemeKind::Studio)] {
         cycle_appearance(&mut app, &ctx);
@@ -248,10 +248,10 @@ fn appearance_button_cycles_modes_without_losing_theme_choices() {
 #[test]
 fn darken_and_lighten_interface_step_through_photoshops_brightnesses_and_stop_at_the_ends() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     sync_appearance(&mut app, &ctx);
     assert_eq!(app.ui.theme, ThemeKind::ProMedium, "Photoshop's default brightness");
-    let press = |app: &mut PhotocraftApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
+    let press = |app: &mut LienzoApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
     for expected in [ThemeKind::ProLightGray, ThemeKind::ProLight, ThemeKind::ProLight] {
         press(&mut app, "view.lightenInterface");
         assert_eq!(app.ui.theme, expected);
@@ -285,9 +285,9 @@ fn ctrl_shift_f1_and_f2_darken_and_lighten_the_interface() {
         assert_eq!(crate::shortcuts::default_shortcut(id).as_deref(), Some(shortcut), "{id}");
     }
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     sync_appearance(&mut app, &ctx);
-    let press = |app: &mut PhotocraftApp, key| {
+    let press = |app: &mut LienzoApp, key| {
         let modifiers = egui::Modifiers::COMMAND | egui::Modifiers::SHIFT;
         let raw = egui::RawInput {
             events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
@@ -304,7 +304,7 @@ fn ctrl_shift_f1_and_f2_darken_and_lighten_the_interface() {
     assert_eq!(app.ui.theme, ThemeKind::ProLightGray);
 }
 
-fn appearance_frame(app: &mut PhotocraftApp, ctx: &egui::Context, appearance: Option<egui::Theme>) {
+fn appearance_frame(app: &mut LienzoApp, ctx: &egui::Context, appearance: Option<egui::Theme>) {
     ctx.run_ui(egui::RawInput { system_theme: appearance, ..Default::default() }, |ui| tick(app, ui.ctx())).textures_delta.clear();
 }
 
@@ -327,7 +327,7 @@ fn auto_appearance_follows_live_changes_without_saving_resolved_palettes() {
     for (dark, light) in [(ThemeKind::ProMedium, ThemeKind::StudioLight), (ThemeKind::SolarizedDark, ThemeKind::Adwaita)] {
         let (mut app, store) = app_with_store();
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        LienzoApp::setup_context(&ctx, Default::default());
         app.run("prefs.set", json!({"values": {"interface.appearanceMode": "auto", "interface.darkTheme": dark.id(), "interface.lightTheme": light.id()}}))
             .unwrap();
         appearance_frame(&mut app, &ctx, Some(egui::Theme::Light));
@@ -350,7 +350,7 @@ fn auto_appearance_follows_live_changes_without_saving_resolved_palettes() {
         for (appearance, expected) in [(Some(egui::Theme::Light), light), (Some(egui::Theme::Dark), dark), (None, dark)] {
             let (mut restarted, store) = app_with_saved(Some(saved.clone()));
             let fresh = egui::Context::default();
-            PhotocraftApp::setup_context(&fresh, Default::default());
+            LienzoApp::setup_context(&fresh, Default::default());
             appearance_frame(&mut restarted, &fresh, appearance);
             assert_palette(&fresh, expected);
             assert_eq!(restarted.ui.theme, expected);
@@ -370,7 +370,7 @@ fn auto_appearance_follows_live_changes_without_saving_resolved_palettes() {
 fn manual_theme_tokens_and_global_styles_stay_fixed_across_os_changes() {
     let (mut app, store) = app_with_store();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     for kind in ThemeKind::ALL {
         app.run("prefs.set", json!({"path": "interface.theme", "value": kind.id()})).unwrap();
         appearance_frame(&mut app, &ctx, Some(egui::Theme::Dark));
@@ -399,7 +399,7 @@ fn auto_appearance_replaces_a_restored_egui_dark_pin() {
     appearance_frame(&mut app, &ctx, Some(egui::Theme::Light));
     assert_palette(&ctx, ThemeKind::ProLight);
     assert_eq!(app.session.prefs().interface.appearance_mode, AppearanceMode::Auto);
-    // A restored pin must also clear when the concrete PhotoCraft palette stays the same.
+    // A restored pin must also clear when the concrete Lienzo palette stays the same.
     ctx.set_theme(egui::ThemePreference::Dark);
     appearance_frame(&mut app, &ctx, Some(egui::Theme::Light));
     assert_eq!(ctx.options(|o| o.theme_preference), egui::ThemePreference::System);
@@ -413,7 +413,7 @@ fn auto_appearance_replaces_a_restored_egui_dark_pin() {
 fn system_theme_menu_choice_stays_checked_as_the_appearance_changes() {
     let (mut app, store) = app_with_store();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     app.run("prefs.set", json!({"values": {"interface.darkTheme": "solarizedDark", "interface.lightTheme": "adwaita"}})).unwrap();
     appearance_frame(&mut app, &ctx, Some(egui::Theme::Light));
     crate::menus::invoke(&mut app, &ctx, "window.theme.system", json!({})).unwrap();
@@ -457,7 +457,7 @@ fn preferences_interface_offers_and_applies_sync_with_system() {
     let interface = app.session.prefs().interface.clone();
     open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.input_mut().system_theme = Some(egui::Theme::Light);
@@ -480,7 +480,7 @@ fn preferences_interface_offers_and_applies_sync_with_system() {
     let saved = store.lock().unwrap().clone().unwrap();
     let (mut restarted, reloaded) = app_with_saved(Some(saved.clone()));
     let fresh = egui::Context::default();
-    PhotocraftApp::setup_context(&fresh, Default::default());
+    LienzoApp::setup_context(&fresh, Default::default());
     appearance_frame(&mut restarted, &fresh, Some(egui::Theme::Dark));
     assert_palette(&fresh, ThemeKind::SolarizedDark);
     assert_eq!(restarted.session.prefs().interface.appearance_mode, AppearanceMode::Auto);
@@ -496,7 +496,7 @@ fn theme_star_saves_favorite_and_menu_groups_it() {
     let (mut app, _) = app_with_store();
     open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -521,7 +521,7 @@ fn theme_star_badge_on_hover_does_not_move_the_next_swatch() {
     let (mut app, _) = app_with_store();
     open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -543,7 +543,7 @@ fn preferences_interface_shows_language_without_scrolling() {
     app.run("prefs.set", json!({"values": {"interface.language": "en"}})).unwrap();
     open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1000.0, 750.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -569,13 +569,13 @@ fn preferences_interface_search_hides_rows_and_skips_empty_groups() {
         let id = open_preferences(&mut app, "interface");
         app.ui.dialog_mut(id).unwrap().fields.insert("__search".into(), json!(search));
         let mut h = Harness::builder().with_size(vec2(1000.0, 750.0)).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             app
         });
         h.run_steps(4);
         h
     };
-    let shown = |h: &Harness<'_, PhotocraftApp>, label: &str| h.query_all_by_label(label).next().is_some();
+    let shown = |h: &Harness<'_, LienzoApp>, label: &str| h.query_all_by_label(label).next().is_some();
 
     let h = render("language");
     assert!(shown(&h, "Language") && shown(&h, "Presentation"));
@@ -595,17 +595,17 @@ fn preferences_interface_search_hides_rows_and_skips_empty_groups() {
     }
 }
 
-fn app_with_store() -> (PhotocraftApp, Arc<Mutex<Option<String>>>) {
+fn app_with_store() -> (LienzoApp, Arc<Mutex<Option<String>>>) {
     app_with_saved(None)
 }
 
-fn app_with_saved(text: Option<String>) -> (PhotocraftApp, Arc<Mutex<Option<String>>>) {
+fn app_with_saved(text: Option<String>) -> (LienzoApp, Arc<Mutex<Option<String>>>) {
     let store: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(text));
     (app_on(&store, Arc::default()), store)
 }
 
 /// An app whose preferences live in `store`; writes fail while `fail` is set.
-fn app_on(store: &Arc<Mutex<Option<String>>>, fail: Arc<std::sync::atomic::AtomicBool>) -> PhotocraftApp {
+fn app_on(store: &Arc<Mutex<Option<String>>>, fail: Arc<std::sync::atomic::AtomicBool>) -> LienzoApp {
     let (a, b) = (store.clone(), store.clone());
     let services = crate::Services {
         load_prefs: Some(Box::new(move || a.lock().unwrap().clone())),
@@ -618,7 +618,7 @@ fn app_on(store: &Arc<Mutex<Option<String>>>, fail: Arc<std::sync::atomic::Atomi
         })),
         ..Default::default()
     };
-    PhotocraftApp::new(photocraft_engine::Session::new(), services)
+    LienzoApp::new(lienzo_engine::Session::new(), services)
 }
 
 fn stored(store: &Arc<Mutex<Option<String>>>) -> Value {
@@ -928,7 +928,7 @@ fn intermediate_ui_scale_choices_can_be_applied_from_preferences() {
     app.run("prefs.set", json!({"path": "interface.uiScale", "value": "100"})).unwrap();
     open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1400.0, 1100.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -950,7 +950,7 @@ fn intermediate_ui_scale_choices_can_be_applied_from_preferences() {
 fn ui_font_size_commands_follow_themes_and_dpi_and_reset_live() {
     let (mut app, _) = app_with_store();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, ThemeKind::Pro);
+    LienzoApp::setup_context(&ctx, ThemeKind::Pro);
     let mut input = egui::RawInput::default();
     input.viewports.get_mut(&egui::ViewportId::ROOT).unwrap().native_pixels_per_point = Some(1.5);
     for (theme, scale, expected) in
@@ -1174,7 +1174,7 @@ fn group_tools_are_flushed_on_exit_without_another_frame() {
 }
 
 /// A frame as far as the tools go: the key handling, then what is remembered.
-fn tool_frame(app: &mut PhotocraftApp, ctx: &egui::Context, events: Vec<egui::Event>) {
+fn tool_frame(app: &mut LienzoApp, ctx: &egui::Context, events: Vec<egui::Event>) {
     ctx.begin_pass(egui::RawInput { events, ..Default::default() });
     crate::shortcuts::handle(app, ctx);
     ctx.end_pass().textures_delta.clear();
@@ -1265,7 +1265,7 @@ fn tool_options_survive_a_restart() {
     tick(&mut app, &ctx);
     app.ui.tool_options.move_auto_select = false;
     app.ui.tool_options.feather = 12.0;
-    app.ui.tool_options.transform_interpolation = Some(photocraft_engine::prefs::Interpolation::Nearest);
+    app.ui.tool_options.transform_interpolation = Some(lienzo_engine::prefs::Interpolation::Nearest);
     crate::tool_memory::persist(&mut app, &ctx);
     tick(&mut app, &ctx);
     // Only what differs from the defaults is stored.
@@ -1275,7 +1275,7 @@ fn tool_options_survive_a_restart() {
     tick(&mut app2, &ctx);
     assert!(!app2.ui.tool_options.move_auto_select);
     assert_eq!(app2.ui.tool_options.feather, 12.0);
-    assert_eq!(app2.ui.tool_options.transform_interpolation, Some(photocraft_engine::prefs::Interpolation::Nearest));
+    assert_eq!(app2.ui.tool_options.transform_interpolation, Some(lienzo_engine::prefs::Interpolation::Nearest));
     assert_eq!(app2.ui.tool_options.tolerance, crate::state::ToolOptions::default().tolerance);
     // A hand-edited file: unreadable fields keep their defaults, the good ones still load.
     for bad in [json!("junk"), json!({"move_auto_select": "no", "feather": 1e300, "tolerance": 5.0, "unknown": 1})] {
@@ -1322,7 +1322,7 @@ fn tool_brushes_survive_a_restart() {
     let (mut app, store) = app_with_store();
     let ctx = egui::Context::default();
     tick(&mut app, &ctx);
-    let set_size = |app: &mut PhotocraftApp, size: f32| {
+    let set_size = |app: &mut LienzoApp, size: f32| {
         app.session.tools.brush.size = size;
         app.session.tools.brush.opacity = size / 100.0;
         app.session.tools.brush_changed();
@@ -1364,7 +1364,7 @@ fn tool_brushes_survive_a_restart() {
 #[test]
 fn the_saved_brush_owner_follows_the_saved_last_brush() {
     use crate::state::Tool;
-    use photocraft_engine::paint::{GrayTile, TipShape};
+    use lienzo_engine::paint::{GrayTile, TipShape};
     let (mut app, store) = app_with_store();
     let ctx = egui::Context::default();
     tick(&mut app, &ctx);
@@ -1472,7 +1472,7 @@ fn reset_tools_clear_the_remembered_options_and_brushes() {
     let saved = stored(&store);
     assert!(saved["toolOptions"].is_null(), "{saved}");
     let starting =
-        |brushes: &[(Tool, photocraft_engine::BrushSettings)]| brushes.iter().all(|(t, b)| *b == crate::paint_mouse::fresh_brush(*t, b) && b.size != 77.0);
+        |brushes: &[(Tool, lienzo_engine::BrushSettings)]| brushes.iter().all(|(t, b)| *b == crate::paint_mouse::fresh_brush(*t, b) && b.size != 77.0);
     assert!(starting(&app.ui.tool_brushes), "{saved}");
     let (app2, _) = app_with_saved(store.lock().unwrap().clone());
     assert_eq!(app2.ui.tool_options, crate::state::ToolOptions::default());
@@ -1579,7 +1579,7 @@ fn unimplemented_preferences_are_hidden_from_the_dialog() {
     assert!(has_visible_fields(&values, "fileHandling"));
     assert!(has_visible_fields(&values, "scratchDisks"));
     assert!(!prefs::is_hidden("scratchDisks.disks"));
-    // Allow Agent Control and Control Port are read at launch (apps/photocraft main.rs).
+    // Allow Agent Control and Control Port are read at launch (apps/lienzo main.rs).
     assert!(has_visible_fields(&values, "integrations"));
     assert!(!prefs::is_hidden("integrations.allowAgentControl"));
     assert!(!prefs::is_hidden("integrations.controlPort"));
@@ -1640,7 +1640,7 @@ fn preferences_persist_through_services_and_theme_follows() {
 #[test]
 fn preset_export_dialog_offers_tool_presets() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let opened = crate::menus::invoke(&mut app, &ctx, "edit.presets.exportImportPresets", json!({})).unwrap();
     let fields = app.ui.dialog_mut(opened["dialog"].as_u64().unwrap()).unwrap().fields.clone();
@@ -1656,11 +1656,11 @@ fn preset_export_dialog_offers_tool_presets() {
 
 #[test]
 fn brush_preset_store_attaches_when_loaded_and_persists() {
-    use photocraft_engine::preset_store::{MemBackend, open};
+    use lienzo_engine::preset_store::{MemBackend, open};
     let mem = MemBackend::default();
     let ctx = egui::Context::default();
     let (tx, rx) = std::sync::mpsc::channel();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { preset_store: Some(rx), ..Default::default() });
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { preset_store: Some(rx), ..Default::default() });
     // Still loading: presets made now are kept and written once the store arrives.
     tick(&mut app, &ctx);
     app.run("brush.presets.save", json!({"name": "Early"})).unwrap();
@@ -1669,7 +1669,7 @@ fn brush_preset_store_attaches_when_loaded_and_persists() {
     tick(&mut app, &ctx);
     assert!(app.services.preset_store.is_none() && app.session.preset_store.is_some());
     app.run("brush.presets.save", json!({"name": "Late"})).unwrap();
-    let mut s2 = photocraft_engine::Session::new();
+    let mut s2 = lienzo_engine::Session::new();
     assert!(s2.attach_preset_store(open(Box::new(mem))).is_empty());
     for n in ["Early", "Late"] {
         assert!(s2.tools.presets.iter().any(|p| p.name == n), "{n}");
@@ -1711,7 +1711,7 @@ fn preferences_apply_button_saves_without_closing_and_cancel_keeps_applied_value
     app.run("prefs.set", json!({"values": {"interface.language": "en", "type.smartQuotes": false}})).unwrap();
     let id = open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1773,7 +1773,7 @@ fn system_title_bar_explains_next_launch_and_preserves_apply_and_cancel() {
     app.custom_titlebar = true;
     let id = open_preferences(&mut app, "interface");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1953,7 +1953,7 @@ fn shortcut_dialog_moves_shortcuts_and_shell_dispatch_follows() {
 fn shortcut_dialog_moves_and_keeps_alternate_keys() {
     let (mut app, _) = app_with_store();
     let ctx = egui::Context::default();
-    let open = |app: &mut PhotocraftApp| crate::menus::invoke(app, &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();
+    let open = |app: &mut LienzoApp| crate::menus::invoke(app, &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();
     assert_eq!(crate::shortcuts::effective_alternates(&app, "edit.copy"), ["F3"]);
     assert_eq!(crate::shortcuts::effective_alternates(&app, "view.zoomIn"), ["Cmd++"]);
     // F2 (Cut's alternate) given to Rename Layer is taken from Cut, which keeps ⌘X.
@@ -2013,7 +2013,7 @@ fn shortcut_dialog_rejects_malformed_overrides() {
     let id = crate::menus::invoke(&mut app, &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();
     app.ui.dialog_mut(id).unwrap().fields.insert("overrides".into(), json!("bogus"));
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -2045,13 +2045,13 @@ fn autosave_runs_for_dirty_documents() {
     let saved: Saved = Arc::default();
     let s2 = saved.clone();
     let services = crate::Services {
-        autosave: Some(Box::new(move |doc: &Arc<photocraft_doc::Document>, rev: u64, _path: Option<&str>| {
+        autosave: Some(Box::new(move |doc: &Arc<lienzo_doc::Document>, rev: u64, _path: Option<&str>| {
             s2.lock().unwrap().push((doc.id.0, rev));
             Ok(())
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     tick(&mut app, &ctx);
@@ -2092,7 +2092,7 @@ fn recovered_documents_adopt_their_entries_until_saved_or_closed() {
     type Log = Arc<Mutex<Vec<String>>>;
     let log: Log = Arc::default();
     let (l1, l2, l3) = (log.clone(), log.clone(), log.clone());
-    use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+    use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
     let doc = || Document::with_background("R", Size::new(4, 4), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let services = crate::Services {
         autosave: Some(Box::new(move |d: &Arc<Document>, _: u64, _: Option<&str>| {
@@ -2106,7 +2106,7 @@ fn recovered_documents_adopt_their_entries_until_saved_or_closed() {
         adopt_autosave: Some(Box::new(move |id: u64, key: &str| l3.lock().unwrap().push(format!("adopt {id} {key}")))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let ctx = egui::Context::default();
     tick(&mut app, &ctx);
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
@@ -2177,7 +2177,7 @@ fn tool_colors_first_saves_keep_other_instances_separate_edits() {
             let restored = app_on(&store, Arc::default());
             assert_eq!(restored.session.tools.foreground, fg);
             assert_eq!(restored.session.tools.background, bg);
-            assert_eq!(restored.session.tools.other_colors, photocraft_engine::ToolState::MASK_COLORS);
+            assert_eq!(restored.session.tools.other_colors, lienzo_engine::ToolState::MASK_COLORS);
         }
     }
 }
@@ -2236,8 +2236,8 @@ fn tool_colors_restore_cmyk_inks_for_picker_and_fill_after_swapping_and_exiting_
     let (mut app, store) = app_with_store();
     let cyan = [1.0, 0.0, 0.0, 0.0];
     let magenta = [0.0, 1.0, 0.0, 0.0];
-    let fg = photocraft_color::convert::cmyk_to_rgb(cyan).map(|c| c.clamp(0.0, 1.0));
-    let bg = photocraft_color::convert::cmyk_to_rgb(magenta).map(|c| c.clamp(0.0, 1.0));
+    let fg = lienzo_color::convert::cmyk_to_rgb(cyan).map(|c| c.clamp(0.0, 1.0));
+    let bg = lienzo_color::convert::cmyk_to_rgb(magenta).map(|c| c.clamp(0.0, 1.0));
     app.run(
         "tools.setColors",
         json!({
@@ -2261,7 +2261,7 @@ fn tool_colors_restore_cmyk_inks_for_picker_and_fill_after_swapping_and_exiting_
         restored.run(command, json!({})).unwrap();
         let st = restored.session.active().unwrap();
         let surface = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap();
-        let pixel = surface.read_region(photocraft_geom::Rect::new(0, 0, 1, 1));
+        let pixel = surface.read_region(lienzo_geom::Rect::new(0, 0, 1, 1));
         assert!(pixel.iter().take(4).zip(expected).all(|(a, b)| (a - b).abs() < 0.01), "{command}: {pixel:?}");
     }
 }
@@ -2286,7 +2286,7 @@ fn tool_colors_save_changed_cmyk_inks_even_when_rgba_is_unchanged() {
 
 #[test]
 fn tool_colors_restore_only_bounded_valid_cmyk_picks() {
-    let limit = photocraft_engine::ToolState::CMYK_PICKS;
+    let limit = lienzo_engine::ToolState::CMYK_PICKS;
     let mut picks: Vec<Value> = (0..limit + 3).map(|i| json!([[i as f32 / 16.0, 0.2, 0.3], [0.1, 0.2, 0.3, 0.4]])).collect();
     picks.extend([json!("bad"), json!([[0, 0, 0], [1, 0, 0]]), json!([[0, 0, 0], [2, 0, 0, 0]]), json!([[1e100, 0, 0], [1, 0, 0, 0]])]);
     let (app, _) = app_with_saved(Some(
@@ -2361,7 +2361,7 @@ fn reset_section_on_type_keeps_the_favourite_fonts() {
     app.run("type.font.favorite", json!({"family": "Bebas Neue"})).unwrap();
     open_preferences(&mut app, "type");
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);

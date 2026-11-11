@@ -4,20 +4,20 @@ use egui_kittest::{
     kittest::{NodeT, Queryable},
 };
 
-fn harness(adjustment: bool, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
-    let mut session = photocraft_engine::Session::new();
+fn harness(adjustment: bool, theme: crate::theme::ThemeKind) -> Harness<'static, LienzoApp> {
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     let command = if adjustment { "layer.newAdjustmentLayer.curves" } else { "layer.new.layer" };
     session.execute(command, json!({})).unwrap();
     if session.active().unwrap().doc.layer(session.active().unwrap().active_layer.unwrap()).unwrap().mask.is_none() {
         session.execute("layer.layerMask.revealAll", json!({})).unwrap();
     }
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
+    let mut app = LienzoApp::new(session, crate::Services::default());
     app.ui.mask_target = true;
     app.ui.panels.properties = true;
     app.last_canvas_rect = Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, 600.0));
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 if Tokens::get(ui.ctx()).pro {
                     properties_body(app, ui);
@@ -28,12 +28,12 @@ fn harness(adjustment: bool, theme: crate::theme::ThemeKind) -> Harness<'static,
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }
 
-fn mask(h: &Harness<'_, PhotocraftApp>) -> photocraft_doc::LayerMask {
+fn mask(h: &Harness<'_, LienzoApp>) -> lienzo_doc::LayerMask {
     let s = h.state().session.active().unwrap();
     s.doc.layer(s.active_layer.unwrap()).unwrap().mask.clone().unwrap()
 }
@@ -59,7 +59,7 @@ fn pixel_mask_properties_follow_target_for_raster_and_adjustment_in_both_themes(
     }
 }
 
-fn drag(h: &mut Harness<'_, PhotocraftApp>, field: usize, fractions: &[f32]) {
+fn drag(h: &mut Harness<'_, LienzoApp>, field: usize, fractions: &[f32]) {
     let r = h.query_all_by_role(egui::accesskit::Role::Slider).nth(field).unwrap().rect();
     let pos = |f: f32| pos2(r.left() + 7.0 + (r.width() - 14.0) * f, r.center().y);
     let start = pos(fractions[0]);
@@ -148,16 +148,16 @@ fn uncommitted_mask_number_stays_with_its_layer() {
 /// `layer.vectorMask.edit` (the compositor already renders both).
 #[test]
 fn vector_mask_properties_edit_density_and_feather() {
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     let id = session.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
     session.execute("layer.vectorMask.revealAll", json!({})).unwrap();
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
+    let mut app = LienzoApp::new(session, crate::Services::default());
     app.ui.vector_mask_target = true;
     app.ui.panels.properties = true;
     app.last_canvas_rect = Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, 600.0));
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 if Tokens::get(ui.ctx()).pro {
                     properties_body(app, ui);
@@ -168,12 +168,12 @@ fn vector_mask_properties_edit_density_and_feather() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(4);
     assert!(h.query_all_by_label("Density").next().is_some(), "the vector mask section is shown");
     assert!(h.query_all_by_label("Feather").next().is_some());
     drag(&mut h, 0, &[1.0, 0.8, 0.5]);
-    let vm = h.state().session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().vector_mask.clone().unwrap();
+    let vm = h.state().session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().vector_mask.clone().unwrap();
     assert!((vm.density - 0.5).abs() < 0.02, "density edited through the vector mask command: {}", vm.density);
 }
 
@@ -183,14 +183,14 @@ fn vector_mask_properties_edit_density_and_feather() {
 #[test]
 fn shape_properties_edit_density_and_feather() {
     for theme in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
         let id = session.execute("shape.create", json!({"kind": "rect", "rect": [16, 16, 32, 32]})).unwrap()["layer"].as_u64().unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = LienzoApp::new(session, crate::Services::default());
         app.ui.panels.properties = true;
         app.last_canvas_rect = Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, 1600.0));
         let mut h = Harness::builder().with_size(vec2(800.0, 1600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                     if Tokens::get(ui.ctx()).pro {
                         egui::ScrollArea::vertical().show(ui, |ui| properties_body(app, ui));
@@ -201,13 +201,13 @@ fn shape_properties_edit_density_and_feather() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
-        let shape = |h: &Harness<'_, PhotocraftApp>| match &h.state().session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
-            photocraft_doc::LayerContent::Shape(sh) => sh.clone(),
+        let shape = |h: &Harness<'_, LienzoApp>| match &h.state().session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().content {
+            lienzo_doc::LayerContent::Shape(sh) => sh.clone(),
             other => panic!("not a shape: {}", other.kind_name()),
         };
-        let slider = |h: &Harness<'_, PhotocraftApp>, label: &str| {
+        let slider = |h: &Harness<'_, LienzoApp>, label: &str| {
             h.query_all_by_role(egui::accesskit::Role::Slider)
                 .position(|n| n.accesskit_node().label().as_deref() == Some(label))
                 .unwrap_or_else(|| panic!("{theme:?}: no {label} slider"))
@@ -235,19 +235,19 @@ fn shape_properties_edit_density_and_feather() {
 /// frame does, though its Density renders it over the whole canvas.
 #[test]
 fn a_soft_shapes_transform_fields_follow_its_path() {
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     let id = session.execute("shape.create", json!({"kind": "rect", "rect": [16, 8, 20, 30]})).unwrap()["layer"].as_u64().unwrap();
     session.execute("layer.vectorMask.edit", json!({"density": 60, "feather": 20})).unwrap();
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
-    let layer = app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().clone();
+    let mut app = LienzoApp::new(session, crate::Services::default());
+    let layer = app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().clone();
     let surface = layer.surface().unwrap().clone();
-    assert_eq!(surface.content_bounds(), photocraft_geom::Rect::new(0, 0, 64, 64), "the soft fill covers the canvas");
-    assert_eq!(app.layer_frame_bounds(&layer, &surface), photocraft_geom::Rect::new(16, 8, 36, 38));
+    assert_eq!(surface.content_bounds(), lienzo_geom::Rect::new(0, 0, 64, 64), "the soft fill covers the canvas");
+    assert_eq!(app.layer_frame_bounds(&layer, &surface), lienzo_geom::Rect::new(16, 8, 36, 38));
 }
 
 /// Document-wide row of mask coverage (or of the layer's own red channel) across the middle.
-fn row(h: &Harness<'_, PhotocraftApp>, of_mask: bool) -> Vec<f32> {
+fn row(h: &Harness<'_, LienzoApp>, of_mask: bool) -> Vec<f32> {
     let s = h.state().session.active().unwrap();
     let layer = s.doc.layer(s.active_layer.unwrap()).unwrap();
     let surface = if of_mask { &layer.mask.as_ref().unwrap().surface } else { layer.surface().unwrap() };
@@ -312,24 +312,24 @@ fn refine_row_opens_the_select_and_mask_workspace_and_color_range_dialog() {
 }
 
 /// A Studio-layout theme's floating Properties card, with no mask targeted.
-fn card_harness(new_layer: bool, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
-    let mut session = photocraft_engine::Session::new();
+fn card_harness(new_layer: bool, theme: crate::theme::ThemeKind) -> Harness<'static, LienzoApp> {
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     if new_layer {
         session.execute("layer.new.layer", json!({})).unwrap();
     }
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
+    let mut app = LienzoApp::new(session, crate::Services::default());
     app.ui.panels.properties = true;
     app.last_canvas_rect = Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, 600.0));
     let mut h = Harness::builder().with_size(vec2(800.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 properties_window(app, ui.ctx());
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }

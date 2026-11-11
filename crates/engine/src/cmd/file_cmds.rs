@@ -10,11 +10,11 @@
 
 use std::sync::Arc;
 
-use photocraft_algo::resample::{Resample, resize_surface, translate_surface};
-use photocraft_color::{ColorMode, PixelFormat};
-use photocraft_doc::{Affine, Document, Layer, LayerContent, LayerId, SmartObject, SmartSource};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into};
+use lienzo_algo::resample::{Resample, resize_surface, translate_surface};
+use lienzo_color::{ColorMode, PixelFormat};
+use lienzo_doc::{Affine, Document, Layer, LayerContent, LayerId, SmartObject, SmartSource};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba_into};
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
@@ -153,7 +153,7 @@ fn size_param(p: &Value, key: &str) -> Option<f64> {
 // ---------- pixels ----------
 
 /// A composite buffer as a surface in `fmt` (straight RGBA → the format's model and depth).
-pub(crate) fn buffer_surface(buf: &photocraft_compose::Buffer, fmt: PixelFormat) -> Surface {
+pub(crate) fn buffer_surface(buf: &lienzo_compose::Buffer, fmt: PixelFormat) -> Surface {
     let n = fmt.channels();
     let mut data = vec![0.0f32; buf.px.len() * n];
     for (p, out) in buf.px.iter().zip(data.chunks_exact_mut(n)) {
@@ -169,7 +169,7 @@ pub(crate) fn buffer_surface(buf: &photocraft_compose::Buffer, fmt: PixelFormat)
 
 /// The flattened image of `doc` as a surface in `fmt`, placed at the origin.
 pub(crate) fn flattened(doc: &Document, fmt: PixelFormat) -> Surface {
-    photocraft_compose::flatten_to_surface(doc, fmt, None)
+    lienzo_compose::flatten_to_surface(doc, fmt, None)
 }
 
 /// [`flattened`] for documents that came from a file (Save a Copy, Place, Load Files into Stack):
@@ -184,7 +184,7 @@ pub(crate) fn flattened_checked(doc: &Document, fmt: PixelFormat, cmd: &str) -> 
 /// caller that flattens `doc` some other way (a place job, which can be cancelled while it does).
 pub(crate) fn check_flattenable(doc: &Document, cmd: &str) -> Result<()> {
     let b = doc.bounds();
-    if u64::from(b.width()) * u64::from(b.height()) > photocraft_compose::MAX_RENDER_PIXELS {
+    if u64::from(b.width()) * u64::from(b.height()) > lienzo_compose::MAX_RENDER_PIXELS {
         return Err(EngineError::BadParams { cmd: cmd.into(), msg: format!("the document's {}×{} canvas is too large to flatten", b.width(), b.height()) });
     }
     Ok(())
@@ -445,20 +445,20 @@ mod aces_exr_tests {
     /// default; on, it opens as ACEScg — the working space ACES render pipelines write.
     #[test]
     fn exr_aces_cg_preference_retags_the_opened_document() {
-        let image = photocraft_codecs::Image::from_f32(
+        let image = lienzo_codecs::Image::from_f32(
             4,
             4,
-            photocraft_codecs::ChannelLayout::Rgb,
+            lienzo_codecs::ChannelLayout::Rgb,
             &[
                 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5,
                 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0, 0.25, 0.5, 0.75, 1.0,
             ],
         )
         .unwrap();
-        let bytes = photocraft_codecs::encode(&image, photocraft_codecs::Format::OpenExr, &photocraft_codecs::EncodeOptions::default()).unwrap();
+        let bytes = lienzo_codecs::encode(&image, lienzo_codecs::Format::OpenExr, &lienzo_codecs::EncodeOptions::default()).unwrap();
 
-        let linear = photocraft_cms::Builtin::LinearSrgb.profile().to_bytes();
-        let aces = photocraft_cms::Builtin::AcesCg.profile().to_bytes();
+        let linear = lienzo_cms::Builtin::LinearSrgb.profile().to_bytes();
+        let aces = lienzo_cms::Builtin::AcesCg.profile().to_bytes();
 
         // Off (the default): io's linear-sRGB tagging stays.
         let mut s = Session::new();
@@ -479,11 +479,10 @@ mod aces_exr_tests {
     #[test]
     fn exr_aces_cg_preference_applies_to_background_opens() {
         use crate::jobs::{OpenSource, Started};
-        let image = photocraft_codecs::Image::from_f32(4, 4, photocraft_codecs::ChannelLayout::Rgb, &[0.5; 48]).unwrap();
-        let bytes =
-            std::sync::Arc::new(photocraft_codecs::encode(&image, photocraft_codecs::Format::OpenExr, &photocraft_codecs::EncodeOptions::default()).unwrap());
-        let linear = photocraft_cms::Builtin::LinearSrgb.profile().to_bytes();
-        let aces = photocraft_cms::Builtin::AcesCg.profile().to_bytes();
+        let image = lienzo_codecs::Image::from_f32(4, 4, lienzo_codecs::ChannelLayout::Rgb, &[0.5; 48]).unwrap();
+        let bytes = std::sync::Arc::new(lienzo_codecs::encode(&image, lienzo_codecs::Format::OpenExr, &lienzo_codecs::EncodeOptions::default()).unwrap());
+        let linear = lienzo_cms::Builtin::LinearSrgb.profile().to_bytes();
+        let aces = lienzo_cms::Builtin::AcesCg.profile().to_bytes();
         for (on, want) in [(false, &linear), (true, &aces)] {
             let mut s = Session::new();
             s.prefs.edit(|p| p.file_handling.exr_aces_cg = on);

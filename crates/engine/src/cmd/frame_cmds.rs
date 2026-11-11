@@ -1,9 +1,9 @@
 //! Photoshop-style image frames: independently editable vector containers with smart content.
 use crate::commands::CommandSpec;
 use crate::{EngineError, Result, Session};
-use photocraft_color::{BlendMode, Color};
-use photocraft_doc::{Document, Frame, Layer, LayerContent, LayerId, Path, VectorMask};
-use photocraft_geom::Affine;
+use lienzo_color::{BlendMode, Color};
+use lienzo_doc::{Document, Frame, Layer, LayerContent, LayerId, Path, VectorMask};
+use lienzo_geom::Affine;
 use serde_json::{Value, json};
 
 fn bad(msg: impl Into<String>) -> EngineError {
@@ -231,7 +231,7 @@ fn convert(s: &mut Session, p: &Value) -> Result<Value> {
         }
         let name = p.get("name").map(|v| v.as_str().ok_or_else(|| bad("name must be a string"))).transpose()?.unwrap_or(&l.name).to_string();
         let l = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
-        l.content = LayerContent::Group(photocraft_doc::Group { children: vec![], expanded: false, artboard: None, frame_stroke: None });
+        l.content = LayerContent::Group(lienzo_doc::Group { children: vec![], expanded: false, artboard: None, frame_stroke: None });
         l.name = name;
         l.frame = Some(Box::new(f));
         l.mask = None;
@@ -316,7 +316,7 @@ fn fit(s: &mut Session, p: &Value) -> Result<Value> {
                 // The same path as `edit.transform`, so the image's linked masks and Smart Filter
                 // mask move with it.
                 return s.edit("Fit Content to Frame", |doc, _| {
-                    crate::transform_cmds::transform_by(doc, child_id, relative, photocraft_algo::transform::Interp::Bicubic)?;
+                    crate::transform_cmds::transform_by(doc, child_id, relative, lienzo_algo::transform::Interp::Bicubic)?;
                     Ok(json!({"layer":id.0,"content":child_id.0}))
                 });
             }
@@ -341,7 +341,7 @@ fn fit(s: &mut Session, p: &Value) -> Result<Value> {
                 (-0.5 * (nw - 1.0), 0.5 * (nh + 1.0)),
             ]
             .map(|(x, y)| {
-                let q = f.transform.apply(photocraft_geom::Point::new(x, y));
+                let q = f.transform.apply(lienzo_geom::Point::new(x, y));
                 [q.x, q.y]
             });
             s.execute("edit.transform", json!({"layer":child.id.0,"rect":[b.x0,b.y0,b.x1,b.y1],"quad":quad}))

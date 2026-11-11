@@ -1,10 +1,10 @@
 use super::editing::edit_home;
 use super::ime_edit::{ime_offsets, ime_preedit_is_current};
 use super::layout::layout;
-use super::{Color32, LayerId, PhotocraftApp, Point, Pos2, Stroke, ViewXform, byte_of, text_layer};
+use super::{Color32, LayerId, LienzoApp, Point, Pos2, Stroke, ViewXform, byte_of, text_layer};
 
 /// Selection highlight, caret and text frame over the canvas.
-pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     app.ui.type_box_overflow = false;
     let Some(ed) = app.ui.text_edit.clone() else { return };
     // Until it commits, an edit in a document no longer active draws nothing over this one.
@@ -32,11 +32,11 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewX
     };
     let mut shape = app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape.clone()));
     if let Some(b) = dragged {
-        shape = Some(photocraft_doc::text::TextShape::Box { x: 0.0, y: 0.0, width: b[2].max(1.0) as f32, height: b[3].max(1.0) as f32 });
+        shape = Some(lienzo_doc::text::TextShape::Box { x: 0.0, y: 0.0, width: b[2].max(1.0) as f32, height: b[3].max(1.0) as f32 });
     }
     // Type on a path: the caret, selection and underline follow the curve the glyphs sit on.
     let text_start = l.line_bounds().map_or(0.0, |bounds| f64::from(bounds[0]));
-    let bend = shape.as_ref().and_then(|shape| photocraft_text::warp::Warp::on_path_oriented(shape, text_start, l.vertical));
+    let bend = shape.as_ref().and_then(|shape| lienzo_text::warp::Warp::on_path_oriented(shape, text_start, l.vertical));
     // Line space (lines, clusters, carets) → screen: vertical type turns it 90° clockwise.
     let scr = |x: f32, y: f32| -> Pos2 {
         let (x, y) = l.to_text(x, y);
@@ -62,7 +62,7 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewX
     let has_transform = crate::type_transform::draw(app, painter, xf, mods);
     let frame = Stroke::new(1.0, t.accent);
     match shape {
-        Some(photocraft_doc::text::TextShape::Box { x, y, width, height }) => {
+        Some(lienzo_doc::text::TextShape::Box { x, y, width, height }) => {
             // Text the box can't hold: as in the reference application, the lower-right handle
             // grows and shows a black "+". Automation reads `ui.type_box_overflow` instead.
             let over = l.overflows(&text);
@@ -85,9 +85,9 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewX
             }
         }
         // Area type: the outline of the shape it wraps inside.
-        Some(photocraft_doc::text::TextShape::Area { path }) => {
+        Some(lienzo_doc::text::TextShape::Area { path }) => {
             if !has_transform {
-                for poly in photocraft_vector::flatten::flatten_path(&path, 0.5) {
+                for poly in lienzo_vector::flatten::flatten_path(&path, 0.5) {
                     let pts: Vec<Pos2> = poly.pts.iter().map(|&(x, y)| scr_t(x as f32, y as f32)).collect();
                     if pts.len() >= 2 {
                         painter.add(egui::Shape::closed_line(pts, frame));
@@ -139,7 +139,7 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewX
             if bend.is_some() {
                 // On a path each glyph turns on its own, so each gets its own highlight.
                 // Glyphs past the end of the path are not drawn, so neither is their highlight.
-                let shown = |p: f32, q: f32| bend.as_ref().is_some_and(|w| w.place_glyph(f64::from(p + q) / 2.0) != photocraft_text::warp::Placement::Hidden);
+                let shown = |p: f32, q: f32| bend.as_ref().is_some_and(|w| w.place_glyph(f64::from(p + q) / 2.0) != lienzo_text::warp::Placement::Hidden);
                 for (p, q) in xs.into_iter().filter(|&(p, q)| shown(p, q)) {
                     painter.add(egui::Shape::convex_polygon(vec![scr(p, top), scr(q, top), scr(q, bot), scr(p, bot)], fill, Stroke::NONE));
                 }
@@ -173,7 +173,7 @@ pub(super) const CARET_STROKES: [Stroke; 2] = [Stroke { width: 3.0, color: Color
 
 /// The Type Mask tools while typing: Quick Mask's colour over the canvas with the glyphs clear,
 /// as Photoshop shows the selection-to-be. The glyphs come from the hidden working layer's pixels.
-fn draw_mask_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, id: LayerId) {
+fn draw_mask_overlay(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform, id: LayerId) {
     let Some(st) = app.session.active() else { return };
     let canvas = st.doc.bounds();
     let opts = app.session.quick_mask_options;
@@ -183,16 +183,16 @@ fn draw_mask_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXfor
         let q = |v: f32| (v.clamp(0.0, 1.0) * a * 255.0 + 0.5) as u8;
         Color32::from_rgba_premultiplied(q(rgb[0]), q(rgb[1]), q(rgb[2]), (a * 255.0 + 0.5) as u8)
     };
-    let corners = |r: photocraft_geom::Rect| -> Vec<Pos2> {
+    let corners = |r: lienzo_geom::Rect| -> Vec<Pos2> {
         let (x0, y0, x1, y1) = (r.x0 as f32, r.y0 as f32, r.x1 as f32, r.y1 as f32);
         vec![xf.to_screen(x0, y0), xf.to_screen(x1, y0), xf.to_screen(x1, y1), xf.to_screen(x0, y1)]
     };
     let surface = text_layer(&st.doc, id).and_then(|t| t.cache.as_ref());
-    let area = surface.map(|s| s.content_bounds().intersect(&canvas)).unwrap_or(photocraft_geom::Rect::EMPTY);
+    let area = surface.map(|s| s.content_bounds().intersect(&canvas)).unwrap_or(lienzo_geom::Rect::EMPTY);
     // One unfeathered mesh, so the bands and the text's box meet without seams.
     let mut bands = egui::Mesh::default();
     let mut band = |x0: i32, y0: i32, x1: i32, y1: i32| {
-        let r = photocraft_geom::Rect { x0, y0, x1, y1 };
+        let r = lienzo_geom::Rect { x0, y0, x1, y1 };
         if !r.is_empty() {
             let base = bands.vertices.len() as u32;
             for p in corners(r) {
@@ -223,7 +223,7 @@ fn draw_mask_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXfor
         let mut row = vec![[0.0f32; 4]; area.width() as usize];
         let mut px = Vec::with_capacity(w * h);
         for y in (area.y0..area.y1).step_by(factor as usize) {
-            surface.read_rgba_into(photocraft_geom::Rect { x0: area.x0, y0: y, x1: area.x1, y1: y + 1 }, &mut row);
+            surface.read_rgba_into(lienzo_geom::Rect { x0: area.x0, y0: y, x1: area.x1, y1: y + 1 }, &mut row);
             px.extend(row.iter().step_by(factor as usize).take(w).map(|p| tint(1.0 - p[3])));
         }
         px.resize(w * h, tint(1.0));

@@ -2,17 +2,17 @@
 //! visible layer with pixels under the pointer (or its outermost group in Group mode) and the drag
 //! then moves it; ⌘/Ctrl held at the press inverts the option for that click.
 
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::{Tool, ToolOptions};
 
 /// A 64×64 document with two painted layers: A covers (8..24)², B covers (40..56)². B is active.
-fn app() -> (PhotocraftApp, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, LayerId, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     let mut ids = Vec::new();
@@ -33,15 +33,15 @@ fn app() -> (PhotocraftApp, LayerId, LayerId) {
     (app, ids[0], ids[1])
 }
 
-fn bounds(app: &PhotocraftApp, id: LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: LayerId) -> Rect {
     app.session.active().unwrap().doc.layer(id).unwrap().surface().unwrap().content_bounds()
 }
 
-fn active(app: &PhotocraftApp) -> Option<LayerId> {
+fn active(app: &LienzoApp) -> Option<LayerId> {
     app.session.active().unwrap().active_layer
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     let mid = [from[0] + by[0] / 2.0, from[1] + by[1] / 2.0];
     crate::canvas::tool_event(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, mods);
@@ -135,7 +135,7 @@ fn every_theme_shows_the_auto_select_toggle() {
     for theme in [crate::theme::ThemeKind::ProMedium, crate::theme::ThemeKind::Studio] {
         let (app, _, _) = app();
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -143,7 +143,7 @@ fn every_theme_shows_the_auto_select_toggle() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
         assert!(h.state().ui.tool_options.move_auto_select);
         h.get_by_role_and_label(egui::accesskit::Role::CheckBox, "Auto-Select:").click();
@@ -161,7 +161,7 @@ fn every_theme_shows_the_transform_controls_toggle() {
     for theme in crate::theme::ThemeKind::ALL {
         let (app, _, _) = app();
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -169,7 +169,7 @@ fn every_theme_shows_the_transform_controls_toggle() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
         let before = h.state().ui.tool_options.move_show_transform;
         h.get_by_label("Show Transform Controls").click();
@@ -185,12 +185,12 @@ fn every_theme_shows_the_type_options() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::{NodeT, Queryable};
     // The font menus show "Loading fonts…" until the font scan is done (#3021): wait for it.
-    let _ = photocraft_text::shared();
+    let _ = lienzo_text::shared();
     for theme in crate::theme::ThemeKind::ALL {
         let (mut app, _, _) = app();
         app.ui.tool = Tool::Type;
         let mut h = Harness::builder().with_size(egui::vec2(1600.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -198,7 +198,7 @@ fn every_theme_shows_the_type_options() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
         let fields: Vec<String> = h
             .query_all_by_role(egui::accesskit::Role::TextInput)
@@ -221,7 +221,7 @@ fn every_theme_shows_the_gradient_options() {
         // The blend Mode and Opacity are the Classic gradient's (#12007).
         app.ui.tool_options.gradient_classic = true;
         let mut h = Harness::builder().with_size(egui::vec2(1600.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -229,7 +229,7 @@ fn every_theme_shows_the_gradient_options() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
         let combos: Vec<String> = h
             .query_all_by_role(egui::accesskit::Role::ComboBox)
@@ -242,7 +242,7 @@ fn every_theme_shows_the_gradient_options() {
 #[test]
 fn shift_click_adds_shape_layers_one_after_another() {
     // Shapes, as in Photoshop: a click selects one, each ⇧-click adds the one under it.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     for rect in [[10, 10, 40, 40], [80, 10, 40, 40], [10, 100, 40, 40]] {
         app.session.execute("shape.create", json!({"kind": "rect", "rect": rect, "fill": "#ff0000"})).unwrap();
@@ -262,7 +262,7 @@ fn shift_click_adds_shape_layers_one_after_another() {
 
 /// Opens B's transform controls (Show Transform Controls on) and resizes the box to twice B's
 /// size from its top-left corner, so it covers (40..72)².
-fn resized_box() -> (PhotocraftApp, LayerId, LayerId) {
+fn resized_box() -> (LienzoApp, LayerId, LayerId) {
     let (mut app, a, b) = app();
     app.ui.tool_options.move_show_transform = true;
     crate::transform_tool::begin(&mut app, &egui::Context::default()).unwrap();
@@ -274,7 +274,7 @@ fn resized_box() -> (PhotocraftApp, LayerId, LayerId) {
 }
 
 /// A plain click (press and release without moving) at document point `p`.
-fn click(app: &mut PhotocraftApp, p: [f64; 2]) {
+fn click(app: &mut LienzoApp, p: [f64; 2]) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, egui::Modifiers::NONE);
     crate::canvas::tool_event(app, ToolEvent::Up { x: p[0], y: p[1] }, egui::Modifiers::NONE);
 }

@@ -3,7 +3,7 @@
 use egui::{Align2, Color32, CornerRadius, RichText, Sense, Stroke, vec2};
 
 use crate::theme::{self, Tokens};
-use crate::{PhotocraftApp, icons};
+use crate::{LienzoApp, icons};
 
 /// Case-insensitive subsequence match score (higher is better); None = no match.
 pub fn fuzzy_score(query: &str, text: &str) -> Option<i32> {
@@ -134,7 +134,7 @@ fn menu_hits(menus: Vec<crate::menus::MenuItem>, q: &str, lang: crate::i18n::Lan
         .collect()
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     if !app.ui.palette_open {
         return;
     }
@@ -281,7 +281,7 @@ mod tests {
     use serde_json::json;
 
     use super::{exact_bonus, fuzzy_score, push_recent};
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
 
     /// Localized fuzzy and exact matches use Turkic casing while English aliases use root casing.
     #[test]
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn open_palette_interrupts_the_ime_only_when_it_takes_focus() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
         crate::theme::install_fonts(&ctx);
         // Fonts bind on the next pass; this one opens nothing.
@@ -328,8 +328,8 @@ mod tests {
     #[test]
     fn the_palette_records_and_replays_recent_commands_on_an_empty_query() {
         let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
         });
         h.state_mut().run("file.new", json!({"width": 64, "height": 64})).unwrap();
         h.state_mut().sync_views();
@@ -369,7 +369,7 @@ mod tests {
     /// palette with blank "---" rows.
     #[test]
     fn separators_are_not_palette_hits() {
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let menus = crate::menus::menu_items(&app);
         assert!(menus.iter().any(|m| m.label == "---"), "the menus have separators to filter");
         for q in ["f", "file", "filter", "", "-"] {
@@ -403,8 +403,8 @@ mod tests {
     fn palette_opens_the_keyboard_shortcuts_dialog() {
         for with_doc in [false, true] {
             let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-                PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+                LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+                LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
             });
             if with_doc {
                 h.state_mut().run("file.new", json!({"width": 64, "height": 64})).unwrap();

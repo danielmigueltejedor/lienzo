@@ -24,13 +24,13 @@ pub(super) fn placement(anchor: (f64, f64), link: bool, phase: (f32, f32), scale
     let base = if link { anchor } else { (0.0, 0.0) };
     let origin = (base.0 + f64::from(phase.0), base.1 + f64::from(phase.1));
     let s = f64::from(scale);
-    let inv_scale = if s.is_finite() && s > 0.0 { 1.0 / s.max(photocraft_compose::pattern::MIN_PLACEMENT_SCALE) } else { 1.0 };
+    let inv_scale = if s.is_finite() && s > 0.0 { 1.0 / s.max(lienzo_compose::pattern::MIN_PLACEMENT_SCALE) } else { 1.0 };
     let a = f64::from(angle).to_radians();
     Placement { origin, cs: (a.cos(), a.sin()), inv_scale }
 }
 
 /// (inside width, outside width) of a stroke.
-pub fn stroke_widths(st: &photocraft_doc::StrokeFx) -> (f32, f32) {
+pub fn stroke_widths(st: &lienzo_doc::StrokeFx) -> (f32, f32) {
     match st.position {
         StrokePosition::Outside => (0.0, st.size),
         StrokePosition::Inside => (st.size, 0.0),
@@ -38,13 +38,13 @@ pub fn stroke_widths(st: &photocraft_doc::StrokeFx) -> (f32, f32) {
     }
 }
 
-pub(super) fn style_index(s: photocraft_doc::GradientStyle) -> f32 {
+pub(super) fn style_index(s: lienzo_doc::GradientStyle) -> f32 {
     match s {
-        photocraft_doc::GradientStyle::Linear => 0.0,
-        photocraft_doc::GradientStyle::Radial => 1.0,
-        photocraft_doc::GradientStyle::Angle => 2.0,
-        photocraft_doc::GradientStyle::Reflected => 3.0,
-        photocraft_doc::GradientStyle::Diamond => 4.0,
+        lienzo_doc::GradientStyle::Linear => 0.0,
+        lienzo_doc::GradientStyle::Radial => 1.0,
+        lienzo_doc::GradientStyle::Angle => 2.0,
+        lienzo_doc::GradientStyle::Reflected => 3.0,
+        lienzo_doc::GradientStyle::Diamond => 4.0,
     }
 }
 
@@ -87,8 +87,8 @@ type Program = (i32, [[f32; 4]; 4], Option<Vec<[f32; 4096]>>);
 /// tables (Hue/Saturation's master sliders) don't add entries. The settings are destructured in
 /// full (Hue/Saturation's builder takes only `ranges`), so a new field fails to compile here until
 /// it is placed. `None`: rows aren't cached.
-pub(super) fn row_key(adj: &Adjustment, depth: photocraft_color::SampleType) -> Option<u64> {
-    use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
+pub(super) fn row_key(adj: &Adjustment, depth: lienzo_color::SampleType) -> Option<u64> {
+    use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();
     let level = |h: &mut std::collections::hash_map::DefaultHasher, c: &LevelsChannel| {
@@ -137,9 +137,9 @@ pub(super) fn row_key(adj: &Adjustment, depth: photocraft_color::SampleType) -> 
 
 /// LUT rows for `adj` at `depth`, built by `build` once per [`row_key`] and reused by later plans
 /// (`compose::lut_rows`): the Levels tables alone took 1–2 ms per layer on every plan (#11498).
-fn cached_rows(adj: &Adjustment, depth: photocraft_color::SampleType, build: impl FnOnce() -> Vec<[f32; 4096]>) -> Vec<[f32; 4096]> {
+fn cached_rows(adj: &Adjustment, depth: lienzo_color::SampleType, build: impl FnOnce() -> Vec<[f32; 4096]>) -> Vec<[f32; 4096]> {
     match row_key(adj, depth) {
-        Some(key) => photocraft_compose::lut_rows::cached(key, build),
+        Some(key) => lienzo_compose::lut_rows::cached(key, build),
         None => build(),
     }
 }
@@ -155,15 +155,15 @@ fn to_row(t: &[f32]) -> [f32; 4096] {
 
 /// Whether the adjustment kernel can evaluate `adj` in a document of colour `mode`: Levels and
 /// Curves on CMYK ink or Lab channels convert through ICC profiles per pixel, and so do the
-/// adjustments a Lab document evaluates on L, a and b (`photocraft_compose::adjust::lab_channel_adjustment`)
+/// adjustments a Lab document evaluates on L, a and b (`lienzo_compose::adjust::lab_channel_adjustment`)
 /// and a CMYK document on its inks (`cmyk_channel_adjustment`), which only the CPU does.
-pub fn adjustment_on_gpu(adj: &Adjustment, mode: photocraft_color::ColorMode) -> bool {
-    use photocraft_compose::adjust::{cmyk_channel_adjustment, lab_channel_adjustment};
+pub fn adjustment_on_gpu(adj: &Adjustment, mode: lienzo_color::ColorMode) -> bool {
+    use lienzo_compose::adjust::{cmyk_channel_adjustment, lab_channel_adjustment};
     let tone_in_space =
         matches!(adj, Adjustment::Levels { space: ToneSpace::Cmyk | ToneSpace::Lab, .. } | Adjustment::Curves { space: ToneSpace::Cmyk | ToneSpace::Lab, .. });
     let own_channels = match mode {
-        photocraft_color::ColorMode::Lab => lab_channel_adjustment(adj),
-        photocraft_color::ColorMode::Cmyk => cmyk_channel_adjustment(adj),
+        lienzo_color::ColorMode::Lab => lab_channel_adjustment(adj),
+        lienzo_color::ColorMode::Cmyk => cmyk_channel_adjustment(adj),
         _ => false,
     };
     !tone_in_space && !own_channels
@@ -178,7 +178,7 @@ fn transfer_exponent(t: Transfer) -> f32 {
 }
 
 /// Adjustment → (kernel kind, parameters, LUT rows). Kinds are the `switch` in `adjust()`.
-pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraft_color::SampleType, mode: photocraft_color::ColorMode) -> Program {
+pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: lienzo_color::SampleType, mode: lienzo_color::ColorMode) -> Program {
     let mut p = [[0.0f32; 4]; 4];
     match adj {
         Adjustment::Invert => (1, p, None),
@@ -186,16 +186,16 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
             // The level, the depth's split (compose::adjust::threshold_white) and the level in 16 bits.
             let t = (level * 255.0).round();
             p[0] = match depth {
-                photocraft_color::SampleType::U8 => [t, 1.0, 0.0, 0.0],
-                photocraft_color::SampleType::U16 => [t, 2.0, (t * 32768.0 / 255.0).round(), 0.0],
-                photocraft_color::SampleType::F32 => [t, 0.0, 0.0, 0.0],
+                lienzo_color::SampleType::U8 => [t, 1.0, 0.0, 0.0],
+                lienzo_color::SampleType::U16 => [t, 2.0, (t * 32768.0 / 255.0).round(), 0.0],
+                lienzo_color::SampleType::F32 => [t, 0.0, 0.0, 0.0],
             };
             (2, p, None)
         }
         Adjustment::Posterize { levels } => {
             // The levels, and the 16-bit rule (compose::adjust::posterize_in).
             p[0][0] = (*levels).clamp(2, 255) as f32;
-            p[0][1] = if depth == photocraft_color::SampleType::U16 { 1.0 } else { 0.0 };
+            p[0][1] = if depth == lienzo_color::SampleType::U16 { 1.0 } else { 0.0 };
             (3, p, None)
         }
         Adjustment::BrightnessContrast { brightness, contrast, legacy: true } => {
@@ -204,7 +204,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
             // Brightness before contrast when it is raised, after it when lowered (compose::adjust).
             let (pre, post) = if c >= 0.0 { (brightness / 255.0, 0.0) } else { (0.0, brightness / 255.0) };
             // 32-bit documents pivot at 127 of 255 and don't clip (the shader checks F_HDR).
-            let pivot = if depth == photocraft_color::SampleType::F32 { 127.0 / 255.0 } else { photocraft_compose::adjust::LEGACY_PIVOT };
+            let pivot = if depth == lienzo_color::SampleType::F32 { 127.0 / 255.0 } else { lienzo_compose::adjust::LEGACY_PIVOT };
             p[0] = [pre, k, pivot, post];
             (4, p, None)
         }
@@ -218,7 +218,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
             p[0] = [2f32.powf(*exposure), *offset, gamma.max(0.01), transfer_exponent(transfer.for_exposure())];
             (6, p, None)
         }
-        Adjustment::Levels { master, per_channel, space: ToneSpace::Rgb, .. } if depth == photocraft_color::SampleType::F32 => {
+        Adjustment::Levels { master, per_channel, space: ToneSpace::Rgb, .. } if depth == lienzo_color::SampleType::F32 => {
             // Twenty coefficients exceed the sixteen uniform parameters. Store four records
             // in LUT row 0, read texel-exact by the analytic float Levels kernel.
             let mut row = [0.0f32; 4096];
@@ -250,7 +250,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
         }
         Adjustment::Vibrance { vibrance, saturation } => {
             // compose::adjust::vibrance_px; 32-bit samples aren't clipped at 1.
-            let hi = if depth == photocraft_color::SampleType::F32 { f32::MAX } else { 1.0 };
+            let hi = if depth == lienzo_color::SampleType::F32 { f32::MAX } else { 1.0 };
             p[0] = [vibrance / 100.0, saturation / 100.0, transfer_exponent(transfer), hi];
             let b = adjust::VIBRANCE_BOOST;
             p[1] = [b[0], b[1], b[2], b[3]];
@@ -260,7 +260,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
         Adjustment::ChannelMixer { matrix, monochrome } => {
             // compose::adjust: 32-bit documents cut each percentage to 1/1024, count 255/512 of
             // the constant and don't clip (the shader checks F_HDR).
-            let hdr = depth == photocraft_color::SampleType::F32;
+            let hdr = depth == lienzo_color::SampleType::F32;
             let cut = |v: f32| if hdr { (v * 1024.0).trunc() / 1024.0 } else { v };
             let rows = matrix.map(|r| [cut(r[0]), cut(r[1]), cut(r[2]), if hdr { r[3] * 255.0 / 512.0 } else { r[3] }]);
             p[0] = rows[0];
@@ -271,7 +271,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
         }
         Adjustment::PhotoFilter { color, density, preserve_luminosity } => {
             // compose::adjust: the linear-light matrix, then SetLum on the encoded values (8/16-bit).
-            let linear_doc = depth == photocraft_color::SampleType::F32;
+            let linear_doc = depth == lienzo_color::SampleType::F32;
             let m = adjust::photo_filter_matrix(*color, *density, *preserve_luminosity && linear_doc);
             for (row, m) in p.iter_mut().zip(m) {
                 *row = [m[0], m[1], m[2], 0.0];
@@ -336,7 +336,7 @@ pub fn adjustment_program(adj: &Adjustment, transfer: Transfer, depth: photocraf
 pub(super) fn gradient_rows(g: &Gradient) -> Vec<[f32; 4096]> {
     let mut rows = vec![[0.0f32; 4096]; 4];
     for k in 0..4096 {
-        let v = photocraft_compose::effects::sample_gradient(g, k as f32 / 4095.0);
+        let v = lienzo_compose::effects::sample_gradient(g, k as f32 / 4095.0);
         for (ch, row) in rows.iter_mut().enumerate() {
             row[k] = v[ch];
         }

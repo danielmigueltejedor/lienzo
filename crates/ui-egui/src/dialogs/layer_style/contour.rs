@@ -8,15 +8,15 @@
 //!   the param Cancel restores.
 
 use egui::{Color32, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_doc::Contour;
-use photocraft_doc::adjust::CurvePoint;
-use photocraft_engine::layer_style::{CONTOURS, contour_from_param, contour_param, contour_to_shc, contours_from_shc};
+use lienzo_doc::Contour;
+use lienzo_doc::adjust::CurvePoint;
+use lienzo_engine::layer_style::{CONTOURS, contour_from_param, contour_param, contour_to_shc, contours_from_shc};
 use serde_json::{Map, Value, json};
 
 use super::{entry, set_param};
 use crate::state::{DialogKind, PointCurveState};
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, point_curve, widgets};
+use crate::{LienzoApp, point_curve, widgets};
 
 pub(super) const PICKER: &str = "contourPicker";
 pub(super) const EDITOR: &str = "contourEditor";
@@ -39,7 +39,7 @@ fn levels_of(c: &Contour) -> (Vec<[f32; 2]>, Vec<bool>) {
 fn lut_of(c: &Contour) -> Vec<f32> {
     match c {
         Contour::Linear => (0..64).map(|i| i as f32 / 63.0).collect(),
-        Contour::Custom { points, corners, .. } => photocraft_compose::adjust::contour_curve_lut(points, corners),
+        Contour::Custom { points, corners, .. } => lienzo_compose::adjust::contour_curve_lut(points, corners),
     }
 }
 
@@ -91,7 +91,7 @@ enum Act {
 /// picker arrow and, when the effect has one, Anti-aliased.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn row(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ui: &mut egui::Ui,
     f: &mut Map<String, Value>,
     effect: &str,
@@ -139,7 +139,7 @@ pub(super) fn row(
             ui.spacing_mut().item_spacing = vec2(4.0, 4.0);
             egui::Grid::new(("contour-presets", effect, key)).spacing(vec2(4.0, 4.0)).show(ui, |ui| {
                 for (i, (name, _)) in CONTOURS.iter().enumerate() {
-                    let preset = photocraft_engine::layer_style::builtin_contour(name).unwrap_or_default();
+                    let preset = lienzo_engine::layer_style::builtin_contour(name).unwrap_or_default();
                     let (r, resp) = ui.allocate_exact_size(vec2(40.0, 40.0), Sense::click());
                     draw(ui.painter(), r, &preset, t.text, &t);
                     if preset == c || resp.hovered() {
@@ -256,7 +256,7 @@ fn editor_curve(f: &Map<String, Value>) -> Option<(String, String, Contour)> {
 /// Stores an edited curve on the effect. Editing a built-in preset makes a "Custom" contour, so a
 /// saved file doesn't call the edited curve by the preset's name.
 fn store(f: &mut Map<String, Value>, effect: &str, key: &str, name: &str, pts: &[[f32; 2]], corners: &[bool]) -> bool {
-    let name = if name.is_empty() || photocraft_engine::layer_style::builtin_contour(name).is_some() { "Custom" } else { name };
+    let name = if name.is_empty() || lienzo_engine::layer_style::builtin_contour(name).is_some() { "Custom" } else { name };
     let v = json!({
         "name": name,
         "points": pts.iter().map(|q| json!([q[0] / 255.0, q[1] / 255.0])).collect::<Vec<_>>(),
@@ -321,7 +321,7 @@ fn follow_corners(before: &[[f32; 2]], after: &[[f32; 2]], corners: &mut Vec<boo
 }
 
 /// The Contour Editor (a modal over the Layer Style dialog), when one is open.
-pub(super) fn editor(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(super) fn editor(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     if !f.contains_key(EDITOR) {
         return;
     }
@@ -526,7 +526,7 @@ fn shown_contour(pts: &[[f32; 2]], corners: &[bool], name: &str) -> Contour {
 }
 
 /// Load, Replace or Save Contours: the library lives in the session, the file is an `.shc`.
-fn library_action(app: &mut PhotocraftApp, act: Act) {
+fn library_action(app: &mut LienzoApp, act: Act) {
     let r = match act {
         Act::Load | Act::Replace => app.pick_file_bytes_filtered(&["shc"], move |app, name, bytes| {
             let mut p = crate::swatches_ui::source(&name, &bytes);
@@ -538,7 +538,7 @@ fn library_action(app: &mut PhotocraftApp, act: Act) {
             Ok(r)
         }),
         Act::Save => app.run("layer.layerStyle.contours.save", json!({})).and_then(|r| {
-            let bytes = r["data"].as_str().and_then(photocraft_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
+            let bytes = r["data"].as_str().and_then(lienzo_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
             app.pick_save("Contours.shc", move |app, path| {
                 let write = app.services.write.as_mut().ok_or("no writer configured")?;
                 write(&path, &bytes)?;
@@ -552,7 +552,7 @@ fn library_action(app: &mut PhotocraftApp, act: Act) {
     report(app, r);
 }
 
-fn report(app: &mut PhotocraftApp, r: Result<Value, String>) {
+fn report(app: &mut LienzoApp, r: Result<Value, String>) {
     if let Err(e) = r
         && e != crate::file_dialog::CANCELLED
     {
@@ -568,8 +568,8 @@ mod library_tests {
     #[test]
     fn cancelling_the_editor_discards_the_contour_name_draft() {
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        LienzoApp::setup_context(&ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("layer.layerStyle.dropShadow", json!({})).unwrap();

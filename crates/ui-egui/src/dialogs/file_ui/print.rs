@@ -1,4 +1,4 @@
-use super::{Arc, DialogKind, Map, PhotocraftApp, Tokens, Value, b, check, dropdown_str, json, n, number, params, s};
+use super::{Arc, DialogKind, LienzoApp, Map, Tokens, Value, b, check, dropdown_str, json, n, number, params, s};
 
 /// Print's Printer menu: the default printer (value ""), then every printer `file.printers`
 /// listed. A saved name the spooler no longer lists stays selectable rather than vanishing.
@@ -27,12 +27,12 @@ pub(super) fn printer_options(list: Option<&Value>, current: &str) -> Vec<(Strin
 /// Refreshes the printer list on each opening; when native driver enumeration succeeds,
 /// an unavailable saved printer is replaced and its stale driver settings are discarded.
 /// Returns the dialog ID without submitting a print job.
-pub fn open_print(app: &mut PhotocraftApp) -> u64 {
+pub fn open_print(app: &mut LienzoApp) -> u64 {
     let mut f = Map::new();
     f.insert("__print".into(), json!(true));
-    f.insert("__label".into(), json!("PhotoCraft Print Settings"));
+    f.insert("__label".into(), json!("Lienzo Print Settings"));
     // The settings of the last print, also from an earlier session (#7410).
-    if let Some(Value::Object(m)) = photocraft_engine::print_cmds::last_print(&app.session) {
+    if let Some(Value::Object(m)) = lienzo_engine::print_cmds::last_print(&app.session) {
         f.extend(m);
     }
     for (k, v) in [
@@ -64,8 +64,8 @@ pub fn open_print(app: &mut PhotocraftApp) -> u64 {
     app.ui.open_dialog(DialogKind::Command, f)
 }
 
-fn refresh_printers(app: &mut PhotocraftApp, f: &mut Map<String, Value>) {
-    if photocraft_engine::print_cmds::try_with_spooler(|| take_printer_lists(app, f)).is_some() {
+fn refresh_printers(app: &mut LienzoApp, f: &mut Map<String, Value>) {
+    if lienzo_engine::print_cmds::try_with_spooler(|| take_printer_lists(app, f)).is_some() {
         f.remove("__printerListingPending");
     } else {
         take_printer_lists(app, f);
@@ -73,10 +73,10 @@ fn refresh_printers(app: &mut PhotocraftApp, f: &mut Map<String, Value>) {
     }
 }
 
-fn take_printer_lists(app: &mut PhotocraftApp, f: &mut Map<String, Value>) {
-    let printers = photocraft_engine::print_cmds::printers_without_waiting(&mut app.session);
+fn take_printer_lists(app: &mut LienzoApp, f: &mut Map<String, Value>) {
+    let printers = lienzo_engine::print_cmds::printers_without_waiting(&mut app.session);
     f.insert("__systemPrinters".into(), printers["printers"].clone());
-    if let Ok(list) = photocraft_engine::print_cmds::rgb_printers_without_waiting(&app.session) {
+    if let Ok(list) = lienzo_engine::print_cmds::rgb_printers_without_waiting(&app.session) {
         f.insert("__printers".into(), json!(list.iter().map(|p| p.name.clone()).collect::<Vec<_>>()));
         let known = |n: &str| list.iter().any(|p| p.name == n);
         if !list.is_empty() && !known(&s(f, "printer", "")) {
@@ -97,18 +97,18 @@ pub(super) fn driver_paper_is_wide(f: &Map<String, Value>) -> bool {
 /// The Orientation buttons: the driver settings (or the printer's own) turned portrait or
 /// landscape through `file.print.page`. An error stays on the dialog, with the settings left as
 /// they were.
-pub(super) fn turn_driver(app: &mut PhotocraftApp, f: &mut Map<String, Value>, landscape: bool) {
+pub(super) fn turn_driver(app: &mut LienzoApp, f: &mut Map<String, Value>, landscape: bool) {
     let mut q = json!({"printer": s(f, "printer", ""), "orientation": if landscape { "landscape" } else { "portrait" }});
     if let (Some(h), Some(o)) = (f.get("printerSettings").cloned(), q.as_object_mut()) {
         o.insert("printerSettings".into(), h);
     }
-    match photocraft_engine::print_cmds::try_with_spooler(|| app.session.execute("file.print.page", q)) {
+    match lienzo_engine::print_cmds::try_with_spooler(|| app.session.execute("file.print.page", q)) {
         Some(Ok(r)) => take_turned_page(f, &r),
         Some(Err(e)) => {
             f.insert("__pageError".into(), json!(e.to_string()));
         }
         None => {
-            f.insert("__pageError".into(), json!(photocraft_engine::print_cmds::SPOOLER_BUSY));
+            f.insert("__pageError".into(), json!(lienzo_engine::print_cmds::SPOOLER_BUSY));
         }
     }
 }
@@ -137,7 +137,7 @@ pub(super) fn take_turned_page(f: &mut Map<String, Value>, r: &Value) {
 pub(super) fn driver_page(f: &mut Map<String, Value>) -> bool {
     let printer = s(f, "printer", "");
     let settings = f.get("printerSettings").and_then(Value::as_str).and_then(|h| craft_print::rgb::DevMode::from_hex(h).ok());
-    match photocraft_engine::print_cmds::try_with_spooler(|| craft_print::rgb::page(&printer, settings.as_ref())) {
+    match lienzo_engine::print_cmds::try_with_spooler(|| craft_print::rgb::page(&printer, settings.as_ref())) {
         Some(Ok(pg)) => {
             f.insert("paper".into(), json!([pg.paper.0, pg.paper.1]));
             f.insert("printable".into(), json!([pg.printable.0, pg.printable.1, pg.printable.2, pg.printable.3]));
@@ -149,7 +149,7 @@ pub(super) fn driver_page(f: &mut Map<String, Value>) -> bool {
             f.insert("__pageError".into(), json!(e.to_string()));
         }
         None => {
-            f.insert("__pageError".into(), json!(photocraft_engine::print_cmds::SPOOLER_BUSY));
+            f.insert("__pageError".into(), json!(lienzo_engine::print_cmds::SPOOLER_BUSY));
             f.remove("__driverPageInitialized");
             return false;
         }
@@ -227,7 +227,7 @@ fn print_paper_size(value: Option<&Value>) -> (f64, f64) {
     let default = (612.0, 792.0);
     match value {
         Some(Value::Array(a)) => (a.first().and_then(Value::as_f64).unwrap_or(default.0), a.get(1).and_then(Value::as_f64).unwrap_or(default.1)),
-        Some(Value::String(name)) => photocraft_engine::print_cmds::paper_size(name).unwrap_or(default),
+        Some(Value::String(name)) => lienzo_engine::print_cmds::paper_size(name).unwrap_or(default),
         _ => default,
     }
 }
@@ -243,13 +243,13 @@ fn print_paper_controls(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
         let name = s(f, "paper", "letter");
         // `file.print` remembers the name as typed, aliases included; the menu is keyed by the
         // canonical `PAPERS` names, so show the key an alias names, and keep unknown names.
-        match photocraft_engine::print_cmds::paper_size(&name) {
-            Some(size) => photocraft_engine::print_cmds::PAPERS.iter().find(|p| (p.1, p.2) == size).map_or(name, |p| p.0.to_string()),
+        match lienzo_engine::print_cmds::paper_size(&name) {
+            Some(size) => lienzo_engine::print_cmds::PAPERS.iter().find(|p| (p.1, p.2) == size).map_or(name, |p| p.0.to_string()),
             None => name,
         }
     };
     ui.horizontal(|ui| {
-        let mut papers: Vec<_> = photocraft_engine::print_cmds::PAPERS.iter().map(|p| (p.0.to_string(), print_paper_label(p.0))).collect();
+        let mut papers: Vec<_> = lienzo_engine::print_cmds::PAPERS.iter().map(|p| (p.0.to_string(), print_paper_label(p.0))).collect();
         papers.push(("custom".to_string(), tl!("Custom")));
         if crate::widgets::dropdown(ui, "print-paper", tl!("Paper"), &mut selected, &papers, 110.0) {
             if selected == "custom" {
@@ -284,7 +284,7 @@ fn print_paper_controls(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 
 /// Save as PDF › Browse…: where to write the PDF, into Print dialog `id` once the file dialog
 /// answers. Without it the only way to save a PDF was to type a full path (#5328).
-fn browse_pdf(app: &mut PhotocraftApp, id: u64, suggested: &str) {
+fn browse_pdf(app: &mut LienzoApp, id: u64, suggested: &str) {
     let r = app.pick_save(suggested, move |app, path| {
         let d = app.ui.dialog_mut(id).ok_or("the dialog was closed")?;
         d.fields.insert("output".into(), json!(path));
@@ -307,7 +307,7 @@ fn browse_pdf(app: &mut PhotocraftApp, id: u64, suggested: &str) {
 /// Accepted offsets are clamped to the engine's safety bound and Center is disabled.
 pub(super) fn drag_print_position(
     f: &mut Map<String, Value>,
-    start: photocraft_engine::print_cmds::PrintLayout,
+    start: lienzo_engine::print_cmds::PrintLayout,
     delta: egui::Vec2,
     points_per_print_point: f32,
 ) -> bool {
@@ -321,7 +321,7 @@ pub(super) fn drag_print_position(
     if !left.is_finite() || !top.is_finite() {
         return false;
     }
-    let limit = photocraft_engine::print_cmds::MAX_POSITION_INCHES;
+    let limit = lienzo_engine::print_cmds::MAX_POSITION_INCHES;
     f.insert("center".into(), json!(false));
     f.insert("left".into(), json!(left.clamp(-limit, limit)));
     f.insert("top".into(), json!(top.clamp(-limit, limit)));
@@ -331,7 +331,7 @@ pub(super) fn drag_print_position(
 /// Maps the engine's bottom-left print-point rectangle into top-left egui coordinates.
 /// `k` is egui points per print point; Emulsion Down mirrors placement across the page,
 /// matching the PDF page transform. Returns the full image bounds for the caller to clip.
-pub(super) fn print_preview_image(l: photocraft_engine::print_cmds::PrintLayout, page: egui::Rect, k: f32) -> egui::Rect {
+pub(super) fn print_preview_image(l: lienzo_engine::print_cmds::PrintLayout, page: egui::Rect, k: f32) -> egui::Rect {
     let (x, y, w, h) = l.rect;
     let x = if l.emulsion_down { l.paper.0 - x - w } else { x };
     egui::Rect::from_min_size(egui::pos2(page.left() + x as f32 * k, page.bottom() - (y + h) as f32 * k), egui::vec2(w as f32 * k, h as f32 * k))
@@ -340,7 +340,7 @@ pub(super) fn print_preview_image(l: photocraft_engine::print_cmds::PrintLayout,
 /// Draws the print controls and paper-clipped preview using the engine's shared layout.
 /// Dragging the visible image updates dialog offsets live from a fixed gesture origin;
 /// the position row stays present while centered so switching to manual cannot move the page.
-pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, id: u64) {
+pub(super) fn print_body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, id: u64) {
     if b(f, "__printerListingPending", false) {
         refresh_printers(app, f);
         if b(f, "__printerListingPending", false) {
@@ -377,7 +377,7 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
         ui.vertical(|ui| {
             let (area, _) = ui.allocate_exact_size(egui::vec2(330.0, 400.0), egui::Sense::hover());
             ui.painter().rect_filled(area, 0.0, t.canvas);
-            match photocraft_engine::print_cmds::layout(&doc, &p, "file.print") {
+            match lienzo_engine::print_cmds::layout(&doc, &p, "file.print") {
                 Ok(mut l) => {
                     let (pw, ph) = l.paper;
                     let k = ((area.width() - 20.0) / pw as f32).min((area.height() - 20.0) / ph as f32);
@@ -397,24 +397,24 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
                         ui.data_mut(|d| d.insert_temp(drag_id, (l, origin, k)));
                     }
                     if (response.dragged_by(egui::PointerButton::Primary) || response.drag_stopped_by(egui::PointerButton::Primary))
-                        && let Some((start, origin, scale)) = ui.data(|d| d.get_temp::<(photocraft_engine::print_cmds::PrintLayout, egui::Pos2, f32)>(drag_id))
+                        && let Some((start, origin, scale)) = ui.data(|d| d.get_temp::<(lienzo_engine::print_cmds::PrintLayout, egui::Pos2, f32)>(drag_id))
                         && let Some(pointer) = response.interact_pointer_pos()
                         && drag_print_position(f, start, pointer - origin, scale)
                     {
-                        if let Ok(updated) = photocraft_engine::print_cmds::layout(&doc, &params(f), "file.print") {
+                        if let Ok(updated) = lienzo_engine::print_cmds::layout(&doc, &params(f), "file.print") {
                             l = updated;
                             img = print_preview_image(l, page, k);
                         }
                         ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
                     }
                     if !ui.input(|i| i.pointer.primary_down()) {
-                        ui.data_mut(|d| d.remove::<(photocraft_engine::print_cmds::PrintLayout, egui::Pos2, f32)>(drag_id));
+                        ui.data_mut(|d| d.remove::<(lienzo_engine::print_cmds::PrintLayout, egui::Pos2, f32)>(drag_id));
                     }
                     let (x, y, w, h) = l.rect;
                     let key = egui::Id::unique(("print-thumb", doc.id.0, app.session.active().map_or(0, |d| d.revision)));
                     let tex: Option<Arc<egui::TextureHandle>> = ui.data(|d| d.get_temp(key));
                     let tex = tex.unwrap_or_else(|| {
-                        let th = photocraft_compose::thumbnail(&doc, 400);
+                        let th = lienzo_compose::thumbnail(&doc, 400);
                         let ci = egui::ColorImage::from_rgba_unmultiplied([th.width as usize, th.height as usize], &th.pixels);
                         let tx = Arc::new(ui.ctx().load_texture("print-thumb", ci, egui::TextureOptions::LINEAR));
                         ui.data_mut(|d| d.insert_temp(key, tx.clone()));
@@ -486,7 +486,7 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
                     if ui.button(tl!("Print Settings…")).clicked() {
                         let printer = s(f, "printer", "");
                         let current = f.get("printerSettings").and_then(Value::as_str).and_then(|h| craft_print::rgb::DevMode::from_hex(h).ok());
-                        match photocraft_engine::print_cmds::try_with_spooler(|| craft_print::rgb::settings_dialog(&printer, current.as_ref(), None)) {
+                        match lienzo_engine::print_cmds::try_with_spooler(|| craft_print::rgb::settings_dialog(&printer, current.as_ref(), None)) {
                             Some(Ok(Some(dm))) => {
                                 f.insert("printerSettings".into(), json!(dm.to_hex()));
                                 driver_page(f);
@@ -496,7 +496,7 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
                                 f.insert("__pageError".into(), json!(e.to_string()));
                             }
                             None => {
-                                f.insert("__pageError".into(), json!(photocraft_engine::print_cmds::SPOOLER_BUSY));
+                                f.insert("__pageError".into(), json!(lienzo_engine::print_cmds::SPOOLER_BUSY));
                             }
                         }
                     }
@@ -543,17 +543,17 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
                 "colorHandling",
                 &[
                     ("printerManages", tl!("Printer Manages Colors")),
-                    ("photocraftManages", tl!("PhotoCraft Manages Colors")),
+                    ("lienzoManages", tl!("Lienzo Manages Colors")),
                     ("noColorManagement", tl!("No Color Management")),
                 ],
                 240.0,
             );
-            if s(f, "colorHandling", "") == "photocraftManages" {
+            if s(f, "colorHandling", "") == "lienzoManages" {
                 // Photoshop's Printer Profile menu: the built-ins, then every installed printer
                 // (output class) profile by its description.
-                let installed: Vec<_> = photocraft_engine::installed_profiles::installed()
+                let installed: Vec<_> = lienzo_engine::installed_profiles::installed()
                     .into_iter()
-                    .filter(|p| p.is_destination() && p.class == photocraft_cms::ProfileClass::Output)
+                    .filter(|p| p.is_destination() && p.class == lienzo_cms::ProfileClass::Output)
                     .collect();
                 let mut profiles: Vec<(&str, &str)> = vec![
                     ("coated-cmyk", tl!("Coated CMYK")),
@@ -598,7 +598,7 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
             let units = s(f, "units", "cm");
             check(ui, f, "center", tl!("Center"), true);
             let centered = b(f, "center", true);
-            let centered_layout = centered.then(|| photocraft_engine::print_cmds::layout(&doc, &params(f), "file.print").ok()).flatten();
+            let centered_layout = centered.then(|| lienzo_engine::print_cmds::layout(&doc, &params(f), "file.print").ok()).flatten();
             // Revealing this row during a drag resizes the centered modal and moves the paper.
             // Keep it present, showing the resolved position while Center owns the offsets.
             ui.add_enabled_ui(!centered, |ui| {
@@ -607,9 +607,9 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
                     for (key, label) in [("top", tl!("Top")), ("left", tl!("Left"))] {
                         let mut pt =
                             centered_layout.map_or_else(|| n(f, key, 0.0) * 72.0, |l| if key == "top" { l.paper.1 - l.rect.1 - l.rect.3 } else { l.rect.0 });
-                        let limit = (photocraft_engine::print_cmds::MAX_POSITION_INCHES * 72.0 / unit_pt(&units)) as f32;
+                        let limit = (lienzo_engine::print_cmds::MAX_POSITION_INCHES * 72.0 / unit_pt(&units)) as f32;
                         if length_field_range(ui, label, &mut pt, &units, 2, -limit..=limit) {
-                            let limit = photocraft_engine::print_cmds::MAX_POSITION_INCHES;
+                            let limit = lienzo_engine::print_cmds::MAX_POSITION_INCHES;
                             f.insert(key.into(), json!((pt / 72.0).clamp(-limit, limit)));
                         }
                     }
@@ -617,7 +617,7 @@ pub(super) fn print_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map
             });
             check(ui, f, "scaleToFit", tl!("Scale to Fit Media"), false);
             // Scaled Print Size: Scale, Height and Width move together; Print Resolution follows.
-            if let Ok(l) = photocraft_engine::print_cmds::layout(&doc, &params(f), "file.print") {
+            if let Ok(l) = lienzo_engine::print_cmds::layout(&doc, &params(f), "file.print") {
                 let (_, _, w, h) = l.rect;
                 let (mut w2, mut h2) = (w, h);
                 let fit = b(f, "scaleToFit", false);
@@ -696,7 +696,7 @@ pub(super) fn print_params(f: &Map<String, Value>) -> Value {
 
 /// Submits the dialog parameters to `file.print`, propagating command errors unchanged.
 /// Updates the status for completed results only; pending jobs report completion later.
-pub(super) fn print_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub(super) fn print_confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let r = app.run("file.print", print_params(f))?;
     if r["pending"] != json!(true) {
         print_status(app, &r);
@@ -704,7 +704,7 @@ pub(super) fn print_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> 
     Ok(r)
 }
 
-pub(crate) fn print_status(app: &mut PhotocraftApp, r: &Value) {
+pub(crate) fn print_status(app: &mut LienzoApp, r: &Value) {
     app.ui.status = if let Some(printer) = r["spooler"]["printer"].as_str() {
         crate::i18n::fmt(tl!("Sent to {printer}"), &[("printer", printer)])
     } else if r["sent"] == json!(true) {

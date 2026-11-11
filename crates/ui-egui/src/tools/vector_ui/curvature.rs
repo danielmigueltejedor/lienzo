@@ -1,5 +1,5 @@
 use super::pen::{cancel_stale, pen_commit, resume_selected};
-use super::{PenPath, PhotocraftApp};
+use super::{LienzoApp, PenPath};
 
 /// Recompute a Curvature Pen path's handles from its anchors and corner points. The knots of a
 /// path it carries on (`PenPath::fixed`) keep theirs, but for the endpoint's outgoing handle
@@ -11,11 +11,11 @@ use super::{PenPath, PhotocraftApp};
 pub(super) fn curvature_refresh(pen: &mut PenPath, closed: bool) {
     let anchors: Vec<[f64; 2]> = pen.knots.iter().map(|k| k[0]).collect();
     let corners: Vec<bool> = (0..anchors.len()).map(|i| pen.unlinked.contains(&i)).collect();
-    pen.knots = photocraft_vector::edit::curvature_knots(&anchors, &corners, closed);
+    pen.knots = lienzo_vector::edit::curvature_knots(&anchors, &corners, closed);
     let last = pen.fixed.len().saturating_sub(1);
     let extended = pen.knots.len() > pen.fixed.len();
     if extended && !closed && !pen.fixed.is_empty() {
-        let run = photocraft_vector::edit::curvature_knots(anchors.get(last..).unwrap_or_default(), corners.get(last..).unwrap_or_default(), false);
+        let run = lienzo_vector::edit::curvature_knots(anchors.get(last..).unwrap_or_default(), corners.get(last..).unwrap_or_default(), false);
         for (k, r) in pen.knots.iter_mut().skip(last).zip(run) {
             *k = r;
         }
@@ -56,12 +56,12 @@ fn in_line(anchor: [f64; 2], kept: [f64; 2], bent: [f64; 2]) -> Option<[f64; 2]>
 }
 
 /// The anchor of the Curvature Pen path being drawn under (x, y), for the cursor.
-pub(crate) fn curvature_anchor_at(app: &PhotocraftApp, x: f64, y: f64) -> Option<usize> {
+pub(crate) fn curvature_anchor_at(app: &LienzoApp, x: f64, y: f64) -> Option<usize> {
     curvature_hit(app, x, y)
 }
 
 /// The Curvature Pen's anchor within a few screen pixels of (x, y).
-pub(super) fn curvature_hit(app: &PhotocraftApp, x: f64, y: f64) -> Option<usize> {
+pub(super) fn curvature_hit(app: &LienzoApp, x: f64, y: f64) -> Option<usize> {
     let tol = 6.0 / app.point_zoom().max(0.01) as f64;
     let pen = app.ui.pen.as_ref().filter(|p| p.curvature)?;
     pen.knots
@@ -75,7 +75,7 @@ pub(super) fn curvature_hit(app: &PhotocraftApp, x: f64, y: f64) -> Option<usize
 
 /// Curvature Pen press: clicking the first anchor closes the path, pressing another anchor
 /// grabs it to move, anywhere else adds a smooth anchor (still draggable until the release).
-pub fn curvature_down(app: &mut PhotocraftApp, x: f64, y: f64) {
+pub fn curvature_down(app: &mut LienzoApp, x: f64, y: f64) {
     if !cancel_stale(app) {
         return;
     }
@@ -117,7 +117,7 @@ pub fn curvature_down(app: &mut PhotocraftApp, x: f64, y: f64) {
     curvature_refresh(pen, false);
 }
 
-pub fn curvature_move(app: &mut PhotocraftApp, x: f64, y: f64) {
+pub fn curvature_move(app: &mut LienzoApp, x: f64, y: f64) {
     cancel_stale_pen(app);
     if let Some(pen) = app.ui.pen.as_mut().filter(|p| p.curvature)
         && let Some(k) = pen.moving.and_then(|i| pen.knots.get_mut(i))
@@ -127,7 +127,7 @@ pub fn curvature_move(app: &mut PhotocraftApp, x: f64, y: f64) {
     }
 }
 
-pub fn curvature_up(app: &mut PhotocraftApp) {
+pub fn curvature_up(app: &mut LienzoApp) {
     cancel_stale_pen(app);
     if let Some(pen) = app.ui.pen.as_mut() {
         pen.moving = None;
@@ -138,7 +138,7 @@ pub fn curvature_up(app: &mut PhotocraftApp) {
 /// (double-clicking empty canvas therefore places a corner point, as in Photoshop). With no path
 /// being drawn, an anchor of the active path toggles the same way and its subpath reflows
 /// (`path.convertPoint` with `curvature`), so a Pen-drawn corner rounds off.
-pub fn curvature_toggle(app: &mut PhotocraftApp, x: f64, y: f64) {
+pub fn curvature_toggle(app: &mut LienzoApp, x: f64, y: f64) {
     if app.ui.pen.as_ref().is_none_or(|p| p.knots.is_empty()) {
         crate::direct_select::curvature_toggle_active(app, [x, y]);
         return;
