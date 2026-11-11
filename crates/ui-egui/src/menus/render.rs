@@ -145,7 +145,7 @@ pub(super) fn submenu_enabled(children: &[&MenuItem]) -> bool {
 /// The command a menu click runs: ⌥ + Merge Down / Merge Layers / Merge Visible keep the
 /// originals, running Stamp Down / Stamp Visible instead (#217).
 pub fn alt_click(id: String, alt: bool) -> String {
-    match photocraft_engine::stamp_cmds::alt_variant(&id) {
+    match lienzo_engine::stamp_cmds::alt_variant(&id) {
         Some(stamp) if alt => stamp.to_string(),
         _ => id,
     }

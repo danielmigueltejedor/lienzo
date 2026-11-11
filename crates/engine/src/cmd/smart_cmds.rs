@@ -19,18 +19,18 @@
 //! Converting a layer embeds it as an in-memory `.pcraft` bundle of a nested document (exactly
 //! lossless, layered, any depth/model). PSD placed layers keep their source in the preserved
 //! global `lnk2` block (found by uuid), and keep Photoshop's rendering until something changes,
-//! so an unedited PSD still round-trips byte for byte. PSD export (`photocraft_io::smart_map`)
+//! so an unedited PSD still round-trips byte for byte. PSD export (`lienzo_io::smart_map`)
 //! writes every smart object back as one: its source embedded in `lnk2` (a `.pcraft` source as a
 //! PSB), its smart filters in `filterFX` and its filter mask in `FEid`.
 
 use std::sync::{Arc, Mutex};
 
-use photocraft_algo::resample::translate_surface;
-use photocraft_algo::transform::Homography;
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{DocId, Document, Layer, LayerContent, LayerId, LayerMask, Metadata, SmartContentsId, SmartFilter, SmartObject, SmartSource};
-use photocraft_geom::{Affine, Rect, Size};
-use photocraft_raster::Surface;
+use lienzo_algo::resample::translate_surface;
+use lienzo_algo::transform::Homography;
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{DocId, Document, Layer, LayerContent, LayerId, LayerMask, Metadata, SmartContentsId, SmartFilter, SmartObject, SmartSource};
+use lienzo_geom::{Affine, Rect, Size};
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 use stack_cache::{Stage, StageKey};
 
@@ -50,8 +50,8 @@ pub struct SmartLink {
 /// PSD placed-layer keys that describe the smart object's source; stale once we change it.
 const PLACED_KEYS: [&[u8; 4]; 3] = [b"SoLd", b"PlLd", b"SoLE"];
 
-/// Command id of a Photoshop smart filter PhotoCraft does not implement (kept verbatim from PSD).
-pub use photocraft_io::smart_map::UNSUPPORTED_FILTER;
+/// Command id of a Photoshop smart filter Lienzo does not implement (kept verbatim from PSD).
+pub use lienzo_io::smart_map::UNSUPPORTED_FILTER;
 
 fn other(msg: impl Into<String>) -> EngineError {
     EngineError::Other(msg.into())
@@ -65,13 +65,13 @@ fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
 
 /// Encodes a document as embedded smart-object contents: an in-memory `.pcraft` bundle.
 pub fn encode_source(doc: &Document) -> Result<Vec<u8>> {
-    photocraft_format::save_to_bytes(doc, &Default::default()).map_err(|e| other(format!("can't encode smart object contents: {e}")))
+    lienzo_format::save_to_bytes(doc, &Default::default()).map_err(|e| other(format!("can't encode smart object contents: {e}")))
 }
 
 /// Decodes smart-object contents (a `.pcraft` bundle, PSD/PSB, or any flat image format).
 pub fn decode_source(file_name: &str, bytes: &[u8]) -> Result<Document> {
-    if photocraft_io::svg::is_svg(bytes) {
-        return photocraft_io::svg::import_svg_bounded_images(file_name, bytes, 24_000_000)
+    if lienzo_io::svg::is_svg(bytes) {
+        return lienzo_io::svg::import_svg_bounded_images(file_name, bytes, 24_000_000)
             .map(|imported| imported.document)
             .map_err(|e| other(format!("can't read SVG smart object contents: {e}")));
     }

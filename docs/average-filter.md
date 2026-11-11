@@ -18,7 +18,7 @@ save a PNG copy. Inspect the file's RGBA values, including invisible colours.
 An opaque control produces `(128,0,128,255)` throughout. Thus transparency is
 neither a weight in this colour average nor a channel to replace with its mean.
 
-PhotoCraft previously alpha-weighted the RGB mean and replaced alpha with its
+Lienzo previously alpha-weighted the RGB mean and replaced alpha with its
 mean. On the first case that predicts translucent red throughout, rather than
 purple pixels with their original transparency. The fix uses selection coverage
 for the existing mean and leaves each pixel's alpha alone. Selection mixing and
@@ -28,13 +28,13 @@ establish Photoshop parity for feathered selection weighting or CMYK/Lab means.
 The engine tests construct their own pixels; no Photoshop binary, proprietary
 code, or reference image is included. They cover transparent and partially
 transparent pixels, selection boundaries, one history step, undo and redo at
-8/16/32-bit storage. The higher-depth tests establish PhotoCraft invariants;
+8/16/32-bit storage. The higher-depth tests establish Lienzo invariants;
 the external reference measurements above are RGB8 only.
 
 Run the focused regressions with:
 
 ```sh
-cargo test -p photocraft-engine --lib average_preserves
+cargo test -p lienzo-engine --lib average_preserves
 ```
 
 ## Smart filters
@@ -54,7 +54,7 @@ They check the dispatcher, command enablement, one history step, visibility,
 undo/redo, and re-rendering after clearing both the layer and stage caches:
 
 ```sh
-cargo test -p photocraft-engine --test it average_smart
+cargo test -p lienzo-engine --test it average_smart
 ```
 
 An additional, explicitly ignored test accepts a local Photoshop oracle. To
@@ -64,8 +64,8 @@ apply Average and save a PSD. Photoshop 26.6.1 on Windows produces purple
 `(128,0,128,255)` throughout. Then run, in PowerShell:
 
 ```powershell
-$env:PHOTOCRAFT_AVERAGE_PSD = 'C:\path\to\average-smart.psd'
-cargo test -p photocraft-engine --test it average_photoshop_psd_rerenders_from_source -- --ignored --nocapture
+$env:LIENZO_AVERAGE_PSD = 'C:\path\to\average-smart.psd'
+cargo test -p lienzo-engine --test it average_photoshop_psd_rerenders_from_source -- --ignored --nocapture
 ```
 
 This test discards the imported layer cache and the smart-filter stage cache,

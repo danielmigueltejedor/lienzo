@@ -1,7 +1,7 @@
 use super::display::{canvas_display, display_doc, display_image};
 use super::strokes::live_stroke;
 use super::textures::{effect_reach, ensure_texture};
-use super::{Document, PhotocraftApp, Rect, TextureOptions};
+use super::{Document, LienzoApp, Rect, TextureOptions};
 
 /// Longest side of the Navigator panel's image (about twice the panel's width, for HiDPI).
 pub const NAVIGATOR_SIDE: u32 = 512;
@@ -15,7 +15,7 @@ const NAVIGATOR_SETTLE_MS: f64 = 200.0;
 /// While a Move or Patch drag or a live paint stroke is under way, the navigator keeps its image
 /// of document `idx` and catches up on release: each step of the drag is a new preview, and a
 /// thumbnail composite of the whole document per step makes painting lag on large images.
-pub(super) fn navigator_waits_for_drag(app: &PhotocraftApp, idx: usize) -> bool {
+pub(super) fn navigator_waits_for_drag(app: &LienzoApp, idx: usize) -> bool {
     crate::move_ui::showing(app) || crate::patch_preview::showing(app) || crate::cam_preview::showing(app) || live_stroke(app, idx).is_some()
 }
 
@@ -25,7 +25,7 @@ pub(super) fn navigator_waits_for_drag(app: &PhotocraftApp, idx: usize) -> bool 
 /// The Navigator's preview from the GPU canvas (#4518): the main canvas's texture of the
 /// document, drawn at `rect` with its own mip chain, so an edit costs no CPU composite. `None`
 /// while the canvas isn't showing the plain document on the GPU (the CPU thumbnail then).
-pub fn navigator_gpu_view(app: &PhotocraftApp, idx: usize, rect: Rect, ctx: &egui::Context) -> Option<crate::gpu_canvas::ViewParams> {
+pub fn navigator_gpu_view(app: &LienzoApp, idx: usize, rect: Rect, ctx: &egui::Context) -> Option<crate::gpu_canvas::ViewParams> {
     app.gpu.as_ref()?;
     let st = app.session.documents().get(idx)?;
     let params = *app.navigator_gpu.get(&st.doc.id)?;
@@ -52,7 +52,7 @@ const NAVIGATOR_WAIT_FRAMES: u32 = 3;
 /// Whether the Navigator should wait a frame for the GPU canvas (#4518): the GPU canvas is on but
 /// hasn't drawn document `idx` yet (the Navigator can draw before the canvas in a frame). After
 /// [`NAVIGATOR_WAIT_FRAMES`] it stops waiting, so it never stays empty.
-pub fn navigator_waits_for_gpu(app: &PhotocraftApp, idx: usize, ctx: &egui::Context) -> bool {
+pub fn navigator_waits_for_gpu(app: &LienzoApp, idx: usize, ctx: &egui::Context) -> bool {
     if app.gpu.is_none() {
         return false;
     }
@@ -70,7 +70,7 @@ pub fn navigator_waits_for_gpu(app: &PhotocraftApp, idx: usize, ctx: &egui::Cont
     true
 }
 
-pub fn navigator_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize) -> Option<egui::TextureId> {
+pub fn navigator_texture(app: &mut LienzoApp, ctx: &egui::Context, idx: usize) -> Option<egui::TextureId> {
     if app.gpu.is_none() {
         return ensure_texture(app, ctx, idx, app.session.color.main_display).map(|(t, _)| t);
     }
@@ -105,7 +105,7 @@ pub fn navigator_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usiz
     // One edit (or command) since the cached image, with the area it changed: update just that part (nothing
     // for a rename, a selection or a new empty layer). A thumbnail composite of the whole
     // document on every edit cost a full-resolution CPU composite on the UI thread.
-    let size = photocraft_compose::thumbnail_size(&doc, NAVIGATOR_SIDE);
+    let size = lienzo_compose::thumbnail_size(&doc, NAVIGATOR_SIDE);
     if let Some((_, p, rev, t)) = &cached
         && *p == preview_key
         && (damage_from..revision).contains(rev)
@@ -114,7 +114,7 @@ pub fn navigator_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usiz
     {
         let mut t = t.clone();
         if !d.is_empty() {
-            let buf = photocraft_compose::render_reduced_damage(&doc, size.0, size.1, d.inflate(effect_reach(&doc.layers)));
+            let buf = lienzo_compose::render_reduced_damage(&doc, size.0, size.1, d.inflate(effect_reach(&doc.layers)));
             let r = buf.rect;
             if !r.is_empty() {
                 t.set_partial([r.x0 as usize, r.y0 as usize], display_image(display.as_deref(), &buf), TextureOptions::LINEAR);
@@ -124,7 +124,7 @@ pub fn navigator_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usiz
         app.navigator_textures.insert(id, (snapshot, preview_key, revision, t.clone()));
         return Some(t.id());
     }
-    let image = display_image(display.as_deref(), &photocraft_compose::thumbnail_buffer(&doc, NAVIGATOR_SIDE));
+    let image = display_image(display.as_deref(), &lienzo_compose::thumbnail_buffer(&doc, NAVIGATOR_SIDE));
     let tex = match cached {
         Some((_, _, _, mut t)) => {
             t.set(image, TextureOptions::LINEAR);

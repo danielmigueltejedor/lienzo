@@ -12,7 +12,7 @@ pub const RENDER_TILE: i32 = 256;
 fn scratch_reuse_preserves_pixels() {
     // 256 × 256 pixels of [f32; 4] (1 MiB): over `MIN_POOLED_BYTES`, so the pool keeps it.
     let rect = Rect::new(-2, -3, 254, 253);
-    for fmt in [photocraft_color::PixelFormat::RGBA8, photocraft_color::PixelFormat::RGBA16, photocraft_color::PixelFormat::RGBA32F] {
+    for fmt in [lienzo_color::PixelFormat::RGBA8, lienzo_color::PixelFormat::RGBA16, lienzo_color::PixelFormat::RGBA32F] {
         let s = Surface::with_default(fmt, &[0.2, 0.4, 0.6, 0.8]);
         let mut buf = surface_to_scratch(&s, rect);
         assert_eq!(buf, surface_to_buffer(&s, rect));
@@ -38,7 +38,7 @@ pub(crate) fn render_content(layer: &Layer, rect: Rect, cx: &Ctx) -> Option<Buff
         LayerContent::Fill(f) => match &layer.fill_cache {
             // Photoshop's own rendering, valid while the fill is unchanged.
             Some(c) if c.fill == *f => surface_to_scratch(&c.surface, rect),
-            _ if cx.mode == photocraft_color::ColorMode::Cmyk => {
+            _ if cx.mode == lienzo_color::ColorMode::Cmyk => {
                 let frame = fill_frame(layer, cx.canvas);
                 let native_rect = if matches!(f, Fill::Solid(_)) { Rect::new(0, 0, 1, 1) } else { rect };
                 match gradient_fill::render_cmyk_fill(f, native_rect, frame, cx.depth) {
@@ -82,8 +82,8 @@ pub fn layer_shape(doc: &Document, layer: &Layer, rect: Rect) -> Vec<f32> {
 /// The frame a gradient stroke `st` of `layer` is laid out in (`effects::FxMaps::stroke_frame`),
 /// from the layer's cached effect maps; `None` when `st` isn't a gradient stroke of the layer.
 /// For the GPU compositor.
-pub fn stroke_frame(doc: &Document, layer: &Layer, st: &photocraft_doc::StrokeFx) -> Option<Rect> {
-    if !matches!(st.paint, photocraft_doc::FxPaint::Gradient(_)) || !effects::has_effects(layer) {
+pub fn stroke_frame(doc: &Document, layer: &Layer, st: &lienzo_doc::StrokeFx) -> Option<Rect> {
+    if !matches!(st.paint, lienzo_doc::FxPaint::Gradient(_)) || !effects::has_effects(layer) {
         return None;
     }
     let patterns = pattern::PreparedPatterns::new(&doc.patterns, pattern::PREPARED_PATTERN_BYTES).in_mode(doc.pixel_format().mode);
@@ -186,8 +186,8 @@ pub(crate) fn empty_in(layer: &Layer, rect: Rect) -> bool {
 /// directly and a grayscale document's single channel covers all three; other modes composite in
 /// display RGB, where a restriction to their own channels has no exact equivalent, so it is
 /// ignored there.
-pub fn channel_weights(layer: &Layer, mode: photocraft_color::ColorMode) -> Option<[f32; 3]> {
-    use photocraft_color::ColorMode as M;
+pub fn channel_weights(layer: &Layer, mode: lienzo_color::ColorMode) -> Option<[f32; 3]> {
+    use lienzo_color::ColorMode as M;
     let x = layer.excluded_channels;
     if x == 0 {
         return None;

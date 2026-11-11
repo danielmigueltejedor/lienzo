@@ -12,7 +12,7 @@ pub(super) struct ProxyJob {
     pub(super) float: bool,
     pub(super) size: (usize, usize),
     pub(super) full_w: usize,
-    pub(super) display: std::sync::Arc<photocraft_engine::display_color::CanvasDisplay>,
+    pub(super) display: std::sync::Arc<lienzo_engine::display_color::CanvasDisplay>,
     pub(super) gpu: Option<crate::camera_raw_gpu::CameraRawGpu>,
     pub(super) source_key: u64,
 }
@@ -23,7 +23,7 @@ pub(super) struct ProxyFrame {
     pub(super) histogram: RgbHistogram,
     pub(super) histogram_ms: f64,
     pub(super) image: egui::ColorImage,
-    pub(super) display: std::sync::Arc<photocraft_engine::display_color::CanvasDisplay>,
+    pub(super) display: std::sync::Arc<lienzo_engine::display_color::CanvasDisplay>,
     pub(super) ms: f64,
     pub(super) develop_ms: f64,
     pub(super) backend: &'static str,
@@ -39,7 +39,7 @@ impl ProxyJob {
         // proxy as it is and uploads it once.
         let retoned = self.raw_curve.as_ref().map(|curve| {
             let mut px = self.proxy.to_vec();
-            photocraft_io::raw::retone(&mut px, pw, ph, curve, raw_stage(&p));
+            lienzo_io::raw::retone(&mut px, pw, ph, curve, raw_stage(&p));
             px
         });
         if retoned.is_some() {
@@ -52,7 +52,7 @@ impl ProxyJob {
             Some(out) => (out, "gpu"),
             None => {
                 let mut px = retoned.unwrap_or_else(|| self.proxy.to_vec());
-                photocraft_algo::camera_raw::develop(&mut px, pw, ph, &p, self.float);
+                lienzo_algo::camera_raw::develop(&mut px, pw, ph, &p, self.float);
                 (px, "cpu")
             }
         };

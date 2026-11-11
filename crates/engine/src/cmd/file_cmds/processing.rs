@@ -124,7 +124,7 @@ pub(super) fn load_files_into_stack(s: &mut Session, p: &Value) -> Result<Value>
     let first = &docs[0].1;
     let w = docs.iter().map(|(_, d)| d.size.width).max().unwrap_or(1);
     let h = docs.iter().map(|(_, d)| d.size.height).max().unwrap_or(1);
-    let mut stack = Document::new(stem(&paths[0]), photocraft_doc::Size::new(w, h), first.mode, first.depth);
+    let mut stack = Document::new(stem(&paths[0]), lienzo_doc::Size::new(w, h), first.mode, first.depth);
     stack.resolution_dpi = first.resolution_dpi;
     stack.icc_profile = first.icc_profile.clone();
     let fmt = stack.pixel_format();
@@ -180,7 +180,7 @@ fn bake(doc: &Document, l: &Layer, keep_effects: bool, apply_mask: bool) -> Surf
     let canvas = doc.bounds();
     let mut tmp = l.clone();
     tmp.opacity = 1.0;
-    tmp.blend = photocraft_color::BlendMode::Normal;
+    tmp.blend = lienzo_color::BlendMode::Normal;
     tmp.visible = true;
     tmp.clipped = false;
     if !keep_effects {
@@ -194,7 +194,7 @@ fn bake(doc: &Document, l: &Layer, keep_effects: bool, apply_mask: bool) -> Surf
     // Render over the union of the canvas and the content so off-canvas pixels survive.
     let area = l.surface().map_or(canvas, |s| s.content_bounds().union(&canvas));
     let area = if keep_effects { area.inflate(256) } else { area };
-    buffer_surface(&photocraft_compose::render_layer_in(doc, &tmp, area), doc.pixel_format())
+    buffer_surface(&lienzo_compose::render_layer_in(doc, &tmp, area), doc.pixel_format())
 }
 
 fn walk_ids(doc: &Document) -> Vec<LayerId> {

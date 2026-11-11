@@ -8,14 +8,14 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::eraser_ui::TOLERANCE_RANGE_ALERT;
 use crate::state::{DialogKind, Tool};
 
-fn app_harness() -> Harness<'static, PhotocraftApp> {
+fn app_harness() -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1600.0, 900.0)).with_step_dt(1.0 / 60.0).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.ui.tool = Tool::BackgroundEraser;
         app
@@ -24,18 +24,18 @@ fn app_harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn bar(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar(tool: Tool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
 /// Types `text` into the Tolerance field, then Tabs out of it.
-fn type_tolerance(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
+fn type_tolerance(h: &mut Harness<'static, LienzoApp>, text: &str) {
     h.query_all_by_role(egui::accesskit::Role::SpinButton)
         .find(|n| n.accesskit_node().label().as_deref() == Some("Tolerance:"))
         .expect("the Tolerance field")
@@ -48,11 +48,11 @@ fn type_tolerance(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
     h.run_steps(3);
 }
 
-fn alert(h: &Harness<'static, PhotocraftApp>) -> Option<String> {
+fn alert(h: &Harness<'static, LienzoApp>) -> Option<String> {
     h.state().ui.dialogs.iter().find(|d| d.kind == DialogKind::Error).and_then(|d| d.fields.get("message")).and_then(|m| m.as_str()).map(str::to_owned)
 }
 
-fn tolerance(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn tolerance(h: &Harness<'static, LienzoApp>) -> f32 {
     h.state().ui.tool_options.bg_tolerance
 }
 
@@ -172,7 +172,7 @@ fn a_restored_tolerance_out_of_range_shows_as_the_field_stores_it() {
 #[test]
 fn a_restored_fraction_reaches_the_stroke_as_a_whole_number() {
     // The options bar need not have drawn: the stroke's params round it themselves.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     for (saved, want) in [(23.6, 24.0), (0.0, 1.0), (f32::NAN, 50.0)] {
         app.ui.tool_options.bg_tolerance = saved;
         let p = crate::eraser_ui::background_eraser_params(&app, &[[1.0, 1.0, 1.0]]);
@@ -214,7 +214,7 @@ fn a_label_scrub_past_100_does_not_alert() {
 #[test]
 fn an_edit_cut_off_by_hiding_the_bar_leaves_no_stale_alert() {
     let mut h = app_harness();
-    let field = |h: &Harness<'static, PhotocraftApp>| {
+    let field = |h: &Harness<'static, LienzoApp>| {
         h.query_all_by_role(egui::accesskit::Role::SpinButton)
             .find(|n| n.accesskit_node().label().as_deref() == Some("Tolerance:"))
             .expect("the Tolerance field")
@@ -241,7 +241,7 @@ fn an_edit_cut_off_by_hiding_the_bar_leaves_no_stale_alert() {
 }
 
 /// The accessible descriptions (tooltips) of the widgets of `role` named `label`.
-fn descriptions(h: &Harness<'static, PhotocraftApp>, role: Option<egui::accesskit::Role>, label: &str) -> Vec<String> {
+fn descriptions(h: &Harness<'static, LienzoApp>, role: Option<egui::accesskit::Role>, label: &str) -> Vec<String> {
     let of = |n: egui_kittest::Node<'_>| n.accesskit_node().description().map(|d| d.to_string());
     match role {
         Some(role) => h.query_all_by_role(role).filter(|n| n.accesskit_node().label().as_deref() == Some(label)).filter_map(of).collect(),
@@ -279,7 +279,7 @@ fn the_other_tools_keep_their_brush_chip_tooltip() {
 /// The alpha at `(x, y)` after a Background Eraser stroke over white and a square one level off
 /// white, with `tolerance`.
 fn erased_alpha(tolerance: serde_json::Value, (x, y): (i32, i32)) -> f32 {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 40})).unwrap();
     s.execute("select.rect", json!({"x": 30, "y": 0, "width": 34, "height": 40, "antiAlias": false})).unwrap();
     s.execute("edit.fill", json!({"color": "#feffff"})).unwrap();
@@ -305,6 +305,6 @@ fn the_command_clamps_tolerance_to_1_through_100() {
 
 #[test]
 fn the_params_doc_says_1_through_100() {
-    let spec = photocraft_engine::commands::find("paint.backgroundEraser").expect("registered");
+    let spec = lienzo_engine::commands::find("paint.backgroundEraser").expect("registered");
     assert!(spec.params.contains(r#""tolerance":1..100=50"#), "{}", spec.params);
 }

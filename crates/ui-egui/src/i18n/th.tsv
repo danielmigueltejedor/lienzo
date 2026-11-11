@@ -4073,7 +4073,7 @@ curves	Smooth	เรียบเนียน
 	Multiple Flames Path Directions	ทิศทางเส้นทางเปลวไฟหลายจุด
 	Multiple Flames Various Length	เปลวไฟหลายลูก ความยาวหลากหลาย
 	My Brushes	แปรงของฉัน
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Wayland ยังไม่รองรับการลากและวางไฟล์เนทิฟ ใช้ไฟล์ › เปิดหรือเรียกใช้ Lienzo ภายใต้ XWayland ด้วย `WAYLAND_DISPLAY= photocraft`
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Wayland ยังไม่รองรับการลากและวางไฟล์เนทิฟ ใช้ไฟล์ › เปิดหรือเรียกใช้ Lienzo ภายใต้ XWayland ด้วย `WAYLAND_DISPLAY= lienzo`
 	Nearest	ใกล้ที่สุด
 	Neon Glow	นีออนโกลว์
 	Neutralize	ทำให้เป็นกลาง

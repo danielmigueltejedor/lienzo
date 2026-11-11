@@ -1,4 +1,4 @@
-use super::{CMD, CafWorkspace, Color32, LayerId, MAX_CAF_POINTS, MAX_OUTLINE_EDGES, PhotocraftApp, Rect, TextureHandle, Value, json, stroke_json};
+use super::{CMD, CafWorkspace, Color32, LayerId, LienzoApp, MAX_CAF_POINTS, MAX_OUTLINE_EDGES, Rect, TextureHandle, Value, json, stroke_json};
 
 /// What the plan (without the brush strokes) says: the window, the fill area and the sampling
 /// option's area, over `rect`.
@@ -27,7 +27,7 @@ pub(super) struct Preview {
     /// Bumped whenever the state changes; a result for an older generation is dropped.
     pub(super) want: u64,
     #[cfg(not(target_arch = "wasm32"))]
-    running: Option<(u64, std::sync::mpsc::Receiver<PreviewResult>, photocraft_engine::jobs::JobCtx)>,
+    running: Option<(u64, std::sync::mpsc::Receiver<PreviewResult>, lienzo_engine::jobs::JobCtx)>,
     pub(super) shown: u64,
     /// A finished preview waiting to be uploaded (on the UI thread, which has the context).
     pub(super) pending_image: Option<(Rect, egui::ColorImage)>,
@@ -87,14 +87,14 @@ pub(super) fn points_limit() -> String {
 
 /// The plan without strokes: the window, fill area and the option's area. Custom starts empty
 /// (the window and fill area are those of Rectangular).
-pub(super) fn compute_base(app: &PhotocraftApp, w: &CafWorkspace) -> Result<Base, String> {
+pub(super) fn compute_base(app: &LienzoApp, w: &CafWorkspace) -> Result<Base, String> {
     let st = app.session.active().ok_or("no document")?;
     let mut p = plan_params(w, false);
     let custom = w.opts.sampling == "custom";
     if custom {
         p["sampling"] = json!("rectangular");
     }
-    let plan = photocraft_engine::edit_menu_cmds::content_aware_plan(&st.doc, w.layer, &p, CMD).map_err(|e| e.to_string())?;
+    let plan = lienzo_engine::edit_menu_cmds::content_aware_plan(&st.doc, w.layer, &p, CMD).map_err(|e| e.to_string())?;
     let base = if custom { vec![false; plan.base.len()] } else { plan.base };
     Ok(Base { window: plan.window, rect: plan.rect, hole: plan.hole, base })
 }
@@ -132,7 +132,7 @@ pub(super) fn outline(b: &Base) -> Option<Vec<[[f32; 2]; 2]>> {
 }
 
 /// Recompute the base after a change of the fill area, the sampling option or the document.
-pub(super) fn rebase(app: &mut PhotocraftApp) {
+pub(super) fn rebase(app: &mut LienzoApp) {
     let Some(w) = app.distort.caf.as_ref() else { return };
     let r = compute_base(app, w);
     let Some(w) = app.distort.caf.as_mut() else { return };
@@ -160,7 +160,7 @@ pub(super) fn cancel_preview(w: CafWorkspace) {
 pub(super) fn cancel_preview(_: CafWorkspace) {}
 
 /// The document changed under the workspace (an Apply): new textures, a new base.
-pub(super) fn refresh(app: &mut PhotocraftApp) {
+pub(super) fn refresh(app: &mut LienzoApp) {
     let rev = app.session.active().map(|s| s.revision);
     if let Some(w) = app.distort.caf.as_mut() {
         w.image_tex = None;
@@ -170,13 +170,13 @@ pub(super) fn refresh(app: &mut PhotocraftApp) {
 }
 
 /// Computes the preview now, on this thread (tests and the control channel).
-pub(super) fn wait_preview(app: &mut PhotocraftApp) -> Result<(), String> {
+pub(super) fn wait_preview(app: &mut LienzoApp) -> Result<(), String> {
     let (doc, layer, p, want, limit) = {
         let w = app.distort.caf.as_ref().ok_or("Content-Aware Fill is not open")?;
         let st = app.session.active().ok_or("no document")?;
         (st.doc.clone(), w.layer, plan_params(w, true), w.preview.want, w.texture_limit)
     };
-    let r = compute_preview(&doc, layer, &p, &photocraft_raster::Interrupt::NONE, limit);
+    let r = compute_preview(&doc, layer, &p, &lienzo_raster::Interrupt::NONE, limit);
     let w = app.distort.caf.as_mut().ok_or("Content-Aware Fill is not open")?;
     let err = r.as_ref().err().cloned();
     w.preview.finish(want, r);
@@ -187,14 +187,14 @@ pub(super) fn wait_preview(app: &mut PhotocraftApp) -> Result<(), String> {
 /// `max_side`: past the device's limit it is box-averaged to fit (the rectangle it is drawn over
 /// stays the plan's).
 fn compute_preview(
-    doc: &photocraft_doc::Document,
+    doc: &lienzo_doc::Document,
     layer: LayerId,
     p: &Value,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &lienzo_raster::Interrupt,
     max_side: usize,
 ) -> Result<(Rect, egui::ColorImage), String> {
-    let plan = photocraft_engine::edit_menu_cmds::content_aware_plan_with(doc, layer, p, CMD, ctl).map_err(|e| match e {
-        photocraft_engine::EngineError::Cancelled => "cancelled".to_string(),
+    let plan = lienzo_engine::edit_menu_cmds::content_aware_plan_with(doc, layer, p, CMD, ctl).map_err(|e| match e {
+        lienzo_engine::EngineError::Cancelled => "cancelled".to_string(),
         e => e.to_string(),
     })?;
     // Patches come only from the sampling area outside the fill area. With none (the Sampling
@@ -205,17 +205,16 @@ fn compute_preview(
     }
     let (w, h) = (plan.rect.width() as usize, plan.rect.height() as usize);
     let n = plan.fmt.channels();
-    let filled =
-        photocraft_algo::content_aware::fill_with(w, h, n, &plan.img, &plan.hole, &plan.source, &plan.opts, ctl).map_err(|_| "cancelled".to_string())?;
+    let filled = lienzo_algo::content_aware::fill_with(w, h, n, &plan.img, &plan.hole, &plan.source, &plan.opts, ctl).map_err(|_| "cancelled".to_string())?;
     let own = plan.layer_pixels();
     // Pixel `i`: the fill over the fill area (a partly selected pixel by its coverage), the
     // layer's own pixels elsewhere.
     let pixel = |i: usize| -> [f32; 4] {
         let src = if plan.hole[i] { &filled[i * n..(i + 1) * n] } else { &own[i * n..(i + 1) * n] };
-        let mut c = photocraft_raster::to_rgba(&plan.fmt, src);
+        let mut c = lienzo_raster::to_rgba(&plan.fmt, src);
         if plan.hole[i] {
             let k = plan.cover[i];
-            let under = photocraft_raster::to_rgba(&plan.fmt, &own[i * n..(i + 1) * n]);
+            let under = lienzo_raster::to_rgba(&plan.fmt, &own[i * n..(i + 1) * n]);
             for j in 0..4 {
                 c[j] = under[j] + (c[j] - under[j]) * k;
             }
@@ -255,7 +254,7 @@ fn compute_preview(
 /// Starts a background preview when the shown one is out of date (and the pointer is up), and
 /// collects a finished one.
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context, dragging: bool) {
+pub(super) fn drive_preview(app: &mut LienzoApp, ctx: &egui::Context, dragging: bool) {
     let doc = app.session.active().map(|s| s.doc.clone());
     let Some(w) = app.distort.caf.as_mut() else { return };
     let pv = &mut w.preview;
@@ -290,7 +289,7 @@ pub(super) fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context, draggi
     let Some(doc) = doc else { return };
     let (layer, p, generation, limit) = (w.layer, plan_params(w, true), w.preview.want, w.texture_limit);
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
-    let job = photocraft_engine::jobs::JobCtx::new();
+    let job = lienzo_engine::jobs::JobCtx::new();
     let work = job.clone();
     let repaint = ctx.clone();
     let spawned = std::thread::Builder::new().name("caf-preview".into()).spawn(move || {
@@ -307,7 +306,7 @@ pub(super) fn drive_preview(app: &mut PhotocraftApp, ctx: &egui::Context, draggi
 
 /// The web build has no threads: the preview is computed when the pointer comes up.
 #[cfg(target_arch = "wasm32")]
-pub(super) fn drive_preview(app: &mut PhotocraftApp, _ctx: &egui::Context, dragging: bool) {
+pub(super) fn drive_preview(app: &mut LienzoApp, _ctx: &egui::Context, dragging: bool) {
     let stale = app.distort.caf.as_ref().is_some_and(|w| w.preview.shown != w.preview.want);
     if stale && !dragging {
         let _ = wait_preview(app);

@@ -8,12 +8,12 @@
 
 use std::collections::HashSet;
 
-use photocraft_color::BlendMode;
-use photocraft_doc::{Document, Fill, LabelColor, Layer, LayerContent, LayerId, SmartSource};
+use lienzo_color::BlendMode;
+use lienzo_doc::{Document, Fill, LabelColor, Layer, LayerContent, LayerId, SmartSource};
 use serde::{Deserialize, Serialize};
 
 use crate::state::UiState;
-use crate::{PhotocraftApp, icons, widgets};
+use crate::{LienzoApp, icons, widgets};
 
 /// What the Layers panel filters by.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,7 +45,7 @@ pub struct Filter {
     /// The Smart Object toggles that are on, from [`SMART`].
     pub smart: Vec<String>,
     /// The linked files the Smart Object filter's Missing toggle lists
-    /// ([`photocraft_engine::Session::missing_links`]).
+    /// ([`lienzo_engine::Session::missing_links`]).
     pub missing: HashSet<String>,
     /// The rows the Artboard filter ([`board_rows`]) or the Group filter ([`group::listed`])
     /// lists; empty lists every row under Artboard and none under Group.
@@ -77,7 +77,7 @@ impl Filter {
     /// artboards in `doc` that hold `selection` while it filters by Artboard, and `empty` set
     /// while it filters by Empty or Not Empty. The Layers panel passes the document and the
     /// selection it already read for the frame.
-    pub fn with_selection(app: &PhotocraftApp, doc: &Document, selection: &[LayerId]) -> Self {
+    pub fn with_selection(app: &LienzoApp, doc: &Document, selection: &[LayerId]) -> Self {
         let mut f = Self::of(&app.ui);
         if f.by == FilterBy::SmartObject {
             f.missing = app.session.missing_links();
@@ -96,7 +96,7 @@ impl Filter {
 
     /// Returns [`Filter::with_selection`] for the active document and its selected layers, or
     /// [`Filter::of`] with no artboard rows when no document is open.
-    pub fn of_app(app: &PhotocraftApp) -> Self {
+    pub fn of_app(app: &LienzoApp) -> Self {
         match app.session.active() {
             Some(d) => Self::with_selection(app, &d.doc, &d.selected_layers()),
             None => Self::of(&app.ui),
@@ -226,7 +226,7 @@ pub fn patched(current: &UiState, v: &serde_json::Value) -> Result<Filter, Strin
     }
     if let Some(mode) = o.get("mode") {
         let name = mode.as_str().ok_or("layerFilter.mode must be a blend mode name")?;
-        f.mode = photocraft_engine::commands::blend_from_str(name).filter(|m| BlendMode::LAYER_MODES.contains(m)).ok_or_else(|| {
+        f.mode = lienzo_engine::commands::blend_from_str(name).filter(|m| BlendMode::LAYER_MODES.contains(m)).ok_or_else(|| {
             let modes: Vec<&str> = BlendMode::LAYER_MODES.iter().map(|m| m.label()).collect();
             format!("layerFilter.mode: `{name}` is not a layer blend mode the filter lists (modes: {})", modes.join(", "))
         })?;
@@ -288,7 +288,7 @@ fn kind(l: &Layer) -> &'static str {
 }
 
 /// Draw the filter row: the type dropdown, then that type's controls.
-pub fn bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
         let by = [

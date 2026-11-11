@@ -3,8 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
-use photocraft_doc::{LayerContent, LayerId, SmartSource};
-use photocraft_geom::Rect;
+use lienzo_doc::{LayerContent, LayerId, SmartSource};
+use lienzo_geom::Rect;
 use serde_json::json;
 
 use crate::Session;
@@ -14,7 +14,7 @@ const REMOTE: &str = r"\\192.0.2.1\share\x.png";
 
 /// An empty folder of its own (tests run in parallel).
 fn dir(name: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("photocraft-doc-path-{name}-{}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-doc-path-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d
@@ -28,8 +28,8 @@ fn png(path: &Path, rgb: impl Fn(u32) -> [u8; 3]) {
             px.extend(rgb(x));
         }
     }
-    let image = photocraft_codecs::Image::from_u8(32, 32, photocraft_codecs::ChannelLayout::Rgb, px).unwrap();
-    std::fs::write(path, photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(32, 32, lienzo_codecs::ChannelLayout::Rgb, px).unwrap();
+    std::fs::write(path, lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
 }
 
 /// On Unix `//` followed by an absolute path names that same local file, while the resolver sees a
@@ -62,7 +62,7 @@ fn relink(s: &mut Session, id: LayerId, path: &str) {
 }
 
 fn centre(s: &Session) -> [f32; 3] {
-    let p = photocraft_compose::render(&s.active().unwrap().doc, Rect::new(16, 16, 17, 17)).px[0];
+    let p = lienzo_compose::render(&s.active().unwrap().doc, Rect::new(16, 16, 17, 17)).px[0];
     [p[0], p[1], p[2]]
 }
 
@@ -157,7 +157,7 @@ fn replayed(s: &mut Session, id: LayerId, params: serde_json::Value) -> Vec<[f32
     })
     .unwrap();
     let doc = &s.active().unwrap().doc;
-    photocraft_compose::render(doc, doc.bounds()).into_px()
+    lienzo_compose::render(doc, doc.bounds()).into_px()
 }
 
 #[test]
@@ -202,16 +202,16 @@ fn smart_displace_keeps_a_relative_map_path() {
     png(&d.join("map.png"), |_| [255, 255, 255]);
     let (mut s, id) = document(&d, &d.join("ramp.png"));
     let path = d.join("map.png").to_string_lossy().into_owned();
-    let unfiltered = photocraft_compose::render(&s.active().unwrap().doc, s.active().unwrap().doc.bounds()).into_px();
+    let unfiltered = lienzo_compose::render(&s.active().unwrap().doc, s.active().unwrap().doc.bounds()).into_px();
     s.execute("filter.distort.displace", json!({"layer": id.0, "mapPath": path, "horizontal": 50, "vertical": 0})).unwrap();
     let state = |s: &Session| {
         let doc = &s.active().unwrap().doc;
         let Some(LayerContent::Smart(sm)) = doc.layer(id).map(|l| &l.content) else { panic!("a smart object") };
-        (sm.smart_filters[0].params.clone(), photocraft_compose::render(doc, doc.bounds()).into_px())
+        (sm.smart_filters[0].params.clone(), lienzo_compose::render(doc, doc.bounds()).into_px())
     };
     let (params, displaced) = state(&s);
     assert_eq!(params["mapPath"], json!(path));
-    assert!(photocraft_io::smart_map::displace_embedded_map(&params).is_none(), "a path, not an embedded map");
+    assert!(lienzo_io::smart_map::displace_embedded_map(&params).is_none(), "a path, not an embedded map");
     assert_ne!(displaced, unfiltered, "the map moves the pixels");
     s.execute("layer.smartFilter.setParams", json!({"layer": id.0, "index": 0, "params": {"mapPath": "map.png"}})).unwrap();
     let (params, relative) = state(&s);
@@ -244,7 +244,7 @@ fn data_sets_and_footage_read_only_followed_files() {
         let id = s.active().unwrap().active_layer.unwrap();
         s.edit("Footage", |doc, _| {
             if let Some(v) = doc.layer_mut(id).and_then(|l| l.video.as_mut()) {
-                v.source = photocraft_doc::VideoSource::File { path: path.into() };
+                v.source = lienzo_doc::VideoSource::File { path: path.into() };
             }
             Ok(())
         })
@@ -256,13 +256,13 @@ fn data_sets_and_footage_read_only_followed_files() {
     footage(&mut s, "blue.png").unwrap();
 }
 
-/// A link to a file PhotoCraft can't place (a text or settings file) is never embedded: a saved
+/// A link to a file Lienzo can't place (a text or settings file) is never embedded: a saved
 /// PSD would otherwise carry bytes no reader can show as the layer's contents. The layer is
 /// written as pixels; Convert to Embedded and Relink refuse.
 #[test]
 fn links_to_files_that_are_not_images_are_never_embedded() {
     const TEXT: &[u8] = b"plain text, not an image
-photocraft-text-marker
+lienzo-text-marker
 ";
     let d = dir("not-image");
     std::fs::create_dir_all(d.join("notes")).unwrap();
@@ -293,7 +293,7 @@ photocraft-text-marker
 #[test]
 fn a_linked_and_an_embedded_copy_of_the_same_bytes_keep_their_own_rule() {
     const TEXT: &[u8] = b"plain text, not an image
-photocraft-shared-marker
+lienzo-shared-marker
 ";
     let d = dir("shared-contents");
     std::fs::write(d.join("readme"), TEXT).unwrap();
@@ -320,12 +320,12 @@ photocraft-shared-marker
     }
 }
 
-/// Package copies only linked files PhotoCraft can open: a link to a text file is listed as
+/// Package copies only linked files Lienzo can open: a link to a text file is listed as
 /// missing and no copy of it is written into the package's Links folder.
 #[test]
 fn package_copies_only_links_to_images() {
     const TEXT: &[u8] = b"plain text, not an image
-photocraft-package-marker
+lienzo-package-marker
 ";
     let d = dir("package-not-image");
     std::fs::write(d.join("readme"), TEXT).unwrap();

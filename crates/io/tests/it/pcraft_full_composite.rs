@@ -3,12 +3,12 @@
 //! 1024 px preview, so other apps can read the whole image without decoding tiles. Off (the
 //! default), the save writes the bundle it wrote before the option existed.
 
-use photocraft_color::{BlendMode, ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent};
-use photocraft_format::zip::ZipReader;
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, export};
-use photocraft_raster::Surface;
+use lienzo_color::{BlendMode, ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent};
+use lienzo_format::zip::ZipReader;
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, export};
+use lienzo_raster::Surface;
 
 /// A background, a soft Multiply layer at 60 % and a layer that leaves part of the canvas clear.
 fn doc(w: u32, h: u32, depth: SampleType) -> Document {
@@ -33,14 +33,14 @@ fn on() -> ExportOptions {
 
 /// The bundle's member named by the manifest's `full_composite`, decoded: size and RGBA8 pixels.
 fn full_composite(bytes: &[u8]) -> ((u32, u32), Vec<u8>) {
-    let png = photocraft_format::read_full_composite(bytes).expect("manifest").expect("the manifest names the full-size composite");
+    let png = lienzo_format::read_full_composite(bytes).expect("manifest").expect("the manifest names the full-size composite");
     assert_eq!(png, ZipReader::new(bytes).expect("zip").read_by_name("composite/full.png", usize::MAX).expect("entry"));
-    let image = photocraft_codecs::decode(&png).expect("png");
+    let image = lienzo_codecs::decode(&png).expect("png");
     (image.dimensions(), image.to_rgba8())
 }
 
 fn flattened(doc: &Document) -> Vec<u8> {
-    photocraft_compose::render(doc, doc.bounds()).to_rgba8().pixels
+    lienzo_compose::render(doc, doc.bounds()).to_rgba8().pixels
 }
 
 #[test]
@@ -48,17 +48,17 @@ fn a_default_save_writes_the_bundle_without_the_full_composite() {
     for depth in SampleType::ALL {
         let d = doc(1500, 700, depth);
         let bytes = export(&d, "a.pcraft", &ExportOptions::default()).expect("export").bytes;
-        assert_eq!(photocraft_format::read_full_composite(&bytes).expect("manifest"), None, "{depth:?}");
+        assert_eq!(lienzo_format::read_full_composite(&bytes).expect("manifest"), None, "{depth:?}");
         assert!(ZipReader::new(&bytes).expect("zip").find("composite/full.png").is_none(), "{depth:?}");
         // The bytes a save wrote before the option: the bundle with its two previews alone.
         let mut named = d.clone();
         named.name = "a.pcraft".into();
-        let previews = photocraft_format::SaveOptions {
-            thumbnail: Some(photocraft_compose::thumbnail(&named, 256)),
-            composite: Some(photocraft_compose::thumbnail(&named, 1024)),
+        let previews = lienzo_format::SaveOptions {
+            thumbnail: Some(lienzo_compose::thumbnail(&named, 256)),
+            composite: Some(lienzo_compose::thumbnail(&named, 1024)),
             ..Default::default()
         };
-        assert!(bytes == photocraft_format::save_to_bytes(&named, &previews).expect("save"), "{depth:?}: the default save changed");
+        assert!(bytes == lienzo_format::save_to_bytes(&named, &previews).expect("save"), "{depth:?}: the default save changed");
     }
 }
 
@@ -73,7 +73,7 @@ fn a_pcraft_save_writes_the_flattened_document_at_its_canvas_size() {
         assert!(pixels.as_chunks::<4>().0.iter().any(|p| p[3] == 0), "{depth:?}: transparent pixels stay transparent");
         let mut saved = d.clone();
         saved.name = "a.pcraft".into();
-        assert_eq!(photocraft_format::load_from_bytes(&bytes).expect("load"), saved, "{depth:?}");
+        assert_eq!(lienzo_format::load_from_bytes(&bytes).expect("load"), saved, "{depth:?}");
     }
 }
 
@@ -85,16 +85,16 @@ fn a_document_larger_than_the_preview_keeps_its_full_size() {
     assert_eq!(size, (1500, 700));
     assert!(pixels == flattened(&d), "the full-size composite differs from the flattened document");
     let preview = ZipReader::new(&bytes).expect("zip").read_by_name("composite/preview.png", usize::MAX).expect("preview");
-    assert_eq!(photocraft_codecs::decode(&preview).expect("png").dimensions(), (1024, 478));
+    assert_eq!(lienzo_codecs::decode(&preview).expect("png").dimensions(), (1024, 478));
 }
 
 #[test]
 fn the_full_composite_carries_the_profile_of_its_pixels() {
-    use photocraft_cms::{Builtin, ColorSpace, Profile};
+    use lienzo_cms::{Builtin, ColorSpace, Profile};
     let full_icc = |d: &Document| {
         let bytes = export(d, "a.pcraft", &on()).expect("export").bytes;
         let png = ZipReader::new(&bytes).expect("zip").read_by_name("composite/full.png", usize::MAX).expect("entry");
-        photocraft_codecs::decode(&png).expect("png").icc.expect("an embedded profile")
+        lienzo_codecs::decode(&png).expect("png").icc.expect("an embedded profile")
     };
     let srgb = Builtin::Srgb.profile().to_bytes().to_vec();
     let p3 = Builtin::DisplayP3.profile().to_bytes().to_vec();
@@ -122,9 +122,9 @@ fn a_canvas_past_the_render_limit_is_saved_without_it() {
     // 40000 x 30000 px is over the compositor's 2^30-pixel limit; the layers stay small.
     let mut d = doc(64, 64, SampleType::U8);
     d.size = Size::new(40_000, 30_000);
-    assert!(photocraft_io::pcraft_full_composite(&d).is_none());
+    assert!(lienzo_io::pcraft_full_composite(&d).is_none());
     let bytes = export(&d, "a.pcraft", &on()).expect("export").bytes;
-    assert_eq!(photocraft_format::read_full_composite(&bytes).expect("manifest"), None);
+    assert_eq!(lienzo_format::read_full_composite(&bytes).expect("manifest"), None);
     assert!(ZipReader::new(&bytes).expect("zip").find("composite/full.png").is_none());
 }
 
@@ -133,8 +133,8 @@ fn a_sparse_canvas_past_the_composite_memory_budget_is_saved_without_it() {
     // The layer data stays tiny; an 8193 x 8192 RGBA8 composite exceeds 256 MiB.
     let mut d = doc(64, 64, SampleType::U8);
     d.size = Size::new(8193, 8192);
-    assert!(photocraft_io::pcraft_full_composite(&d).is_none());
+    assert!(lienzo_io::pcraft_full_composite(&d).is_none());
     let bytes = export(&d, "a.pcraft", &on()).expect("export").bytes;
-    assert_eq!(photocraft_format::read_full_composite(&bytes).expect("manifest"), None);
+    assert_eq!(lienzo_format::read_full_composite(&bytes).expect("manifest"), None);
     assert!(ZipReader::new(&bytes).expect("zip").find("composite/full.png").is_none());
 }

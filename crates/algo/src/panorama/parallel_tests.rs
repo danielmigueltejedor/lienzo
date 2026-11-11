@@ -406,7 +406,7 @@ fn multiband_rejects_single_band_larger_than_budget() {
     let (w, h, ch) = (97, 61, 3);
     let (imgs, wts) = rois(w, h, ch, 42);
     let err = try_multiband_batched(w, h, &imgs, &wts, 3, 100, Some(100)).unwrap_err();
-    assert!(matches!(err, photocraft_raster::AllocationError::NotEnoughMemory { bytes } if bytes > 100));
+    assert!(matches!(err, lienzo_raster::AllocationError::NotEnoughMemory { bytes } if bytes > 100));
 }
 
 /// [`band_bytes_bound`] covers the cost the batching estimates for any ROI, offsets and levels.
@@ -434,14 +434,14 @@ fn multiband_checks_later_images_and_zero_limit() {
     let expected = band_cost(&large, 40, 40, 1, 1);
     assert!(expected > limit);
     let err = try_multiband_batched(40, 40, &[small.clone(), large], &[vec![1.0], vec![1.0; 400]], 1, usize::MAX, Some(limit)).unwrap_err();
-    assert!(matches!(err, photocraft_raster::AllocationError::NotEnoughMemory { bytes } if bytes == expected));
+    assert!(matches!(err, lienzo_raster::AllocationError::NotEnoughMemory { bytes } if bytes == expected));
     let err = try_multiband_batched(40, 40, &[small], &[vec![1.0]], 1, usize::MAX, Some(0)).unwrap_err();
-    assert!(matches!(err, photocraft_raster::AllocationError::NotEnoughMemory { .. }));
+    assert!(matches!(err, lienzo_raster::AllocationError::NotEnoughMemory { .. }));
 }
 
 #[test]
 fn pyramid_planes_reject_size_overflow() {
-    assert!(matches!(reduce(usize::MAX, 3, 3, &[]), Err(photocraft_raster::AllocationError::SizeOverflow)));
-    assert!(matches!(expand(1, 1, 3, &[0.0; 3], usize::MAX, 2), Err(photocraft_raster::AllocationError::SizeOverflow)));
-    assert!(matches!(push_pull(usize::MAX, 3, 3, &mut [], &[]), Err(photocraft_raster::AllocationError::SizeOverflow)));
+    assert!(matches!(reduce(usize::MAX, 3, 3, &[]), Err(lienzo_raster::AllocationError::SizeOverflow)));
+    assert!(matches!(expand(1, 1, 3, &[0.0; 3], usize::MAX, 2), Err(lienzo_raster::AllocationError::SizeOverflow)));
+    assert!(matches!(push_pull(usize::MAX, 3, 3, &mut [], &[]), Err(lienzo_raster::AllocationError::SizeOverflow)));
 }

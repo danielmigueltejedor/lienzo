@@ -1,12 +1,12 @@
 use super::*;
-use photocraft_color::BlendMode;
+use lienzo_color::BlendMode;
 use serde_json::json;
 
 fn render_state() -> Option<eframe::egui_wgpu::RenderState> {
     match std::panic::catch_unwind(|| egui_kittest::wgpu::create_render_state(crate::gpu_canvas::wgpu_setup(), Default::default())) {
         Ok(rs) => Some(rs),
         Err(error) => {
-            if std::env::var_os("PHOTOCRAFT_REQUIRE_GPU_TESTS").is_some() {
+            if std::env::var_os("LIENZO_REQUIRE_GPU_TESTS").is_some() {
                 std::panic::resume_unwind(error);
             }
             eprintln!("skipping blend viewport regression: no GPU adapter");
@@ -32,9 +32,9 @@ fn blend_hover_multiple_layers_tracks_visible_canvas() {
 
 #[test]
 fn blend_hover_pattern_tiles_and_multiple_views_reuse_current_pixels() {
-    let _guard = photocraft_testkit::gpu_lock();
+    let _guard = lienzo_testkit::gpu_lock();
     let Some(rs) = render_state() else { return };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.set_wgpu(rs);
     app.run("file.new", json!({"width":1024,"height":768,"background":"#336699"})).unwrap();
     let layer = app.run("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
@@ -44,18 +44,18 @@ fn blend_hover_pattern_tiles_and_multiple_views_reuse_current_pixels() {
     let b = DRect::new(0, 200, 300, 500);
     assert!(ensure_gpu(&mut app, &ctx, 0, a));
     app.ui.view.pattern_preview = true;
-    crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], Some(BlendMode::Multiply));
+    crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], Some(BlendMode::Multiply));
     assert!(ensure_gpu(&mut app, &ctx, 0, a));
     assert_visible_pixels(&mut app, b);
     let bounds = app.session.active().unwrap().doc.bounds();
     assert_visible_pixels(&mut app, bounds);
-    crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], None);
+    crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], None);
     assert!(ensure_gpu(&mut app, &ctx, 0, a));
     assert_visible_pixels(&mut app, bounds);
 
     app.ui.view.pattern_preview = false;
     for mode in [BlendMode::Multiply, BlendMode::Screen] {
-        crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], Some(mode));
+        crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], Some(mode));
         assert!(ensure_gpu(&mut app, &ctx, 0, a));
         assert!(ensure_gpu(&mut app, &ctx, 0, b));
         for visible in [a, b, a, b] {
@@ -69,16 +69,16 @@ fn blend_hover_pattern_tiles_and_multiple_views_reuse_current_pixels() {
     app.ui.view.pattern_preview = true;
     assert!(ensure_gpu(&mut app, &ctx, 0, a));
     assert_visible_pixels(&mut app, bounds);
-    crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], None);
+    crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], None);
     assert!(ensure_gpu(&mut app, &ctx, 0, a));
     assert_visible_pixels(&mut app, bounds);
 }
 
 #[test]
 fn blend_hover_during_background_redraw_restores_committed_pixels() {
-    let _guard = photocraft_testkit::gpu_lock();
+    let _guard = lienzo_testkit::gpu_lock();
     let Some(rs) = render_state() else { return };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.set_wgpu(rs);
     app.background_jobs = true;
     app.run("file.new", json!({"width":2600,"height":1700,"background":"#336699"})).unwrap();
@@ -89,20 +89,20 @@ fn blend_hover_during_background_redraw_restores_committed_pixels() {
     let visible = DRect::new(256, 256, 512, 512);
     assert!(ensure_gpu(&mut app, &ctx, 0, visible));
     assert!(!app.redraws.is_empty(), "fixture must start a deferred full redraw");
-    crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], Some(BlendMode::Multiply));
+    crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], Some(BlendMode::Multiply));
     assert!(ensure_gpu(&mut app, &ctx, 0, visible));
     let panned = DRect::new(2048, 1024, 2304, 1280);
     assert!(ensure_gpu(&mut app, &ctx, 0, panned));
     settle_redraw(&mut app);
     assert_visible_pixels(&mut app, panned);
-    crate::blend_preview::hover(&mut app, &[photocraft_doc::LayerId(layer)], None);
+    crate::blend_preview::hover(&mut app, &[lienzo_doc::LayerId(layer)], None);
     assert!(ensure_gpu(&mut app, &ctx, 0, panned));
     settle_redraw(&mut app);
     let bounds = app.session.active().unwrap().doc.bounds();
     assert_visible_pixels(&mut app, bounds);
 }
 
-fn settle_redraw(app: &mut PhotocraftApp) {
+fn settle_redraw(app: &mut LienzoApp) {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
     let gpu = app.gpu.clone().unwrap();
     let id = app.session.active().unwrap().doc.id;
@@ -113,7 +113,7 @@ fn settle_redraw(app: &mut PhotocraftApp) {
     }
 }
 
-fn assert_visible_pixels(app: &mut PhotocraftApp, visible: DRect) {
+fn assert_visible_pixels(app: &mut LienzoApp, visible: DRect) {
     let (doc, _) = display_doc(app, 0);
     let gpu = app.gpu.clone().unwrap();
     let reference = doc.id.0 ^ (1u64 << 60);
@@ -132,9 +132,9 @@ fn assert_visible_pixels(app: &mut PhotocraftApp, visible: DRect) {
 }
 
 fn check_blend_viewport(cpu_fallback: bool, multiple_layers: bool) {
-    let _guard = photocraft_testkit::gpu_lock();
+    let _guard = lienzo_testkit::gpu_lock();
     let Some(rs) = render_state() else { return };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.set_wgpu(rs);
     app.run("file.new", json!({"width":1024,"height":768,"background":"#336699"})).unwrap();
     let layer = app.run("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
@@ -142,12 +142,12 @@ fn check_blend_viewport(cpu_fallback: bool, multiple_layers: bool) {
     if cpu_fallback {
         app.run("layer.layerStyle.blendingOptions", json!({"knockout":"shallow"})).unwrap();
     }
-    let mut layers = vec![photocraft_doc::LayerId(layer)];
+    let mut layers = vec![lienzo_doc::LayerId(layer)];
     if multiple_layers {
         let other = app.run("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
         app.run("edit.fill", json!({"color": "#4488cc"})).unwrap();
         app.run("layer.setProps", json!({"layer": other, "opacity": 0.5})).unwrap();
-        layers.push(photocraft_doc::LayerId(other));
+        layers.push(lienzo_doc::LayerId(other));
     }
     let ctx = egui::Context::default();
     let visible = DRect::new(256, 256, 512, 512);

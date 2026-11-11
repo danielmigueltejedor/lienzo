@@ -1,12 +1,12 @@
 //! The font menu's filters, as in Photoshop's font menu (except its Adobe Fonts parts): a class
 //! list (Serif, Sans Serif, Script…), Show Variable Fonts, Show Favorite Fonts and Show Similar
 //! Fonts, and Clear All. Each family's class, format and shape come from its own tables
-//! ([`photocraft_text::font_class`]), read once per font list and cached here.
+//! ([`lienzo_text::font_class`]), read once per font list and cached here.
 
 use std::collections::HashMap;
 use std::sync::{Arc, PoisonError};
 
-use photocraft_text::{FamilyTraits, FontClass, FontFormat};
+use lienzo_text::{FamilyTraits, FontClass, FontFormat};
 
 /// How many fonts Show Similar Fonts lists (the current one first).
 pub(crate) const SIMILAR_COUNT: usize = 30;
@@ -44,7 +44,7 @@ pub(crate) type TraitsMap = HashMap<String, Option<FamilyTraits>>;
 pub(crate) fn traits(family: &str) -> Option<FamilyTraits> {
     type Cached = Option<(u64, TraitsMap)>;
     static CACHE: std::sync::Mutex<Cached> = std::sync::Mutex::new(None);
-    let generation = photocraft_text::fonts::shared_generation();
+    let generation = lienzo_text::fonts::shared_generation();
     let mut cache = CACHE.lock().unwrap_or_else(PoisonError::into_inner);
     if cache.as_ref().is_none_or(|(g, _)| *g != generation) {
         *cache = Some((generation, HashMap::new()));
@@ -54,7 +54,7 @@ pub(crate) fn traits(family: &str) -> Option<FamilyTraits> {
         return t.clone();
     }
     // Only once the background font scan is done: never block the UI on it.
-    let t = photocraft_text::try_shared()?.lock().unwrap_or_else(PoisonError::into_inner).fonts.family_traits(family);
+    let t = lienzo_text::try_shared()?.lock().unwrap_or_else(PoisonError::into_inner).fonts.family_traits(family);
     map.insert(family.to_string(), t.clone());
     t
 }
@@ -86,7 +86,7 @@ pub(crate) fn apply<'a>(
     };
     let mut scored: Vec<(f32, (&String, &str))> = rows
         .drain(..)
-        .filter_map(|row| lookup(row.0).map(|t| (if row.0 == current { -1.0 } else { photocraft_text::font_class::difference(&reference, &t) }, row)))
+        .filter_map(|row| lookup(row.0).map(|t| (if row.0 == current { -1.0 } else { lienzo_text::font_class::difference(&reference, &t) }, row)))
         .collect();
     scored.sort_by(|a, b| a.0.total_cmp(&b.0));
     rows.extend(scored.into_iter().take(SIMILAR_COUNT).map(|(_, row)| row));
@@ -169,7 +169,7 @@ pub(crate) fn preview_banner(ui: &mut egui::Ui, family: &str, label: &str, text:
         crate::font_preview::paint_text(ui, family, text, line, 30.0);
         return;
     }
-    let Some((size, _)) = crate::font_preview::sample(photocraft_engine::prefs::FontPreview::Huge) else { return };
+    let Some((size, _)) = crate::font_preview::sample(lienzo_engine::prefs::FontPreview::Huge) else { return };
     crate::font_preview::paint(ui, family, rect.translate(egui::vec2(0.0, 6.0)), size);
 }
 

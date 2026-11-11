@@ -1,12 +1,12 @@
-//! An adjustment layer whose key PhotoCraft doesn't know (an older or newer adjustment type)
+//! An adjustment layer whose key Lienzo doesn't know (an older or newer adjustment type)
 //! opens as an unsupported adjustment with a warning and saves its block back unchanged, instead
 //! of opening silently as an empty pixel layer (#6575). Pixel layers that merely carry an unknown
 //! block stay pixel layers.
 
-use photocraft_doc::{Adjustment, Document, LayerContent};
-use photocraft_io::*;
-use photocraft_psd::testgen;
-use photocraft_psd::{ChannelData, Compression, LayerFlags, LayerRecord, PsdFile, Rect, TaggedBlock, Version};
+use lienzo_doc::{Adjustment, Document, LayerContent};
+use lienzo_io::*;
+use lienzo_psd::testgen;
+use lienzo_psd::{ChannelData, Compression, LayerFlags, LayerRecord, PsdFile, Rect, TaggedBlock, Version};
 
 /// A layer record as Photoshop writes an adjustment layer: no pixels, "pixel data irrelevant"
 /// set, the adjustment block first, then the usual metadata.
@@ -40,7 +40,7 @@ fn record<'a>(f: &'a PsdFile, name: &str) -> &'a LayerRecord {
 #[test]
 fn unknown_adjustment_key_opens_as_unsupported_and_saves_verbatim() {
     // `hue ` is the Photoshop 4 Hue/Saturation block (in the spec, never mapped); `zNew` stands
-    // for an adjustment type newer than PhotoCraft.
+    // for an adjustment type newer than Lienzo.
     for key in [*b"hue ", *b"zNew"] {
         let data = vec![0, 2, 1, 2, 3, 4, 5, 6];
         let mut f = testgen::small(Version::Psd, Compression::Raw);

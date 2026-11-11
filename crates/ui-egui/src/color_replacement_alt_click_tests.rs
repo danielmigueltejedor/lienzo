@@ -9,8 +9,8 @@ use super::*;
 use crate::canvas::{ToolEvent, tool_event};
 
 /// A 400 × 300 RGB document: a green layer (30,180,60), blue foreground, the Color Replacement tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#1eb43c"})).unwrap();
@@ -20,22 +20,22 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn foreground(app: &PhotocraftApp) -> [u8; 3] {
+fn foreground(app: &LienzoApp) -> [u8; 3] {
     let c = app.session.tools.foreground;
     [0, 1, 2].map(|i| (c[i] * 255.0).round() as u8)
 }
 
-fn pixel(app: &PhotocraftApp, x: i32, y: i32) -> [u8; 3] {
+fn pixel(app: &LienzoApp, x: i32, y: i32) -> [u8; 3] {
     let st = app.session.active().unwrap();
     let c = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(x, y);
     [0, 1, 2].map(|i| (c[i] * 255.0).round() as u8)
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, mods);

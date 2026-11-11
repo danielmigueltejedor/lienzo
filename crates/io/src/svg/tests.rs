@@ -20,8 +20,8 @@ fn png_dimensions(width: u32, height: u32) -> Vec<u8> {
 /// Source-image decoding and canvas rendering are separate work components.
 #[test]
 fn preview_work_counts_large_compressed_rasters_on_tiny_canvases() {
-    let image = photocraft_codecs::Image::from_u8(64, 64, photocraft_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(64, 64, lienzo_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let svg = image_svg(&embedded_image("image/png", &png));
     let (imported, work) = import_svg_bounded_with_work("work", svg.as_bytes(), 8192).unwrap();
     assert_eq!(imported.document.size, Size::new(1, 1));
@@ -35,8 +35,8 @@ fn preview_work_counts_large_compressed_rasters_on_tiny_canvases() {
 /// A full-size input and output may each use the existing 24 MP component allowance.
 #[test]
 fn preview_work_can_pay_for_both_a_24mp_image_and_a_24mp_canvas() {
-    let image = photocraft_codecs::Image::from_u8(6000, 4000, photocraft_codecs::ChannelLayout::Rgb, vec![255; 6000 * 4000 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(6000, 4000, lienzo_codecs::ChannelLayout::Rgb, vec![255; 6000 * 4000 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let data = png.iter().map(|byte| format!("%{byte:02X}")).collect::<String>();
     let svg =
         format!(r#"<svg xmlns="http://www.w3.org/2000/svg" width="6000" height="4000"><image width="6000" height="4000" href="data:image/png,{data}"/></svg>"#);
@@ -49,8 +49,8 @@ fn preview_work_can_pay_for_both_a_24mp_image_and_a_24mp_canvas() {
 
 #[test]
 fn preview_work_plain_paths_and_artboard_clip_do_not_repeat_photo_decode() {
-    let image = photocraft_codecs::Image::from_u8(6000, 4000, photocraft_codecs::ChannelLayout::Rgb, vec![255; 6000 * 4000 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(6000, 4000, lienzo_codecs::ChannelLayout::Rgb, vec![255; 6000 * 4000 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let data = png.iter().map(|byte| format!("%{byte:02X}")).collect::<String>();
     let svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="6000" height="4000"><defs><clipPath id="page"><path d="M0 0H6000V4000H0Z"/></clipPath></defs><g clip-path="url(#page)"><image width="6000" height="4000" href="data:image/png,{data}"/><path d="M0 0H4V4Z"/><path d="M5 5H9V9Z"/><path d="M10 10H14V14Z"/><path d="M15 15H19V19Z"/></g></svg>"#
@@ -64,8 +64,8 @@ fn preview_work_plain_paths_and_artboard_clip_do_not_repeat_photo_decode() {
 
 #[test]
 fn preview_work_repeatable_raster_patterns_pay_for_repainting() {
-    let image = photocraft_codecs::Image::from_u8(64, 64, photocraft_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(64, 64, lienzo_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let data = png.iter().map(|byte| format!("%{byte:02X}")).collect::<String>();
     let svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><defs><pattern id="paint" width="1" height="1" patternUnits="userSpaceOnUse"><image width="1" height="1" href="data:image/png,{data}"/></pattern></defs><path fill="url(#paint)" d="M0 0H4V4H0Z"/><path fill="url(#paint)" d="M4 4H8V8H4Z"/></svg>"#
@@ -80,8 +80,8 @@ fn preview_work_repeatable_raster_patterns_pay_for_repainting() {
 
 #[test]
 fn preview_work_use_images_charge_each_resolved_occurrence() {
-    let image = photocraft_codecs::Image::from_u8(64, 64, photocraft_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(64, 64, lienzo_codecs::ChannelLayout::Rgb, vec![255; 64 * 64 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let data = png.iter().map(|byte| format!("%{byte:02X}")).collect::<String>();
     let svg = format!(
         r##"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><defs><image id="photo" width="1" height="1" href="data:image/png,{data}"/></defs><use href="#photo"/><use href="#photo" x="1"/><use href="#photo" x="2"/></svg>"##
@@ -143,8 +143,8 @@ fn webp_container_cannot_hide_a_larger_lossy_frame() {
 
 #[test]
 fn bounded_images_keep_small_pixels_and_external_references_stay_disabled() {
-    let image = photocraft_codecs::Image::from_u8(1, 1, photocraft_codecs::ChannelLayout::Rgba, vec![255, 0, 0, 255]).unwrap();
-    let bytes = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(1, 1, lienzo_codecs::ChannelLayout::Rgba, vec![255, 0, 0, 255]).unwrap();
+    let bytes = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let inner = image_svg(&embedded_image("image/png", &bytes));
     let nested = image_svg(&embedded_image("image/svg+xml", inner.as_bytes()));
     for svg in [&inner, &nested] {
@@ -263,7 +263,7 @@ fn text_without_any_font_is_reported_not_silently_dropped() {
 fn transformed_text_lands_where_resvg_draws_it() {
     fn inter() -> Arc<usvg::fontdb::Database> {
         let mut db = usvg::fontdb::Database::new();
-        db.load_font_data(photocraft_text::fonts::INTER_REGULAR.to_vec());
+        db.load_font_data(lienzo_text::fonts::INTER_REGULAR.to_vec());
         Arc::new(db)
     }
     assert!(inter().faces().next().is_some(), "the bundled Inter loads");
@@ -285,7 +285,7 @@ fn transformed_text_lands_where_resvg_draws_it() {
         let r = import_parsed("t", parsed, MAX_GROUP_DEPTH, None, false).unwrap();
         let [layer] = r.document.layers.as_slice() else { panic!("one text layer, got {}: {c}", r.document.layers.len()) };
         assert!(matches!(layer.content, LayerContent::Group(_)), "text stays outline shapes: {c}");
-        let imported = photocraft_compose::flatten(&r.document);
+        let imported = lienzo_compose::flatten(&r.document);
         let (mut both, mut either) = (0usize, 0usize);
         let (mut a_box, mut b_box) = ([i32::MAX, i32::MAX, i32::MIN, i32::MIN], [i32::MAX, i32::MAX, i32::MIN, i32::MIN]);
         let grow = |bx: &mut [i32; 4], x: i32, y: i32| *bx = [bx[0].min(x), bx[1].min(y), bx[2].max(x), bx[3].max(y)];
@@ -309,7 +309,7 @@ fn transformed_text_lands_where_resvg_draws_it() {
     }
 }
 
-/// #4266: a group clipped by one path (the PhotoCraft icon's rounded square) stays editable
+/// #4266: a group clipped by one path (the Lienzo icon's rounded square) stays editable
 /// shapes with the clip as its vector mask, and looks as resvg draws the drawing; a clip of
 /// two shapes is still rasterised, with the warning.
 #[test]
@@ -331,7 +331,7 @@ fn a_single_path_clip_becomes_the_groups_vector_mask() {
     let (lo, hi) = (xs.iter().copied().fold(f64::MAX, f64::min), xs.iter().copied().fold(f64::MIN, f64::max));
     assert!((lo - 12.0).abs() < 1e-3 && (hi - 52.0).abs() < 1e-3, "in the group's space: {lo}..{hi}");
     // Pixel for pixel what resvg draws, but for anti-aliasing along the edges.
-    let ours = photocraft_compose::flatten(&r.document).to_rgba8().pixels;
+    let ours = lienzo_compose::flatten(&r.document).to_rgba8().pixels;
     let tree = parse(svg).unwrap().tree;
     let mut pm = tiny_skia::Pixmap::new(64, 64).unwrap();
     resvg::render(&tree, tiny_skia::Transform::default(), &mut pm.as_mut());
@@ -345,8 +345,8 @@ fn a_single_path_clip_becomes_the_groups_vector_mask() {
         .collect();
     let off = ours.chunks(4).zip(theirs.chunks(4)).filter(|(a, b)| a.iter().zip(*b).any(|(x, y)| x.abs_diff(*y) > 48)).count();
     assert!(off < 64, "{off} pixels differ");
-    // The report's file: PhotoCraft's own icon opens without the clip-path warning.
-    let icon = import_svg("photocraft.svg", include_bytes!("../../../../assets/app-icon/photocraft.svg")).unwrap();
+    // The report's file: Lienzo's own icon opens without the clip-path warning.
+    let icon = import_svg("lienzo.svg", include_bytes!("../../../../assets/app-icon/lienzo.svg")).unwrap();
     assert!(icon.warnings.iter().all(|w| !w.contains("clip-path")), "{:?}", icon.warnings);
     assert!(icon.document.layers.iter().any(|l| l.vector_mask.is_some()), "its rounded square is a vector mask");
     // Two shapes in the clip: rasterised, and said so.
@@ -419,7 +419,7 @@ fn a_font_file_gone_bad_since_indexing_is_not_cached() {
     use std::sync::atomic::{AtomicBool, Ordering};
     static BAD: AtomicBool = AtomicBool::new(true);
     fn indexed_then_overwritten() -> Arc<usvg::fontdb::Database> {
-        let path = std::env::temp_dir().join(format!("photocraft-svg-test-bad-{}.ttf", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-svg-test-bad-{}.ttf", std::process::id()));
         std::fs::write(&path, include_bytes!("../../../../assets/fonts/Inter-Regular.ttf")).unwrap();
         let mut db = usvg::fontdb::Database::new();
         db.load_font_file(&path).unwrap();
@@ -453,7 +453,7 @@ fn imports_missing_the_same_font_at_once_share_one_read() {
     static ROUND: AtomicUsize = AtomicUsize::new(0);
     fn fresh_file() -> Arc<usvg::fontdb::Database> {
         let round = ROUND.load(Ordering::SeqCst);
-        let path = std::env::temp_dir().join(format!("photocraft-svg-test-shared-{}-{round}.ttf", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-svg-test-shared-{}-{round}.ttf", std::process::id()));
         let mut db = usvg::fontdb::Database::new();
         db.load_font_file(&path).unwrap();
         Arc::new(db)
@@ -461,7 +461,7 @@ fn imports_missing_the_same_font_at_once_share_one_read() {
     let svg = b"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"60\"><text x=\"5\" y=\"45\" font-family=\"Inter\">IHI</text></svg>";
     for round in 0..5 {
         ROUND.store(round, Ordering::SeqCst);
-        let path = std::env::temp_dir().join(format!("photocraft-svg-test-shared-{}-{round}.ttf", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-svg-test-shared-{}-{round}.ttf", std::process::id()));
         std::fs::write(&path, include_bytes!("../../../../assets/fonts/Inter-Regular.ttf")).unwrap();
         let start = Arc::new(std::sync::Barrier::new(8));
         let threads: Vec<_> = (0..8)
@@ -497,7 +497,7 @@ fn the_fallback_search_reads_each_font_file_once() {
     use std::sync::atomic::{AtomicBool, Ordering};
     static GONE: AtomicBool = AtomicBool::new(false);
     fn path() -> std::path::PathBuf {
-        std::env::temp_dir().join(format!("photocraft-svg-test-fallback-{}.ttf", std::process::id()))
+        std::env::temp_dir().join(format!("lienzo-svg-test-fallback-{}.ttf", std::process::id()))
     }
     fn inter_and_mono_on_disk() -> Arc<usvg::fontdb::Database> {
         std::fs::write(path(), include_bytes!("../../../../assets/fonts/JetBrainsMono-Regular.ttf")).unwrap();
@@ -545,7 +545,7 @@ fn the_fallback_search_reads_the_cmap_of_an_unsorted_font() {
         let raw = ttf_parser::RawFace::parse(&font, 0).unwrap();
         assert!(raw.table(ttf_parser::Tag::from_bytes(b"cmap")).is_none(), "a binary search misses the cmap");
         assert!(raw.table(ttf_parser::Tag::from_bytes(b"name")).is_some(), "fontdb still finds the name");
-        let path = std::env::temp_dir().join(format!("photocraft-svg-test-unsorted-{}.ttf", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-svg-test-unsorted-{}.ttf", std::process::id()));
         std::fs::write(&path, font).unwrap();
         let mut db = usvg::fontdb::Database::new();
         db.load_font_data(include_bytes!("../../../../assets/fonts/Inter-Regular.ttf").to_vec());
@@ -554,7 +554,7 @@ fn the_fallback_search_reads_the_cmap_of_an_unsorted_font() {
     }
     let svg = b"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"60\"><text x=\"5\" y=\"45\" font-family=\"Inter\">I\xE2\x94\x80I</text></svg>";
     let parsed = parse_with(svg, inter_and_unsorted_mono_on_disk).unwrap();
-    let _ = std::fs::remove_file(std::env::temp_dir().join(format!("photocraft-svg-test-unsorted-{}.ttf", std::process::id())));
+    let _ = std::fs::remove_file(std::env::temp_dir().join(format!("lienzo-svg-test-unsorted-{}.ttf", std::process::id())));
     let mono =
         parsed.tree.fontdb().faces().any(|f| f.families.iter().any(|(n, _)| n == "JetBrains Mono") && matches!(f.source, usvg::fontdb::Source::Binary(_)));
     assert!(mono, "the box-drawing character falls back to JetBrains Mono");
@@ -585,7 +585,7 @@ fn a_collection_in_memory_keeps_its_face_order() {
             body.extend(font);
         }
         ttc.extend(body);
-        let path = std::env::temp_dir().join(format!("photocraft-svg-test-{}.ttc", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-svg-test-{}.ttc", std::process::id()));
         std::fs::write(&path, ttc).unwrap();
         let mut db = usvg::fontdb::Database::new();
         db.load_font_file(&path).unwrap();
@@ -793,8 +793,8 @@ fn missing_svg_font_uses_an_available_generic_instead_of_dropping_text() {
 fn resolve_data_rejects_oversized_and_malformed_embedded_png_and_webp() {
     let opt = options(Arc::new(usvg::fontdb::Database::new()), MAX_XML_DEPTH);
     let resolve = &opt.image_href_resolver.resolve_data;
-    let img = photocraft_codecs::Image::from_u8(2, 2, photocraft_codecs::ChannelLayout::Rgb, vec![255; 12]).unwrap();
-    let valid_png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(2, 2, lienzo_codecs::ChannelLayout::Rgb, vec![255; 12]).unwrap();
+    let valid_png = lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     assert!(resolve("image/png", Arc::new(valid_png.clone()), &opt).is_some());
     assert!(resolve("text/plain", Arc::new(valid_png.clone()), &opt).is_some());
 
@@ -851,7 +851,7 @@ fn resolve_data_rejects_nested_gzip_and_handles_text_plain_svgz() {
     assert!(resolve("text/plain", Arc::new(twice), &opt).is_none());
 }
 
-/// The outer gzip is size-limited by PhotoCraft. Its result must be XML, never another
+/// The outer gzip is size-limited by Lienzo. Its result must be XML, never another
 /// compressed stream which usvg could inflate independently without that byte limit.
 #[test]
 fn bounded_svg_rejects_nested_gzip_at_top_level_and_inside_data_urls() {
@@ -884,8 +884,8 @@ fn bounded_svg_rejects_nested_gzip_at_top_level_and_inside_data_urls() {
 /// resolver leaves it out, and the rest of the drawing still renders.
 #[test]
 fn unreadable_embedded_images_are_left_out_and_the_drawing_still_renders() {
-    let image = photocraft_codecs::Image::from_u8(2, 2, photocraft_codecs::ChannelLayout::Rgb, vec![255; 12]).unwrap();
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(2, 2, lienzo_codecs::ChannelLayout::Rgb, vec![255; 12]).unwrap();
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     for (mime, bytes) in [
         ("image/x-foo", png.clone()),
         ("application/octet-stream", png.clone()),

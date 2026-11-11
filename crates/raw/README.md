@@ -1,4 +1,4 @@
-# photocraft-raw
+# lienzo-raw
 
 A clean-room, pure-Rust camera raw decoder and developer. The crate is standalone (no workspace
 dependencies; its decoding dependencies are `flate2` for Deflate DNG and `jxl-oxide`, a pure-Rust
@@ -7,14 +7,14 @@ JPEG XL decoder, for DNG 1.7, native builds only), has no `unsafe`, does no I/O 
 bounds-checked and sizes are checked against `Limits` before allocating.
 
 ```rust
-use photocraft_raw::{develop, DevelopOptions, Demosaic};
+use lienzo_raw::{develop, DevelopOptions, Demosaic};
 
 let dev = develop(&bytes, &DevelopOptions { demosaic: Demosaic::Ahd, ..Default::default() })?;
 // dev.rgb: interleaved 16-bit RGB in ProPhoto RGB (ROMM primaries, D50, gamma 1.8)
 // dev.warnings: anything approximated or not applied
 ```
 
-`photocraft-io` uses it so opening a raw file yields a normal 16-bit RGB document tagged with the
+`lienzo-io` uses it so opening a raw file yields a normal 16-bit RGB document tagged with the
 built-in ProPhoto-compatible profile.
 
 ## Sources (clean-room)
@@ -82,7 +82,7 @@ camera colour tables were copied.
 | Panasonic / Leica RW2, RawFormat 5 (12- and 14-bit packed) | Decoded, with PanasonicRaw black / white / WB / sensor borders |
 | Panasonic / Leica RW2, RawFormat 3 and 4 (vendor-compressed, 12-bit) | Decoded; the black level is read 15 counts above the recorded tag; PanasonicRaw white / WB / sensor borders |
 | Olympus ORF, uncompressed 16-bit (E-1, E-400…) | Decoded, with ImageProcessing black / WB / ValidBits / crop |
-| Sony "Compressed RAW 2", Pentax compressed PEF, RW2 RawFormat 6 and newer, Olympus compressed ORF | Unsupported: no public description of these codes was found apart from GPL decoder source, which this crate may not use (clean-room). `photocraft-io` opens the embedded JPEG preview instead |
+| Sony "Compressed RAW 2", Pentax compressed PEF, RW2 RawFormat 6 and newer, Olympus compressed ORF | Unsupported: no public description of these codes was found apart from GPL decoder source, which this crate may not use (clean-room). `lienzo-io` opens the embedded JPEG preview instead |
 | Fujifilm RAF, uncompressed (X-Trans I–V, GFX and Bayer bodies since about 2010) | Decoded: 16-bit containers (either byte order), 12-bit LSB-first packing, 14-bit packing in 32-bit words; X-Trans 6×6 or Bayer 2×2 layout, black, as-shot WB, crop, RawExposureBias, orientation from the preview's EXIF |
 | Fujifilm compressed RAF, lossless and lossy (X-Trans and Bayer, 12/14/16-bit) | Decoded (`rafc.rs`): ported from LightCraft's clean-room decoder (storytold/lightcraft `crates/raw/src/vendor/rafc.rs`, MIT OR Apache-2.0, same organisation), verified there sample for sample on 24 files from 13 bodies; here on an X-T30 lossless file |
 | Early FinePix / SuperCCD RAF (no CFA TIFF) | Unsupported; preview fallback |
@@ -124,7 +124,7 @@ Tukey biweights against misaligned edges and local tone mapping; clipped and nea
 out). One cell in three is held out: the look is used only when it shows the same picture in colour,
 the matrix is plausible and the held-out mean CIE76 ΔE drops to at most 85 % of the fallback's.
 Pass it as `DevelopOptions::camera_look`; `develop` then notes "colour fitted to the camera's
-embedded JPEG (mean ΔE …)". The crate cannot decode JPEG itself: `photocraft-io` decodes the
+embedded JPEG (mean ΔE …)". The crate cannot decode JPEG itself: `lienzo-io` decodes the
 smallest preview at least 512 pixels long, fits and develops in one go. A preview without an ICC
 profile is read in the colour space the raw states (`embedded_preview_color_space`): the EXIF
 ColorSpace (a Sony body set to Adobe RGB writes Uncalibrated with Interoperability "R03"), else a
@@ -158,7 +158,7 @@ a calibration, so no look is fitted for them. On 6 D4 NEFs against Photoshop 25.
 Raw rendering (quarter size, medians over the frames) the measured profile is 0.048 stop from its
 luminance with a mean CIE76 ΔE of 1.8; the look fitted to the embedded JPEG would be 0.30 stop and
 ΔE 6.4, as it follows the camera's picture style instead. The open-time re-develop
-(`photocraft-io`'s `import_raw_tuned`) and the tone curve its previews use (`tone_curve`) take the
+(`lienzo-io`'s `import_raw_tuned`) and the tone curve its previews use (`tone_curve`) take the
 same look as the default open, so changing a slider does not change the colour rendering. The D4's
 saturation level was measured on 14-bit files and follows the sample depth (a 12-bit frame is the
 14-bit one shifted right by two, so its level is a quarter of it): the three public 12-bit D4 files
@@ -166,11 +166,11 @@ develop within 0.02 stop of their 14-bit twin.
 
 ## Tools
 
-`cargo run --release -p photocraft-raw --example rawinfo -- [--dump] [--demosaic ahd] [--png DIR] FILE...`
+`cargo run --release -p lienzo-raw --example rawinfo -- [--dump] [--demosaic ahd] [--png DIR] FILE...`
 prints what was decoded, times decode and develop, and can write sRGB PNG previews and the
 embedded JPEG previews.
 
-`cargo run --release -p photocraft-io --example rawlook -- [--png DIR] FILE...` times the
+`cargo run --release -p lienzo-io --example rawlook -- [--png DIR] FILE...` times the
 camera-JPEG colour fit, reports ΔE against the embedded JPEG with the neutral fallback and with the
 fit, and can write 1200-pixel sRGB PNGs of both and of the JPEG; `--synthetic` times it on a
 generated 24 MP file.

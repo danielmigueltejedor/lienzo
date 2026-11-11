@@ -5,9 +5,9 @@
 //! The built-in groups are our own designs, built from the same effect params as
 //! `layer.layerStyle.*`.
 
-use photocraft_color::{BlendMode, ColorMode, SampleType};
-use photocraft_doc::{Document, Effect, Layer, Pattern, Size};
-use photocraft_geom::Rect;
+use lienzo_color::{BlendMode, ColorMode, SampleType};
+use lienzo_doc::{Document, Effect, Layer, Pattern, Size};
+use lienzo_geom::Rect;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -160,12 +160,12 @@ fn list(s: &mut Session, _: &Value) -> Result<Value> {
 }
 
 /// Target layers: `"layers": [ids]`, `"layer": id`, else every selected layer.
-fn targets(s: &Session, p: &Value) -> Vec<photocraft_doc::LayerId> {
+fn targets(s: &Session, p: &Value) -> Vec<lienzo_doc::LayerId> {
     if let Some(a) = p.get("layers").and_then(Value::as_array) {
-        return a.iter().filter_map(Value::as_u64).map(photocraft_doc::LayerId).collect();
+        return a.iter().filter_map(Value::as_u64).map(lienzo_doc::LayerId).collect();
     }
     if let Some(id) = p.get("layer").and_then(Value::as_u64) {
-        return vec![photocraft_doc::LayerId(id)];
+        return vec![lienzo_doc::LayerId(id)];
     }
     crate::layer_multi_cmds::selected(s)
 }
@@ -180,7 +180,7 @@ fn resolve_style_effects(s: &Session, fx_list: &[Effect]) -> Result<(Vec<Effect>
         pats.extend(pat);
     }
     // Pattern strokes and bevel textures name their pattern too: copy it when the library has it.
-    for (name, id) in photocraft_io::asl_map::referenced_patterns(&effects) {
+    for (name, id) in lienzo_io::asl_map::referenced_patterns(&effects) {
         if let Some(pat) = crate::pattern_cmds::resolve(s, if id.is_empty() { &name } else { &id }).filter(|_| !(id.is_empty() && name.is_empty())) {
             pats.push(pat);
         }
@@ -353,7 +353,7 @@ pub fn thumbnail(s: &Session, style: &StylePreset, size: u32) -> Vec<u8> {
         l.fill_opacity = f;
     }
     doc.layers.push(l);
-    photocraft_compose::render(&doc, doc.bounds()).to_rgba8().pixels
+    lienzo_compose::render(&doc, doc.bounds()).to_rgba8().pixels
 }
 
 pub fn specs() -> Vec<CommandSpec> {

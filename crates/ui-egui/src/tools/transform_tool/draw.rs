@@ -5,14 +5,14 @@ use super::options_bar::{quad_scale, readout};
 use super::pointer::{Hit, handle_at, rotation_degrees};
 use super::warp::{on_section_edge, quick_split_kind, single_patch};
 use super::{
-    BezierMesh, Color32, DocId, Homography, LayerId, PhotocraftApp, Pos2, SplitTool, Stroke, TransformPreview, TransformSession, ViewXform, Warp, WarpDrag,
+    BezierMesh, Color32, DocId, Homography, LayerId, LienzoApp, Pos2, SplitTool, Stroke, TransformPreview, TransformSession, ViewXform, Warp, WarpDrag,
     WarpStyle, corners, pos2, vec2,
 };
 
 /// The distort or skew pointer at screen point `at`, where [`super::cursor`] hid the system
 /// pointer over a handle. The canvas calls it from its cursor branch, so nothing is drawn where a
 /// guide, a pan or a zoom set the cursor instead.
-pub(crate) fn draw_handle_cursor(app: &PhotocraftApp, ctx: &egui::Context, xf: &ViewXform, at: Pos2, mods: egui::Modifiers) {
+pub(crate) fn draw_handle_cursor(app: &LienzoApp, ctx: &egui::Context, xf: &ViewXform, at: Pos2, mods: egui::Modifiers) {
     let Some(t) = &app.ui.transform else { return };
     let h = handle_at(app, t, xf.to_doc(at), super::handle_tolerance(app));
     let scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);
@@ -96,7 +96,7 @@ pub(super) fn front_vertices(h: &Homography, n: usize) -> Vec<bool> {
 /// them. This is image content: the canvas draws it right after the document, under the grid
 /// and guides, so a guide stays visible across a layer being transformed (#5086), as in
 /// Photoshop. The box, handles and reference point are [`draw_overlay`], drawn over the guides.
-pub fn draw_content(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_content(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let (Some(t), Some(pv)) = (&app.ui.transform, &app.transform_preview) else { return };
     if crate::frame_tool::frame_transform(t) {
         return;
@@ -171,7 +171,7 @@ pub(super) fn texture_quad(t: &TransformSession, pv: &TransformPreview) -> [[f64
 
 /// The box, handles, reference point and path outline over the preview that [`draw_content`]
 /// drew; the warp grid and its split guides for a warp.
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let (Some(t), Some(pv)) = (&app.ui.transform, &app.transform_preview) else { return };
     let scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);
     if let Some(w) = &t.warp {
@@ -236,20 +236,20 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
 /// Applying the open box moves the selection outline with it: `edit.transform` and
 /// `edit.transform.warp` map it like the pixels. Not Transform Selection (its ants are hidden), a
 /// path, Content-Aware Scale or a type layer's Warp Text, which leave the selection alone.
-fn carries_selection(app: &PhotocraftApp, t: &TransformSession) -> bool {
+fn carries_selection(app: &LienzoApp, t: &TransformSession) -> bool {
     !t.selection && !crate::frame_tool::frame_transform(t) && t.path.is_none() && t.content_aware.is_none() && !(t.warp.is_some() && warps_type(app))
 }
 
 /// Applying the open box moves the selection outline: Transform Selection's own box, or a box
 /// that [carries the selection along](carries_selection). A path, Content-Aware Scale or Warp Text
 /// leaves it where it is, so its edges stay snap targets.
-pub(crate) fn moves_selection(app: &PhotocraftApp, t: &TransformSession) -> bool {
+pub(crate) fn moves_selection(app: &LienzoApp, t: &TransformSession) -> bool {
     t.selection || carries_selection(app, t)
 }
 
 /// A transform of `document` is open that carries its selection along (#5297): the canvas traces
 /// the whole outline, not only the part in view where it started, for [`selection_ants`].
-pub(crate) fn carries_selection_of(app: &PhotocraftApp, document: DocId) -> bool {
+pub(crate) fn carries_selection_of(app: &LienzoApp, document: DocId) -> bool {
     matches!((&app.ui.transform, &app.transform_preview), (Some(t), Some(pv)) if pv.doc.id == document && carries_selection(app, t))
 }
 
@@ -259,7 +259,7 @@ pub(crate) fn carries_selection_of(app: &PhotocraftApp, document: DocId) -> bool
 /// `painter`, not drawn (the canvas paints them over the guides, #10671). `None` when no open
 /// transform carries that selection: the caller draws it where it is.
 pub(crate) fn selection_ants(
-    app: &PhotocraftApp,
+    app: &LienzoApp,
     painter: &egui::Painter,
     xf: &ViewXform,
     document: DocId,
@@ -312,11 +312,11 @@ pub(crate) fn selection_ants(
 /// pixels per document pixel. `None` for a layer without a style (also once it is switched off
 /// while the box is open) or a hidden one: the bare pixels are drawn instead. The style, opacity
 /// and fill are the layer's as they are now, so edits made while the box is open show.
-pub(crate) fn styled_frame(app: &PhotocraftApp, zoom: f32, dragging: bool) -> Option<(&crate::transform_fx::StyledPreview, crate::transform_fx::Frame<'_>)> {
+pub(crate) fn styled_frame(app: &LienzoApp, zoom: f32, dragging: bool) -> Option<(&crate::transform_fx::StyledPreview, crate::transform_fx::Frame<'_>)> {
     let (t, pv) = (app.ui.transform.as_ref()?, app.transform_preview.as_ref()?);
     let styled = pv.styled.as_ref().filter(|_| t.warp.is_none())?;
     let st = app.session.active().filter(|st| st.doc.id == pv.doc.id)?;
-    let layer = st.doc.layer(LayerId(t.layer)).filter(|l| l.visible && photocraft_compose::effects::has_effects(l))?;
+    let layer = st.doc.layer(LayerId(t.layer)).filter(|l| l.visible && lienzo_compose::effects::has_effects(l))?;
     let frame = crate::transform_fx::Frame {
         doc: &st.doc,
         layer,
@@ -349,7 +349,7 @@ pub(crate) enum Readout {
 
 /// The readout for the drag in progress, or `None` when nothing is dragged (or the drag is the
 /// reference point, a warp, or a distortion that has no single scale).
-pub(crate) fn live_readout(app: &PhotocraftApp) -> Option<Readout> {
+pub(crate) fn live_readout(app: &LienzoApp) -> Option<Readout> {
     let t = app.ui.transform.as_ref().filter(|t| t.warp.is_none())?;
     let g = app.transform_preview.as_ref()?.gesture?;
     match g.hit {
@@ -372,7 +372,7 @@ fn parallelogram(q: &[[f64; 2]; 4]) -> bool {
 }
 
 /// [`live_readout`] as the rounded label beside the pointer (the marquee's and Crop's readout).
-fn draw_live_readout(app: &PhotocraftApp, ctx: &egui::Context, at: Pos2, r: Readout) {
+fn draw_live_readout(app: &LienzoApp, ctx: &egui::Context, at: Pos2, r: Readout) {
     let id = "transform-readout";
     match r {
         Readout::Angle(a) => crate::canvas::draw_readout(ctx, id, at, ["Angle:"], [format!("{:.1}°", fixed(a, 1))]),
@@ -391,8 +391,8 @@ fn fixed(v: f64, places: i32) -> f64 {
 /// The W and H rows of the scale readout: the box's size in the Units & Rulers unit at the
 /// document's resolution, as Photoshop shows it (cm when the rulers are in centimeters, #9400);
 /// the scale of the original box when the rulers are in percent.
-pub(crate) fn scale_values(app: &PhotocraftApp, percent: [f64; 2], px: [f64; 2]) -> [String; 2] {
-    if app.session.prefs().units_and_rulers.rulers == photocraft_engine::prefs::Unit::Percent {
+pub(crate) fn scale_values(app: &LienzoApp, percent: [f64; 2], px: [f64; 2]) -> [String; 2] {
+    if app.session.prefs().units_and_rulers.rulers == lienzo_engine::prefs::Unit::Percent {
         return percent.map(|v| format!("{:.1}%", fixed(v, 1)));
     }
     crate::canvas::size_readout(app, [0.0, 0.0, px[0], px[1]])
@@ -526,7 +526,7 @@ fn draw_warp_content(
     t: &TransformSession,
     w: &Warp,
     pv: &TransformPreview,
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
+    display: Option<&lienzo_engine::display_color::CanvasDisplay>,
 ) {
     let r = t.rect;
     let m = w.to_mesh(1, 1);

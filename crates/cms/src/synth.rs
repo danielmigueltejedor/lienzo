@@ -2,7 +2,7 @@
 //!
 //! Adobe's CMYK profiles (U.S. Web Coated SWOP, Coated FOGRA39 …) are proprietary, and the
 //! freely downloadable characterisation-based profiles come with redistribution conditions, so
-//! PhotoCraft ships a CMYK profile it generates itself from a documented printer model:
+//! Lienzo ships a CMYK profile it generates itself from a documented printer model:
 //!
 //! * **Forward model** (CMYK → XYZ): Yule–Nielsen modified Neugebauer (n = 2) over the 16
 //!   ink overprints, with Demichel coverage weights and a parabolic tone value increase (dot
@@ -443,7 +443,7 @@ pub fn cmyk_profile(p: &CmykParams) -> Profile {
     .with_encoded_bytes()
 }
 
-/// The default coated profile (what `profiles/photocraft-coated-cmyk.icc` contains).
+/// The default coated profile (what `profiles/lienzo-coated-cmyk.icc` contains).
 pub fn coated_cmyk() -> Profile {
     cmyk_profile(&CmykParams::default())
 }

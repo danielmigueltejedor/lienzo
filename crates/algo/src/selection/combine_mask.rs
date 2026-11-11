@@ -3,9 +3,9 @@
 
 use super::{SelectionMode, combine, coverage8};
 use crate::photo_util::par_map;
-use photocraft_color::PixelFormat;
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use lienzo_color::PixelFormat;
+use lienzo_geom::{Rect, TILE_SIZE, TileCoord};
+use lienzo_raster::{Surface, Tile};
 use std::sync::Arc;
 
 /// Combines a mask covering only `band` (zero elsewhere). Add and Subtract retain the old

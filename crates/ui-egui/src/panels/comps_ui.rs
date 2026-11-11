@@ -8,12 +8,12 @@
 use egui::{Align2, Rect, Sense, Stroke, pos2, vec2};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 /// The comp footer and row actions act on: the panel selection if still valid, else the last
 /// applied comp.
-pub fn target(app: &PhotocraftApp) -> Option<u32> {
+pub fn target(app: &LienzoApp) -> Option<u32> {
     let doc = &app.session.active()?.doc;
     app.ui.layer_comp_selected.filter(|id| doc.comp(*id).is_some()).or(doc.last_applied_comp.filter(|id| doc.comp(*id).is_some()))
 }
@@ -60,7 +60,7 @@ fn rename_field(ui: &mut egui::Ui, id: egui::Id, rect: Rect) -> Option<String> {
     }
 }
 
-fn run(app: &mut PhotocraftApp, id: &str, p: Value) {
+fn run(app: &mut LienzoApp, id: &str, p: Value) {
     if let Err(e) = app.run(id, p) {
         app.ui.status = e;
         app.ui.status_error = true;
@@ -69,7 +69,7 @@ fn run(app: &mut PhotocraftApp, id: &str, p: Value) {
 
 #[derive(Clone, Copy)]
 struct DragComp {
-    document: photocraft_doc::DocId,
+    document: lienzo_doc::DocId,
     comp: u32,
 }
 
@@ -78,7 +78,7 @@ fn drop_index(from: usize, target: usize, after: bool) -> usize {
     if from < slot { slot - 1 } else { slot }
 }
 
-pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
         ui.label(egui::RichText::new(tl!("No document")).color(t.text_faint).size(11.5));
@@ -287,12 +287,12 @@ pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_engine::Session;
+    use lienzo_engine::Session;
 
     #[test]
     fn dragging_a_comp_row_reorders_without_applying_it() {
         use egui_kittest::{Harness, kittest::Queryable};
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.run("file.new", json!({"width":16,"height":16})).unwrap();
         for name in ["First", "Second", "Third"] {
             app.run("layerComp.new", json!({"name":name})).unwrap();
@@ -355,7 +355,7 @@ mod tests {
             Harness,
             kittest::{NodeT, Queryable},
         };
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
         let first = app.run("layerComp.new", json!({"name": "Comp number one"})).unwrap()["comp"].as_u64().unwrap() as u32;
         let second = app.run("layerComp.new", json!({"name": "Two"})).unwrap()["comp"].as_u64().unwrap() as u32;
@@ -367,7 +367,7 @@ mod tests {
         // to hit the short "Hero" too.
         let left = h.get_by_label("Apply previous selected layer comp").rect().left();
         let (name, rest) = (pos2(left + 35.0, left + 39.0), pos2(left + 190.0, left + 39.0));
-        let double_click = |h: &mut Harness<'_, PhotocraftApp>, pos: egui::Pos2| {
+        let double_click = |h: &mut Harness<'_, LienzoApp>, pos: egui::Pos2| {
             h.event(egui::Event::PointerMoved(pos));
             // Wait out the double-click window of the previous attempt.
             h.run_steps(30);
@@ -377,7 +377,7 @@ mod tests {
             }
             h.run_steps(3);
         };
-        let type_name = |h: &mut Harness<'_, PhotocraftApp>, text: &str, key: egui::Key| {
+        let type_name = |h: &mut Harness<'_, LienzoApp>, text: &str, key: egui::Key| {
             double_click(h, name);
             h.event(egui::Event::Text(text.into()));
             h.run_steps(1);
@@ -386,8 +386,8 @@ mod tests {
             h.key_press(key);
             h.run_steps(3);
         };
-        let comp_name = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().doc.comp(first).unwrap().name.clone();
-        let applied = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().unwrap().doc.last_applied_comp;
+        let comp_name = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().doc.comp(first).unwrap().name.clone();
+        let applied = |h: &Harness<'_, LienzoApp>| h.state().session.active().unwrap().doc.last_applied_comp;
         // Whitespace keeps the old name.
         type_name(&mut h, "  ", egui::Key::Enter);
         assert_eq!(comp_name(&h), "Comp number one");
@@ -410,7 +410,7 @@ mod tests {
             Harness,
             kittest::{NodeT, Queryable},
         };
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
         let a = app.run("layerComp.new", json!({"name": "Alpha comp"})).unwrap()["comp"].as_u64().unwrap() as u32;
         app.run("file.new", json!({"width": 16, "height": 16})).unwrap();

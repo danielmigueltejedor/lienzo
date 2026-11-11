@@ -1,17 +1,17 @@
 //! TOOL-214-12: a live rectangle's corner radius widgets, as in Photoshop.
 
 use egui::Modifiers;
-use photocraft_doc::LayerContent;
-use photocraft_doc::vector::LiveShape;
+use lienzo_doc::LayerContent;
+use lienzo_doc::vector::LiveShape;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// A 200 × 200 document at 100 % with a live rectangle at (40, 40), 120 × 80, radii 10.
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.run("shape.create", json!({"kind": "roundedRect", "rect": [40, 40, 120, 80], "radii": 10})).unwrap();
@@ -19,7 +19,7 @@ fn app(tool: Tool) -> PhotocraftApp {
     app
 }
 
-fn radii(app: &PhotocraftApp) -> Option<[f64; 4]> {
+fn radii(app: &LienzoApp) -> Option<[f64; 4]> {
     let st = app.session.active()?;
     let l = st.active_layer.and_then(|id| st.doc.layer(id))?;
     match &l.content {
@@ -31,11 +31,11 @@ fn radii(app: &PhotocraftApp) -> Option<[f64; 4]> {
     }
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, mods);
@@ -98,8 +98,8 @@ fn only_live_rectangles_with_the_right_tools_take_the_press() {
     assert!(!super::pointer(&mut a, ToolEvent::Down { x: 100.0, y: 80.0, pressure: 1.0 }, Modifiers::NONE));
 }
 
-fn app_with(shape: serde_json::Value) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(shape: serde_json::Value) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.run("shape.create", shape).unwrap();
@@ -109,8 +109,8 @@ fn app_with(shape: serde_json::Value) -> PhotocraftApp {
 
 /// Three live rectangles: (20, 20) 60 × 40 radii 5, (110, 20) 70 × 50 radii 0, and (20, 120)
 /// 80 × 60 radii 0, the last one left unselected. Returns the ids, bottom first.
-fn three(tool: Tool) -> (PhotocraftApp, Vec<photocraft_doc::LayerId>) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn three(tool: Tool) -> (LienzoApp, Vec<lienzo_doc::LayerId>) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     let mut ids = Vec::new();
@@ -124,7 +124,7 @@ fn three(tool: Tool) -> (PhotocraftApp, Vec<photocraft_doc::LayerId>) {
     (app, ids)
 }
 
-fn radii_of(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> [f64; 4] {
+fn radii_of(app: &LienzoApp, id: lienzo_doc::LayerId) -> [f64; 4] {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Shape(sh) => match sh.live {
             Some(LiveShape::Rect { radii, .. }) => radii,
@@ -186,7 +186,7 @@ fn the_cursor_and_readout_follow_the_widgets() {
 }
 
 /// The live polygon of layer `id`: its corner radius.
-fn corner_radius_of(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> f64 {
+fn corner_radius_of(app: &LienzoApp, id: lienzo_doc::LayerId) -> f64 {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Shape(sh) => match sh.live {
             Some(LiveShape::Polygon { corner_radius, .. }) => corner_radius,
@@ -197,8 +197,8 @@ fn corner_radius_of(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> f64 {
 }
 
 /// A live triangle (a 3-sided polygon) in (40, 40) 120 × 120, as the Triangle tool draws it.
-fn triangle(tool: Tool, radius: f64) -> (PhotocraftApp, photocraft_doc::LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn triangle(tool: Tool, radius: f64) -> (LienzoApp, lienzo_doc::LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.run("shape.create", json!({"kind": "polygon", "rect": [40, 40, 120, 120], "sides": 3, "cornerRadius": radius})).unwrap();
@@ -208,7 +208,7 @@ fn triangle(tool: Tool, radius: f64) -> (PhotocraftApp, photocraft_doc::LayerId)
 }
 
 /// Where the widget of corner `i` of the first target is, and the way its arc's centre moves.
-fn widget_of(app: &PhotocraftApp, i: usize) -> ([f64; 2], [f64; 2]) {
+fn widget_of(app: &LienzoApp, i: usize) -> ([f64; 2], [f64; 2]) {
     let t = &super::targets(app)[0];
     let z = f64::from(app.point_zoom());
     (t.widget(t.radii, i, z).unwrap(), t.corner(i).unwrap().step)

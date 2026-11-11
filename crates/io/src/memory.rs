@@ -45,7 +45,7 @@ pub const LOW_MEMORY_RESERVE: u64 = 256 << 20;
 const AUTOMATIC_RAM_RESERVE: u64 = 1 << 30;
 
 /// When opening a file would leave less than this free, the approval prompt warns that
-/// PhotoCraft may run out of memory.
+/// Lienzo may run out of memory.
 pub const LOW_MEMORY_WARNING_MARGIN: u64 = 1 << 30;
 
 /// Bytes Rust's layout rules allow for one contiguous allocation on this target
@@ -54,7 +54,7 @@ pub const LOW_MEMORY_WARNING_MARGIN: u64 = 1 << 30;
 /// A layer plane, a decode buffer or a tile is one contiguous allocation, so each must fit this
 /// limit at the point it is allocated. An import's peak is the *sum* of many such buffers and
 /// may legitimately exceed this; decode paths enforce their own per-buffer limits
-/// (`photocraft-psd::MAX_DECODED_BYTES`, `photocraft-codecs`' `Limits::max_alloc`) there.
+/// (`lienzo-psd::MAX_DECODED_BYTES`, `lienzo-codecs`' `Limits::max_alloc`) there.
 pub const MAX_SINGLE_ALLOCATION: u64 = isize::MAX as u64;
 
 /// Architectural maximum linear memory of wasm32: 65,536 pages of 64 KiB (4 GiB).
@@ -109,7 +109,7 @@ thread_local! {
 }
 
 /// Tile bytes the scratch disk can take beyond RAM: `None` while spilling is off, paused or
-/// unavailable (web), or its room is unknown. See [`photocraft_raster::spill::scratch_capacity`].
+/// unavailable (web), or its room is unknown. See [`lienzo_raster::spill::scratch_capacity`].
 ///
 /// Test builds: a mocked memory snapshot without a mocked scratch disk measures no scratch, so a
 /// test that mocks RAM keeps the RAM-only policy whatever another test did to the process-wide
@@ -127,7 +127,7 @@ pub fn scratch_capacity() -> Option<u64> {
     if cfg!(target_arch = "wasm32") {
         return None;
     }
-    photocraft_raster::spill::scratch_capacity()
+    lienzo_raster::spill::scratch_capacity()
 }
 
 /// How much of `spillable` tile bytes the scratch disk covers on `platform` right now. The web
@@ -148,7 +148,7 @@ impl MemorySnapshot {
     /// Unknown memory measurement.
     pub const UNKNOWN: Self = Self { available_ram: None, swap_free: None, commit_headroom: None };
 
-    /// The current measurement from the shared detector, [`photocraft_raster::memory::system`],
+    /// The current measurement from the shared detector, [`lienzo_raster::memory::system`],
     /// which also sizes the tile residency budget.
     pub fn current() -> Self {
         #[cfg(any(test, feature = "testgen"))]
@@ -161,14 +161,14 @@ impl MemorySnapshot {
             }
         }
 
-        photocraft_raster::memory::system::current().into()
+        lienzo_raster::memory::system::current().into()
     }
 }
 
-impl From<photocraft_raster::memory::system::SystemMemory> for MemorySnapshot {
+impl From<lienzo_raster::memory::system::SystemMemory> for MemorySnapshot {
     /// The shared detector's measurement; an unreadable constraint is already the fail-closed
     /// `Some(0)` available RAM, which admission refuses.
-    fn from(m: photocraft_raster::memory::system::SystemMemory) -> Self {
+    fn from(m: lienzo_raster::memory::system::SystemMemory) -> Self {
         Self { available_ram: m.available_ram, swap_free: m.swap_free, commit_headroom: m.commit_headroom }
     }
 }
@@ -207,7 +207,7 @@ impl MemoryBudget {
     /// Determines the admission decision for an estimated requirement in bytes.
     ///
     /// `u64::MAX` is the sentinel a format estimate produces when a size overflowed `u64`
-    /// (`photocraft-io`'s TIFF estimates saturate there rather than wrap). It is not a real
+    /// (`lienzo-io`'s TIFF estimates saturate there rather than wrap). It is not a real
     /// requirement, so it is always refused, even when the hard limit is itself `u64::MAX` (the
     /// native unknown-memory cap) and even with explicit approval or a matching one-shot
     /// estimate. The refusal keeps the estimate and limit as they are; no value is invented.
@@ -540,9 +540,9 @@ pub(crate) fn nested_import_local_bound(required: u64, caller_limit: u64, approv
 /// its commit limit, which the importers already report as an error, and macOS pages to disk as it
 /// needs. macOS's physical-memory provider feeds the adaptive budget, not this legacy
 /// RAM-plus-swap helper; flat and layered TIFF conversion keep their existing behaviour. Measured
-/// by [`photocraft_raster::memory::system::available_with_swap`].
+/// by [`lienzo_raster::memory::system::available_with_swap`].
 pub fn available() -> Option<u64> {
-    photocraft_raster::memory::system::available_with_swap()
+    lienzo_raster::memory::system::available_with_swap()
 }
 
 /// Refuses to open a `w` × `h` px image whose layer and decode buffers take `needed` bytes when

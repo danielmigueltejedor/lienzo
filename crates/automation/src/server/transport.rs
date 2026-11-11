@@ -1,5 +1,5 @@
 //! Recover malformed JSON lines before passing valid messages to rmcp.
-use super::{AutomationError, PhotocraftMcp, ServiceExt, Value, json};
+use super::{AutomationError, LienzoMcp, ServiceExt, Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::security::MAX_REQUEST_BYTES;
@@ -34,7 +34,7 @@ async fn bounded_line<R: tokio::io::AsyncRead + Unpin>(source: &mut BufReader<R>
     }
 }
 
-impl PhotocraftMcp {
+impl LienzoMcp {
     /// Serve a JSON-lines stream. A malformed line receives -32700/id:null; the next line
     /// is still handled. A single writer serializes parse errors and SDK responses.
     pub async fn serve_io(
@@ -139,7 +139,7 @@ mod tests {
         // crosses the byte limit. No part of this line may be forwarded to rmcp.
         input.extend(vec![b' '; MAX_REQUEST_BYTES - call.len()]);
         input.push(b'\n');
-        let server = PhotocraftMcp::headless();
+        let server = LienzoMcp::headless();
         let observer = server.clone();
         let result = tokio::time::timeout(std::time::Duration::from_secs(5), server.serve_io(std::io::Cursor::new(input), tokio::io::sink()))
             .await
@@ -158,7 +158,7 @@ mod tests {
     async fn a_line_that_is_not_utf8_gets_a_parse_error_and_the_session_keeps_serving() {
         let (mut client, input) = tokio::io::duplex(1 << 16);
         let (output, replies) = tokio::io::duplex(1 << 16);
-        let server = PhotocraftMcp::headless();
+        let server = LienzoMcp::headless();
         let observer = server.clone();
         let session = tokio::spawn(server.serve_io(input, output));
         let mut replies = BufReader::new(replies).lines();

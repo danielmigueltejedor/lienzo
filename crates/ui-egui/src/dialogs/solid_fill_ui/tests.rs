@@ -1,21 +1,21 @@
 use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
 use egui_kittest::Harness;
-use photocraft_color::{Color, ColorMode};
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use lienzo_color::{Color, ColorMode};
+use lienzo_doc::{Fill, LayerContent, LayerId};
 use serde_json::json;
 
 use super::*;
 
-fn harness(ppp: f32) -> (Harness<'static, PhotocraftApp>, LayerId) {
-    let mut s = photocraft_engine::Session::new();
+fn harness(ppp: f32) -> (Harness<'static, LienzoApp>, LayerId) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48, "depth": 16})).unwrap();
     let id = LayerId(s.execute("layer.newFillLayer.solidColor", json!({"color": "#33669980"})).unwrap()["layer"].as_u64().unwrap());
     s.execute("layer.layerMask.revealAll", json!({})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Other"})).unwrap();
     let mut h =
         Harness::builder().with_size(vec2(1440.0, 900.0)).with_pixels_per_point(ppp).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            PhotocraftApp::new(s, crate::Services::default())
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            LienzoApp::new(s, crate::Services::default())
         });
     let ctx = h.ctx.clone();
     let (r, _) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -24,7 +24,7 @@ fn harness(ppp: f32) -> (Harness<'static, PhotocraftApp>, LayerId) {
     (h, id)
 }
 
-fn double_click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
+fn double_click(h: &mut Harness<'_, LienzoApp>, at: Pos2) {
     h.run_steps(40);
     for _ in 0..2 {
         h.hover_at(at);
@@ -37,7 +37,7 @@ fn double_click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
     }
 }
 
-fn row(h: &Harness<'_, PhotocraftApp>, id: LayerId) -> crate::layer_row_ui::RowRects {
+fn row(h: &Harness<'_, LienzoApp>, id: LayerId) -> crate::layer_row_ui::RowRects {
     crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == id.0).unwrap()
 }
 
@@ -190,12 +190,12 @@ fn picker_previews_without_editing_cancel_discards_and_ok_is_one_step() {
     assert_eq!(app.session.active().unwrap().history.entries().len(), steps + 1);
     assert_eq!(app.session.tools.foreground, tools, "editing a fill doesn't change the tool colour");
     assert_eq!(app.session.active().unwrap().doc.layer(id).unwrap().content, LayerContent::Fill(Fill::Solid(color)));
-    let bytes = photocraft_format::save_to_bytes(&app.session.active().unwrap().doc, &Default::default()).unwrap();
-    let loaded = photocraft_format::load_from_bytes(&bytes).unwrap();
+    let bytes = lienzo_format::save_to_bytes(&app.session.active().unwrap().doc, &Default::default()).unwrap();
+    let loaded = lienzo_format::load_from_bytes(&bytes).unwrap();
     assert_eq!(loaded.layer(id).unwrap().content, LayerContent::Fill(Fill::Solid(color)));
     assert_eq!(loaded.layer(id).unwrap().mask, before.layer(id).unwrap().mask);
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "fill.psd", &Default::default()).unwrap().bytes;
-    let loaded = photocraft_io::import("fill.psd", &bytes).unwrap().document;
+    let bytes = lienzo_io::export(&app.session.active().unwrap().doc, "fill.psd", &Default::default()).unwrap().bytes;
+    let loaded = lienzo_io::import("fill.psd", &bytes).unwrap().document;
     let fill = loaded.walk().into_iter().find(|(_, _, l)| matches!(l.content, LayerContent::Fill(Fill::Solid(_)))).unwrap().2;
     let LayerContent::Fill(Fill::Solid(saved)) = fill.content else { panic!() };
     // PSD's existing SoCo descriptor stores the fill's colour components, not Color.alpha.
@@ -275,16 +275,16 @@ fn cmyk_lab_preview_thumbnail_cancel_and_ok_are_consistent() {
 /// to through the document profile.
 #[test]
 fn cmyk_typed_into_the_picker_is_the_fills_colour_in_a_cmyk_document() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
     s.execute("image.mode.cmyk", json!({})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     let typed = |f: &mut serde_json::Map<String, serde_json::Value>, inks: [f32; 4]| {
-        let [r, g, b] = photocraft_color::convert::cmyk_to_rgb(inks).map(|c| (c.clamp(0.0, 1.0) * 255.0).round() as u8);
+        let [r, g, b] = lienzo_color::convert::cmyk_to_rgb(inks).map(|c| (c.clamp(0.0, 1.0) * 255.0).round() as u8);
         f.insert("color".into(), json!(format!("#{r:02x}{g:02x}{b:02x}")));
         f.insert("__cmyk".into(), json!(inks));
     };
-    let fill = |app: &PhotocraftApp| {
+    let fill = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         match st.doc.layer(st.active_layer.unwrap()).unwrap().content {
             LayerContent::Fill(Fill::Solid(c)) => c,
@@ -325,7 +325,7 @@ fn cmyk_typed_into_the_picker_is_the_fills_colour_in_a_cmyk_document() {
 }
 
 fn with_inks(f: &mut serde_json::Map<String, serde_json::Value>, inks: [f32; 4]) {
-    let [r, g, b] = photocraft_color::convert::cmyk_to_rgb(inks).map(|c| (c.clamp(0.0, 1.0) * 255.0).round() as u8);
+    let [r, g, b] = lienzo_color::convert::cmyk_to_rgb(inks).map(|c| (c.clamp(0.0, 1.0) * 255.0).round() as u8);
     f.insert("color".into(), json!(format!("#{r:02x}{g:02x}{b:02x}")));
     f.insert("__cmyk".into(), json!(inks));
 }
@@ -334,10 +334,10 @@ fn with_inks(f: &mut serde_json::Map<String, serde_json::Value>, inks: [f32; 4])
 /// they are an edit on OK (#8568).
 #[test]
 fn same_hex_inks_preview_and_thumbnail_as_ok_commits_them() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
     s.execute("image.mode.cmyk", json!({})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     let near = [0.5, 0.5, 0.499, 1.0];
     let id = open_new(&mut app).unwrap();
     let mut f = app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone();

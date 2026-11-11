@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType, encode};
-use photocraft_doc::Document;
-use photocraft_io::{ImportOptions, ImportResult, PngImport, import_with_options_and_interrupt};
-use photocraft_raster::Interrupt;
+use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType, encode};
+use lienzo_doc::Document;
+use lienzo_io::{ImportOptions, ImportResult, PngImport, import_with_options_and_interrupt};
+use lienzo_raster::Interrupt;
 
 /// A pseudo-random `w`×`h` image.
 fn noise(w: u32, h: u32, layout: ChannelLayout, sample: SampleType) -> Image {
@@ -77,7 +77,7 @@ fn stepped_png_import_equals_import() {
 fn stepped_png_import_keeps_a_palette_as_indexed_colour() {
     let pal = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [9, 9, 9]];
     let idx: Vec<u8> = (0..40 * 30).map(|i| (i % 4) as u8).collect();
-    let bytes = photocraft_codecs::encode_png_indexed(40, 30, &idx, &pal, Some(3), None, None).unwrap();
+    let bytes = lienzo_codecs::encode_png_indexed(40, 30, &idx, &pal, Some(3), None, None).unwrap();
     let (got, _) = stepped("p.png", &bytes, 0);
     assert!(got.document.color_table.is_some(), "an Indexed Color document");
     assert_stepped_equals_import("p.png", &bytes, "palette");

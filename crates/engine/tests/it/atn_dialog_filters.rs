@@ -1,6 +1,6 @@
-use photocraft_engine::{Session, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
+use lienzo_engine::{Session, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
 use serde_json::{Value, json};
 
 fn encoded(code: &[u8; 4], d: Descriptor) -> Vec<u8> {
@@ -74,16 +74,12 @@ fn custom_and_fibers_recordings_round_trip_replay_native_settings_and_undo() {
             let mut native = fixture(depth);
             native.execute(id, p.clone()).unwrap();
             let mut s = fixture(depth);
-            let before = photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
+            let before = lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
             s.actions.list = imported.actions.clone();
             assert_eq!(s.execute("actions.play", json!({"action":"Dialog"})).unwrap()["ran"], 1);
-            assert_eq!(
-                photocraft_compose::flatten(&s.active().unwrap().doc).px,
-                photocraft_compose::flatten(&native.active().unwrap().doc).px,
-                "{id} {depth}-bit"
-            );
+            assert_eq!(lienzo_compose::flatten(&s.active().unwrap().doc).px, lienzo_compose::flatten(&native.active().unwrap().doc).px, "{id} {depth}-bit");
             s.execute("edit.undo", json!({})).unwrap();
-            assert_eq!(photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
+            assert_eq!(lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
         }
     }
 }
@@ -105,7 +101,7 @@ fn fibers_missing_seed_is_stable_across_playback_and_save() {
         let mut s = fixture(8);
         s.actions.list = actions;
         s.execute("actions.play", json!({"action":"Dialog"})).unwrap();
-        photocraft_compose::flatten(&s.active().unwrap().doc).px.clone()
+        lienzo_compose::flatten(&s.active().unwrap().doc).px.clone()
     };
     assert_eq!(render(imported.actions.clone()), render(saved.actions));
 }

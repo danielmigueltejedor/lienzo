@@ -27,7 +27,7 @@ Reviewed-head links below retain historical provenance. Use these current paths 
 
 | Case / area | Current source path |
 |---|---|
-| #6492 occupied control port | `apps/photocraft/tests/it/control_exit_code.rs` |
+| #6492 occupied control port | `apps/lienzo/tests/it/control_exit_code.rs` |
 | #8347 type-tool checkbox/canvas coverage | `crates/ui-egui/src/tools/type_tool/canvas_tests.rs` |
 | Engine command regressions | `crates/engine/src/cmd/` and the command's live test submodule; do not use deleted root monoliths |
 | #7153 Liquify smart-filter editing | `crates/ui-egui/src/dialogs/liquify_ui/tests.rs` |
@@ -38,14 +38,14 @@ Reviewed-head links below retain historical provenance. Use these current paths 
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-automation --locked unknown_names_suggest_the_right_method_or_command -- --nocapture` — [crates/automation/src/rpc.rs / unknown_names_suggest_the_right_method_or_command](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/automation/src/rpc.rs)
-  - `cargo test -p photocraft-automation --locked errors_are_tool_errors_not_crashes -- --nocapture` — [crates/automation/tests/mcp.rs / errors_are_tool_errors_not_crashes](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/automation/tests/mcp.rs)
-  - `cargo test -p photocraft-engine --locked protocol_listing_method_points_at_command_list -- --nocapture` — [crates/engine/src/command_hints.rs / protocol_listing_method_points_at_command_list](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
-  - `cargo test -p photocraft-engine --locked near_misses_suggest_registered_ids -- --nocapture` — [crates/engine/src/command_hints.rs / near_misses_suggest_registered_ids](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
-  - `cargo test -p photocraft-engine --locked suggestions_are_capped_and_ordered -- --nocapture` — [crates/engine/src/command_hints.rs / suggestions_are_capped_and_ordered](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
-  - `cargo test -p photocraft-engine --locked protocol_method_hints -- --nocapture` — [crates/engine/src/command_hints.rs / protocol_method_hints](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
-  - `cargo test -p photocraft-text --locked tokenizer_and_distance -- --nocapture` — [crates/text/src/spell.rs / tokenizer_and_distance](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/text/src/spell.rs)
-  - `cargo test -p photocraft-ui-egui --locked unknown_names_suggest_the_right_method_or_command -- --nocapture` — [crates/ui-egui/src/control.rs / unknown_names_suggest_the_right_method_or_command](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/ui-egui/src/control.rs)
+  - `cargo test -p lienzo-automation --locked unknown_names_suggest_the_right_method_or_command -- --nocapture` — [crates/automation/src/rpc.rs / unknown_names_suggest_the_right_method_or_command](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/automation/src/rpc.rs)
+  - `cargo test -p lienzo-automation --locked errors_are_tool_errors_not_crashes -- --nocapture` — [crates/automation/tests/mcp.rs / errors_are_tool_errors_not_crashes](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/automation/tests/mcp.rs)
+  - `cargo test -p lienzo-engine --locked protocol_listing_method_points_at_command_list -- --nocapture` — [crates/engine/src/command_hints.rs / protocol_listing_method_points_at_command_list](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
+  - `cargo test -p lienzo-engine --locked near_misses_suggest_registered_ids -- --nocapture` — [crates/engine/src/command_hints.rs / near_misses_suggest_registered_ids](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
+  - `cargo test -p lienzo-engine --locked suggestions_are_capped_and_ordered -- --nocapture` — [crates/engine/src/command_hints.rs / suggestions_are_capped_and_ordered](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
+  - `cargo test -p lienzo-engine --locked protocol_method_hints -- --nocapture` — [crates/engine/src/command_hints.rs / protocol_method_hints](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/engine/src/command_hints.rs)
+  - `cargo test -p lienzo-text --locked tokenizer_and_distance -- --nocapture` — [crates/text/src/spell.rs / tokenizer_and_distance](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/text/src/spell.rs)
+  - `cargo test -p lienzo-ui-egui --locked unknown_names_suggest_the_right_method_or_command -- --nocapture` — [crates/ui-egui/src/control.rs / unknown_names_suggest_the_right_method_or_command](https://github.com/storytold/photocraft/blob/c45d01eafe84e600bb28033a6853cc19c827b7bf/crates/ui-egui/src/control.rs)
 
 - Expected behavior: unknown names suggest the right method or command; errors are tool errors not crashes; protocol listing method points at command list; near misses suggest registered ids; suggestions are capped and ordered; protocol method hints; tokenizer and distance; unknown names suggest the right method or command. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -86,7 +86,7 @@ assert!(e.contains("did you mean `command.list`") && e.contains("protocol method
 `errors_are_tool_errors_not_crashes` setup/action excerpt:
 
 ```rust
-let client = connect(PhotocraftMcp::headless()).await;
+let client = connect(LienzoMcp::headless()).await;
     let r = call(&client, "command_run", json!({"id": "no.such.command"})).await;
     assert_eq!(r.is_error, Some(true));
     assert!(text(&r).contains("unknown command"));
@@ -135,7 +135,7 @@ assert_eq!(r.is_error, Some(true));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked engine_execute_cannot_change_document_behind_adjustment_dialog -- --nocapture` — [crates/ui-egui/src/control.rs / engine_execute_cannot_change_document_behind_adjustment_dialog](https://github.com/storytold/photocraft/blob/81964dc5ef77a71a2ae2a938958cf3ed77d90719/crates/ui-egui/src/control.rs)
+  - `cargo test -p lienzo-ui-egui --locked engine_execute_cannot_change_document_behind_adjustment_dialog -- --nocapture` — [crates/ui-egui/src/control.rs / engine_execute_cannot_change_document_behind_adjustment_dialog](https://github.com/storytold/photocraft/blob/81964dc5ef77a71a2ae2a938958cf3ed77d90719/crates/ui-egui/src/control.rs)
 
 - Expected behavior: engine execute cannot change document behind adjustment dialog. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -144,7 +144,7 @@ assert_eq!(r.is_error, Some(true));
 `engine_execute_cannot_change_document_behind_adjustment_dialog` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width": 60, "height": 40, "background": "#3366cc"})).unwrap();
         let opened = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "image.adjustments.hueSaturation"}));
@@ -191,12 +191,12 @@ assert_eq!(opened["ok"], true, "{opened}");
 - Fixture/setup: Synthetic ATN mappings, smart-object Edit Contents action, temporary pattern stores and matting hard/soft edges.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-engine --locked every_mapped_command_exports_and_imports_back -- --nocapture`
-  - `cargo test -p photocraft-engine --locked save_in_edit_contents_updates_the_smart_object -- --nocapture`
-  - `cargo test -p photocraft-engine --locked patterns_survive_a_restart -- --nocapture`
-  - `cargo test -p photocraft-engine --locked corrupt_pattern_files_are_skipped_and_kept -- --nocapture`
-  - `cargo test -p photocraft-engine --locked large_patterns_load_on_use -- --nocapture`
-  - `cargo test -p photocraft-algo --locked matting::tests -- --nocapture`
+  - `cargo test -p lienzo-engine --locked every_mapped_command_exports_and_imports_back -- --nocapture`
+  - `cargo test -p lienzo-engine --locked save_in_edit_contents_updates_the_smart_object -- --nocapture`
+  - `cargo test -p lienzo-engine --locked patterns_survive_a_restart -- --nocapture`
+  - `cargo test -p lienzo-engine --locked corrupt_pattern_files_are_skipped_and_kept -- --nocapture`
+  - `cargo test -p lienzo-engine --locked large_patterns_load_on_use -- --nocapture`
+  - `cargo test -p lienzo-algo --locked matting::tests -- --nocapture`
 
 - Expected: Mappings round-trip parameters; Save in Edit Contents updates parent smart content. Pattern names/pixels and rename/delete survive restart; corrupt assets are warned about and preserved; large patterns load full pixels lazily. Hard edge ±100% shifts one pixel, ±50% gives half coverage within 0.02; feather 4/+100% reaches four pixels.
 - Separate coverage / prerequisites: Named CopyCat/AJ/Line and Color playback needs licensed fixture identities and required document/pattern setup; missing action sets leave that subcase BLOCKED. Mapping tests alone do not prove full set playback. Also run all new legacy/new-store migration, interruption, corruption, duplicate-ID and deletion-authority regressions.
@@ -208,11 +208,11 @@ assert_eq!(opened["ok"], true, "{opened}");
 
 ## PR-6492: Fail control startup promptly when its port is occupied
 
-- Fixture/setup: Process-isolated occupied loopback listener and successful prebound control-server fixtures in apps/photocraft tests.
+- Fixture/setup: Process-isolated occupied loopback listener and successful prebound control-server fixtures in apps/lienzo tests.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft --locked an_occupied_control_port_exits_with_status_2 -- --nocapture`
-  - `cargo test -p photocraft --locked a_prebound_listener_authenticates_and_dispatches_requests -- --nocapture`
+  - `cargo test -p lienzo --locked an_occupied_control_port_exits_with_status_2 -- --nocapture`
+  - `cargo test -p lienzo --locked a_prebound_listener_authenticates_and_dispatches_requests -- --nocapture`
 
 - Expected: Occupied port exits with status 2 before window/GPU initialization; successful prebound control authenticates and dispatches requests. Preserve timing, cleanup and child-exit assertions.
 - Separate coverage / prerequisites: Use only the test-owned listener and process.
@@ -226,8 +226,8 @@ assert_eq!(opened["ok"], true, "{opened}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-plugins --locked parallel_bands_fit_the_total_memory_budget -- --nocapture` — [crates/plugins/tests/abi.rs / parallel_bands_fit_the_total_memory_budget](https://github.com/storytold/photocraft/blob/0fdc6259193aab32b8feab7347ddc36196f40a19/crates/plugins/tests/abi.rs)
-  - `cargo test -p photocraft-plugins --locked one_band_at_a_time_matches_parallel_bands -- --nocapture` — [crates/plugins/tests/abi.rs / one_band_at_a_time_matches_parallel_bands](https://github.com/storytold/photocraft/blob/0fdc6259193aab32b8feab7347ddc36196f40a19/crates/plugins/tests/abi.rs)
+  - `cargo test -p lienzo-plugins --locked parallel_bands_fit_the_total_memory_budget -- --nocapture` — [crates/plugins/tests/abi.rs / parallel_bands_fit_the_total_memory_budget](https://github.com/storytold/photocraft/blob/0fdc6259193aab32b8feab7347ddc36196f40a19/crates/plugins/tests/abi.rs)
+  - `cargo test -p lienzo-plugins --locked one_band_at_a_time_matches_parallel_bands -- --nocapture` — [crates/plugins/tests/abi.rs / one_band_at_a_time_matches_parallel_bands](https://github.com/storytold/photocraft/blob/0fdc6259193aab32b8feab7347ddc36196f40a19/crates/plugins/tests/abi.rs)
 
 - Expected behavior: parallel bands fit the total memory budget; one band at a time matches parallel bands. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -299,7 +299,7 @@ assert_eq!(serial, parallel);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked blend_if_alt_split_and_drag_behavior -- --nocapture` — [crates/ui-egui/src/layer_style.rs / blend_if_alt_split_and_drag_behavior](https://github.com/storytold/photocraft/blob/92488307722c3b840507827cac7ee9a88470fc8a/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked blend_if_alt_split_and_drag_behavior -- --nocapture` — [crates/ui-egui/src/layer_style.rs / blend_if_alt_split_and_drag_behavior](https://github.com/storytold/photocraft/blob/92488307722c3b840507827cac7ee9a88470fc8a/crates/ui-egui/src/layer_style.rs)
 
 - Expected behavior: blend if alt split and drag behavior. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -371,13 +371,13 @@ assert_eq!(q1, [0, 45, 255, 255], "Alt-drag right must split black triangle into
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked clipped_dissolve_is_binary_and_preserves_the_base_shape -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_is_binary_and_preserves_the_base_shape](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked clipped_dissolve_matches_whole_render_at_offset_regions_and_depths -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_matches_whole_render_at_offset_regions_and_depths](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked dissolve_adjustment_is_a_per_pixel_choice -- --nocapture` — [crates/compose/src/tests.rs / dissolve_adjustment_is_a_per_pixel_choice](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked clipped_dissolve_fill_is_a_per_pixel_choice -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_fill_is_a_per_pixel_choice](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked color_overlay_keeps_dissolve_coverage -- --nocapture` — [crates/compose/src/tests.rs / color_overlay_keeps_dissolve_coverage](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-gpu --locked groups_masks_and_clipping -- --nocapture` — [crates/gpu/tests/parity.rs / groups_masks_and_clipping](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/gpu/tests/parity.rs)
-  - `cargo test -p photocraft-gpu --locked dissolve_adjustments_and_effects_match_cpu_in_offset_regions -- --nocapture` — [crates/gpu/tests/parity.rs / dissolve_adjustments_and_effects_match_cpu_in_offset_regions](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/gpu/tests/parity.rs)
+  - `cargo test -p lienzo-compose --locked clipped_dissolve_is_binary_and_preserves_the_base_shape -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_is_binary_and_preserves_the_base_shape](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked clipped_dissolve_matches_whole_render_at_offset_regions_and_depths -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_matches_whole_render_at_offset_regions_and_depths](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked dissolve_adjustment_is_a_per_pixel_choice -- --nocapture` — [crates/compose/src/tests.rs / dissolve_adjustment_is_a_per_pixel_choice](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked clipped_dissolve_fill_is_a_per_pixel_choice -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_fill_is_a_per_pixel_choice](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked color_overlay_keeps_dissolve_coverage -- --nocapture` — [crates/compose/src/tests.rs / color_overlay_keeps_dissolve_coverage](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-gpu --locked groups_masks_and_clipping -- --nocapture` — [crates/gpu/tests/parity.rs / groups_masks_and_clipping](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/gpu/tests/parity.rs)
+  - `cargo test -p lienzo-gpu --locked dissolve_adjustments_and_effects_match_cpu_in_offset_regions -- --nocapture` — [crates/gpu/tests/parity.rs / dissolve_adjustments_and_effects_match_cpu_in_offset_regions](https://github.com/storytold/photocraft/blob/db546ff4822a011a7915b66af3834f94c05767db/crates/gpu/tests/parity.rs)
 
 - Expected behavior: clipped dissolve is binary and preserves the base shape; clipped dissolve matches whole render at offset regions and depths; dissolve adjustment is a per pixel choice; clipped dissolve fill is a per pixel choice; color overlay keeps dissolve coverage; groups masks and clipping; dissolve adjustments and effects match cpu in offset regions. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -452,11 +452,11 @@ assert!(close4(part.get(x, y), whole.get(x, y)), "{fmt:?}: region mismatch at ({
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked clipped_dissolve_is_binary_and_preserves_the_base_shape -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_is_binary_and_preserves_the_base_shape](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked clipped_dissolve_matches_whole_render_at_offset_regions_and_depths -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_matches_whole_render_at_offset_regions_and_depths](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-gpu --locked groups_masks_and_clipping -- --nocapture` — [crates/gpu/tests/parity.rs / groups_masks_and_clipping](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/gpu/tests/parity.rs)
-  - `cargo test -p photocraft-ui-egui --locked native_rotate_event_reaches_canvas_when_trackpad_rotation_is_enabled -- --nocapture` — [crates/ui-egui/src/rotate_view.rs / native_rotate_event_reaches_canvas_when_trackpad_rotation_is_enabled](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/ui-egui/src/rotate_view.rs)
-  - `cargo test -p photocraft-ui-egui --locked native_pinch_resets_legacy_gesture_continuation -- --nocapture` — [crates/ui-egui/src/wheel_nav.rs / native_pinch_resets_legacy_gesture_continuation](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/ui-egui/src/wheel_nav.rs)
+  - `cargo test -p lienzo-compose --locked clipped_dissolve_is_binary_and_preserves_the_base_shape -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_is_binary_and_preserves_the_base_shape](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked clipped_dissolve_matches_whole_render_at_offset_regions_and_depths -- --nocapture` — [crates/compose/src/tests.rs / clipped_dissolve_matches_whole_render_at_offset_regions_and_depths](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-gpu --locked groups_masks_and_clipping -- --nocapture` — [crates/gpu/tests/parity.rs / groups_masks_and_clipping](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/gpu/tests/parity.rs)
+  - `cargo test -p lienzo-ui-egui --locked native_rotate_event_reaches_canvas_when_trackpad_rotation_is_enabled -- --nocapture` — [crates/ui-egui/src/rotate_view.rs / native_rotate_event_reaches_canvas_when_trackpad_rotation_is_enabled](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/ui-egui/src/rotate_view.rs)
+  - `cargo test -p lienzo-ui-egui --locked native_pinch_resets_legacy_gesture_continuation -- --nocapture` — [crates/ui-egui/src/wheel_nav.rs / native_pinch_resets_legacy_gesture_continuation](https://github.com/storytold/photocraft/blob/194a8976cd6c14441222b287b9b4f4841a0eb2f9/crates/ui-egui/src/wheel_nav.rs)
 
 - Expected behavior: clipped dissolve is binary and preserves the base shape; clipped dissolve matches whole render at offset regions and depths; groups masks and clipping; native rotate event reaches canvas when trackpad rotation is enabled; native pinch resets legacy gesture continuation. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -531,41 +531,41 @@ assert!(close4(part.get(x, y), whole.get(x, y)), "{fmt:?}: region mismatch at ({
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-algo --locked rough_pastels_and_angled_strokes_respond_to_every_slider -- --nocapture` — [crates/algo/src/artistic_fx.rs / rough_pastels_and_angled_strokes_respond_to_every_slider](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
-  - `cargo test -p photocraft-algo --locked cutout_makes_flat_shapes_with_clean_edges -- --nocapture` — [crates/algo/src/artistic_fx.rs / cutout_makes_flat_shapes_with_clean_edges](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
-  - `cargo test -p photocraft-algo --locked cutout_keeps_the_tone_of_surviving_islands_at_low_fidelity -- --nocapture` — [crates/algo/src/artistic_fx.rs / cutout_keeps_the_tone_of_surviving_islands_at_low_fidelity](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
-  - `cargo test -p photocraft-algo --locked a_stack_around_a_cutout_is_tile_independent -- --nocapture` — [crates/algo/src/artistic_fx.rs / a_stack_around_a_cutout_is_tile_independent](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
-  - `cargo test -p photocraft-algo --locked oklab_round_trips_and_marks_the_gamut -- --nocapture` — [crates/algo/src/cutout/colour.rs / oklab_round_trips_and_marks_the_gamut](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked out_of_gamut_colours_lose_strength_not_hue -- --nocapture` — [crates/algo/src/cutout/colour.rs / out_of_gamut_colours_lose_strength_not_hue](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked smoothing_flattens_noise_and_keeps_edges -- --nocapture` — [crates/algo/src/cutout/colour.rs / smoothing_flattens_noise_and_keeps_edges](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked the_palette_finds_the_pictures_own_colours -- --nocapture` — [crates/algo/src/cutout/colour.rs / the_palette_finds_the_pictures_own_colours](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked a_tone_of_two_different_hues_splits_in_two -- --nocapture` — [crates/algo/src/cutout/colour.rs / a_tone_of_two_different_hues_splits_in_two](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked an_empty_image_still_has_a_palette -- --nocapture` — [crates/algo/src/cutout/colour.rs / an_empty_image_still_has_a_palette](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked douglas_peucker_keeps_only_points_off_the_line -- --nocapture` — [crates/algo/src/cutout/curves.rs / douglas_peucker_keeps_only_points_off_the_line](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked lines_cross_where_they_should -- --nocapture` — [crates/algo/src/cutout/curves.rs / lines_cross_where_they_should](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked rounding_off_keeps_an_open_chains_ends -- --nocapture` — [crates/algo/src/cutout/curves.rs / rounding_off_keeps_an_open_chains_ends](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked a_square_keeps_its_four_corners_and_straight_sides -- --nocapture` — [crates/algo/src/cutout/curves.rs / a_square_keeps_its_four_corners_and_straight_sides](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked a_rounded_corner_is_squared_back -- --nocapture` — [crates/algo/src/cutout/curves.rs / a_rounded_corner_is_squared_back](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked an_open_chain_ends_where_it_started_at_any_fidelity -- --nocapture` — [crates/algo/src/cutout/curves.rs / an_open_chain_ends_where_it_started_at_any_fidelity](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked curves_pass_through_their_vertices -- --nocapture` — [crates/algo/src/cutout/curves.rs / curves_pass_through_their_vertices](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked fitting_keeps_small_islands_and_their_winding -- --nocapture` — [crates/algo/src/cutout/curves.rs / fitting_keeps_small_islands_and_their_winding](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked bounds_cover_every_point -- --nocapture` — [crates/algo/src/cutout/curves.rs / bounds_cover_every_point](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
-  - `cargo test -p photocraft-algo --locked the_edge_between_two_regions_is_one_chain_between_junctions -- --nocapture` — [crates/algo/src/cutout/edges.rs / the_edge_between_two_regions_is_one_chain_between_junctions](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
-  - `cargo test -p photocraft-algo --locked an_island_is_one_closed_chain -- --nocapture` — [crates/algo/src/cutout/edges.rs / an_island_is_one_closed_chain](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
-  - `cargo test -p photocraft-algo --locked an_anti_aliased_edge_is_placed_inside_its_pixel -- --nocapture` — [crates/algo/src/cutout/edges.rs / an_anti_aliased_edge_is_placed_inside_its_pixel](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
-  - `cargo test -p photocraft-algo --locked a_square_covers_its_area_exactly -- --nocapture` — [crates/algo/src/cutout/fill.rs / a_square_covers_its_area_exactly](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/fill.rs)
-  - `cargo test -p photocraft-algo --locked shapes_cover_every_pixel_once_with_no_seams -- --nocapture` — [crates/algo/src/cutout/mod.rs / shapes_cover_every_pixel_once_with_no_seams](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
-  - `cargo test -p photocraft-algo --locked edge_fidelity_changes_the_outlines -- --nocapture` — [crates/algo/src/cutout/mod.rs / edge_fidelity_changes_the_outlines](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
-  - `cargo test -p photocraft-algo --locked empty_images_stop_before_the_transpose_and_row_passes -- --nocapture` — [crates/algo/src/cutout/mod.rs / empty_images_stop_before_the_transpose_and_row_passes](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
-  - `cargo test -p photocraft-algo --locked filling_does_not_depend_on_the_tiling -- --nocapture` — [crates/algo/src/cutout/mod.rs / filling_does_not_depend_on_the_tiling](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
-  - `cargo test -p photocraft-algo --locked noise_merges_into_neighbours_and_noise_apart_colours_are_one -- --nocapture` — [crates/algo/src/cutout/mod.rs / noise_merges_into_neighbours_and_noise_apart_colours_are_one](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
-  - `cargo test -p photocraft-algo --locked components_are_four_connected_and_numbered_in_raster_order -- --nocapture` — [crates/algo/src/cutout/regions.rs / components_are_four_connected_and_numbered_in_raster_order](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
-  - `cargo test -p photocraft-algo --locked small_regions_merge_into_the_neighbour_they_share_most_border_with -- --nocapture` — [crates/algo/src/cutout/regions.rs / small_regions_merge_into_the_neighbour_they_share_most_border_with](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
-  - `cargo test -p photocraft-algo --locked slivers_merge_though_they_are_large -- --nocapture` — [crates/algo/src/cutout/regions.rs / slivers_merge_though_they_are_large](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
-  - `cargo test -p photocraft-algo --locked paper_is_stretched_towards_black_and_white_and_keeps_its_hue -- --nocapture` — [crates/algo/src/cutout/regions.rs / paper_is_stretched_towards_black_and_white_and_keeps_its_hue](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
-  - `cargo test -p photocraft-algo --locked local_colour_drifts_within_a_shape_but_never_crosses_a_cut -- --nocapture` — [crates/algo/src/cutout/regions.rs / local_colour_drifts_within_a_shape_but_never_crosses_a_cut](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
-  - `cargo test -p photocraft-algo --locked transposing_twice_gives_the_image_back -- --nocapture` — [crates/algo/src/cutout/util.rs / transposing_twice_gives_the_image_back](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/util.rs)
-  - `cargo test -p photocraft-algo --locked find_returns_the_root_and_shortens_the_path -- --nocapture` — [crates/algo/src/cutout/util.rs / find_returns_the_root_and_shortens_the_path](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/util.rs)
+  - `cargo test -p lienzo-algo --locked rough_pastels_and_angled_strokes_respond_to_every_slider -- --nocapture` — [crates/algo/src/artistic_fx.rs / rough_pastels_and_angled_strokes_respond_to_every_slider](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
+  - `cargo test -p lienzo-algo --locked cutout_makes_flat_shapes_with_clean_edges -- --nocapture` — [crates/algo/src/artistic_fx.rs / cutout_makes_flat_shapes_with_clean_edges](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
+  - `cargo test -p lienzo-algo --locked cutout_keeps_the_tone_of_surviving_islands_at_low_fidelity -- --nocapture` — [crates/algo/src/artistic_fx.rs / cutout_keeps_the_tone_of_surviving_islands_at_low_fidelity](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
+  - `cargo test -p lienzo-algo --locked a_stack_around_a_cutout_is_tile_independent -- --nocapture` — [crates/algo/src/artistic_fx.rs / a_stack_around_a_cutout_is_tile_independent](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/artistic_fx.rs)
+  - `cargo test -p lienzo-algo --locked oklab_round_trips_and_marks_the_gamut -- --nocapture` — [crates/algo/src/cutout/colour.rs / oklab_round_trips_and_marks_the_gamut](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked out_of_gamut_colours_lose_strength_not_hue -- --nocapture` — [crates/algo/src/cutout/colour.rs / out_of_gamut_colours_lose_strength_not_hue](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked smoothing_flattens_noise_and_keeps_edges -- --nocapture` — [crates/algo/src/cutout/colour.rs / smoothing_flattens_noise_and_keeps_edges](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked the_palette_finds_the_pictures_own_colours -- --nocapture` — [crates/algo/src/cutout/colour.rs / the_palette_finds_the_pictures_own_colours](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked a_tone_of_two_different_hues_splits_in_two -- --nocapture` — [crates/algo/src/cutout/colour.rs / a_tone_of_two_different_hues_splits_in_two](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked an_empty_image_still_has_a_palette -- --nocapture` — [crates/algo/src/cutout/colour.rs / an_empty_image_still_has_a_palette](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked douglas_peucker_keeps_only_points_off_the_line -- --nocapture` — [crates/algo/src/cutout/curves.rs / douglas_peucker_keeps_only_points_off_the_line](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked lines_cross_where_they_should -- --nocapture` — [crates/algo/src/cutout/curves.rs / lines_cross_where_they_should](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked rounding_off_keeps_an_open_chains_ends -- --nocapture` — [crates/algo/src/cutout/curves.rs / rounding_off_keeps_an_open_chains_ends](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked a_square_keeps_its_four_corners_and_straight_sides -- --nocapture` — [crates/algo/src/cutout/curves.rs / a_square_keeps_its_four_corners_and_straight_sides](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked a_rounded_corner_is_squared_back -- --nocapture` — [crates/algo/src/cutout/curves.rs / a_rounded_corner_is_squared_back](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked an_open_chain_ends_where_it_started_at_any_fidelity -- --nocapture` — [crates/algo/src/cutout/curves.rs / an_open_chain_ends_where_it_started_at_any_fidelity](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked curves_pass_through_their_vertices -- --nocapture` — [crates/algo/src/cutout/curves.rs / curves_pass_through_their_vertices](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked fitting_keeps_small_islands_and_their_winding -- --nocapture` — [crates/algo/src/cutout/curves.rs / fitting_keeps_small_islands_and_their_winding](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked bounds_cover_every_point -- --nocapture` — [crates/algo/src/cutout/curves.rs / bounds_cover_every_point](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/curves.rs)
+  - `cargo test -p lienzo-algo --locked the_edge_between_two_regions_is_one_chain_between_junctions -- --nocapture` — [crates/algo/src/cutout/edges.rs / the_edge_between_two_regions_is_one_chain_between_junctions](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
+  - `cargo test -p lienzo-algo --locked an_island_is_one_closed_chain -- --nocapture` — [crates/algo/src/cutout/edges.rs / an_island_is_one_closed_chain](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
+  - `cargo test -p lienzo-algo --locked an_anti_aliased_edge_is_placed_inside_its_pixel -- --nocapture` — [crates/algo/src/cutout/edges.rs / an_anti_aliased_edge_is_placed_inside_its_pixel](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/edges.rs)
+  - `cargo test -p lienzo-algo --locked a_square_covers_its_area_exactly -- --nocapture` — [crates/algo/src/cutout/fill.rs / a_square_covers_its_area_exactly](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/fill.rs)
+  - `cargo test -p lienzo-algo --locked shapes_cover_every_pixel_once_with_no_seams -- --nocapture` — [crates/algo/src/cutout/mod.rs / shapes_cover_every_pixel_once_with_no_seams](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
+  - `cargo test -p lienzo-algo --locked edge_fidelity_changes_the_outlines -- --nocapture` — [crates/algo/src/cutout/mod.rs / edge_fidelity_changes_the_outlines](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
+  - `cargo test -p lienzo-algo --locked empty_images_stop_before_the_transpose_and_row_passes -- --nocapture` — [crates/algo/src/cutout/mod.rs / empty_images_stop_before_the_transpose_and_row_passes](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
+  - `cargo test -p lienzo-algo --locked filling_does_not_depend_on_the_tiling -- --nocapture` — [crates/algo/src/cutout/mod.rs / filling_does_not_depend_on_the_tiling](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
+  - `cargo test -p lienzo-algo --locked noise_merges_into_neighbours_and_noise_apart_colours_are_one -- --nocapture` — [crates/algo/src/cutout/mod.rs / noise_merges_into_neighbours_and_noise_apart_colours_are_one](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/mod.rs)
+  - `cargo test -p lienzo-algo --locked components_are_four_connected_and_numbered_in_raster_order -- --nocapture` — [crates/algo/src/cutout/regions.rs / components_are_four_connected_and_numbered_in_raster_order](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
+  - `cargo test -p lienzo-algo --locked small_regions_merge_into_the_neighbour_they_share_most_border_with -- --nocapture` — [crates/algo/src/cutout/regions.rs / small_regions_merge_into_the_neighbour_they_share_most_border_with](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
+  - `cargo test -p lienzo-algo --locked slivers_merge_though_they_are_large -- --nocapture` — [crates/algo/src/cutout/regions.rs / slivers_merge_though_they_are_large](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
+  - `cargo test -p lienzo-algo --locked paper_is_stretched_towards_black_and_white_and_keeps_its_hue -- --nocapture` — [crates/algo/src/cutout/regions.rs / paper_is_stretched_towards_black_and_white_and_keeps_its_hue](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
+  - `cargo test -p lienzo-algo --locked local_colour_drifts_within_a_shape_but_never_crosses_a_cut -- --nocapture` — [crates/algo/src/cutout/regions.rs / local_colour_drifts_within_a_shape_but_never_crosses_a_cut](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/regions.rs)
+  - `cargo test -p lienzo-algo --locked transposing_twice_gives_the_image_back -- --nocapture` — [crates/algo/src/cutout/util.rs / transposing_twice_gives_the_image_back](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/util.rs)
+  - `cargo test -p lienzo-algo --locked find_returns_the_root_and_shortens_the_path -- --nocapture` — [crates/algo/src/cutout/util.rs / find_returns_the_root_and_shortens_the_path](https://github.com/storytold/photocraft/blob/5c30699087b02edcaa23397a0f7076bf503be048/crates/algo/src/cutout/util.rs)
 
 - Expected behavior: rough pastels and angled strokes respond to every slider; cutout makes flat shapes with clean edges; cutout keeps the tone of surviving islands at low fidelity; a stack around a cutout is tile independent; oklab round trips and marks the gamut; out of gamut colours lose strength not hue; smoothing flattens noise and keeps edges; the palette finds the pictures own colours; a tone of two different hues splits in two; an empty image still has a palette; douglas peucker keeps only points off the line; lines cross where they should; rounding off keeps an open chains ends; a square keeps its four corners and straight sides; a rounded corner is squared back; an open chain ends where it started at any fidelity; curves pass through their vertices; fitting keeps small islands and their winding; bounds cover every point; the edge between two regions is one chain between junctions; an island is one closed chain; an anti aliased edge is placed inside its pixel; a square covers its area exactly; shapes cover every pixel once with no seams; edge fidelity changes the outlines; empty images stop before the transpose and row passes; filling does not depend on the tiling; noise merges into neighbours and noise apart colours are one; components are four connected and numbered in raster order; small regions merge into the neighbour they share most border with; slivers merge though they are large; paper is stretched towards black and white and keeps its hue; local colour drifts within a shape but never crosses a cut; transposing twice gives the image back; find returns the root and shortens the path. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -650,9 +650,9 @@ assert!(spread < 1e-4, "a noisy area should be one flat tone, spread {spread}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked softer_outer_glow_keeps_a_fading_tail_past_its_size -- --nocapture` — [crates/compose/src/effects.rs / softer_outer_glow_keeps_a_fading_tail_past_its_size](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/compose/src/effects.rs)
-  - `cargo test -p photocraft-compose --locked softer_outer_glow_margin_includes_its_tail_support -- --nocapture` — [crates/compose/src/effects.rs / softer_outer_glow_margin_includes_its_tail_support](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/compose/src/effects.rs)
-  - `cargo test -p photocraft-gpu --locked softer_outer_glow_program_keeps_the_tent_and_adds_a_distance_tail -- --nocapture` — [crates/gpu/src/fx.rs / softer_outer_glow_program_keeps_the_tent_and_adds_a_distance_tail](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/gpu/src/fx.rs)
+  - `cargo test -p lienzo-compose --locked softer_outer_glow_keeps_a_fading_tail_past_its_size -- --nocapture` — [crates/compose/src/effects.rs / softer_outer_glow_keeps_a_fading_tail_past_its_size](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/compose/src/effects.rs)
+  - `cargo test -p lienzo-compose --locked softer_outer_glow_margin_includes_its_tail_support -- --nocapture` — [crates/compose/src/effects.rs / softer_outer_glow_margin_includes_its_tail_support](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/compose/src/effects.rs)
+  - `cargo test -p lienzo-gpu --locked softer_outer_glow_program_keeps_the_tent_and_adds_a_distance_tail -- --nocapture` — [crates/gpu/src/fx.rs / softer_outer_glow_program_keeps_the_tent_and_adds_a_distance_tail](https://github.com/storytold/photocraft/blob/5579cf5439856fed93f41a669a3fc9b56d5813cf/crates/gpu/src/fx.rs)
 
 - Expected behavior: softer outer glow keeps a fading tail past its size; softer outer glow margin includes its tail support; softer outer glow program keeps the tent and adds a distance tail. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -668,8 +668,8 @@ let mut shape = Map::new(220, 220, 0.0);
             }
         }
         let glow = Glow {
-            common: photocraft_doc::FxCommon::new(BlendMode::Screen, 1.0),
-            paint: FxPaint::Color(photocraft_color::Color::WHITE),
+            common: lienzo_doc::FxCommon::new(BlendMode::Screen, 1.0),
+            paint: FxPaint::Color(lienzo_color::Color::WHITE),
             technique: GlowTechnique::Softer,
             spread: 0.0,
             size: 60.0,
@@ -689,8 +689,8 @@ assert!(at(50) > 0.024, "the softer shoulder should stay visible: {}", at(50));
 
 ```rust
 let glow = Glow {
-            common: photocraft_doc::FxCommon::new(BlendMode::Screen, 1.0),
-            paint: FxPaint::Color(photocraft_color::Color::WHITE),
+            common: lienzo_doc::FxCommon::new(BlendMode::Screen, 1.0),
+            paint: FxPaint::Color(lienzo_color::Color::WHITE),
             technique: GlowTechnique::Softer,
             spread: 0.0,
             size: 60.0,
@@ -721,14 +721,14 @@ assert_eq!(margin(&layer), 68);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-algo --locked oklab_round_trips_and_marks_the_gamut -- --nocapture` — [crates/algo/src/cutout/colour.rs / oklab_round_trips_and_marks_the_gamut](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked out_of_gamut_colours_lose_strength_not_hue -- --nocapture` — [crates/algo/src/cutout/colour.rs / out_of_gamut_colours_lose_strength_not_hue](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked smoothing_flattens_noise_and_keeps_edges -- --nocapture` — [crates/algo/src/cutout/colour.rs / smoothing_flattens_noise_and_keeps_edges](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked the_palette_finds_the_pictures_own_colours -- --nocapture` — [crates/algo/src/cutout/colour.rs / the_palette_finds_the_pictures_own_colours](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked a_tone_of_two_different_hues_splits_in_two -- --nocapture` — [crates/algo/src/cutout/colour.rs / a_tone_of_two_different_hues_splits_in_two](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked an_empty_image_still_has_a_palette -- --nocapture` — [crates/algo/src/cutout/colour.rs / an_empty_image_still_has_a_palette](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
-  - `cargo test -p photocraft-algo --locked transposing_twice_gives_the_image_back -- --nocapture` — [crates/algo/src/cutout/util.rs / transposing_twice_gives_the_image_back](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/util.rs)
-  - `cargo test -p photocraft-algo --locked find_returns_the_root_and_shortens_the_path -- --nocapture` — [crates/algo/src/cutout/util.rs / find_returns_the_root_and_shortens_the_path](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/util.rs)
+  - `cargo test -p lienzo-algo --locked oklab_round_trips_and_marks_the_gamut -- --nocapture` — [crates/algo/src/cutout/colour.rs / oklab_round_trips_and_marks_the_gamut](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked out_of_gamut_colours_lose_strength_not_hue -- --nocapture` — [crates/algo/src/cutout/colour.rs / out_of_gamut_colours_lose_strength_not_hue](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked smoothing_flattens_noise_and_keeps_edges -- --nocapture` — [crates/algo/src/cutout/colour.rs / smoothing_flattens_noise_and_keeps_edges](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked the_palette_finds_the_pictures_own_colours -- --nocapture` — [crates/algo/src/cutout/colour.rs / the_palette_finds_the_pictures_own_colours](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked a_tone_of_two_different_hues_splits_in_two -- --nocapture` — [crates/algo/src/cutout/colour.rs / a_tone_of_two_different_hues_splits_in_two](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked an_empty_image_still_has_a_palette -- --nocapture` — [crates/algo/src/cutout/colour.rs / an_empty_image_still_has_a_palette](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/colour.rs)
+  - `cargo test -p lienzo-algo --locked transposing_twice_gives_the_image_back -- --nocapture` — [crates/algo/src/cutout/util.rs / transposing_twice_gives_the_image_back](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/util.rs)
+  - `cargo test -p lienzo-algo --locked find_returns_the_root_and_shortens_the_path -- --nocapture` — [crates/algo/src/cutout/util.rs / find_returns_the_root_and_shortens_the_path](https://github.com/storytold/photocraft/blob/91e4cec43525ca739c05cff614701fbd3576e389/crates/algo/src/cutout/util.rs)
 
 - Expected behavior: oklab round trips and marks the gamut; out of gamut colours lose strength not hue; smoothing flattens noise and keeps edges; the palette finds the pictures own colours; a tone of two different hues splits in two; an empty image still has a palette; transposing twice gives the image back; find returns the root and shortens the path. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -803,10 +803,10 @@ assert!((lab[0] - l).abs() < 0.01, "lightness kept: {lab:?}");
 - Fixture/setup: Synthetic label maps in cutout/regions.rs.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-algo --locked components_are_four_connected_and_numbered_in_raster_order -- --nocapture`
-  - `cargo test -p photocraft-algo --locked small_regions_merge_into_the_neighbour_they_share_most_border_with -- --nocapture`
-  - `cargo test -p photocraft-algo --locked slivers_merge_though_they_are_large -- --nocapture`
-  - `cargo test -p photocraft-algo --locked local_colour_drifts_within_a_shape_but_never_crosses_a_cut -- --nocapture`
+  - `cargo test -p lienzo-algo --locked components_are_four_connected_and_numbered_in_raster_order -- --nocapture`
+  - `cargo test -p lienzo-algo --locked small_regions_merge_into_the_neighbour_they_share_most_border_with -- --nocapture`
+  - `cargo test -p lienzo-algo --locked slivers_merge_though_they_are_large -- --nocapture`
+  - `cargo test -p lienzo-algo --locked local_colour_drifts_within_a_shape_but_never_crosses_a_cut -- --nocapture`
 
 - Expected: Four-connected components have deterministic raster numbering; small regions choose the shared-border neighbour; narrow slivers merge despite area; colour variation never crosses a cut.
 - Separate coverage / prerequisites: The earlier Oklab test is supporting coverage, not the regions-stage oracle.
@@ -821,13 +821,13 @@ assert!((lab[0] - l).abs() < 0.01, "lightness kept: {lab:?}");
 - Fixture/setup: Two-region boundaries, islands, antialiased edges, squares and open chains in cutout/edges.rs and curves.rs.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-algo --locked the_edge_between_two_regions_is_one_chain_between_junctions -- --nocapture`
-  - `cargo test -p photocraft-algo --locked an_island_is_one_closed_chain -- --nocapture`
-  - `cargo test -p photocraft-algo --locked an_anti_aliased_edge_is_placed_inside_its_pixel -- --nocapture`
-  - `cargo test -p photocraft-algo --locked a_square_keeps_its_four_corners_and_straight_sides -- --nocapture`
-  - `cargo test -p photocraft-algo --locked an_open_chain_ends_where_it_started_at_any_fidelity -- --nocapture`
-  - `cargo test -p photocraft-algo --locked fitting_keeps_small_islands_and_their_winding -- --nocapture`
-  - `cargo test -p photocraft-algo --locked cutout_makes_flat_shapes_with_clean_edges -- --nocapture`
+  - `cargo test -p lienzo-algo --locked the_edge_between_two_regions_is_one_chain_between_junctions -- --nocapture`
+  - `cargo test -p lienzo-algo --locked an_island_is_one_closed_chain -- --nocapture`
+  - `cargo test -p lienzo-algo --locked an_anti_aliased_edge_is_placed_inside_its_pixel -- --nocapture`
+  - `cargo test -p lienzo-algo --locked a_square_keeps_its_four_corners_and_straight_sides -- --nocapture`
+  - `cargo test -p lienzo-algo --locked an_open_chain_ends_where_it_started_at_any_fidelity -- --nocapture`
+  - `cargo test -p lienzo-algo --locked fitting_keeps_small_islands_and_their_winding -- --nocapture`
+  - `cargo test -p lienzo-algo --locked cutout_makes_flat_shapes_with_clean_edges -- --nocapture`
 
 - Expected: Shared boundaries are single chains; islands close; subpixel edge placement, square corners, open endpoints and winding survive fitting. Complete Cutout yields the asserted clean flat shapes.
 - Separate coverage / prerequisites: Run after the complete #8191 → #8192 → #8193 → #7903 chain.
@@ -841,8 +841,8 @@ assert!((lab[0] - l).abs() < 0.01, "lightness kept: {lab:?}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked minified_pattern_is_filtered_not_aliased -- --nocapture` — [crates/compose/src/pattern.rs / minified_pattern_is_filtered_not_aliased](https://github.com/storytold/photocraft/blob/d387f52f1f2f5681b2c7d1c517aa5b5992c7bc88/crates/compose/src/pattern.rs)
-  - `cargo test -p photocraft-gpu --locked pattern_fill_layers -- --nocapture` — [crates/gpu/tests/it/parity.rs / pattern_fill_layers](https://github.com/storytold/photocraft/blob/d387f52f1f2f5681b2c7d1c517aa5b5992c7bc88/crates/gpu/tests/it/parity.rs)
+  - `cargo test -p lienzo-compose --locked minified_pattern_is_filtered_not_aliased -- --nocapture` — [crates/compose/src/pattern.rs / minified_pattern_is_filtered_not_aliased](https://github.com/storytold/photocraft/blob/d387f52f1f2f5681b2c7d1c517aa5b5992c7bc88/crates/compose/src/pattern.rs)
+  - `cargo test -p lienzo-gpu --locked pattern_fill_layers -- --nocapture` — [crates/gpu/tests/it/parity.rs / pattern_fill_layers](https://github.com/storytold/photocraft/blob/d387f52f1f2f5681b2c7d1c517aa5b5992c7bc88/crates/gpu/tests/it/parity.rs)
 
 - Expected behavior: minified pattern is filtered not aliased; pattern fill layers. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -913,8 +913,8 @@ Expected assertion context (overlapping windows merged):
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked displace_psd_filter_with_only_a_map_path_renders_after_replace_contents -- --nocapture` — [crates/engine/tests/it/smart_psd.rs / displace_psd_filter_with_only_a_map_path_renders_after_replace_contents](https://github.com/storytold/photocraft/blob/4bab657cd4fb4a91ced44d3721e63a002ca5068c/crates/engine/tests/it/smart_psd.rs)
-  - `cargo test -p photocraft-io --locked a_map_named_only_by_its_path_imports_as_map_path -- --nocapture` — [crates/io/src/displace_map.rs / a_map_named_only_by_its_path_imports_as_map_path](https://github.com/storytold/photocraft/blob/4bab657cd4fb4a91ced44d3721e63a002ca5068c/crates/io/src/displace_map.rs)
+  - `cargo test -p lienzo-engine --locked displace_psd_filter_with_only_a_map_path_renders_after_replace_contents -- --nocapture` — [crates/engine/tests/it/smart_psd.rs / displace_psd_filter_with_only_a_map_path_renders_after_replace_contents](https://github.com/storytold/photocraft/blob/4bab657cd4fb4a91ced44d3721e63a002ca5068c/crates/engine/tests/it/smart_psd.rs)
+  - `cargo test -p lienzo-io --locked a_map_named_only_by_its_path_imports_as_map_path -- --nocapture` — [crates/io/src/displace_map.rs / a_map_named_only_by_its_path_imports_as_map_path](https://github.com/storytold/photocraft/blob/4bab657cd4fb4a91ced44d3721e63a002ca5068c/crates/io/src/displace_map.rs)
 
 - Expected behavior: displace psd filter with only a map path renders after replace contents; a map named only by its path imports as map path. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -923,16 +923,16 @@ Expected assertion context (overlapping windows merged):
 `displace_psd_filter_with_only_a_map_path_renders_after_replace_contents` setup/action excerpt:
 
 ```rust
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value};
     let dir = std::env::temp_dir().join(format!("pcraft-9162-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let png = |name: &str, size: (u32, u32), c: [f32; 4]| {
         let d = Document::with_background(
             "m",
-            photocraft_geom::Size::new(size.0, size.1),
-            photocraft_color::ColorMode::Rgb,
-            photocraft_color::SampleType::U8,
-            photocraft_color::Color::rgba(c[0], c[1], c[2], c[3]),
+            lienzo_geom::Size::new(size.0, size.1),
+            lienzo_color::ColorMode::Rgb,
+            lienzo_color::SampleType::U8,
+            lienzo_color::Color::rgba(c[0], c[1], c[2], c[3]),
         );
         let path = dir.join(name);
 ```
@@ -1003,10 +1003,10 @@ assert_eq!(f.command, COMMAND);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked full_coverage_adjustment_keeps_its_result_over_huge_hdr_values -- --nocapture` — [crates/compose/src/tests.rs / full_coverage_adjustment_keeps_its_result_over_huge_hdr_values](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked reused_render_matches_previous_allocating_stack -- --nocapture` — [crates/compose/src/tests.rs / reused_render_matches_previous_allocating_stack](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-engine --locked mixing_through_a_selection_matches_sampling_it_per_pixel -- --nocapture` — [crates/engine/src/pixels_tests.rs / mixing_through_a_selection_matches_sampling_it_per_pixel](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/engine/src/pixels_tests.rs)
-  - `cargo test -p photocraft-engine --locked full_coverage_keeps_the_edit_over_huge_hdr_values -- --nocapture` — [crates/engine/src/pixels_tests.rs / full_coverage_keeps_the_edit_over_huge_hdr_values](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/engine/src/pixels_tests.rs)
+  - `cargo test -p lienzo-compose --locked full_coverage_adjustment_keeps_its_result_over_huge_hdr_values -- --nocapture` — [crates/compose/src/tests.rs / full_coverage_adjustment_keeps_its_result_over_huge_hdr_values](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked reused_render_matches_previous_allocating_stack -- --nocapture` — [crates/compose/src/tests.rs / reused_render_matches_previous_allocating_stack](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-engine --locked mixing_through_a_selection_matches_sampling_it_per_pixel -- --nocapture` — [crates/engine/src/pixels_tests.rs / mixing_through_a_selection_matches_sampling_it_per_pixel](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/engine/src/pixels_tests.rs)
+  - `cargo test -p lienzo-engine --locked full_coverage_keeps_the_edit_over_huge_hdr_values -- --nocapture` — [crates/engine/src/pixels_tests.rs / full_coverage_keeps_the_edit_over_huge_hdr_values](https://github.com/storytold/photocraft/blob/d78d7493d3f0b6e760c88de969ac810e9bc5d910/crates/engine/src/pixels_tests.rs)
 
 - Expected behavior: full coverage adjustment keeps its result over huge hdr values; reused render matches previous allocating stack; mixing through a selection matches sampling it per pixel; full coverage keeps the edit over huge hdr values. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1073,8 +1073,8 @@ Expected assertion context (overlapping windows merged):
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked adjustment_fill_changes_the_special_blend_modes -- --nocapture` — [crates/compose/src/tests.rs / adjustment_fill_changes_the_special_blend_modes](https://github.com/storytold/photocraft/blob/6c55561128caf5ac917eb3d174e8e7bb4bd48e23/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-gpu --locked special_eight_fill_on_adjustment_layers_matches_cpu -- --nocapture` — [crates/gpu/tests/it/parity.rs / special_eight_fill_on_adjustment_layers_matches_cpu](https://github.com/storytold/photocraft/blob/6c55561128caf5ac917eb3d174e8e7bb4bd48e23/crates/gpu/tests/it/parity.rs)
+  - `cargo test -p lienzo-compose --locked adjustment_fill_changes_the_special_blend_modes -- --nocapture` — [crates/compose/src/tests.rs / adjustment_fill_changes_the_special_blend_modes](https://github.com/storytold/photocraft/blob/6c55561128caf5ac917eb3d174e8e7bb4bd48e23/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-gpu --locked special_eight_fill_on_adjustment_layers_matches_cpu -- --nocapture` — [crates/gpu/tests/it/parity.rs / special_eight_fill_on_adjustment_layers_matches_cpu](https://github.com/storytold/photocraft/blob/6c55561128caf5ac917eb3d174e8e7bb4bd48e23/crates/gpu/tests/it/parity.rs)
 
 - Expected behavior: adjustment fill changes the special blend modes; special eight fill on adjustment layers matches cpu. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1140,8 +1140,8 @@ Expected assertion context (overlapping windows merged):
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked blend_if_16_bit_cutoffs_follow_photoshops_steps -- --nocapture` — [crates/compose/src/tests.rs / blend_if_16_bit_cutoffs_follow_photoshops_steps](https://github.com/storytold/photocraft/blob/fc0f7b1132f799b5bba7be642c9047499d95a887/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-compose --locked blend_if_gray_follows_photoshops_weights_and_rounding -- --nocapture` — [crates/compose/src/tests.rs / blend_if_gray_follows_photoshops_weights_and_rounding](https://github.com/storytold/photocraft/blob/fc0f7b1132f799b5bba7be642c9047499d95a887/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked blend_if_16_bit_cutoffs_follow_photoshops_steps -- --nocapture` — [crates/compose/src/tests.rs / blend_if_16_bit_cutoffs_follow_photoshops_steps](https://github.com/storytold/photocraft/blob/fc0f7b1132f799b5bba7be642c9047499d95a887/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-compose --locked blend_if_gray_follows_photoshops_weights_and_rounding -- --nocapture` — [crates/compose/src/tests.rs / blend_if_gray_follows_photoshops_weights_and_rounding](https://github.com/storytold/photocraft/blob/fc0f7b1132f799b5bba7be642c9047499d95a887/crates/compose/src/tests.rs)
 
 - Expected behavior: blend if 16 bit cutoffs follow photoshops steps; blend if gray follows photoshops weights and rounding. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1218,8 +1218,8 @@ assert!(!shown(below, cut, 255), "{below:?} hidden by black {cut}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked adjustment_blend_if_judges_the_result_before_opacity -- --nocapture` — [crates/compose/src/tests.rs / adjustment_blend_if_judges_the_result_before_opacity](https://github.com/storytold/photocraft/blob/da157945077190e550b53a5e14b0536f62761292/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-gpu --locked blend_if -- --nocapture` — [crates/gpu/tests/it/parity.rs / blend_if](https://github.com/storytold/photocraft/blob/da157945077190e550b53a5e14b0536f62761292/crates/gpu/tests/it/parity.rs)
+  - `cargo test -p lienzo-compose --locked adjustment_blend_if_judges_the_result_before_opacity -- --nocapture` — [crates/compose/src/tests.rs / adjustment_blend_if_judges_the_result_before_opacity](https://github.com/storytold/photocraft/blob/da157945077190e550b53a5e14b0536f62761292/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-gpu --locked blend_if -- --nocapture` — [crates/gpu/tests/it/parity.rs / blend_if](https://github.com/storytold/photocraft/blob/da157945077190e550b53a5e14b0536f62761292/crates/gpu/tests/it/parity.rs)
 
 - Expected behavior: adjustment blend if judges the result before opacity; blend if. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1252,7 +1252,7 @@ assert!(got.iter().zip(want).all(|(g, w)| (g - w).abs() <= 1), "black {black} wh
 `blend_if` setup/action excerpt:
 
 ```rust
-use photocraft_doc::BlendRange;
+use lienzo_doc::BlendRange;
     let Some(mut g) = gpu() else { return };
     let r = |b0: u8, b1: u8, w0: u8, w1: u8| BlendRange { black: [b0, b1], white: [w0, w1] };
     // (name, entry, [this layer, underlying], has a hard point)
@@ -1287,8 +1287,8 @@ assert!(hits.prefix_hits > 0, "{depth:?} {name}: the edit above reuses the lower
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked pass_through_group_with_blend_if_is_isolated -- --nocapture` — [crates/compose/src/tests.rs / pass_through_group_with_blend_if_is_isolated](https://github.com/storytold/photocraft/blob/75fa71a4f55a098061b12d91508b514565ab8dcf/crates/compose/src/tests.rs)
-  - `cargo test -p photocraft-gpu --locked pass_through_group_with_blend_if_is_isolated -- --nocapture` — [crates/gpu/tests/it/parity.rs / pass_through_group_with_blend_if_is_isolated](https://github.com/storytold/photocraft/blob/75fa71a4f55a098061b12d91508b514565ab8dcf/crates/gpu/tests/it/parity.rs)
+  - `cargo test -p lienzo-compose --locked pass_through_group_with_blend_if_is_isolated -- --nocapture` — [crates/compose/src/tests.rs / pass_through_group_with_blend_if_is_isolated](https://github.com/storytold/photocraft/blob/75fa71a4f55a098061b12d91508b514565ab8dcf/crates/compose/src/tests.rs)
+  - `cargo test -p lienzo-gpu --locked pass_through_group_with_blend_if_is_isolated -- --nocapture` — [crates/gpu/tests/it/parity.rs / pass_through_group_with_blend_if_is_isolated](https://github.com/storytold/photocraft/blob/75fa71a4f55a098061b12d91508b514565ab8dcf/crates/gpu/tests/it/parity.rs)
 
 - Expected behavior: pass through group with blend if is isolated; pass through group with blend if is isolated. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1322,7 +1322,7 @@ assert!(got.iter().zip(want).all(|(g, w)| (g - w).abs() <= 1), "Blend If {gated}
 `pass_through_group_with_blend_if_is_isolated` setup/action excerpt:
 
 ```rust
-use photocraft_doc::BlendRange;
+use lienzo_doc::BlendRange;
     let Some(mut g) = gpu() else { return };
     for gated in [true, false] {
         let mut d = base_doc(64, 48);
@@ -1354,8 +1354,8 @@ Expected assertion context (overlapping windows merged):
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-algo --locked matches_scalar_sharpen_bit_for_bit_across_layouts_edges_and_hdr -- --nocapture` — [crates/algo/tests/it/retouch_sharpen_exact.rs / matches_scalar_sharpen_bit_for_bit_across_layouts_edges_and_hdr](https://github.com/storytold/photocraft/blob/67666bdf72a58066df868868cef82e5b9cc838de/crates/algo/tests/it/retouch_sharpen_exact.rs)
-  - `cargo test -p photocraft-algo --locked empty_channel_layout_remains_empty -- --nocapture` — [crates/algo/tests/it/retouch_sharpen_exact.rs / empty_channel_layout_remains_empty](https://github.com/storytold/photocraft/blob/67666bdf72a58066df868868cef82e5b9cc838de/crates/algo/tests/it/retouch_sharpen_exact.rs)
+  - `cargo test -p lienzo-algo --locked matches_scalar_sharpen_bit_for_bit_across_layouts_edges_and_hdr -- --nocapture` — [crates/algo/tests/it/retouch_sharpen_exact.rs / matches_scalar_sharpen_bit_for_bit_across_layouts_edges_and_hdr](https://github.com/storytold/photocraft/blob/67666bdf72a58066df868868cef82e5b9cc838de/crates/algo/tests/it/retouch_sharpen_exact.rs)
+  - `cargo test -p lienzo-algo --locked empty_channel_layout_remains_empty -- --nocapture` — [crates/algo/tests/it/retouch_sharpen_exact.rs / empty_channel_layout_remains_empty](https://github.com/storytold/photocraft/blob/67666bdf72a58066df868868cef82e5b9cc838de/crates/algo/tests/it/retouch_sharpen_exact.rs)
 
 - Expected behavior: matches scalar sharpen bit for bit across layouts edges and hdr; empty channel layout remains empty. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1415,8 +1415,8 @@ assert!(local_sharpen(&[], 5, 5, 0, None, (0, 0, 5, 5), 1.0, true).is_empty());
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked a_new_adjustment_or_fill_layer_shows_its_settings_until_the_mask_thumbnail_is_clicked -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / a_new_adjustment_or_fill_layer_shows_its_settings_until_the_mask_thumbnail_is_clicked](https://github.com/storytold/photocraft/blob/3605d30c38294c4d970e52f4a02f44f97e8bc1a9/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked adjustment_names_target_contents_instead_of_masks -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / adjustment_names_target_contents_instead_of_masks](https://github.com/storytold/photocraft/blob/3605d30c38294c4d970e52f4a02f44f97e8bc1a9/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_new_adjustment_or_fill_layer_shows_its_settings_until_the_mask_thumbnail_is_clicked -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / a_new_adjustment_or_fill_layer_shows_its_settings_until_the_mask_thumbnail_is_clicked](https://github.com/storytold/photocraft/blob/3605d30c38294c4d970e52f4a02f44f97e8bc1a9/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked adjustment_names_target_contents_instead_of_masks -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / adjustment_names_target_contents_instead_of_masks](https://github.com/storytold/photocraft/blob/3605d30c38294c4d970e52f4a02f44f97e8bc1a9/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
 
 - Expected behavior: a new adjustment or fill layer shows its settings until the mask thumbnail is clicked; adjustment names target contents instead of masks. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1426,7 +1426,7 @@ assert!(local_sharpen(&[], 5, 5, 0, None, (0, 0, 5, 5), 1.0, true).is_empty());
 
 ```rust
 for (command, settings) in [("layer.newAdjustmentLayer.curves", Some("Reset to defaults")), ("layer.newFillLayer.solidColor", None)] {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 200, "height": 100})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         let mut h = harness(s, 0, 1.0, 290.0);
@@ -1521,13 +1521,13 @@ assert_eq!(h.state().ui.mask_target, kind == MaskKind::Pixel);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-raw --locked measured_image_areas_crop_the_borders_without_touching_the_rest -- --nocapture` — [crates/raw/src/cameras.rs / measured_image_areas_crop_the_borders_without_touching_the_rest](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/cameras.rs)
-  - `cargo test -p photocraft-raw --locked encrypted_applied_white_balance_and_black_reach_the_developer -- --nocapture` — [crates/raw/src/sony_metadata.rs / encrypted_applied_white_balance_and_black_reach_the_developer](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
-  - `cargo test -p photocraft-raw --locked plain_levels_win_and_invalid_encrypted_levels_are_ignored -- --nocapture` — [crates/raw/src/sony_metadata.rs / plain_levels_win_and_invalid_encrypted_levels_are_ignored](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
-  - `cargo test -p photocraft-raw --locked hostile_private_metadata_is_bounded_and_optional -- --nocapture` — [crates/raw/src/sony_metadata.rs / hostile_private_metadata_is_bounded_and_optional](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
-  - `cargo test -p photocraft-raw --locked measured_keystream_recurrence_and_unencrypted_tail -- --nocapture` — [crates/raw/src/sony_metadata.rs / measured_keystream_recurrence_and_unencrypted_tail](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
-  - `cargo test -p photocraft-raw --locked decode_matches_the_measured_oracles -- --nocapture` — [crates/raw/tests/raw_corpus.rs / decode_matches_the_measured_oracles](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/tests/raw_corpus.rs)
-  - `cargo test -p photocraft-raw --locked developing_produces_the_crop_in_16bit_rgb -- --nocapture` — [crates/raw/tests/raw_corpus.rs / developing_produces_the_crop_in_16bit_rgb](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/tests/raw_corpus.rs)
+  - `cargo test -p lienzo-raw --locked measured_image_areas_crop_the_borders_without_touching_the_rest -- --nocapture` — [crates/raw/src/cameras.rs / measured_image_areas_crop_the_borders_without_touching_the_rest](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/cameras.rs)
+  - `cargo test -p lienzo-raw --locked encrypted_applied_white_balance_and_black_reach_the_developer -- --nocapture` — [crates/raw/src/sony_metadata.rs / encrypted_applied_white_balance_and_black_reach_the_developer](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
+  - `cargo test -p lienzo-raw --locked plain_levels_win_and_invalid_encrypted_levels_are_ignored -- --nocapture` — [crates/raw/src/sony_metadata.rs / plain_levels_win_and_invalid_encrypted_levels_are_ignored](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
+  - `cargo test -p lienzo-raw --locked hostile_private_metadata_is_bounded_and_optional -- --nocapture` — [crates/raw/src/sony_metadata.rs / hostile_private_metadata_is_bounded_and_optional](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
+  - `cargo test -p lienzo-raw --locked measured_keystream_recurrence_and_unencrypted_tail -- --nocapture` — [crates/raw/src/sony_metadata.rs / measured_keystream_recurrence_and_unencrypted_tail](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/src/sony_metadata.rs)
+  - `cargo test -p lienzo-raw --locked decode_matches_the_measured_oracles -- --nocapture` — [crates/raw/tests/raw_corpus.rs / decode_matches_the_measured_oracles](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/tests/raw_corpus.rs)
+  - `cargo test -p lienzo-raw --locked developing_produces_the_crop_in_16bit_rgb -- --nocapture` — [crates/raw/tests/raw_corpus.rs / developing_produces_the_crop_in_16bit_rgb](https://github.com/storytold/photocraft/blob/e2ed234e654e574109ffcdb9756f8e8d1b8a00b2/crates/raw/tests/raw_corpus.rs)
 
 - Expected behavior: measured image areas crop the borders without touching the rest; encrypted applied white balance and black reach the developer; plain levels win and invalid encrypted levels are ignored; hostile private metadata is bounded and optional; measured keystream recurrence and unencrypted tail; decode matches the measured oracles; developing produces the crop in 16bit rgb. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1629,11 +1629,11 @@ assert_eq!(s.format, RawFormat::Arw);
 - Fixture/setup: Native 7×5 Gray/GrayA/RGB/RGBA U8/U16 fixtures plus 2/513/8193-pixel-wide alpha samples in codecs/tests/jxl_export.rs.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-codecs --locked jpeg_xl_decodes_losslessly_with_independent_decoder -- --nocapture`
-  - `cargo test -p photocraft-codecs --locked jpeg_xl_preserves_sixteen_bit_alpha_across_dimension_header_sizes -- --nocapture`
-  - `cargo test -p photocraft-codecs --locked jpeg_xl_encoding_is_deterministic_and_converts_float_to_integer -- --nocapture`
-  - `cargo test -p photocraft-codecs --locked jpeg_xl_is_export_only_and_detects_both_signatures -- --nocapture`
-  - `cargo test -p photocraft-codecs --locked jpeg_xl_rejects_one_pixel_images_without_panicking -- --nocapture`
+  - `cargo test -p lienzo-codecs --locked jpeg_xl_decodes_losslessly_with_independent_decoder -- --nocapture`
+  - `cargo test -p lienzo-codecs --locked jpeg_xl_preserves_sixteen_bit_alpha_across_dimension_header_sizes -- --nocapture`
+  - `cargo test -p lienzo-codecs --locked jpeg_xl_encoding_is_deterministic_and_converts_float_to_integer -- --nocapture`
+  - `cargo test -p lienzo-codecs --locked jpeg_xl_is_export_only_and_detects_both_signatures -- --nocapture`
+  - `cargo test -p lienzo-codecs --locked jpeg_xl_rejects_one_pixel_images_without_panicking -- --nocapture`
 
 - Expected: Independent jxl_oxide decoding equals original integer samples exactly, including alpha and GrayA widening. Dimensions/channels and deterministic output are correct; capabilities remain export-only; 1×1 refuses without panic.
 - Separate coverage / prerequisites: These native independent-decoder checks cannot be established by wasm or malformed-header rejection alone.
@@ -1647,64 +1647,64 @@ assert_eq!(s.format, RawFormat::Arw);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked appended_work_and_saved_components_preserve_existing_geometry_and_undo -- --nocapture` — [crates/engine/tests/pen_path_append.rs / appended_work_and_saved_components_preserve_existing_geometry_and_undo](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
-  - `cargo test -p photocraft-engine --locked appending_valid_components_cannot_exceed_total_path_budget -- --nocapture` — [crates/engine/tests/pen_path_append.rs / appending_valid_components_cannot_exceed_total_path_budget](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
-  - `cargo test -p photocraft-engine --locked invalid_path_coordinates_leave_work_and_saved_paths_unchanged -- --nocapture` — [crates/engine/tests/pen_path_append.rs / invalid_path_coordinates_leave_work_and_saved_paths_unchanged](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
-  - `cargo test -p photocraft-engine --locked large_straight_work_and_saved_paths_append_and_undo_without_shape_coordinate_limits -- --nocapture` — [crates/engine/tests/pen_path_append.rs / large_straight_work_and_saved_paths_append_and_undo_without_shape_coordinate_limits](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
-  - `cargo test -p photocraft-ui-egui --locked shape_layer_paths_are_edited_and_a_direct_selection_is_cleared -- --nocapture` — [crates/ui-egui/src/anchor_tools_tests.rs / shape_layer_paths_are_edited_and_a_direct_selection_is_cleared](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/anchor_tools_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked add_and_delete_anchor_tools_edit_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/anchor_tools_tests.rs / add_and_delete_anchor_tools_edit_the_selected_saved_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/anchor_tools_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked command_with_freeform_and_curvature_edits_the_selected_saved_path_after_modifier_release -- --nocapture` — [crates/ui-egui/src/direct_select.rs / command_with_freeform_and_curvature_edits_the_selected_saved_path_after_modifier_release](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select.rs)
-  - `cargo test -p photocraft-ui-egui --locked command_cannot_edit_an_existing_path_when_the_freeform_trace_failed_to_finish -- --nocapture` — [crates/ui-egui/src/direct_select.rs / command_cannot_edit_an_existing_path_when_the_freeform_trace_failed_to_finish](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select.rs)
-  - `cargo test -p photocraft-ui-egui --locked dragging_an_anchor_moves_it_in_one_undoable_step -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / dragging_an_anchor_moves_it_in_one_undoable_step](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked arrow_keys_nudge_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / arrow_keys_nudge_the_selected_saved_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked selected_saved_and_work_paths_win_overlapping_shape_hits -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / selected_saved_and_work_paths_win_overlapping_shape_hits](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked direct_selection_cannot_apply_to_another_document_or_a_reopened_identity -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / direct_selection_cannot_apply_to_another_document_or_a_reopened_identity](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked external_revision_cancels_preview_and_preserves_the_new_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / external_revision_cancels_preview_and_preserves_the_new_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_path_and_tool_changes_cancel_the_owned_edit -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / layer_path_and_tool_changes_cancel_the_owned_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked closing_a_document_and_changing_marquee_target_discard_old_events -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / closing_a_document_and_changing_marquee_target_discard_old_events](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked serialized_anchor_selection_has_no_runtime_ownership_and_is_not_restored -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / serialized_anchor_selection_has_no_runtime_ownership_and_is_not_restored](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked command_drag_after_failed_pen_commit_preserves_draft_and_existing_work_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / command_drag_after_failed_pen_commit_preserves_draft_and_existing_work_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked switching_between_selection_and_convert_tools_cancels_an_in_flight_drag -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / switching_between_selection_and_convert_tools_cancels_an_in_flight_drag](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_convert_point_tool_edits_selected_saved_paths_without_changing_the_work_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / the_convert_point_tool_edits_selected_saved_paths_without_changing_the_work_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked changing_the_channel_vector_mask_target_cancels_an_owned_edit -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / changing_the_channel_vector_mask_target_cancels_an_owned_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked esc_ends_a_pen_path_and_keeps_it -- --nocapture` — [crates/ui-egui/src/input_tests.rs / esc_ends_a_pen_path_and_keeps_it](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/input_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked pen_shows_the_close_path_pointer_over_the_first_anchor -- --nocapture` — [crates/ui-egui/src/input_tests.rs / pen_shows_the_close_path_pointer_over_the_first_anchor](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/input_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked real_freeform_freehand_and_alt_straight_segments_append_to_the_owned_saved_path_once -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / real_freeform_freehand_and_alt_straight_segments_append_to_the_owned_saved_path_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked real_freeform_stale_target_source_revision_and_document_cancel_without_finishing_elsewhere -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / real_freeform_stale_target_source_revision_and_document_cancel_without_finishing_elsewhere](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked another_freeform_trace_cannot_replace_a_failed_owned_draft_or_retry_it_automatically -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / another_freeform_trace_cannot_replace_a_failed_owned_draft_or_retry_it_automatically](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_alt_release_in_the_next_press_keeps_the_failed_fit -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / freeform_alt_release_in_the_next_press_keeps_the_failed_fit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked clicking_the_vector_mask_targets_it_for_the_path_tools -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / clicking_the_vector_mask_targets_it_for_the_path_tools](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked cmd_enter_while_drawing_finishes_the_path_and_loads_it -- --nocapture` — [crates/ui-egui/src/path_selection_tests.rs / cmd_enter_while_drawing_finishes_the_path_and_loads_it](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/path_selection_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_and_path_selection_releases_cannot_edit_a_different_document -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_and_path_selection_releases_cannot_edit_a_different_document](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_release_cancels_after_revision_or_target_change -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_release_cancels_after_revision_or_target_change](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_valid_release_is_one_undoable_path_edit -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_valid_release_is_one_undoable_path_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked frame_cancellation_consumes_old_events_after_switching_tools -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / frame_cancellation_consumes_old_events_after_switching_tools](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked selected_work_and_saved_paths_append_pen_and_curvature_components_once -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / selected_work_and_saved_paths_append_pen_and_curvature_components_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked deselected_work_path_is_replaced_without_touching_saved_paths -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / deselected_work_path_is_replaced_without_touching_saved_paths](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked captured_path_and_shape_mode_do_not_follow_later_ui_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / captured_path_and_shape_mode_do_not_follow_later_ui_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked captured_pen_paint_preserves_float_colour_and_alpha_after_toolbar_changes -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / captured_pen_paint_preserves_float_colour_and_alpha_after_toolbar_changes](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked stale_drafts_are_cancelled_before_tool_switch_or_pointer_input -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / stale_drafts_are_cancelled_before_tool_switch_or_pointer_input](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked sync_views_and_input_apis_discard_unowned_or_closed_document_drafts -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / sync_views_and_input_apis_discard_unowned_or_closed_document_drafts](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked same_named_saved_paths_do_not_share_selection_or_drafts_across_tabs -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / same_named_saved_paths_do_not_share_selection_or_drafts_across_tabs](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked reopened_same_id_and_revision_do_not_reuse_the_saved_path_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / reopened_same_id_and_revision_do_not_reuse_the_saved_path_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked ordinary_path_edits_undo_and_redo_preserve_the_explicit_saved_path_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / ordinary_path_edits_undo_and_redo_preserve_the_explicit_saved_path_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked failed_pen_and_curvature_commits_keep_the_exact_draft_and_do_not_retry_each_frame -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / failed_pen_and_curvature_commits_keep_the_exact_draft_and_do_not_retry_each_frame](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked ordinary_tool_switch_commits_the_owned_draft_once -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / ordinary_tool_switch_commits_the_owned_draft_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked selected_saved_paths_move_and_free_transform_without_changing_work_or_shape -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / selected_saved_paths_move_and_free_transform_without_changing_work_or_shape](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked explicit_work_path_precedes_vector_mask_and_deselection_restores_mask_fallback -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / explicit_work_path_precedes_vector_mask_and_deselection_restores_mask_fallback](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked pen_keeps_its_captured_vector_mask_when_another_path_is_selected -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / pen_keeps_its_captured_vector_mask_when_another_path_is_selected](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_finish_uses_its_captured_saved_path_and_rejects_foreign_documents -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / freeform_finish_uses_its_captured_saved_path_and_rejects_foreign_documents](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked saved_path_drag_visual_fixture -- --nocapture --ignored` — [crates/ui-egui/src/pen_path_visual_tests.rs / saved_path_drag_visual_fixture](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_visual_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked enter_selects_a_stroke_style_and_escape_closes_its_popups_without_committing_pen -- --nocapture` — [crates/ui-egui/src/shape_stroke_ui/shortcut_tests.rs / enter_selects_a_stroke_style_and_escape_closes_its_popups_without_committing_pen](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/shape_stroke_ui/shortcut_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked transparent_and_absent_paints_remain_distinct_and_open_pen_keeps_foreground -- --nocapture` — [crates/ui-egui/src/vector_paint_tests.rs / transparent_and_absent_paints_remain_distinct_and_open_pen_keeps_foreground](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_paint_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked all_shape_tools_and_open_pen_use_the_complete_stroke_defaults -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / all_shape_tools_and_open_pen_use_the_complete_stroke_defaults](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_straight_segments_keep_the_captured_saved_path_and_reject_a_foreign_document -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / freeform_straight_segments_keep_the_captured_saved_path_and_reject_a_foreign_document](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked failed_freeform_straight_segment_commit_keeps_its_owned_fitted_draft -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / failed_freeform_straight_segment_commit_keeps_its_owned_fitted_draft](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked show_target_path_and_extras_hide_the_path_outlines -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / show_target_path_and_extras_hide_the_path_outlines](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked pen_last_anchor_hit_tolerance_tracks_zoom_and_draft_round_trips -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / pen_last_anchor_hit_tolerance_tracks_zoom_and_draft_round_trips](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
-  - `cargo test -p photocraft-vector --locked general_paths_keep_large_straight_coordinates_and_shape_limits_stay_put -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_keep_large_straight_coordinates_and_shape_limits_stay_put](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
-  - `cargo test -p photocraft-vector --locked general_paths_reject_coordinates_that_overflow_the_ui_or_segment_arithmetic -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_reject_coordinates_that_overflow_the_ui_or_segment_arithmetic](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
-  - `cargo test -p photocraft-vector --locked general_paths_bound_total_knots_subpaths_and_combined_tessellation -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_bound_total_knots_subpaths_and_combined_tessellation](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
+  - `cargo test -p lienzo-engine --locked appended_work_and_saved_components_preserve_existing_geometry_and_undo -- --nocapture` — [crates/engine/tests/pen_path_append.rs / appended_work_and_saved_components_preserve_existing_geometry_and_undo](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
+  - `cargo test -p lienzo-engine --locked appending_valid_components_cannot_exceed_total_path_budget -- --nocapture` — [crates/engine/tests/pen_path_append.rs / appending_valid_components_cannot_exceed_total_path_budget](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
+  - `cargo test -p lienzo-engine --locked invalid_path_coordinates_leave_work_and_saved_paths_unchanged -- --nocapture` — [crates/engine/tests/pen_path_append.rs / invalid_path_coordinates_leave_work_and_saved_paths_unchanged](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
+  - `cargo test -p lienzo-engine --locked large_straight_work_and_saved_paths_append_and_undo_without_shape_coordinate_limits -- --nocapture` — [crates/engine/tests/pen_path_append.rs / large_straight_work_and_saved_paths_append_and_undo_without_shape_coordinate_limits](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/engine/tests/pen_path_append.rs)
+  - `cargo test -p lienzo-ui-egui --locked shape_layer_paths_are_edited_and_a_direct_selection_is_cleared -- --nocapture` — [crates/ui-egui/src/anchor_tools_tests.rs / shape_layer_paths_are_edited_and_a_direct_selection_is_cleared](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/anchor_tools_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked add_and_delete_anchor_tools_edit_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/anchor_tools_tests.rs / add_and_delete_anchor_tools_edit_the_selected_saved_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/anchor_tools_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked command_with_freeform_and_curvature_edits_the_selected_saved_path_after_modifier_release -- --nocapture` — [crates/ui-egui/src/direct_select.rs / command_with_freeform_and_curvature_edits_the_selected_saved_path_after_modifier_release](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select.rs)
+  - `cargo test -p lienzo-ui-egui --locked command_cannot_edit_an_existing_path_when_the_freeform_trace_failed_to_finish -- --nocapture` — [crates/ui-egui/src/direct_select.rs / command_cannot_edit_an_existing_path_when_the_freeform_trace_failed_to_finish](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_an_anchor_moves_it_in_one_undoable_step -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / dragging_an_anchor_moves_it_in_one_undoable_step](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked arrow_keys_nudge_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / arrow_keys_nudge_the_selected_saved_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked selected_saved_and_work_paths_win_overlapping_shape_hits -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / selected_saved_and_work_paths_win_overlapping_shape_hits](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked direct_selection_cannot_apply_to_another_document_or_a_reopened_identity -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / direct_selection_cannot_apply_to_another_document_or_a_reopened_identity](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked external_revision_cancels_preview_and_preserves_the_new_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / external_revision_cancels_preview_and_preserves_the_new_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_path_and_tool_changes_cancel_the_owned_edit -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / layer_path_and_tool_changes_cancel_the_owned_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked closing_a_document_and_changing_marquee_target_discard_old_events -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / closing_a_document_and_changing_marquee_target_discard_old_events](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked serialized_anchor_selection_has_no_runtime_ownership_and_is_not_restored -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / serialized_anchor_selection_has_no_runtime_ownership_and_is_not_restored](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked command_drag_after_failed_pen_commit_preserves_draft_and_existing_work_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / command_drag_after_failed_pen_commit_preserves_draft_and_existing_work_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked switching_between_selection_and_convert_tools_cancels_an_in_flight_drag -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / switching_between_selection_and_convert_tools_cancels_an_in_flight_drag](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_convert_point_tool_edits_selected_saved_paths_without_changing_the_work_path -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / the_convert_point_tool_edits_selected_saved_paths_without_changing_the_work_path](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked changing_the_channel_vector_mask_target_cancels_an_owned_edit -- --nocapture` — [crates/ui-egui/src/direct_select_tests.rs / changing_the_channel_vector_mask_target_cancels_an_owned_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/direct_select_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked esc_ends_a_pen_path_and_keeps_it -- --nocapture` — [crates/ui-egui/src/input_tests.rs / esc_ends_a_pen_path_and_keeps_it](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/input_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked pen_shows_the_close_path_pointer_over_the_first_anchor -- --nocapture` — [crates/ui-egui/src/input_tests.rs / pen_shows_the_close_path_pointer_over_the_first_anchor](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/input_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked real_freeform_freehand_and_alt_straight_segments_append_to_the_owned_saved_path_once -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / real_freeform_freehand_and_alt_straight_segments_append_to_the_owned_saved_path_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked real_freeform_stale_target_source_revision_and_document_cancel_without_finishing_elsewhere -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / real_freeform_stale_target_source_revision_and_document_cancel_without_finishing_elsewhere](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked another_freeform_trace_cannot_replace_a_failed_owned_draft_or_retry_it_automatically -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / another_freeform_trace_cannot_replace_a_failed_owned_draft_or_retry_it_automatically](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_alt_release_in_the_next_press_keeps_the_failed_fit -- --nocapture` — [crates/ui-egui/src/lasso_ui/tests.rs / freeform_alt_release_in_the_next_press_keeps_the_failed_fit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/lasso_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked clicking_the_vector_mask_targets_it_for_the_path_tools -- --nocapture` — [crates/ui-egui/src/mask_thumbs_ui/tests.rs / clicking_the_vector_mask_targets_it_for_the_path_tools](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/mask_thumbs_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked cmd_enter_while_drawing_finishes_the_path_and_loads_it -- --nocapture` — [crates/ui-egui/src/path_selection_tests.rs / cmd_enter_while_drawing_finishes_the_path_and_loads_it](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/path_selection_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_and_path_selection_releases_cannot_edit_a_different_document -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_and_path_selection_releases_cannot_edit_a_different_document](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_release_cancels_after_revision_or_target_change -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_release_cancels_after_revision_or_target_change](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_valid_release_is_one_undoable_path_edit -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / freeform_valid_release_is_one_undoable_path_edit](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked frame_cancellation_consumes_old_events_after_switching_tools -- --nocapture` — [crates/ui-egui/src/pen_gesture_owner_tests.rs / frame_cancellation_consumes_old_events_after_switching_tools](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_gesture_owner_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked selected_work_and_saved_paths_append_pen_and_curvature_components_once -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / selected_work_and_saved_paths_append_pen_and_curvature_components_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked deselected_work_path_is_replaced_without_touching_saved_paths -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / deselected_work_path_is_replaced_without_touching_saved_paths](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked captured_path_and_shape_mode_do_not_follow_later_ui_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / captured_path_and_shape_mode_do_not_follow_later_ui_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked captured_pen_paint_preserves_float_colour_and_alpha_after_toolbar_changes -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / captured_pen_paint_preserves_float_colour_and_alpha_after_toolbar_changes](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked stale_drafts_are_cancelled_before_tool_switch_or_pointer_input -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / stale_drafts_are_cancelled_before_tool_switch_or_pointer_input](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked sync_views_and_input_apis_discard_unowned_or_closed_document_drafts -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / sync_views_and_input_apis_discard_unowned_or_closed_document_drafts](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked same_named_saved_paths_do_not_share_selection_or_drafts_across_tabs -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / same_named_saved_paths_do_not_share_selection_or_drafts_across_tabs](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked reopened_same_id_and_revision_do_not_reuse_the_saved_path_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / reopened_same_id_and_revision_do_not_reuse_the_saved_path_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked ordinary_path_edits_undo_and_redo_preserve_the_explicit_saved_path_selection -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / ordinary_path_edits_undo_and_redo_preserve_the_explicit_saved_path_selection](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked failed_pen_and_curvature_commits_keep_the_exact_draft_and_do_not_retry_each_frame -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / failed_pen_and_curvature_commits_keep_the_exact_draft_and_do_not_retry_each_frame](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked ordinary_tool_switch_commits_the_owned_draft_once -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / ordinary_tool_switch_commits_the_owned_draft_once](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked selected_saved_paths_move_and_free_transform_without_changing_work_or_shape -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / selected_saved_paths_move_and_free_transform_without_changing_work_or_shape](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked explicit_work_path_precedes_vector_mask_and_deselection_restores_mask_fallback -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / explicit_work_path_precedes_vector_mask_and_deselection_restores_mask_fallback](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked pen_keeps_its_captured_vector_mask_when_another_path_is_selected -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / pen_keeps_its_captured_vector_mask_when_another_path_is_selected](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_finish_uses_its_captured_saved_path_and_rejects_foreign_documents -- --nocapture` — [crates/ui-egui/src/pen_path_ownership_tests.rs / freeform_finish_uses_its_captured_saved_path_and_rejects_foreign_documents](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_ownership_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked saved_path_drag_visual_fixture -- --nocapture --ignored` — [crates/ui-egui/src/pen_path_visual_tests.rs / saved_path_drag_visual_fixture](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/pen_path_visual_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked enter_selects_a_stroke_style_and_escape_closes_its_popups_without_committing_pen -- --nocapture` — [crates/ui-egui/src/shape_stroke_ui/shortcut_tests.rs / enter_selects_a_stroke_style_and_escape_closes_its_popups_without_committing_pen](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/shape_stroke_ui/shortcut_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked transparent_and_absent_paints_remain_distinct_and_open_pen_keeps_foreground -- --nocapture` — [crates/ui-egui/src/vector_paint_tests.rs / transparent_and_absent_paints_remain_distinct_and_open_pen_keeps_foreground](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_paint_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked all_shape_tools_and_open_pen_use_the_complete_stroke_defaults -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / all_shape_tools_and_open_pen_use_the_complete_stroke_defaults](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_straight_segments_keep_the_captured_saved_path_and_reject_a_foreign_document -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / freeform_straight_segments_keep_the_captured_saved_path_and_reject_a_foreign_document](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked failed_freeform_straight_segment_commit_keeps_its_owned_fitted_draft -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / failed_freeform_straight_segment_commit_keeps_its_owned_fitted_draft](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked show_target_path_and_extras_hide_the_path_outlines -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / show_target_path_and_extras_hide_the_path_outlines](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked pen_last_anchor_hit_tolerance_tracks_zoom_and_draft_round_trips -- --nocapture` — [crates/ui-egui/src/vector_ui.rs / pen_last_anchor_hit_tolerance_tracks_zoom_and_draft_round_trips](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/ui-egui/src/vector_ui.rs)
+  - `cargo test -p lienzo-vector --locked general_paths_keep_large_straight_coordinates_and_shape_limits_stay_put -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_keep_large_straight_coordinates_and_shape_limits_stay_put](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
+  - `cargo test -p lienzo-vector --locked general_paths_reject_coordinates_that_overflow_the_ui_or_segment_arithmetic -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_reject_coordinates_that_overflow_the_ui_or_segment_arithmetic](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
+  - `cargo test -p lienzo-vector --locked general_paths_bound_total_knots_subpaths_and_combined_tessellation -- --nocapture` — [crates/vector/src/flatten.rs / general_paths_bound_total_knots_subpaths_and_combined_tessellation](https://github.com/storytold/photocraft/blob/1eecd00b2dff4ae4c642269cec211cd06ce1c3aa/crates/vector/src/flatten.rs)
 
 - Expected behavior: appended work and saved components preserve existing geometry and undo; appending valid components cannot exceed total path budget; invalid path coordinates leave work and saved paths unchanged; large straight work and saved paths append and undo without shape coordinate limits; shape layer paths are edited and a direct selection is cleared; add and delete anchor tools edit the selected saved path; command with freeform and curvature edits the selected saved path after modifier release; command cannot edit an existing path when the freeform trace failed to finish; dragging an anchor moves it in one undoable step; arrow keys nudge the selected saved path; selected saved and work paths win overlapping shape hits; direct selection cannot apply to another document or a reopened identity; external revision cancels preview and preserves the new path; layer path and tool changes cancel the owned edit; closing a document and changing marquee target discard old events; serialized anchor selection has no runtime ownership and is not restored; command drag after failed pen commit preserves draft and existing work path; switching between selection and convert tools cancels an in flight drag; the convert point tool edits selected saved paths without changing the work path; changing the channel vector mask target cancels an owned edit; esc ends a pen path and keeps it; pen shows the close path pointer over the first anchor; real freeform freehand and alt straight segments append to the owned saved path once; real freeform stale target source revision and document cancel without finishing elsewhere; another freeform trace cannot replace a failed owned draft or retry it automatically; freeform alt release in the next press keeps the failed fit; clicking the vector mask targets it for the path tools; cmd enter while drawing finishes the path and loads it; freeform and path selection releases cannot edit a different document; freeform release cancels after revision or target change; freeform valid release is one undoable path edit; frame cancellation consumes old events after switching tools; selected work and saved paths append pen and curvature components once; deselected work path is replaced without touching saved paths; captured path and shape mode do not follow later ui selection; captured pen paint preserves float colour and alpha after toolbar changes; stale drafts are cancelled before tool switch or pointer input; sync views and input apis discard unowned or closed document drafts; same named saved paths do not share selection or drafts across tabs; reopened same id and revision do not reuse the saved path selection; ordinary path edits undo and redo preserve the explicit saved path selection; failed pen and curvature commits keep the exact draft and do not retry each frame; ordinary tool switch commits the owned draft once; selected saved paths move and free transform without changing work or shape; explicit work path precedes vector mask and deselection restores mask fallback; pen keeps its captured vector mask when another path is selected; freeform finish uses its captured saved path and rejects foreign documents; saved path drag visual fixture; enter selects a stroke style and escape closes its popups without committing pen; transparent and absent paints remain distinct and open pen keeps foreground; all shape tools and open pen use the complete stroke defaults; freeform straight segments keep the captured saved path and reject a foreign document; failed freeform straight segment commit keeps its owned fitted draft; show target path and extras hide the path outlines; pen last anchor hit tolerance tracks zoom and draft round trips; general paths keep large straight coordinates and shape limits stay put; general paths reject coordinates that overflow the ui or segment arithmetic; general paths bound total knots subpaths and combined tessellation. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1776,9 +1776,9 @@ assert!(error.to_string().contains("4096"));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked layers_to_files_can_trim_transparent_margins_without_changing_the_document -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / layers_to_files_can_trim_transparent_margins_without_changing_the_document](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
-  - `cargo test -p photocraft-engine --locked streamed_layer_export_respects_trim -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / streamed_layer_export_respects_trim](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
-  - `cargo test -p photocraft-engine --locked trimming_an_empty_layer_keeps_a_valid_nonzero_canvas -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / trimming_an_empty_layer_keeps_a_valid_nonzero_canvas](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked layers_to_files_can_trim_transparent_margins_without_changing_the_document -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / layers_to_files_can_trim_transparent_margins_without_changing_the_document](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked streamed_layer_export_respects_trim -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / streamed_layer_export_respects_trim](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked trimming_an_empty_layer_keeps_a_valid_nonzero_canvas -- --nocapture` — [crates/engine/src/file_cmds/tests.rs / trimming_an_empty_layer_keeps_a_valid_nonzero_canvas](https://github.com/storytold/photocraft/blob/807de6c043a512cb947d86b944c758b3db1277c7/crates/engine/src/file_cmds/tests.rs)
 
 - Expected behavior: layers to files can trim transparent margins without changing the document; streamed layer export respects trim; trimming an empty layer keeps a valid nonzero canvas. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1798,7 +1798,7 @@ let dir = tmp("layers-trim");
         let before = doc(&s).clone();
         let regular = s.execute("file.export.layersToFiles", json!({"dir": dir, "prefix": format!("full-{depth}"), "format": "png"})).unwrap();
         let full = std::fs::read(regular["files"][0].as_str().unwrap()).unwrap();
-        let full = photocraft_io::import("full.png", &full).unwrap().document;
+        let full = lienzo_io::import("full.png", &full).unwrap().document;
 ```
 
 Expected assertion context (overlapping windows merged):
@@ -1809,7 +1809,7 @@ assert_eq!((full.size.width, full.size.height), (12, 11), "default is unchanged"
         let trimmed = s.execute("file.export.layersToFiles", json!({"dir": dir, "prefix": format!("trim-{depth}"), "format": "png", "trim": true})).unwrap();
         let image = std::fs::read(trimmed["files"][0].as_str().unwrap()).unwrap();
         assert_eq!((cropped.size.width, cropped.size.height), (4, 5), "depth {depth}");
-        let px = photocraft_compose::render(&cropped, Rect::new(0, 0, 1, 1)).px[0];
+        let px = lienzo_compose::render(&cropped, Rect::new(0, 0, 1, 1)).px[0];
         assert!(px[0] > 0.95 && px[1] < 0.05 && px[2] < 0.05, "depth {depth}: {px:?}");
         assert_eq!(*doc(&s), before, "export must not crop the original document");
     }
@@ -1837,7 +1837,7 @@ Expected assertion context (overlapping windows merged):
 
 ```rust
 assert_eq!(names.len(), encoded.len());
-    let cropped = photocraft_io::import(&encoded[0].0, &encoded[0].1).unwrap().document;
+    let cropped = lienzo_io::import(&encoded[0].0, &encoded[0].1).unwrap().document;
     assert_eq!((cropped.size.width, cropped.size.height), (4, 5));
 }
 ```
@@ -1857,7 +1857,7 @@ assert_eq!(names.len(), encoded.len());
 
   - Perform the explicit artifact inspection below; mark BLOCKED if fixtures are absent.
 
-- Expected: ZIP has photocraft.pdb, photocraft_cli.pdb and symbols.txt. Each PDB GUID/age matches its same-run executable; debugger/profiler resolves a PhotoCraft function. Portable/MSI launches without optional symbols.
+- Expected: ZIP has lienzo.pdb, lienzo_cli.pdb and symbols.txt. Each PDB GUID/age matches its same-run executable; debugger/profiler resolves a Lienzo function. Portable/MSI launches without optional symbols.
 - Separate coverage / prerequisites: Inspect PE CodeView/PDB identity, record run/job/artifact IDs and hashes. Same SHA rebuilt is not the same PDB identity. Source lines are not required because release omits line tables. Missing packaging artifacts/identity evidence is BLOCKED; do not publish a release just for fixtures.
 - Status: NOT RUN
 - Actual:
@@ -1880,9 +1880,9 @@ assert_eq!(names.len(), encoded.len());
 - Fixture/setup: Unix test-owned FIFO linked by synthetic 8×6 document; bounded-reader synthetic fixtures.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-io --locked a_linked_fifo_is_not_read -- --nocapture`
-  - `cargo test -p photocraft-format --locked reads_stop_at_the_total_limit -- --nocapture`
-  - `cargo test -p photocraft-format --locked an_exact_hint_is_not_over_allocated -- --nocapture`
+  - `cargo test -p lienzo-io --locked a_linked_fifo_is_not_read -- --nocapture`
+  - `cargo test -p lienzo-format --locked reads_stop_at_the_total_limit -- --nocapture`
+  - `cargo test -p lienzo-format --locked an_exact_hint_is_not_over_allocated -- --nocapture`
 
 - Expected: FIFO export completes within 30 seconds without a writer, exports cached pixels and warns of fallback/not-regular-file. Exact-limit read succeeds, over-limit/never-ending reads fail FileTooLarge; size hints do not overallocate.
 - Separate coverage / prerequisites: Use only owned temporary FIFO, never a real device. Non-Unix exclusion is BLOCKED for FIFO qualification, not PASSED.
@@ -1896,15 +1896,15 @@ assert_eq!(names.len(), encoded.len());
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked direct_selection_drags_an_anchor_of_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / direct_selection_drags_an_anchor_of_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked direct_selection_marquee_selects_and_arrow_params_name_the_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / direct_selection_marquee_selects_and_arrow_params_name_the_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_saved_path_is_only_edited_while_the_paths_panel_selects_it -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / the_saved_path_is_only_edited_while_the_paths_panel_selects_it](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_selected_saved_path_comes_before_the_work_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / the_selected_saved_path_comes_before_the_work_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked path_selection_moves_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / path_selection_moves_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked free_transform_path_names_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / free_transform_path_names_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked add_and_delete_anchor_point_edit_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / add_and_delete_anchor_point_edit_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_saved_path_read_from_a_psd_is_editable -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / a_saved_path_read_from_a_psd_is_editable](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked arrows_leave_a_saved_path_the_paths_panel_no_longer_selects -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / arrows_leave_a_saved_path_the_paths_panel_no_longer_selects](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked direct_selection_drags_an_anchor_of_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / direct_selection_drags_an_anchor_of_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked direct_selection_marquee_selects_and_arrow_params_name_the_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / direct_selection_marquee_selects_and_arrow_params_name_the_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_saved_path_is_only_edited_while_the_paths_panel_selects_it -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / the_saved_path_is_only_edited_while_the_paths_panel_selects_it](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_selected_saved_path_comes_before_the_work_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / the_selected_saved_path_comes_before_the_work_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked path_selection_moves_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / path_selection_moves_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked free_transform_path_names_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / free_transform_path_names_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked add_and_delete_anchor_point_edit_the_selected_saved_path -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / add_and_delete_anchor_point_edit_the_selected_saved_path](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_saved_path_read_from_a_psd_is_editable -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / a_saved_path_read_from_a_psd_is_editable](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked arrows_leave_a_saved_path_the_paths_panel_no_longer_selects -- --nocapture` — [crates/ui-egui/src/saved_path_edit_tests.rs / arrows_leave_a_saved_path_the_paths_panel_no_longer_selects](https://github.com/storytold/photocraft/blob/390dfbbcb026b33d46c52c62360b65deca00f258/crates/ui-egui/src/saved_path_edit_tests.rs)
 
 - Expected behavior: direct selection drags an anchor of the selected saved path; direct selection marquee selects and arrow params name the saved path; the saved path is only edited while the paths panel selects it; the selected saved path comes before the work path; path selection moves the selected saved path; free transform path names the selected saved path; add and delete anchor point edit the selected saved path; a saved path read from a psd is editable; arrows leave a saved path the paths panel no longer selects. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -1977,24 +1977,24 @@ assert_eq!((app.ui.direct_selection.target, app.ui.direct_selection.anchors.clon
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked ico_export_is_available_and_rejects_oversize_output -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / ico_export_is_available_and_rejects_oversize_output](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked nearest_neighbor_doubles_each_pixel_into_an_exact_block -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / nearest_neighbor_doubles_each_pixel_into_an_exact_block](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked resample_choices_are_checked -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / resample_choices_are_checked](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked export_document_scales_height_when_rounded_width_is_unchanged -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_height_when_rounded_width_is_unchanged](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked export_document_proxy_limits_both_dimensions_before_rounding -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_proxy_limits_both_dimensions_before_rounding](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_estimate_is_the_exported_files_size -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / the_estimate_is_the_exported_files_size](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked export_as_downscales_stroke_only_shapes_and_preview -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_as_downscales_stroke_only_shapes_and_preview](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked export_document_scales_and_flattens -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_and_flattens](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked export_document_scales_when_only_the_height_changes -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_when_only_the_height_changes](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked layered_preview_runs_outside_the_ui_frame -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / layered_preview_runs_outside_the_ui_frame](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked exact_pixels_lock_aspect_and_leave_the_source -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / exact_pixels_lock_aspect_and_leave_the_source](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked untagged_srgb_export_tags_without_rewriting_pixels -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / untagged_srgb_export_tags_without_rewriting_pixels](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked untagged_srgb_export_24mp_keeps_pixel_tiles -- --nocapture --ignored` — [crates/ui-egui/src/export_dialog.rs / untagged_srgb_export_24mp_keeps_pixel_tiles](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked untagged_jpeg_export_embeds_the_requested_srgb_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / untagged_jpeg_export_embeds_the_requested_srgb_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked preview_cache_tracks_working_profiles_but_prefers_embedded_profiles -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / preview_cache_tracks_working_profiles_but_prefers_embedded_profiles](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked preview_workers_keep_the_captured_source_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / preview_workers_keep_the_captured_source_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked replay_converts_untagged_pixels_from_the_original_working_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / replay_converts_untagged_pixels_from_the_original_working_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
-  - `cargo test -p photocraft-ui-egui --locked profile_and_metadata_follow_the_existing_exporter -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / profile_and_metadata_follow_the_existing_exporter](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked ico_export_is_available_and_rejects_oversize_output -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / ico_export_is_available_and_rejects_oversize_output](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked nearest_neighbor_doubles_each_pixel_into_an_exact_block -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / nearest_neighbor_doubles_each_pixel_into_an_exact_block](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked resample_choices_are_checked -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / resample_choices_are_checked](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked export_document_scales_height_when_rounded_width_is_unchanged -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_height_when_rounded_width_is_unchanged](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked export_document_proxy_limits_both_dimensions_before_rounding -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_proxy_limits_both_dimensions_before_rounding](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_estimate_is_the_exported_files_size -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / the_estimate_is_the_exported_files_size](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked export_as_downscales_stroke_only_shapes_and_preview -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_as_downscales_stroke_only_shapes_and_preview](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked export_document_scales_and_flattens -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_and_flattens](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked export_document_scales_when_only_the_height_changes -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / export_document_scales_when_only_the_height_changes](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked layered_preview_runs_outside_the_ui_frame -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / layered_preview_runs_outside_the_ui_frame](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked exact_pixels_lock_aspect_and_leave_the_source -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / exact_pixels_lock_aspect_and_leave_the_source](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked untagged_srgb_export_tags_without_rewriting_pixels -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / untagged_srgb_export_tags_without_rewriting_pixels](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked untagged_srgb_export_24mp_keeps_pixel_tiles -- --nocapture --ignored` — [crates/ui-egui/src/export_dialog.rs / untagged_srgb_export_24mp_keeps_pixel_tiles](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked untagged_jpeg_export_embeds_the_requested_srgb_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / untagged_jpeg_export_embeds_the_requested_srgb_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked preview_cache_tracks_working_profiles_but_prefers_embedded_profiles -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / preview_cache_tracks_working_profiles_but_prefers_embedded_profiles](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked preview_workers_keep_the_captured_source_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / preview_workers_keep_the_captured_source_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked replay_converts_untagged_pixels_from_the_original_working_profile -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / replay_converts_untagged_pixels_from_the_original_working_profile](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-ui-egui --locked profile_and_metadata_follow_the_existing_exporter -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / profile_and_metadata_follow_the_existing_exporter](https://github.com/storytold/photocraft/blob/393645ab91460af2e37cc3ba8f6921e7551f676e/crates/ui-egui/src/export_dialog.rs)
 
 - Expected behavior: ico export is available and rejects oversize output; nearest neighbor doubles each pixel into an exact block; resample choices are checked; export document scales height when rounded width is unchanged; export document proxy limits both dimensions before rounding; the estimate is the exported files size; export as downscales stroke only shapes and preview; export document scales and flattens; export document scales when only the height changes; layered preview runs outside the ui frame; exact pixels lock aspect and leave the source; untagged srgb export tags without rewriting pixels; untagged srgb export 24mp keeps pixel tiles; untagged jpeg export embeds the requested srgb profile; preview cache tracks working profiles but prefers embedded profiles; preview workers keep the captured source profile; replay converts untagged pixels from the original working profile; profile and metadata follow the existing exporter. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2003,7 +2003,7 @@ assert_eq!((app.ui.direct_selection.target, app.ui.direct_selection.anchors.clon
 `ico_export_is_available_and_rejects_oversize_output` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 300, "height": 200})).unwrap();
         let mut f = Map::new();
         f.insert("format".into(), json!("ico"));
@@ -2030,7 +2030,7 @@ assert!(FORMATS.iter().any(|(ext, _)| *ext == "ico"));
 `nearest_neighbor_doubles_each_pixel_into_an_exact_block` setup/action excerpt:
 
 ```rust
-use photocraft_doc::SampleType;
+use lienzo_doc::SampleType;
         for depth in [SampleType::U8, SampleType::U16] {
             let doc = checker_doc(depth);
             let before = doc.clone();
@@ -2082,11 +2082,11 @@ assert_eq!((out.size.width, out.size.height), (10, 6));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-automation --locked doc_save_rejects_a_bad_quality_instead_of_ignoring_or_clamping_it -- --nocapture` — [crates/automation/src/rpc.rs / doc_save_rejects_a_bad_quality_instead_of_ignoring_or_clamping_it](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/automation/src/rpc.rs)
-  - `cargo test -p photocraft-engine --locked exif_srgb_jpeg_round_trip -- --nocapture` — [crates/engine/src/color_cmds.rs / exif_srgb_jpeg_round_trip](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/engine/src/color_cmds.rs)
-  - `cargo test -p photocraft-engine --locked embed_color_profile_tags_an_untagged_document_srgb -- --nocapture` — [crates/engine/src/web_cmds/tests.rs / embed_color_profile_tags_an_untagged_document_srgb](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/engine/src/web_cmds/tests.rs)
-  - `cargo test -p photocraft-io --locked untagged_documents_embed_the_profile_they_are_assumed_to_be_in -- --nocapture` — [crates/io/src/flat.rs / untagged_documents_embed_the_profile_they_are_assumed_to_be_in](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/io/src/flat.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_estimate_is_the_exported_files_size -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / the_estimate_is_the_exported_files_size](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/ui-egui/src/export_dialog.rs)
+  - `cargo test -p lienzo-automation --locked doc_save_rejects_a_bad_quality_instead_of_ignoring_or_clamping_it -- --nocapture` — [crates/automation/src/rpc.rs / doc_save_rejects_a_bad_quality_instead_of_ignoring_or_clamping_it](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/automation/src/rpc.rs)
+  - `cargo test -p lienzo-engine --locked exif_srgb_jpeg_round_trip -- --nocapture` — [crates/engine/src/color_cmds.rs / exif_srgb_jpeg_round_trip](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/engine/src/color_cmds.rs)
+  - `cargo test -p lienzo-engine --locked embed_color_profile_tags_an_untagged_document_srgb -- --nocapture` — [crates/engine/src/web_cmds/tests.rs / embed_color_profile_tags_an_untagged_document_srgb](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/engine/src/web_cmds/tests.rs)
+  - `cargo test -p lienzo-io --locked untagged_documents_embed_the_profile_they_are_assumed_to_be_in -- --nocapture` — [crates/io/src/flat.rs / untagged_documents_embed_the_profile_they_are_assumed_to_be_in](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/io/src/flat.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_estimate_is_the_exported_files_size -- --nocapture` — [crates/ui-egui/src/export_dialog.rs / the_estimate_is_the_exported_files_size](https://github.com/storytold/photocraft/blob/c46a74621d36adae9707ab8f3eb39cf6b4c302b9/crates/ui-egui/src/export_dialog.rs)
 
 - Expected behavior: doc save rejects a bad quality instead of ignoring or clamping it; exif srgb jpeg round trip; embed color profile tags an untagged document srgb; untagged documents embed the profile they are assumed to be in; the estimate is the exported files size. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2128,10 +2128,10 @@ assert!(err.contains("quality"), "{q}: {err}");
 let mut s = Session::new();
         s.execute("edit.colorSettings", json!({"workingRgb": "display-p3"})).unwrap();
         // Embed Color Profile off: an untagged document is otherwise tagged sRGB on export (#9325).
-        let mut opts = photocraft_io::ExportOptions::default();
+        let mut opts = lienzo_io::ExportOptions::default();
         opts.encode.embed_icc = false;
-        let r = photocraft_io::export(&untagged_camera_file(Some(1)), "x.jpg", &opts).unwrap();
-        let back = photocraft_io::import("x.jpg", &r.bytes).unwrap().document;
+        let r = lienzo_io::export(&untagged_camera_file(Some(1)), "x.jpg", &opts).unwrap();
+        let back = lienzo_io::import("x.jpg", &r.bytes).unwrap().document;
         assert!(back.icc_profile.is_none(), "no ICC profile in the file");
         let (_, r) = s.open_document(back, None);
         assert_eq!((r["action"].as_str(), r["exif"].as_bool()), (Some("kept"), Some(true)));
@@ -2161,9 +2161,9 @@ assert!(back.icc_profile.is_none(), "no ICC profile in the file");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-automation --locked write_keeps_the_replaced_files_creation_time -- --nocapture` — [crates/automation/src/workspace.rs / write_keeps_the_replaced_files_creation_time](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/automation/src/workspace.rs)
-  - `cargo test -p photocraft-format --locked keeps_the_original_creation_time -- --nocapture` — [crates/format/src/atomic/tests.rs / keeps_the_original_creation_time](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/format/src/atomic/tests.rs)
-  - `cargo test -p photocraft-format --locked keeps_the_creation_time_under_a_deny_write_acl -- --nocapture` — [crates/format/src/atomic/tests.rs / keeps_the_creation_time_under_a_deny_write_acl](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/format/src/atomic/tests.rs)
+  - `cargo test -p lienzo-automation --locked write_keeps_the_replaced_files_creation_time -- --nocapture` — [crates/automation/src/workspace.rs / write_keeps_the_replaced_files_creation_time](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/automation/src/workspace.rs)
+  - `cargo test -p lienzo-format --locked keeps_the_original_creation_time -- --nocapture` — [crates/format/src/atomic/tests.rs / keeps_the_original_creation_time](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/format/src/atomic/tests.rs)
+  - `cargo test -p lienzo-format --locked keeps_the_creation_time_under_a_deny_write_acl -- --nocapture` — [crates/format/src/atomic/tests.rs / keeps_the_creation_time_under_a_deny_write_acl](https://github.com/storytold/photocraft/blob/f241bba1adfb9c7ec5dd5ed9d86f95b63c7bc2c3/crates/format/src/atomic/tests.rs)
 
 - Expected behavior: write keeps the replaced files creation time; keeps the original creation time; keeps the creation time under a deny write acl. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2233,8 +2233,8 @@ assert_eq!(std::fs::metadata(&p).unwrap().created().unwrap(), born);
 - Fixture/setup: Synthetic repeated tags and fixed-record stream in affinity/src/tests.rs; licensed curve document with known topology/reference.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-affinity --locked lookup_keeps_first_match_for_every_object_size -- --nocapture`
-  - `cargo test -p photocraft-affinity --locked a_fixed_size_array_is_one_buffer_and_one_value_per_record -- --nocapture`
+  - `cargo test -p lienzo-affinity --locked lookup_keeps_first_match_for_every_object_size -- --nocapture`
+  - `cargo test -p lienzo-affinity --locked a_fixed_size_array_is_one_buffer_and_one_value_per_record -- --nocapture`
 
 - Expected: Tag lookup preserves first occurrence for sizes 0–59 and positional-tag exclusion; five 18-byte records occupy one buffer and report five elements. Full curve import preserves finite control points, nodes and topology.
 - Separate coverage / prerequisites: Also run full affinity suite and applicable pinned corpus tests. Record curve fixture hash and compare imported geometry/appearance; if no end-to-end contiguous-curve fixture exists, mark that subcase BLOCKED. Storage tests alone do not establish render fidelity.
@@ -2248,8 +2248,8 @@ assert_eq!(std::fs::metadata(&p).unwrap().created().unwrap(), born);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-io --locked psd_contours_keep_at_most_16_points_and_their_peaks -- --nocapture` — [crates/io/src/effects_map.rs / psd_contours_keep_at_most_16_points_and_their_peaks](https://github.com/storytold/photocraft/blob/a9744ed44dc782613b19a97b8c159a091f73e669/crates/io/src/effects_map.rs)
-  - `cargo test -p photocraft-io --locked a_point_on_a_tiny_straight_span_is_not_a_bend -- --nocapture` — [crates/io/src/effects_map.rs / a_point_on_a_tiny_straight_span_is_not_a_bend](https://github.com/storytold/photocraft/blob/a9744ed44dc782613b19a97b8c159a091f73e669/crates/io/src/effects_map.rs)
+  - `cargo test -p lienzo-io --locked psd_contours_keep_at_most_16_points_and_their_peaks -- --nocapture` — [crates/io/src/effects_map.rs / psd_contours_keep_at_most_16_points_and_their_peaks](https://github.com/storytold/photocraft/blob/a9744ed44dc782613b19a97b8c159a091f73e669/crates/io/src/effects_map.rs)
+  - `cargo test -p lienzo-io --locked a_point_on_a_tiny_straight_span_is_not_a_bend -- --nocapture` — [crates/io/src/effects_map.rs / a_point_on_a_tiny_straight_span_is_not_a_bend](https://github.com/storytold/photocraft/blob/a9744ed44dc782613b19a97b8c159a091f73e669/crates/io/src/effects_map.rs)
 
 - Expected behavior: psd contours keep at most 16 points and their peaks; a point on a tiny straight span is not a bend. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2334,14 +2334,14 @@ assert_eq!(kept.len(), 16);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked shift_right_mode_picker_selects_journals_and_clear_erases -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_right_mode_picker_selects_journals_and_clear_erases](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked mode_picker_outside_dismissal_does_not_paint_or_erase -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / mode_picker_outside_dismissal_does_not_paint_or_erase](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked mode_control_can_pick_a_row_with_ui_click -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / mode_control_can_pick_a_row_with_ui_click](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked shift_right_mode_picker_cancels_and_other_gestures_keep_their_routes -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_right_mode_picker_cancels_and_other_gestures_keep_their_routes](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked escape_dismissal_consumes_a_held_secondary_release -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / escape_dismissal_consumes_a_held_secondary_release](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked shift_released_before_the_right_button_still_opens_the_mode_picker -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_released_before_the_right_button_still_opens_the_mode_picker](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked shift_right_brush_does_not_open_presets_or_paint -- --nocapture` — [crates/ui-egui/src/control/tests.rs / shift_right_brush_does_not_open_presets_or_paint](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/control/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked brush_mode_control_routes_modifiers_and_reports_choices_without_history -- --nocapture` — [crates/ui-egui/src/control/tests.rs / brush_mode_control_routes_modifiers_and_reports_choices_without_history](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/control/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_right_mode_picker_selects_journals_and_clear_erases -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_right_mode_picker_selects_journals_and_clear_erases](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked mode_picker_outside_dismissal_does_not_paint_or_erase -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / mode_picker_outside_dismissal_does_not_paint_or_erase](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked mode_control_can_pick_a_row_with_ui_click -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / mode_control_can_pick_a_row_with_ui_click](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_right_mode_picker_cancels_and_other_gestures_keep_their_routes -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_right_mode_picker_cancels_and_other_gestures_keep_their_routes](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked escape_dismissal_consumes_a_held_secondary_release -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / escape_dismissal_consumes_a_held_secondary_release](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_released_before_the_right_button_still_opens_the_mode_picker -- --nocapture` — [crates/ui-egui/src/canvas/paint_mouse/tests.rs / shift_released_before_the_right_button_still_opens_the_mode_picker](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/canvas/paint_mouse/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_right_brush_does_not_open_presets_or_paint -- --nocapture` — [crates/ui-egui/src/control/tests.rs / shift_right_brush_does_not_open_presets_or_paint](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/control/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked brush_mode_control_routes_modifiers_and_reports_choices_without_history -- --nocapture` — [crates/ui-egui/src/control/tests.rs / brush_mode_control_routes_modifiers_and_reports_choices_without_history](https://github.com/storytold/photocraft/blob/1dc98f80f60e993f3edf20af815391b6a7e7add7/crates/ui-egui/src/control/tests.rs)
 
 - Expected behavior: shift right mode picker selects journals and clear erases; mode picker outside dismissal does not paint or erase; mode control can pick a row with ui click; shift right mode picker cancels and other gestures keep their routes; escape dismissal consumes a held secondary release; shift released before the right button still opens the mode picker; shift right brush does not open presets or paint; brush mode control routes modifiers and reports choices without history. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2374,7 +2374,7 @@ assert!(h.state().ui.brush_mode_menu.is_some());
     h.get_by_label("Multiply").click();
     h.run_steps(2);
     assert!(h.state().ui.brush_mode_menu.is_none());
-    assert_eq!(h.state().session.tools.brush.mode, photocraft_doc::BlendMode::Multiply);
+    assert_eq!(h.state().session.tools.brush.mode, lienzo_doc::BlendMode::Multiply);
     assert_eq!(h.state().session.journal.last().unwrap(), &("tools.setBrush".into(), json!({"brush": {"mode": "Multiply"}})));
     let (a, b) = drag(&mut h, PointerButton::Primary);
     let mid = a + (b - a) * 0.5;
@@ -2383,7 +2383,7 @@ assert!(h.state().ui.brush_mode_menu.is_some());
     h.get_by_label("Clear").click();
     h.run_steps(2);
     assert!(h.state().ui.tool_options.brush_clear);
-    assert_eq!(h.state().session.tools.brush.mode, photocraft_doc::BlendMode::Multiply, "Clear keeps the underlying mode, as the options bar does");
+    assert_eq!(h.state().session.tools.brush.mode, lienzo_doc::BlendMode::Multiply, "Clear keeps the underlying mode, as the options bar does");
     drag(&mut h, PointerButton::Primary);
     assert_eq!(alpha_at(&h, mid), 0.0);
     assert!(strokes(&h).last().unwrap()["erase"].as_bool().unwrap());
@@ -2433,8 +2433,8 @@ Historical PR title: fix(mixer-brush): Alt-click samples the foreground colour l
 - Fixture/setup: Red/green canvas with blue foreground from alt_click_tests.rs; engine 80×40 transparent canvas with blue stroke and red foreground.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-ui-egui --locked alt_click_with_the_mixer_brush_loads_the_reservoir_not_the_foreground -- --nocapture`
-  - `cargo test -p photocraft-engine --locked mixer_load_fills_the_reservoir_from_the_canvas_and_keeps_the_foreground -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked alt_click_with_the_mixer_brush_loads_the_reservoir_not_the_foreground -- --nocapture`
+  - `cargo test -p lienzo-engine --locked mixer_load_fills_the_reservoir_from_the_canvas_and_keeps_the_foreground -- --nocapture`
 
 - Expected: Alt-click loads Current Brush Load/reservoir, preserving foreground and document revision and painting nothing. Dry stroke uses sampled blue until foreground changes; green foreground then paints green. Transparent sampling loads nothing; invalid coordinates preserve all state.
 - Separate coverage / prerequisites: Historical PR title is stale: this case follows reviewed reservoir behavior, not foreground replacement. Repeat Alt/Option-click natively as a separate NOT RUN subcase.
@@ -2448,10 +2448,10 @@ Historical PR title: fix(mixer-brush): Alt-click samples the foreground colour l
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked selecting_a_controls_section_keeps_its_enabled_flag_and_brush_history -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / selecting_a_controls_section_keeps_its_enabled_flag_and_brush_history](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked controls_section_checkbox_toggles_without_selecting_its_settings -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / controls_section_checkbox_toggles_without_selecting_its_settings](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked f5_edits_the_default_brush_with_every_section -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / f5_edits_the_default_brush_with_every_section](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked section_boxes_show_a_pressed_state -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / section_boxes_show_a_pressed_state](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked selecting_a_controls_section_keeps_its_enabled_flag_and_brush_history -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / selecting_a_controls_section_keeps_its_enabled_flag_and_brush_history](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked controls_section_checkbox_toggles_without_selecting_its_settings -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / controls_section_checkbox_toggles_without_selecting_its_settings](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked f5_edits_the_default_brush_with_every_section -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / f5_edits_the_default_brush_with_every_section](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked section_boxes_show_a_pressed_state -- --nocapture` — [crates/ui-egui/src/brush_panel_tests.rs / section_boxes_show_a_pressed_state](https://github.com/storytold/photocraft/blob/27bc6e4b37b701480efa69559ab13eafc52bd94c/crates/ui-egui/src/brush_panel_tests.rs)
 
 - Expected behavior: selecting a controls section keeps its enabled flag and brush history; controls section checkbox toggles without selecting its settings; f5 edits the default brush with every section; section boxes show a pressed state. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2524,18 +2524,18 @@ assert_eq!(h.state().session.tools.brush.scattering.enabled, enabled);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-automation --locked a_refresh_outside_command_execution_surfaces_the_denial_instead_of_rendering_unfiltered -- --nocapture` — [crates/automation/tests/smart_filter_authorization.rs / a_refresh_outside_command_execution_surfaces_the_denial_instead_of_rendering_unfiltered](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/automation/tests/smart_filter_authorization.rs)
-  - `cargo test -p photocraft-engine --locked behind_brush_and_pencil_preserve_foreground_and_round_trip_history -- --nocapture` — [crates/engine/src/brush_cmds/tests.rs / behind_brush_and_pencil_preserve_foreground_and_round_trip_history](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/engine/src/brush_cmds/tests.rs)
-  - `cargo test -p photocraft-paint --locked behind_preserves_native_channels_and_respects_alpha_selection_and_locks -- --nocapture` — [crates/paint/src/brush_tests.rs / behind_preserves_native_channels_and_respects_alpha_selection_and_locks](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/paint/src/brush_tests.rs)
-  - `cargo test -p photocraft-paint --locked live_union_of_passes_matches_merging_the_finished_passes_after_every_chunk -- --nocapture` — [crates/paint/src/brush_tests.rs / live_union_of_passes_matches_merging_the_finished_passes_after_every_chunk](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/paint/src/brush_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked german_color_picker_fits_its_actions_and_translates_the_title -- --nocapture` — [crates/ui-egui/src/dialogs.rs / german_color_picker_fits_its_actions_and_translates_the_title](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked file_info_multiline_fields_keep_enter_and_cancel_discards_edits -- --nocapture` — [crates/ui-egui/src/dialogs.rs / file_info_multiline_fields_keep_enter_and_cancel_discards_edits](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked file_info_keeps_multiline_metadata_on_confirm_and_reopen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / file_info_keeps_multiline_metadata_on_confirm_and_reopen](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked mask_sampling_sets_gray_swatches_without_changing_pixel_sampling -- --nocapture` — [crates/ui-egui/src/eyedropper_ui.rs / mask_sampling_sets_gray_swatches_without_changing_pixel_sampling](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/eyedropper_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked move_alt_copy_cursor_follows_the_latched_duplication_drag -- --nocapture` — [crates/ui-egui/src/input_tests.rs / move_alt_copy_cursor_follows_the_latched_duplication_drag](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/input_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked assignable_pick_layer_shortcut_follows_transformed_canvas_without_editing -- --nocapture` — [crates/ui-egui/src/input_tests.rs / assignable_pick_layer_shortcut_follows_transformed_canvas_without_editing](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/input_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_wheel_over_the_brush_mode_dropdown_steps_the_painting_mode -- --nocapture` — [crates/ui-egui/src/options_bar_mode_wheel_tests.rs / the_wheel_over_the_brush_mode_dropdown_steps_the_painting_mode](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/options_bar_mode_wheel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked space_repositions_a_pen_anchor_and_keeps_its_handles -- --nocapture` — [crates/ui-egui/src/pen_draw_tests.rs / space_repositions_a_pen_anchor_and_keeps_its_handles](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/pen_draw_tests.rs)
+  - `cargo test -p lienzo-automation --locked a_refresh_outside_command_execution_surfaces_the_denial_instead_of_rendering_unfiltered -- --nocapture` — [crates/automation/tests/smart_filter_authorization.rs / a_refresh_outside_command_execution_surfaces_the_denial_instead_of_rendering_unfiltered](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/automation/tests/smart_filter_authorization.rs)
+  - `cargo test -p lienzo-engine --locked behind_brush_and_pencil_preserve_foreground_and_round_trip_history -- --nocapture` — [crates/engine/src/brush_cmds/tests.rs / behind_brush_and_pencil_preserve_foreground_and_round_trip_history](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/engine/src/brush_cmds/tests.rs)
+  - `cargo test -p lienzo-paint --locked behind_preserves_native_channels_and_respects_alpha_selection_and_locks -- --nocapture` — [crates/paint/src/brush_tests.rs / behind_preserves_native_channels_and_respects_alpha_selection_and_locks](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/paint/src/brush_tests.rs)
+  - `cargo test -p lienzo-paint --locked live_union_of_passes_matches_merging_the_finished_passes_after_every_chunk -- --nocapture` — [crates/paint/src/brush_tests.rs / live_union_of_passes_matches_merging_the_finished_passes_after_every_chunk](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/paint/src/brush_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked german_color_picker_fits_its_actions_and_translates_the_title -- --nocapture` — [crates/ui-egui/src/dialogs.rs / german_color_picker_fits_its_actions_and_translates_the_title](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked file_info_multiline_fields_keep_enter_and_cancel_discards_edits -- --nocapture` — [crates/ui-egui/src/dialogs.rs / file_info_multiline_fields_keep_enter_and_cancel_discards_edits](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked file_info_keeps_multiline_metadata_on_confirm_and_reopen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / file_info_keeps_multiline_metadata_on_confirm_and_reopen](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked mask_sampling_sets_gray_swatches_without_changing_pixel_sampling -- --nocapture` — [crates/ui-egui/src/eyedropper_ui.rs / mask_sampling_sets_gray_swatches_without_changing_pixel_sampling](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/eyedropper_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked move_alt_copy_cursor_follows_the_latched_duplication_drag -- --nocapture` — [crates/ui-egui/src/input_tests.rs / move_alt_copy_cursor_follows_the_latched_duplication_drag](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/input_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked assignable_pick_layer_shortcut_follows_transformed_canvas_without_editing -- --nocapture` — [crates/ui-egui/src/input_tests.rs / assignable_pick_layer_shortcut_follows_transformed_canvas_without_editing](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/input_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_wheel_over_the_brush_mode_dropdown_steps_the_painting_mode -- --nocapture` — [crates/ui-egui/src/options_bar_mode_wheel_tests.rs / the_wheel_over_the_brush_mode_dropdown_steps_the_painting_mode](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/options_bar_mode_wheel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked space_repositions_a_pen_anchor_and_keeps_its_handles -- --nocapture` — [crates/ui-egui/src/pen_draw_tests.rs / space_repositions_a_pen_anchor_and_keeps_its_handles](https://github.com/storytold/photocraft/blob/e2347f8ead85d929193044f139788b850e31c06f/crates/ui-egui/src/pen_draw_tests.rs)
 
 - Expected behavior: a refresh outside command execution surfaces the denial instead of rendering unfiltered; behind brush and pencil preserve foreground and round trip history; behind preserves native channels and respects alpha selection and locks; live union of passes matches merging the finished passes after every chunk; german color picker fits its actions and translates the title; file info multiline fields keep enter and cancel discards edits; file info keeps multiline metadata on confirm and reopen; mask sampling sets gray swatches without changing pixel sampling; move alt copy cursor follows the latched duplication drag; assignable pick layer shortcut follows transformed canvas without editing; the wheel over the brush mode dropdown steps the painting mode; space repositions a pen anchor and keeps its handles. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2613,12 +2613,12 @@ assert_eq!(rgba(&s, 10, 10), [1.0, 0.0, 0.0, 1.0], "{cmd}: existing opaque paint
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked pressure_shape_and_smoothing_match_replay -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / pressure_shape_and_smoothing_match_replay](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
-  - `cargo test -p photocraft-engine --locked native_modes_selection_and_lock_match_replay -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / native_modes_selection_and_lock_match_replay](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
-  - `cargo test -p photocraft-engine --locked changed_document_refuses_live_pixels -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / changed_document_refuses_live_pixels](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
-  - `cargo test -p photocraft-engine --locked smudge_pickup_matches_full_neighborhood_when_pressure_expands -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / smudge_pickup_matches_full_neighborhood_when_pressure_expands](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
-  - `cargo test -p photocraft-engine --locked pressure_sized_live_dabs_commit_only_the_requested_mask_or_channel -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / pressure_sized_live_dabs_commit_only_the_requested_mask_or_channel](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
-  - `cargo test -p photocraft-ui-egui --locked pressure_sized_smudge_release_matches_replay_and_undo_redo -- --nocapture` — [crates/ui-egui/src/stroke_timing_tests.rs / pressure_sized_smudge_release_matches_replay_and_undo_redo](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/ui-egui/src/stroke_timing_tests.rs)
+  - `cargo test -p lienzo-engine --locked pressure_shape_and_smoothing_match_replay -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / pressure_shape_and_smoothing_match_replay](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
+  - `cargo test -p lienzo-engine --locked native_modes_selection_and_lock_match_replay -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / native_modes_selection_and_lock_match_replay](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
+  - `cargo test -p lienzo-engine --locked changed_document_refuses_live_pixels -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / changed_document_refuses_live_pixels](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
+  - `cargo test -p lienzo-engine --locked smudge_pickup_matches_full_neighborhood_when_pressure_expands -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / smudge_pickup_matches_full_neighborhood_when_pressure_expands](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
+  - `cargo test -p lienzo-engine --locked pressure_sized_live_dabs_commit_only_the_requested_mask_or_channel -- --nocapture` — [crates/engine/tests/live_dab_matches_replay.rs / pressure_sized_live_dabs_commit_only_the_requested_mask_or_channel](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/engine/tests/live_dab_matches_replay.rs)
+  - `cargo test -p lienzo-ui-egui --locked pressure_sized_smudge_release_matches_replay_and_undo_redo -- --nocapture` — [crates/ui-egui/src/stroke_timing_tests.rs / pressure_sized_smudge_release_matches_replay_and_undo_redo](https://github.com/storytold/photocraft/blob/389a1d5bd67072d5581c27989080222a7065b585/crates/ui-egui/src/stroke_timing_tests.rs)
 
 - Expected behavior: pressure shape and smoothing match replay; native modes selection and lock match replay; changed document refuses live pixels; smudge pickup matches full neighborhood when pressure expands; pressure sized live dabs commit only the requested mask or channel; pressure sized smudge release matches replay and undo redo. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2692,7 +2692,7 @@ assert_eq!(result["fromLive"], true);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-paint --locked pencil_1px_freehand_line_never_breaks_where_it_turns -- --nocapture` — [crates/paint/src/brush_tests.rs / pencil_1px_freehand_line_never_breaks_where_it_turns](https://github.com/storytold/photocraft/blob/652075f4da7fe905ad651eebc3a6c276fe1d7a5d/crates/paint/src/brush_tests.rs)
+  - `cargo test -p lienzo-paint --locked pencil_1px_freehand_line_never_breaks_where_it_turns -- --nocapture` — [crates/paint/src/brush_tests.rs / pencil_1px_freehand_line_never_breaks_where_it_turns](https://github.com/storytold/photocraft/blob/652075f4da7fe905ad651eebc3a6c276fe1d7a5d/crates/paint/src/brush_tests.rs)
 
 - Expected behavior: pencil 1px freehand line never breaks where it turns. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2741,14 +2741,14 @@ assert_eq!(reached.len(), painted.len(), "the line breaks along {path:?}");
 - Evidence:
 - Tester:
 
-## PR-4742: fix(macos): bundle photocraft-cli and resolve it from droplet scripts
+## PR-4742: fix(macos): bundle lienzo-cli and resolve it from droplet scripts
 
-- Fixture/setup: Frozen-SHA macOS bundle containing executable Contents/MacOS/photocraft-cli; synthetic droplet and image paths with spaces.
+- Fixture/setup: Frozen-SHA macOS bundle containing executable Contents/MacOS/lienzo-cli; synthetic droplet and image paths with spaces.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-engine --locked droplets_are_written_and_run -- --nocapture`
+  - `cargo test -p lienzo-engine --locked droplets_are_written_and_run -- --nocapture`
 
-- Expected: Explicit PHOTOCRAFT_CLI wins, then supported /Applications and ~/Applications bundles, then PATH. Arguments remain separate; the intended action runs without standalone CLI installation; ordinary signature verification succeeds.
+- Expected: Explicit LIENZO_CLI wins, then supported /Applications and ~/Applications bundles, then PATH. Arguments remain separate; the intended action runs without standalone CLI installation; ordinary signature verification succeeds.
 - Separate coverage / prerequisites: Use an authorized test installation; do not replace user's app. Installed-bundle resolution is BLOCKED if required bundle is absent. Finder dropping onto a plain shell shim is not promised; app wrapper is separate.
 - Status: NOT RUN
 - Actual:
@@ -2770,8 +2770,8 @@ assert_eq!(reached.len(), painted.len(), "the line breaks along {path:?}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked field_marker_stays_inside_the_field -- --nocapture` — [crates/ui-egui/src/color_picker_ui.rs / field_marker_stays_inside_the_field](https://github.com/storytold/photocraft/blob/8e695caf885b529f01f482b3f0c90cdb34df1915/crates/ui-egui/src/color_picker_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked color_field_cursor_stays_inside_the_field -- --nocapture` — [crates/ui-egui/src/panels.rs / color_field_cursor_stays_inside_the_field](https://github.com/storytold/photocraft/blob/8e695caf885b529f01f482b3f0c90cdb34df1915/crates/ui-egui/src/panels.rs)
+  - `cargo test -p lienzo-ui-egui --locked field_marker_stays_inside_the_field -- --nocapture` — [crates/ui-egui/src/color_picker_ui.rs / field_marker_stays_inside_the_field](https://github.com/storytold/photocraft/blob/8e695caf885b529f01f482b3f0c90cdb34df1915/crates/ui-egui/src/color_picker_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked color_field_cursor_stays_inside_the_field -- --nocapture` — [crates/ui-egui/src/panels.rs / color_field_cursor_stays_inside_the_field](https://github.com/storytold/photocraft/blob/8e695caf885b529f01f482b3f0c90cdb34df1915/crates/ui-egui/src/panels.rs)
 
 - Expected behavior: field marker stays inside the field; color field cursor stays inside the field. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -2808,7 +2808,7 @@ assert!(!circles.is_empty(), "the marker is drawn");
 `color_field_cursor_stays_inside_the_field` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         // Black is s = 0, v = 0: the bottom-left corner.
         app.session.tools.foreground = [0.0, 0.0, 0.0, 1.0];
         let h = field_harness(app);
@@ -2855,7 +2855,7 @@ assert!(rings.iter().any(|(_, radius, _)| *radius == 5.0), "inner ring sits at t
 `unknown_bench_is_rejected_before_updating_the_baseline` setup/action excerpt:
 
 ```rust
-let root = std::env::temp_dir().join(format!("photocraft-perf-unknown-bench-{}", std::process::id()));
+let root = std::env::temp_dir().join(format!("lienzo-perf-unknown-bench-{}", std::process::id()));
         std::fs::create_dir(&root).unwrap();
         std::fs::create_dir(root.join("perf")).unwrap();
         std::fs::write(root.join(BUDGETS), "[[bench]]\nname = \"known\"\npackage = \"unused\"\nrequires = \"missing.rs\"\n").unwrap();
@@ -2891,11 +2891,11 @@ assert_eq!(result, Err(format!("perf: unknown bench `unknown` (see {BUDGETS})"))
 - Fixture/setup: Windows Intel host with functioning DX12; record OS, GPU and driver; frozen integration build.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-gpu --locked injected_fault_skips_the_gpu -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked layout_document_composites_on_the_gpu_like_the_cpu -- --nocapture`
+  - `cargo test -p lienzo-gpu --locked injected_fault_skips_the_gpu -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked layout_document_composites_on_the_gpu_like_the_cpu -- --nocapture`
 
 - Expected: Every process honors WGPU_BACKEND=dx12. Example completes real composition; fault test renders before injecting loss and returns expected lost-device error; layout test executes CPU/GPU assertions.
-- Separate coverage / prerequisites: Run cargo run --release -p photocraft-gpu --locked --example bench_stack_reuse -- --quick with WGPU_BACKEND=dx12. Record adapter/vendor/device/backend/driver and proof each comparison executed. Silent early returns are BLOCKED. Do not load the known-crashing Intel Vulkan backend.
+- Separate coverage / prerequisites: Run cargo run --release -p lienzo-gpu --locked --example bench_stack_reuse -- --quick with WGPU_BACKEND=dx12. Record adapter/vendor/device/backend/driver and proof each comparison executed. Silent early returns are BLOCKED. Do not load the known-crashing Intel Vulkan backend.
 - Status: NOT RUN
 - Actual:
 - Evidence:
@@ -2907,10 +2907,10 @@ assert_eq!(result, Err(format!("perf: unknown bench `unknown` (see {BUDGETS})"))
 - Fixture/setup: startup_report.rs terminal/automation/display combinations and synthetic renderer/error/log text.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft --locked a_desktop_launch_asks_the_user_and_a_script_does_not -- --nocapture`
-  - `cargo test -p photocraft --locked the_text_names_the_error_renderer_version_and_log -- --nocapture`
-  - `cargo test -p photocraft --locked a_fallback_that_was_not_the_preference_is_explained -- --nocapture`
-  - `cargo test -p photocraft --locked path_names_the_attached_log_file -- --nocapture`
+  - `cargo test -p lienzo --locked a_desktop_launch_asks_the_user_and_a_script_does_not -- --nocapture`
+  - `cargo test -p lienzo --locked the_text_names_the_error_renderer_version_and_log -- --nocapture`
+  - `cargo test -p lienzo --locked a_fallback_that_was_not_the_preference_is_explained -- --nocapture`
+  - `cargo test -p lienzo --locked path_names_the_attached_log_file -- --nocapture`
 
 - Expected: Desktop launch with display and without terminal/control asks via dialog; terminal/headless/automation do not hang. Text contains error, attempted renderer, version, actual log path and applicable fallback reason; no invented log path.
 - Separate coverage / prerequisites: Native dialog subcase uses only an existing safe failure reproduction in temporary settings. If unavailable, mark BLOCKED; never force a GPU driver crash.
@@ -2924,11 +2924,11 @@ assert_eq!(result, Err(format!("perf: unknown bench `unknown` (see {BUDGETS})"))
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked polygon_edge_scroll_continues_with_button_up_and_keeps_vertices_fixed -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_continues_with_button_up_and_keeps_vertices_fixed](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked polygon_edge_scroll_places_the_next_vertex_in_the_panned_view_and_commits_once -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_places_the_next_vertex_in_the_panned_view_and_commits_once](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked polygon_edge_scroll_keeps_pixel_aspect_and_shift_constrained_segments -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_keeps_pixel_aspect_and_shift_constrained_segments](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked polygon_edge_scroll_pauses_for_dialogs_and_temporary_navigation -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_pauses_for_dialogs_and_temporary_navigation](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked polygon_edge_scroll_never_moves_an_inactive_pane_or_survives_a_document_or_tool_switch -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_never_moves_an_inactive_pane_or_survives_a_document_or_tool_switch](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked polygon_edge_scroll_continues_with_button_up_and_keeps_vertices_fixed -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_continues_with_button_up_and_keeps_vertices_fixed](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked polygon_edge_scroll_places_the_next_vertex_in_the_panned_view_and_commits_once -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_places_the_next_vertex_in_the_panned_view_and_commits_once](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked polygon_edge_scroll_keeps_pixel_aspect_and_shift_constrained_segments -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_keeps_pixel_aspect_and_shift_constrained_segments](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked polygon_edge_scroll_pauses_for_dialogs_and_temporary_navigation -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_pauses_for_dialogs_and_temporary_navigation](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked polygon_edge_scroll_never_moves_an_inactive_pane_or_survives_a_document_or_tool_switch -- --nocapture` — [crates/ui-egui/src/polygon_lasso_tests.rs / polygon_edge_scroll_never_moves_an_inactive_pane_or_survives_a_document_or_tool_switch](https://github.com/storytold/photocraft/blob/ebf3777aec961d1815aa141d9987eaa645c2273f/crates/ui-egui/src/polygon_lasso_tests.rs)
 
 - Expected behavior: polygon edge scroll continues with button up and keeps vertices fixed; polygon edge scroll places the next vertex in the panned view and commits once; polygon edge scroll keeps pixel aspect and shift constrained segments; polygon edge scroll pauses for dialogs and temporary navigation; polygon edge scroll never moves an inactive pane or survives a document or tool switch. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3028,18 +3028,18 @@ assert!(panned.center[0] > original.center[0], "the zoomed image pans toward the
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked dragging_the_title_bar_moves_the_dialog -- --nocapture` — [crates/ui-egui/src/dialogs.rs / dragging_the_title_bar_moves_the_dialog](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_keeps_one_size_on_every_page -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_keeps_one_size_on_every_page](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_fits_a_short_screen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_fits_a_short_screen](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_is_laid_out_like_photoshops -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_is_laid_out_like_photoshops](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_ok_cancel_and_enter -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_ok_cancel_and_enter](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_bin_deletes_the_selected_effect -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_bin_deletes_the_selected_effect](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked every_effect_row_shows_a_checkbox -- --nocapture` — [crates/ui-egui/src/layer_style.rs / every_effect_row_shows_a_checkbox](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked move_instance_reorders_within_its_kind -- --nocapture` — [crates/ui-egui/src/layer_style.rs / move_instance_reorders_within_its_kind](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked fx_menu_adds_or_shows_an_effect -- --nocapture` — [crates/ui-egui/src/layer_style.rs / fx_menu_adds_or_shows_an_effect](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked pending_style_is_the_dialogs_and_leaves_the_document_alone -- --nocapture` — [crates/ui-egui/src/layer_style.rs / pending_style_is_the_dialogs_and_leaves_the_document_alone](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked body_keeps_invalid_params_and_renders_without_panicking -- --nocapture` — [crates/ui-egui/src/layer_style.rs / body_keeps_invalid_params_and_renders_without_panicking](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked blending_page_renders_for_every_mode_and_odd_fields -- --nocapture` — [crates/ui-egui/src/layer_style.rs / blending_page_renders_for_every_mode_and_odd_fields](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_the_title_bar_moves_the_dialog -- --nocapture` — [crates/ui-egui/src/dialogs.rs / dragging_the_title_bar_moves_the_dialog](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_keeps_one_size_on_every_page -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_keeps_one_size_on_every_page](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_fits_a_short_screen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_fits_a_short_screen](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_is_laid_out_like_photoshops -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_is_laid_out_like_photoshops](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_ok_cancel_and_enter -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_ok_cancel_and_enter](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_bin_deletes_the_selected_effect -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_bin_deletes_the_selected_effect](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked every_effect_row_shows_a_checkbox -- --nocapture` — [crates/ui-egui/src/layer_style.rs / every_effect_row_shows_a_checkbox](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked move_instance_reorders_within_its_kind -- --nocapture` — [crates/ui-egui/src/layer_style.rs / move_instance_reorders_within_its_kind](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked fx_menu_adds_or_shows_an_effect -- --nocapture` — [crates/ui-egui/src/layer_style.rs / fx_menu_adds_or_shows_an_effect](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked pending_style_is_the_dialogs_and_leaves_the_document_alone -- --nocapture` — [crates/ui-egui/src/layer_style.rs / pending_style_is_the_dialogs_and_leaves_the_document_alone](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked body_keeps_invalid_params_and_renders_without_panicking -- --nocapture` — [crates/ui-egui/src/layer_style.rs / body_keeps_invalid_params_and_renders_without_panicking](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked blending_page_renders_for_every_mode_and_odd_fields -- --nocapture` — [crates/ui-egui/src/layer_style.rs / blending_page_renders_for_every_mode_and_odd_fields](https://github.com/storytold/photocraft/blob/cc865221894e21f846d92b721cce7421ea338363/crates/ui-egui/src/layer_style.rs)
 
 - Expected behavior: dragging the title bar moves the dialog; layer style keeps one size on every page; layer style fits a short screen; layer style is laid out like photoshops; layer style ok cancel and enter; layer style bin deletes the selected effect; every effect row shows a checkbox; move instance reorders within its kind; fx menu adds or shows an effect; pending style is the dialogs and leaves the document alone; body keeps invalid params and renders without panicking; blending page renders for every mode and odd fields. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3050,9 +3050,9 @@ assert!(panned.center[0] > original.center[0], "the zoomed image pans toward the
 ```rust
 use egui_kittest::{Harness, kittest::Queryable};
 
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let mut harness = Harness::builder().with_size(egui::vec2(1400.0, 1100.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
         harness.state_mut().ui.open_dialog(DialogKind::LayerStyle, serde_json::Map::new());
         harness.run_steps(3);
         let before = harness.get_by_label("Layer Style").rect();
@@ -3108,8 +3108,8 @@ assert_eq!(frame(&h).size(), size, "{page}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked select_subject_samples_the_selected_layer_else_the_composite -- --nocapture` — [crates/engine/src/smartselect_cmds.rs / select_subject_samples_the_selected_layer_else_the_composite](https://github.com/storytold/photocraft/blob/375d4894a119b6cd5933d53e8fe7f506d2783392/crates/engine/src/smartselect_cmds.rs)
-  - `cargo test -p photocraft-engine --locked select_subject_repeat_reuses_the_mask_until_pixels_change -- --nocapture` — [crates/engine/src/smartselect_cmds.rs / select_subject_repeat_reuses_the_mask_until_pixels_change](https://github.com/storytold/photocraft/blob/375d4894a119b6cd5933d53e8fe7f506d2783392/crates/engine/src/smartselect_cmds.rs)
+  - `cargo test -p lienzo-engine --locked select_subject_samples_the_selected_layer_else_the_composite -- --nocapture` — [crates/engine/src/smartselect_cmds.rs / select_subject_samples_the_selected_layer_else_the_composite](https://github.com/storytold/photocraft/blob/375d4894a119b6cd5933d53e8fe7f506d2783392/crates/engine/src/smartselect_cmds.rs)
+  - `cargo test -p lienzo-engine --locked select_subject_repeat_reuses_the_mask_until_pixels_change -- --nocapture` — [crates/engine/src/smartselect_cmds.rs / select_subject_repeat_reuses_the_mask_until_pixels_change](https://github.com/storytold/photocraft/blob/375d4894a119b6cd5933d53e8fe7f506d2783392/crates/engine/src/smartselect_cmds.rs)
 
 - Expected behavior: select subject samples the selected layer else the composite; select subject repeat reuses the mask until pixels change. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3189,12 +3189,12 @@ assert!(std::sync::Arc::ptr_eq(&mask, &cached(&s)), "the repeat recomputed the m
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked move_guide_turns_a_guide -- --nocapture` — [crates/engine/src/edit_cmds.rs / move_guide_turns_a_guide](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/engine/src/edit_cmds.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_panel_hover_outlines_layer_on_canvas -- --nocapture` — [crates/ui-egui/src/move_hover.rs / layer_panel_hover_outlines_layer_on_canvas](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/move_hover.rs)
-  - `cargo test -p photocraft-ui-egui --locked guide_drags_create_move_and_delete -- --nocapture` — [crates/ui-egui/src/rulers.rs / guide_drags_create_move_and_delete](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
-  - `cargo test -p photocraft-ui-egui --locked alt_turns_a_guide_dragged_out_of_a_ruler -- --nocapture` — [crates/ui-egui/src/rulers.rs / alt_turns_a_guide_dragged_out_of_a_ruler](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
-  - `cargo test -p photocraft-ui-egui --locked alt_turns_a_guide_moved_with_the_move_tool -- --nocapture` — [crates/ui-egui/src/rulers.rs / alt_turns_a_guide_moved_with_the_move_tool](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_guide_dropped_on_either_ruler_is_deleted -- --nocapture` — [crates/ui-egui/src/rulers.rs / a_guide_dropped_on_either_ruler_is_deleted](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
+  - `cargo test -p lienzo-engine --locked move_guide_turns_a_guide -- --nocapture` — [crates/engine/src/edit_cmds.rs / move_guide_turns_a_guide](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/engine/src/edit_cmds.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_panel_hover_outlines_layer_on_canvas -- --nocapture` — [crates/ui-egui/src/move_hover.rs / layer_panel_hover_outlines_layer_on_canvas](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/move_hover.rs)
+  - `cargo test -p lienzo-ui-egui --locked guide_drags_create_move_and_delete -- --nocapture` — [crates/ui-egui/src/rulers.rs / guide_drags_create_move_and_delete](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
+  - `cargo test -p lienzo-ui-egui --locked alt_turns_a_guide_dragged_out_of_a_ruler -- --nocapture` — [crates/ui-egui/src/rulers.rs / alt_turns_a_guide_dragged_out_of_a_ruler](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
+  - `cargo test -p lienzo-ui-egui --locked alt_turns_a_guide_moved_with_the_move_tool -- --nocapture` — [crates/ui-egui/src/rulers.rs / alt_turns_a_guide_moved_with_the_move_tool](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_guide_dropped_on_either_ruler_is_deleted -- --nocapture` — [crates/ui-egui/src/rulers.rs / a_guide_dropped_on_either_ruler_is_deleted](https://github.com/storytold/photocraft/blob/4b1bd6fb6d264f885cb9caa3b8a6578ee527bd7b/crates/ui-egui/src/rulers.rs)
 
 - Expected behavior: move guide turns a guide; layer panel hover outlines layer on canvas; guide drags create move and delete; alt turns a guide dragged out of a ruler; alt turns a guide moved with the move tool; a guide dropped on either ruler is deleted. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3243,7 +3243,7 @@ assert_eq!((g.horizontal.clone(), g.vertical.clone()), (vec![70.0], vec![100.0])
 `layer_panel_hover_outlines_layer_on_canvas` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
         app.session.execute("layer.new.layer", json!({})).unwrap();
         app.session
@@ -3285,8 +3285,8 @@ assert_eq!(active_outline(&mut app, None, false, false), None);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked fixed_size_px_is_exactly_the_size -- --nocapture` — [crates/ui-egui/src/canvas.rs / fixed_size_px_is_exactly_the_size](https://github.com/storytold/photocraft/blob/248ba660576f4896f69cbb6639353e2f1d295271/crates/ui-egui/src/canvas.rs)
-  - `cargo test -p photocraft-ui-egui --locked fixed_size_selects_exactly_the_entered_size -- --nocapture` — [crates/ui-egui/src/marquee_tests.rs / fixed_size_selects_exactly_the_entered_size](https://github.com/storytold/photocraft/blob/248ba660576f4896f69cbb6639353e2f1d295271/crates/ui-egui/src/marquee_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked fixed_size_px_is_exactly_the_size -- --nocapture` — [crates/ui-egui/src/canvas.rs / fixed_size_px_is_exactly_the_size](https://github.com/storytold/photocraft/blob/248ba660576f4896f69cbb6639353e2f1d295271/crates/ui-egui/src/canvas.rs)
+  - `cargo test -p lienzo-ui-egui --locked fixed_size_selects_exactly_the_entered_size -- --nocapture` — [crates/ui-egui/src/marquee_tests.rs / fixed_size_selects_exactly_the_entered_size](https://github.com/storytold/photocraft/blob/248ba660576f4896f69cbb6639353e2f1d295271/crates/ui-egui/src/marquee_tests.rs)
 
 - Expected behavior: fixed size px is exactly the size; fixed size selects exactly the entered size. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3362,18 +3362,18 @@ assert!(readout(&h, w, ht), "{tool:?} {w} × {ht}: the readout shows the entered
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked shift_alt_right_press_opens_the_hud_not_the_picker -- --nocapture` — [crates/ui-egui/src/color_hud.rs / shift_alt_right_press_opens_the_hud_not_the_picker](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked quick_selections_shift_alt_right_opens_only_the_selection_menu -- --nocapture` — [crates/ui-egui/src/color_hud.rs / quick_selections_shift_alt_right_opens_only_the_selection_menu](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_hud_clamped_under_the_still_pointer_picks_nothing_until_it_moves -- --nocapture` — [crates/ui-egui/src/color_hud.rs / a_hud_clamped_under_the_still_pointer_picks_nothing_until_it_moves](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked dragging_over_the_hud_picks_the_foreground_live_and_release_keeps_it -- --nocapture` — [crates/ui-egui/src/color_hud.rs / dragging_over_the_hud_picks_the_foreground_live_and_release_keeps_it](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked escape_restores_the_starting_colour -- --nocapture` — [crates/ui-egui/src/color_hud.rs / escape_restores_the_starting_colour](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked plain_right_click_still_opens_the_picker_and_alt_drag_still_resizes -- --nocapture` — [crates/ui-egui/src/color_hud.rs / plain_right_click_still_opens_the_picker_and_alt_drag_still_resizes](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked shift_alt_right_drag_does_not_resize_the_brush -- --nocapture` — [crates/ui-egui/src/color_hud.rs / shift_alt_right_drag_does_not_resize_the_brush](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_control_channel_opens_and_closes_the_hud -- --nocapture` — [crates/ui-egui/src/color_hud.rs / the_control_channel_opens_and_closes_the_hud](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked hue_strip_mesh_indices_stay_within_its_rows -- --nocapture` — [crates/ui-egui/src/color_hud.rs / hue_strip_mesh_indices_stay_within_its_rows](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked pick_at_maps_the_rects_and_ignores_the_gaps -- --nocapture` — [crates/ui-egui/src/color_hud.rs / pick_at_maps_the_rects_and_ignores_the_gaps](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
-  - `cargo test -p photocraft-ui-egui --locked shift_alt_right_through_the_control_channel_respects_the_erase_preference -- --nocapture` — [crates/ui-egui/src/paint_mouse.rs / shift_alt_right_through_the_control_channel_respects_the_erase_preference](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/paint_mouse.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_control_channel_up_closes_the_hud_without_repeating_its_modifiers -- --nocapture` — [crates/ui-egui/src/paint_mouse.rs / a_control_channel_up_closes_the_hud_without_repeating_its_modifiers](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/paint_mouse.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_alt_right_press_opens_the_hud_not_the_picker -- --nocapture` — [crates/ui-egui/src/color_hud.rs / shift_alt_right_press_opens_the_hud_not_the_picker](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked quick_selections_shift_alt_right_opens_only_the_selection_menu -- --nocapture` — [crates/ui-egui/src/color_hud.rs / quick_selections_shift_alt_right_opens_only_the_selection_menu](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_hud_clamped_under_the_still_pointer_picks_nothing_until_it_moves -- --nocapture` — [crates/ui-egui/src/color_hud.rs / a_hud_clamped_under_the_still_pointer_picks_nothing_until_it_moves](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_over_the_hud_picks_the_foreground_live_and_release_keeps_it -- --nocapture` — [crates/ui-egui/src/color_hud.rs / dragging_over_the_hud_picks_the_foreground_live_and_release_keeps_it](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked escape_restores_the_starting_colour -- --nocapture` — [crates/ui-egui/src/color_hud.rs / escape_restores_the_starting_colour](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked plain_right_click_still_opens_the_picker_and_alt_drag_still_resizes -- --nocapture` — [crates/ui-egui/src/color_hud.rs / plain_right_click_still_opens_the_picker_and_alt_drag_still_resizes](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_alt_right_drag_does_not_resize_the_brush -- --nocapture` — [crates/ui-egui/src/color_hud.rs / shift_alt_right_drag_does_not_resize_the_brush](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_control_channel_opens_and_closes_the_hud -- --nocapture` — [crates/ui-egui/src/color_hud.rs / the_control_channel_opens_and_closes_the_hud](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked hue_strip_mesh_indices_stay_within_its_rows -- --nocapture` — [crates/ui-egui/src/color_hud.rs / hue_strip_mesh_indices_stay_within_its_rows](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked pick_at_maps_the_rects_and_ignores_the_gaps -- --nocapture` — [crates/ui-egui/src/color_hud.rs / pick_at_maps_the_rects_and_ignores_the_gaps](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/color_hud.rs)
+  - `cargo test -p lienzo-ui-egui --locked shift_alt_right_through_the_control_channel_respects_the_erase_preference -- --nocapture` — [crates/ui-egui/src/paint_mouse.rs / shift_alt_right_through_the_control_channel_respects_the_erase_preference](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/paint_mouse.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_control_channel_up_closes_the_hud_without_repeating_its_modifiers -- --nocapture` — [crates/ui-egui/src/paint_mouse.rs / a_control_channel_up_closes_the_hud_without_repeating_its_modifiers](https://github.com/storytold/photocraft/blob/ce546dd4b5451a17b843ef1e129bdb40fbfe3160/crates/ui-egui/src/paint_mouse.rs)
 
 - Expected behavior: shift alt right press opens the hud not the picker; quick selections shift alt right opens only the selection menu; a hud clamped under the still pointer picks nothing until it moves; dragging over the hud picks the foreground live and release keeps it; escape restores the starting colour; plain right click still opens the picker and alt drag still resizes; shift alt right drag does not resize the brush; the control channel opens and closes the hud; hue strip mesh indices stay within its rows; pick at maps the rects and ignores the gaps; shift alt right through the control channel respects the erase preference; a control channel up closes the hud without repeating its modifiers. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3451,16 +3451,16 @@ assert_eq!(h.state().ui.color_hud, None, "no HUD for Quick Selection");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-automation --locked canonical_windows_prefixes_match_without_ambient_resolution -- --nocapture` — [crates/automation/src/workspace/tests.rs / canonical_windows_prefixes_match_without_ambient_resolution](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked windows_root_case_variants_keep_io_inside_the_grant -- --nocapture` — [crates/automation/src/workspace/tests.rs / windows_root_case_variants_keep_io_inside_the_grant](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked unix_root_prefixes_remain_case_sensitive -- --nocapture` — [crates/automation/src/workspace/tests.rs / unix_root_prefixes_remain_case_sensitive](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked configured_parent_components_accept_resolved_absolute_paths -- --nocapture` — [crates/automation/src/workspace/tests.rs / configured_parent_components_accept_resolved_absolute_paths](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked relative_configured_root_accepts_resolved_absolute_paths -- --nocapture` — [crates/automation/src/workspace/tests.rs / relative_configured_root_accepts_resolved_absolute_paths](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked trusted_root_names_are_not_validated_as_relative_request_names -- --nocapture` — [crates/automation/src/workspace/tests.rs / trusted_root_names_are_not_validated_as_relative_request_names](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked linked_root_accepts_both_spellings_and_new_nested_exports -- --nocapture` — [crates/automation/src/workspace/tests.rs / linked_root_accepts_both_spellings_and_new_nested_exports](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked root_alias_tests_work_with_an_aliased_windows_temp -- --nocapture` — [crates/automation/src/workspace/tests.rs / root_alias_tests_work_with_an_aliased_windows_temp](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked ungranted_absolute_aliases_and_link_escapes_are_refused -- --nocapture` — [crates/automation/src/workspace/tests.rs / ungranted_absolute_aliases_and_link_escapes_are_refused](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
-  - `cargo test -p photocraft-automation --locked retargeting_root_alias_does_not_regrant_the_held_authority -- --nocapture` — [crates/automation/src/workspace/tests.rs / retargeting_root_alias_does_not_regrant_the_held_authority](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked canonical_windows_prefixes_match_without_ambient_resolution -- --nocapture` — [crates/automation/src/workspace/tests.rs / canonical_windows_prefixes_match_without_ambient_resolution](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked windows_root_case_variants_keep_io_inside_the_grant -- --nocapture` — [crates/automation/src/workspace/tests.rs / windows_root_case_variants_keep_io_inside_the_grant](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked unix_root_prefixes_remain_case_sensitive -- --nocapture` — [crates/automation/src/workspace/tests.rs / unix_root_prefixes_remain_case_sensitive](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked configured_parent_components_accept_resolved_absolute_paths -- --nocapture` — [crates/automation/src/workspace/tests.rs / configured_parent_components_accept_resolved_absolute_paths](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked relative_configured_root_accepts_resolved_absolute_paths -- --nocapture` — [crates/automation/src/workspace/tests.rs / relative_configured_root_accepts_resolved_absolute_paths](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked trusted_root_names_are_not_validated_as_relative_request_names -- --nocapture` — [crates/automation/src/workspace/tests.rs / trusted_root_names_are_not_validated_as_relative_request_names](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked linked_root_accepts_both_spellings_and_new_nested_exports -- --nocapture` — [crates/automation/src/workspace/tests.rs / linked_root_accepts_both_spellings_and_new_nested_exports](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked root_alias_tests_work_with_an_aliased_windows_temp -- --nocapture` — [crates/automation/src/workspace/tests.rs / root_alias_tests_work_with_an_aliased_windows_temp](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked ungranted_absolute_aliases_and_link_escapes_are_refused -- --nocapture` — [crates/automation/src/workspace/tests.rs / ungranted_absolute_aliases_and_link_escapes_are_refused](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
+  - `cargo test -p lienzo-automation --locked retargeting_root_alias_does_not_regrant_the_held_authority -- --nocapture` — [crates/automation/src/workspace/tests.rs / retargeting_root_alias_does_not_regrant_the_held_authority](https://github.com/storytold/photocraft/blob/8bb0a5e67474d36ae08d565251edb1ae780dd044/crates/automation/src/workspace/tests.rs)
 
 - Expected behavior: canonical windows prefixes match without ambient resolution; windows root case variants keep io inside the grant; unix root prefixes remain case sensitive; configured parent components accept resolved absolute paths; relative configured root accepts resolved absolute paths; trusted root names are not validated as relative request names; linked root accepts both spellings and new nested exports; root alias tests work with an aliased windows temp; ungranted absolute aliases and link escapes are refused; retargeting root alias does not regrant the held authority. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3535,38 +3535,38 @@ assert_eq!(workspace.read(&path.to_string_lossy()).unwrap(), b"inside");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked merge_shape_components_bakes_a_paths_operations -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_shape_components_bakes_a_paths_operations](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked merge_shape_components_on_a_shape_layer_rerenders_it -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_shape_components_on_a_shape_layer_rerenders_it](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked merging_a_vector_mask_to_nothing_keeps_what_it_shows -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merging_a_vector_mask_to_nothing_keeps_what_it_shows](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked set_operation_changes_existing_components -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_changes_existing_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked set_operation_on_a_joined_subpath_changes_its_component -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_on_a_joined_subpath_changes_its_component](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked set_operation_leaves_the_first_component_combining -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_leaves_the_first_component_combining](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked bad_set_operation_params_change_nothing -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / bad_set_operation_params_change_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked bad_merge_params_change_nothing -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / bad_merge_params_change_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-engine --locked merge_refuses_open_subpaths -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_refuses_open_subpaths](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
-  - `cargo test -p photocraft-ui-egui --locked ui_set_drives_the_pen_path_operation -- --nocapture` — [crates/ui-egui/src/control/tests.rs / ui_set_drives_the_pen_path_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/control/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_selected_component_takes_the_picked_operation -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / a_selected_component_takes_the_picked_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked plus_and_minus_pick_combine_and_subtract -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / plus_and_minus_pick_combine_and_subtract](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked path_selection_selects_and_moves_components -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / path_selection_selects_and_moves_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_stale_selection_changes_nothing -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / a_stale_selection_changes_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_first_component_keeps_combining -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_first_component_keeps_combining](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_pen_does_not_edit_a_hidden_component_selection -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_does_not_edit_a_hidden_component_selection](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked dragging_a_live_shape_keeps_it_live -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / dragging_a_live_shape_keeps_it_live](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_pen_carries_on_an_open_shape_path -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_carries_on_an_open_shape_path](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked an_open_component_of_a_filled_shape_keeps_its_paint -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / an_open_component_of_a_filled_shape_keeps_its_paint](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_pen_carries_on_a_vector_masks_open_subpath -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_carries_on_a_vector_masks_open_subpath](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked subtract_front_shape_cuts_a_hole_in_the_selected_shape_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / subtract_front_shape_cuts_a_hole_in_the_selected_shape_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked a_locked_shape_layer_keeps_the_drawn_path -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / a_locked_shape_layer_keeps_the_drawn_path](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked switching_tools_ends_a_refused_draft_once -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / switching_tools_ends_a_refused_draft_once](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked esc_ends_a_refused_draft_and_return_keeps_it -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / esc_ends_a_refused_draft_and_return_keeps_it](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked an_operation_without_a_selected_shape_starts_a_new_shape_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / an_operation_without_a_selected_shape_starts_a_new_shape_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked path_mode_adds_subpaths_with_the_operation -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / path_mode_adds_subpaths_with_the_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_options_bar_menu_sets_the_operation_and_merges -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / the_options_bar_menu_sets_the_operation_and_merges](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked merge_is_disabled_with_fewer_than_two_components -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / merge_is_disabled_with_fewer_than_two_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked an_unknown_operation_falls_back_to_new_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / an_unknown_operation_falls_back_to_new_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked freeform_refuses_a_locked_shape_before_starting_a_stroke -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / freeform_refuses_a_locked_shape_before_starting_a_stroke](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked failed_stale_pen_commit_preserves_the_draft_until_retry -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/tests.rs / failed_stale_pen_commit_preserves_the_draft_until_retry](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked stale_pen_commits_to_its_owner_across_document_changes -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/tests.rs / stale_pen_commits_to_its_owner_across_document_changes](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/tests.rs)
+  - `cargo test -p lienzo-engine --locked merge_shape_components_bakes_a_paths_operations -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_shape_components_bakes_a_paths_operations](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked merge_shape_components_on_a_shape_layer_rerenders_it -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_shape_components_on_a_shape_layer_rerenders_it](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked merging_a_vector_mask_to_nothing_keeps_what_it_shows -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merging_a_vector_mask_to_nothing_keeps_what_it_shows](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked set_operation_changes_existing_components -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_changes_existing_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked set_operation_on_a_joined_subpath_changes_its_component -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_on_a_joined_subpath_changes_its_component](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked set_operation_leaves_the_first_component_combining -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / set_operation_leaves_the_first_component_combining](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked bad_set_operation_params_change_nothing -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / bad_set_operation_params_change_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked bad_merge_params_change_nothing -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / bad_merge_params_change_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-engine --locked merge_refuses_open_subpaths -- --nocapture` — [crates/engine/src/cmd/path_edit_cmds.rs / merge_refuses_open_subpaths](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/engine/src/cmd/path_edit_cmds.rs)
+  - `cargo test -p lienzo-ui-egui --locked ui_set_drives_the_pen_path_operation -- --nocapture` — [crates/ui-egui/src/control/tests.rs / ui_set_drives_the_pen_path_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/control/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_selected_component_takes_the_picked_operation -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / a_selected_component_takes_the_picked_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked plus_and_minus_pick_combine_and_subtract -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / plus_and_minus_pick_combine_and_subtract](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked path_selection_selects_and_moves_components -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / path_selection_selects_and_moves_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_stale_selection_changes_nothing -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / a_stale_selection_changes_nothing](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_first_component_keeps_combining -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_first_component_keeps_combining](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_pen_does_not_edit_a_hidden_component_selection -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_does_not_edit_a_hidden_component_selection](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_a_live_shape_keeps_it_live -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / dragging_a_live_shape_keeps_it_live](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_pen_carries_on_an_open_shape_path -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_carries_on_an_open_shape_path](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked an_open_component_of_a_filled_shape_keeps_its_paint -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / an_open_component_of_a_filled_shape_keeps_its_paint](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_pen_carries_on_a_vector_masks_open_subpath -- --nocapture` — [crates/ui-egui/src/tools/path_components/tests.rs / the_pen_carries_on_a_vector_masks_open_subpath](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/path_components/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked subtract_front_shape_cuts_a_hole_in_the_selected_shape_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / subtract_front_shape_cuts_a_hole_in_the_selected_shape_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked a_locked_shape_layer_keeps_the_drawn_path -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / a_locked_shape_layer_keeps_the_drawn_path](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked switching_tools_ends_a_refused_draft_once -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / switching_tools_ends_a_refused_draft_once](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked esc_ends_a_refused_draft_and_return_keeps_it -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / esc_ends_a_refused_draft_and_return_keeps_it](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked an_operation_without_a_selected_shape_starts_a_new_shape_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / an_operation_without_a_selected_shape_starts_a_new_shape_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked path_mode_adds_subpaths_with_the_operation -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / path_mode_adds_subpaths_with_the_operation](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_options_bar_menu_sets_the_operation_and_merges -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / the_options_bar_menu_sets_the_operation_and_merges](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked merge_is_disabled_with_fewer_than_two_components -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / merge_is_disabled_with_fewer_than_two_components](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked an_unknown_operation_falls_back_to_new_layer -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / an_unknown_operation_falls_back_to_new_layer](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked freeform_refuses_a_locked_shape_before_starting_a_stroke -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs / freeform_refuses_a_locked_shape_before_starting_a_stroke](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/pen_path_ops_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked failed_stale_pen_commit_preserves_the_draft_until_retry -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/tests.rs / failed_stale_pen_commit_preserves_the_draft_until_retry](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked stale_pen_commits_to_its_owner_across_document_changes -- --nocapture` — [crates/ui-egui/src/tools/vector_ui/tests.rs / stale_pen_commits_to_its_owner_across_document_changes](https://github.com/storytold/photocraft/blob/d24669d412f64ab079a668b0b8520ddbc607410c/crates/ui-egui/src/tools/vector_ui/tests.rs)
 
 - Expected behavior: merge shape components bakes a paths operations; merge shape components on a shape layer rerenders it; merging a vector mask to nothing keeps what it shows; set operation changes existing components; set operation on a joined subpath changes its component; set operation leaves the first component combining; bad set operation params change nothing; bad merge params change nothing; merge refuses open subpaths; ui set drives the pen path operation; a selected component takes the picked operation; plus and minus pick combine and subtract; path selection selects and moves components; a stale selection changes nothing; the first component keeps combining; the pen does not edit a hidden component selection; dragging a live shape keeps it live; the pen carries on an open shape path; an open component of a filled shape keeps its paint; the pen carries on a vector masks open subpath; subtract front shape cuts a hole in the selected shape layer; a locked shape layer keeps the drawn path; switching tools ends a refused draft once; esc ends a refused draft and return keeps it; an operation without a selected shape starts a new shape layer; path mode adds subpaths with the operation; the options bar menu sets the operation and merges; merge is disabled with fewer than two components; an unknown operation falls back to new layer; freeform refuses a locked shape before starting a stroke; failed stale pen commit preserves the draft until retry; stale pen commits to its owner across document changes. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3617,7 +3617,7 @@ let mut s = session();
         s.execute("shape.create", json!({"kind": "rect", "rect": [25, 25, 20, 20], "addTo": id, "op": "subtract"})).unwrap();
         s.execute("path.mergeShapeComponents", json!({"name": "layer", "layer": id})).unwrap();
         let st = s.active().unwrap();
-        let photocraft_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+        let lienzo_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
         assert_eq!(covered(path, 35, 35), 0.0);
         assert!(cache.is_some());
     }
@@ -3643,8 +3643,8 @@ assert_eq!(covered(path, 35, 35), 0.0);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked tool_options_survive_a_restart -- --nocapture` — [crates/ui-egui/src/prefs_ui.rs / tool_options_survive_a_restart](https://github.com/storytold/photocraft/blob/290f924d0fecc3bf6bea159c0d9e86255d326a96/crates/ui-egui/src/prefs_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked interpolation_selection_is_reused_for_the_next_transform -- --nocapture` — [crates/ui-egui/src/transform_tool.rs / interpolation_selection_is_reused_for_the_next_transform](https://github.com/storytold/photocraft/blob/290f924d0fecc3bf6bea159c0d9e86255d326a96/crates/ui-egui/src/transform_tool.rs)
+  - `cargo test -p lienzo-ui-egui --locked tool_options_survive_a_restart -- --nocapture` — [crates/ui-egui/src/prefs_ui.rs / tool_options_survive_a_restart](https://github.com/storytold/photocraft/blob/290f924d0fecc3bf6bea159c0d9e86255d326a96/crates/ui-egui/src/prefs_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked interpolation_selection_is_reused_for_the_next_transform -- --nocapture` — [crates/ui-egui/src/transform_tool.rs / interpolation_selection_is_reused_for_the_next_transform](https://github.com/storytold/photocraft/blob/290f924d0fecc3bf6bea159c0d9e86255d326a96/crates/ui-egui/src/transform_tool.rs)
 
 - Expected behavior: tool options survive a restart; interpolation selection is reused for the next transform. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3658,7 +3658,7 @@ let (mut app, store) = app_with_store();
         tick(&mut app, &ctx);
         app.ui.tool_options.move_auto_select = false;
         app.ui.tool_options.feather = 12.0;
-        app.ui.tool_options.transform_interpolation = Some(photocraft_engine::prefs::Interpolation::Nearest);
+        app.ui.tool_options.transform_interpolation = Some(lienzo_engine::prefs::Interpolation::Nearest);
         crate::tool_memory::persist(&mut app, &ctx);
         tick(&mut app, &ctx);
         // Only what differs from the defaults is stored.
@@ -3676,7 +3676,7 @@ assert_eq!(stored(&store)["toolOptions"], json!({"move_auto_select": false, "fea
         tick(&mut app2, &ctx);
         assert!(!app2.ui.tool_options.move_auto_select);
         assert_eq!(app2.ui.tool_options.feather, 12.0);
-        assert_eq!(app2.ui.tool_options.transform_interpolation, Some(photocraft_engine::prefs::Interpolation::Nearest));
+        assert_eq!(app2.ui.tool_options.transform_interpolation, Some(lienzo_engine::prefs::Interpolation::Nearest));
         assert_eq!(app2.ui.tool_options.tolerance, crate::state::ToolOptions::default().tolerance);
         // A hand-edited file: unreadable fields keep their defaults, the good ones still load.
         for bad in [json!("junk"), json!({"move_auto_select": "no", "feather": 1e300, "tolerance": 5.0, "unknown": 1})] {
@@ -3693,9 +3693,9 @@ assert_eq!(stored(&store)["toolOptions"], json!({"move_auto_select": false, "fea
 use egui::accesskit::Role;
         use egui_kittest::{Harness, kittest::Queryable};
 
-        let app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+        let app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
         let mut h = Harness::builder().with_size(vec2(2400.0, 360.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     ui.horizontal_centered(|ui| options_bar(app, ui));
                 }
@@ -3719,8 +3719,8 @@ assert!(h.state().ui.transform.is_some(), "transform stays open while the bar re
         h.run();
         assert!(h.state().ui.transform.is_some(), "second interpolation step keeps the transform open");
         assert_eq!(h.state().ui.transform.as_ref().unwrap().interpolation, "nearest");
-        assert_eq!(h.state().ui.tool_options.transform_interpolation, Some(photocraft_engine::prefs::Interpolation::Nearest));
-        assert_eq!(h.state().session.prefs().general.image_interpolation, photocraft_engine::prefs::Interpolation::BicubicAutomatic);
+        assert_eq!(h.state().ui.tool_options.transform_interpolation, Some(lienzo_engine::prefs::Interpolation::Nearest));
+        assert_eq!(h.state().session.prefs().general.image_interpolation, lienzo_engine::prefs::Interpolation::BicubicAutomatic);
 
         let transform = h.state_mut().ui.transform.as_mut().unwrap();
         transform.quad = transform.quad.map(|[x, y]| [x + 1.0, y]);
@@ -3743,16 +3743,16 @@ assert!(h.state().ui.transform.is_some(), "transform stays open while the bar re
 - Fixture/setup: Selected document/layer-mask fixtures in dialogs/select_mask_ui/tests.rs plus two-document controls; record viewport/theme/scale.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-ui-egui --locked opens_like_photoshop -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked opening_needs_a_selection_or_a_layer_mask -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked tools_make_edits_and_undo_and_redo_them -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked ok_is_one_step_and_matches_the_command -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked cancel_changes_nothing -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked decontaminate_outputs_to_a_new_layer -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked hostile_control_params_are_errors -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked ok_after_a_document_switch_changes_neither_document -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked ok_after_a_layer_switch_leaves_the_new_layer_alone -- --nocapture`
-  - `cargo test -p photocraft-ui-egui --locked renders_photoshops_layout -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked opens_like_photoshop -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked opening_needs_a_selection_or_a_layer_mask -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked tools_make_edits_and_undo_and_redo_them -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked ok_is_one_step_and_matches_the_command -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked cancel_changes_nothing -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked decontaminate_outputs_to_a_new_layer -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked hostile_control_params_are_errors -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked ok_after_a_document_switch_changes_neither_document -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked ok_after_a_layer_switch_leaves_the_new_layer_alone -- --nocapture`
+  - `cargo test -p lienzo-ui-egui --locked renders_photoshops_layout -- --nocapture`
 
 - Expected: Workspace needs valid selection/mask; tools/preview affect intended target. OK matches engine output in one history step; Cancel changes nothing; decontamination outputs a new layer. Hostile controls refuse; stale document/layer targets edit neither new target.
 - Separate coverage / prerequisites: Native refinement → undo/redo → Cancel and commit are separate NOT RUN subcases. Capture the full workspace with reachable controls, not only an overlay helper.
@@ -3766,13 +3766,13 @@ assert!(h.state().ui.transform.is_some(), "transform stays open while the bar re
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-compose --locked feather_at_the_canvas_edge_continues_the_mask_past_it -- --nocapture` — [crates/compose/src/masks.rs / feather_at_the_canvas_edge_continues_the_mask_past_it](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/compose/src/masks.rs)
-  - `cargo test -p photocraft-compose --locked soft_shape_matches_an_equal_vector_mask -- --nocapture` — [crates/compose/src/soft_shape_tests.rs / soft_shape_matches_an_equal_vector_mask](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/compose/src/soft_shape_tests.rs)
-  - `cargo test -p photocraft-vector --locked parallel_gaussian_matches_the_sequential_reference -- --nocapture` — [crates/vector/src/feather.rs / parallel_gaussian_matches_the_sequential_reference](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
-  - `cargo test -p photocraft-vector --locked padding_each_line_matches_padding_the_plane -- --nocapture` — [crates/vector/src/feather.rs / padding_each_line_matches_padding_the_plane](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
-  - `cargo test -p photocraft-vector --locked benchmark_50mp_mask_blur -- --nocapture --ignored` — [crates/vector/src/feather.rs / benchmark_50mp_mask_blur](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
-  - `cargo test -p photocraft-vector --locked a_maximum_feather_does_not_pad_the_whole_plane -- --nocapture` — [crates/vector/src/feather.rs / a_maximum_feather_does_not_pad_the_whole_plane](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
-  - `cargo test -p photocraft-vector --locked a_failed_line_buffer_never_leaves_a_half_blurred_mask -- --nocapture` — [crates/vector/src/feather.rs / a_failed_line_buffer_never_leaves_a_half_blurred_mask](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
+  - `cargo test -p lienzo-compose --locked feather_at_the_canvas_edge_continues_the_mask_past_it -- --nocapture` — [crates/compose/src/masks.rs / feather_at_the_canvas_edge_continues_the_mask_past_it](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/compose/src/masks.rs)
+  - `cargo test -p lienzo-compose --locked soft_shape_matches_an_equal_vector_mask -- --nocapture` — [crates/compose/src/soft_shape_tests.rs / soft_shape_matches_an_equal_vector_mask](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/compose/src/soft_shape_tests.rs)
+  - `cargo test -p lienzo-vector --locked parallel_gaussian_matches_the_sequential_reference -- --nocapture` — [crates/vector/src/feather.rs / parallel_gaussian_matches_the_sequential_reference](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
+  - `cargo test -p lienzo-vector --locked padding_each_line_matches_padding_the_plane -- --nocapture` — [crates/vector/src/feather.rs / padding_each_line_matches_padding_the_plane](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
+  - `cargo test -p lienzo-vector --locked benchmark_50mp_mask_blur -- --nocapture --ignored` — [crates/vector/src/feather.rs / benchmark_50mp_mask_blur](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
+  - `cargo test -p lienzo-vector --locked a_maximum_feather_does_not_pad_the_whole_plane -- --nocapture` — [crates/vector/src/feather.rs / a_maximum_feather_does_not_pad_the_whole_plane](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
+  - `cargo test -p lienzo-vector --locked a_failed_line_buffer_never_leaves_a_half_blurred_mask -- --nocapture` — [crates/vector/src/feather.rs / a_failed_line_buffer_never_leaves_a_half_blurred_mask](https://github.com/storytold/photocraft/blob/61a413d8df9e90ee545eb08e57c5615aa2b29cea/crates/vector/src/feather.rs)
 
 - Expected behavior: feather at the canvas edge continues the mask past it; soft shape matches an equal vector mask; parallel gaussian matches the sequential reference; padding each line matches padding the plane; benchmark 50mp mask blur; a maximum feather does not pad the whole plane; a failed line buffer never leaves a half blurred mask. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3782,7 +3782,7 @@ assert!(h.state().ui.transform.is_some(), "transform stays open while the bar re
 
 ```rust
 let mut layer = Layer::raster("edge", PixelFormat::RGBA8);
-        let mut mask = photocraft_doc::LayerMask::hide_all();
+        let mut mask = lienzo_doc::LayerMask::hide_all();
         mask.surface.fill_rect(Rect::new(40, 20, 120, 60), &[1.0]);
         mask.feather = 32.0;
         layer.mask = Some(mask);
@@ -3792,7 +3792,7 @@ let mut layer = Layer::raster("edge", PixelFormat::RGBA8);
         let worst = tight.iter().zip(&tall).map(|(a, b)| (a - b).abs()).fold(0.0_f32, f32::max);
         assert!(worst < 1e-4, "the canvas edge changed the feather by {worst}");
 
-        let mut half = photocraft_doc::LayerMask::hide_all();
+        let mut half = lienzo_doc::LayerMask::hide_all();
 ```
 
 Expected assertion context (overlapping windows merged):
@@ -3800,7 +3800,7 @@ Expected assertion context (overlapping windows merged):
 ```rust
 assert!(worst < 1e-4, "the canvas edge changed the feather by {worst}");
 
-        let mut half = photocraft_doc::LayerMask::hide_all();
+        let mut half = lienzo_doc::LayerMask::hide_all();
         half.surface.fill_rect(Rect::new(0, 0, 80, 80), &[1.0]);
             assert!(row.iter().zip(middle).all(|(a, b)| (a - b).abs() < 1e-5), "row {y} differs from row 40");
         }
@@ -3850,10 +3850,10 @@ assert!(d8 <= i32::from(depth == SampleType::U8), "{depth:?} density {density} f
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-raw --locked gauss_gives_the_bits_of_the_tap_loop -- --nocapture` — [crates/raw/src/tone.rs / gauss_gives_the_bits_of_the_tap_loop](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
-  - `cargo test -p photocraft-raw --locked box_mean_gives_the_bits_of_the_column_loop -- --nocapture` — [crates/raw/src/tone.rs / box_mean_gives_the_bits_of_the_column_loop](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
-  - `cargo test -p photocraft-raw --locked the_tap_tables_give_the_bits_of_the_per_pixel_lookup -- --nocapture` — [crates/raw/src/tone.rs / the_tap_tables_give_the_bits_of_the_per_pixel_lookup](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
-  - `cargo test -p photocraft-raw --locked reduce_pair_gives_the_bits_of_two_reductions -- --nocapture` — [crates/raw/src/tone.rs / reduce_pair_gives_the_bits_of_two_reductions](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
+  - `cargo test -p lienzo-raw --locked gauss_gives_the_bits_of_the_tap_loop -- --nocapture` — [crates/raw/src/tone.rs / gauss_gives_the_bits_of_the_tap_loop](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
+  - `cargo test -p lienzo-raw --locked box_mean_gives_the_bits_of_the_column_loop -- --nocapture` — [crates/raw/src/tone.rs / box_mean_gives_the_bits_of_the_column_loop](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
+  - `cargo test -p lienzo-raw --locked the_tap_tables_give_the_bits_of_the_per_pixel_lookup -- --nocapture` — [crates/raw/src/tone.rs / the_tap_tables_give_the_bits_of_the_per_pixel_lookup](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
+  - `cargo test -p lienzo-raw --locked reduce_pair_gives_the_bits_of_two_reductions -- --nocapture` — [crates/raw/src/tone.rs / reduce_pair_gives_the_bits_of_two_reductions](https://github.com/storytold/photocraft/blob/2863c3281c2a22dade0ce92d42bf8900074f76c6/crates/raw/src/tone.rs)
 
 - Expected behavior: gauss gives the bits of the tap loop; box mean gives the bits of the column loop; the tap tables give the bits of the per pixel lookup; reduce pair gives the bits of two reductions. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -3915,10 +3915,10 @@ assert!(same(&box_mean(&v, w, h, r), &box_mean_ref(&v, w, h, r)), "{w}x{h} r {r}
 - Fixture/setup: Roman, ligature and half-width CJK fixtures in text/vertical_tests.rs; record fonts.
 - Action: run each command separately:
 
-  - `cargo test -p photocraft-text --locked latin_stands_upright_one_per_em_by_default -- --nocapture`
-  - `cargo test -p photocraft-text --locked upright_roman_letters_stay_apart_without_ligatures -- --nocapture`
-  - `cargo test -p photocraft-text --locked half_width_cjk_stays_rotated_beside_upright_roman -- --nocapture`
-  - `cargo test -p photocraft-text --locked baseline_direction_round_trips -- --nocapture`
+  - `cargo test -p lienzo-text --locked latin_stands_upright_one_per_em_by_default -- --nocapture`
+  - `cargo test -p lienzo-text --locked upright_roman_letters_stay_apart_without_ligatures -- --nocapture`
+  - `cargo test -p lienzo-text --locked half_width_cjk_stays_rotated_beside_upright_roman -- --nocapture`
+  - `cargo test -p lienzo-text --locked baseline_direction_round_trips -- --nocapture`
 
 - Expected: Roman defaults upright at one-em advances without ligature collapse; half-width CJK retains specified rotation. Run BaselineDirection overrides sheet defaults and survives PSD persistence.
 - Separate coverage / prerequisites: Capture upright/rotated text at 1×/2× and save/reopen PSD separately. Font-unavailable geometry is BLOCKED; the flag round-trip alone is insufficient.
@@ -3932,18 +3932,18 @@ assert!(same(&box_mean(&v, w, h, r), &box_mean_ref(&v, w, h, r)), "{w}x{h} r {r}
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-text --locked closed_rectangle_left_edge_continues_past_the_top_left_seam -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_rectangle_left_edge_continues_past_the_top_left_seam](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked closed_ellipse_upper_left_and_apex_cross_the_seam_in_both_directions -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_ellipse_upper_left_and_apex_cross_the_seam_in_both_directions](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked closed_path_shows_one_lap_without_repeating_glyph_centres -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_shows_one_lap_without_repeating_glyph_centres](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked open_path_clipping_offsets_and_end_tangents_stay_unchanged -- --nocapture` — [crates/text/src/closed_path_tests.rs / open_path_clipping_offsets_and_end_tangents_stay_unchanged](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked closed_path_alignment_uses_one_lap_from_the_text_left_edge -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_alignment_uses_one_lap_from_the_text_left_edge](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked closed_path_start_offsets_wrap_and_invalid_coordinates_are_hidden -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_start_offsets_wrap_and_invalid_coordinates_are_hidden](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-text --locked caret_projection_roundtrips_closed_seams_and_open_offsets -- --nocapture` — [crates/text/src/closed_path_tests.rs / caret_projection_roundtrips_closed_seams_and_open_offsets](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked closed_path_forward_hit_after_last_caret -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_forward_hit_after_last_caret](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
-  - `cargo test -p photocraft-ui-egui --locked open_path_hits_keep_endpoint_clamping -- --nocapture` — [crates/ui-egui/src/type_tool.rs / open_path_hits_keep_endpoint_clamping](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
-  - `cargo test -p photocraft-ui-egui --locked closed_path_backward_hit_before_first_caret -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_backward_hit_before_first_caret](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
-  - `cargo test -p photocraft-ui-egui --locked closed_path_upstream_caret_rectangle_left_edge_roundtrip -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_upstream_caret_rectangle_left_edge_roundtrip](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
-  - `cargo test -p photocraft-ui-egui --locked closed_path_aligned_selection_highlights_every_visible_cluster -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_aligned_selection_highlights_every_visible_cluster](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
+  - `cargo test -p lienzo-text --locked closed_rectangle_left_edge_continues_past_the_top_left_seam -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_rectangle_left_edge_continues_past_the_top_left_seam](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked closed_ellipse_upper_left_and_apex_cross_the_seam_in_both_directions -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_ellipse_upper_left_and_apex_cross_the_seam_in_both_directions](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked closed_path_shows_one_lap_without_repeating_glyph_centres -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_shows_one_lap_without_repeating_glyph_centres](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked open_path_clipping_offsets_and_end_tangents_stay_unchanged -- --nocapture` — [crates/text/src/closed_path_tests.rs / open_path_clipping_offsets_and_end_tangents_stay_unchanged](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked closed_path_alignment_uses_one_lap_from_the_text_left_edge -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_alignment_uses_one_lap_from_the_text_left_edge](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked closed_path_start_offsets_wrap_and_invalid_coordinates_are_hidden -- --nocapture` — [crates/text/src/closed_path_tests.rs / closed_path_start_offsets_wrap_and_invalid_coordinates_are_hidden](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-text --locked caret_projection_roundtrips_closed_seams_and_open_offsets -- --nocapture` — [crates/text/src/closed_path_tests.rs / caret_projection_roundtrips_closed_seams_and_open_offsets](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/text/src/closed_path_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked closed_path_forward_hit_after_last_caret -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_forward_hit_after_last_caret](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
+  - `cargo test -p lienzo-ui-egui --locked open_path_hits_keep_endpoint_clamping -- --nocapture` — [crates/ui-egui/src/type_tool.rs / open_path_hits_keep_endpoint_clamping](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
+  - `cargo test -p lienzo-ui-egui --locked closed_path_backward_hit_before_first_caret -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_backward_hit_before_first_caret](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
+  - `cargo test -p lienzo-ui-egui --locked closed_path_upstream_caret_rectangle_left_edge_roundtrip -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_upstream_caret_rectangle_left_edge_roundtrip](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
+  - `cargo test -p lienzo-ui-egui --locked closed_path_aligned_selection_highlights_every_visible_cluster -- --nocapture` — [crates/ui-egui/src/type_tool.rs / closed_path_aligned_selection_highlights_every_visible_cluster](https://github.com/storytold/photocraft/blob/728782c595e768bdb6febc7f30e4d1456d13fd36/crates/ui-egui/src/type_tool.rs)
 
 - Expected behavior: closed rectangle left edge continues past the top left seam; closed ellipse upper left and apex cross the seam in both directions; closed path shows one lap without repeating glyph centres; open path clipping offsets and end tangents stay unchanged; closed path alignment uses one lap from the text left edge; closed path start offsets wrap and invalid coordinates are hidden; caret projection roundtrips closed seams and open offsets; closed path forward hit after last caret; open path hits keep endpoint clamping; closed path backward hit before first caret; closed path upstream caret rectangle left edge roundtrip; closed path aligned selection highlights every visible cluster. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4020,7 +4020,7 @@ assert!((actual.0 - point.0).hypot(actual.1 - point.1) < 1e-6);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked copied_type_keeps_its_pixel_size_across_resolutions_after_an_edit -- --nocapture` — [crates/engine/src/layer_copy_cmds/tests.rs / copied_type_keeps_its_pixel_size_across_resolutions_after_an_edit](https://github.com/storytold/photocraft/blob/46512521fec2b4b462c29d9fefd16398cb81212c/crates/engine/src/layer_copy_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked copied_type_keeps_its_pixel_size_across_resolutions_after_an_edit -- --nocapture` — [crates/engine/src/layer_copy_cmds/tests.rs / copied_type_keeps_its_pixel_size_across_resolutions_after_an_edit](https://github.com/storytold/photocraft/blob/46512521fec2b4b462c29d9fefd16398cb81212c/crates/engine/src/layer_copy_cmds/tests.rs)
 
 - Expected behavior: copied type keeps its pixel size across resolutions after an edit. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4067,7 +4067,7 @@ assert_eq!(bounds(&s, 1, id).size(), original.size(), "{from}→{to}: the copy")
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-io --locked a_kept_txt2_goes_with_the_last_type_layer -- --nocapture` — [crates/io/src/psd_export.rs / a_kept_txt2_goes_with_the_last_type_layer](https://github.com/storytold/photocraft/blob/e62013cfd652fa60470a0f7a185fbc8f3d2a2c92/crates/io/src/psd_export.rs)
+  - `cargo test -p lienzo-io --locked a_kept_txt2_goes_with_the_last_type_layer -- --nocapture` — [crates/io/src/psd_export.rs / a_kept_txt2_goes_with_the_last_type_layer](https://github.com/storytold/photocraft/blob/e62013cfd652fa60470a0f7a185fbc8f3d2a2c92/crates/io/src/psd_export.rs)
 
 - Expected behavior: a kept txt2 goes with the last type layer. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4076,13 +4076,13 @@ assert_eq!(bounds(&s, 1, id).size(), original.size(), "{from}→{to}: the copy")
 `a_kept_txt2_goes_with_the_last_type_layer` setup/action excerpt:
 
 ```rust
-let mut doc = Document::new("t", photocraft_geom::Size::new(8, 6), ColorMode::Rgb, SampleType::U8);
+let mut doc = Document::new("t", lienzo_geom::Size::new(8, 6), ColorMode::Rgb, SampleType::U8);
         doc.layers.push(Layer::new("Layer 1", LayerContent::Raster(Surface::new(doc.pixel_format()))));
         doc.metadata.psd_global_blocks = vec![(*b"8BIM", *b"Txt2", std::sync::Arc::new(b"<< /0 << /1 (stale) >> >>".to_vec()))];
         let file = document_to_psd(&doc);
         assert!(!file.global_blocks.iter().any(|b| b.key == *b"Txt2"), "no type layers: no Txt2");
 
-        doc.layers.push(Layer::new("T", LayerContent::Text(photocraft_doc::TextLayer::default())));
+        doc.layers.push(Layer::new("T", LayerContent::Text(lienzo_doc::TextLayer::default())));
         let file = document_to_psd(&doc);
         assert!(file.global_blocks.iter().any(|b| b.key == *b"Txt2"), "a type layer keeps its Txt2");
     }
@@ -4093,7 +4093,7 @@ Expected assertion context (overlapping windows merged):
 ```rust
 assert!(!file.global_blocks.iter().any(|b| b.key == *b"Txt2"), "no type layers: no Txt2");
 
-        doc.layers.push(Layer::new("T", LayerContent::Text(photocraft_doc::TextLayer::default())));
+        doc.layers.push(Layer::new("T", LayerContent::Text(lienzo_doc::TextLayer::default())));
         let file = document_to_psd(&doc);
         assert!(file.global_blocks.iter().any(|b| b.key == *b"Txt2"), "a type layer keeps its Txt2");
     }
@@ -4111,8 +4111,8 @@ assert!(!file.global_blocks.iter().any(|b| b.key == *b"Txt2"), "no type layers: 
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked recorded_eye_visibility_replays_on_another_document_and_duplicate_names -- --nocapture` — [crates/engine/src/actions_cmds.rs / recorded_eye_visibility_replays_on_another_document_and_duplicate_names](https://github.com/storytold/photocraft/blob/5d8cb2a39ad70e31260f1f3fc2010ca132daff65/crates/engine/src/actions_cmds.rs)
-  - `cargo test -p photocraft-ui-egui --locked shell_playback_resolves_recorded_eye_target_on_new_document -- --nocapture` — [crates/ui-egui/src/actions.rs / shell_playback_resolves_recorded_eye_target_on_new_document](https://github.com/storytold/photocraft/blob/5d8cb2a39ad70e31260f1f3fc2010ca132daff65/crates/ui-egui/src/actions.rs)
+  - `cargo test -p lienzo-engine --locked recorded_eye_visibility_replays_on_another_document_and_duplicate_names -- --nocapture` — [crates/engine/src/actions_cmds.rs / recorded_eye_visibility_replays_on_another_document_and_duplicate_names](https://github.com/storytold/photocraft/blob/5d8cb2a39ad70e31260f1f3fc2010ca132daff65/crates/engine/src/actions_cmds.rs)
+  - `cargo test -p lienzo-ui-egui --locked shell_playback_resolves_recorded_eye_target_on_new_document -- --nocapture` — [crates/ui-egui/src/actions.rs / shell_playback_resolves_recorded_eye_target_on_new_document](https://github.com/storytold/photocraft/blob/5d8cb2a39ad70e31260f1f3fc2010ca132daff65/crates/ui-egui/src/actions.rs)
 
 - Expected behavior: recorded eye visibility replays on another document and duplicate names; shell playback resolves recorded eye target on new document. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4139,17 +4139,17 @@ Expected assertion context (overlapping windows merged):
 
 ```rust
 assert!(result.get("failed").is_none(), "{result}");
-        assert!(s.active().unwrap().doc.layer(photocraft_doc::LayerId(keep)).unwrap().visible);
-        assert!(!s.active().unwrap().doc.layer(photocraft_doc::LayerId(target)).unwrap().visible);
+        assert!(s.active().unwrap().doc.layer(lienzo_doc::LayerId(keep)).unwrap().visible);
+        assert!(!s.active().unwrap().doc.layer(lienzo_doc::LayerId(target)).unwrap().visible);
         s.execute("edit.undo", json!({})).unwrap();
-        assert!(s.active().unwrap().doc.layer(photocraft_doc::LayerId(target)).unwrap().visible);
+        assert!(s.active().unwrap().doc.layer(lienzo_doc::LayerId(target)).unwrap().visible);
     }
 ```
 
 `shell_playback_resolves_recorded_eye_target_on_new_document` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
         app.run("layer.new.layer", json!({"name": "Target"})).unwrap();
         app.run("actions.record", json!({"name": "Hide"})).unwrap();
@@ -4183,7 +4183,7 @@ assert!(result.get("failed").is_none(), "{result}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked studio_dark_keeps_square_colour_chips -- --nocapture` — [crates/ui-egui/src/theme.rs / studio_dark_keeps_square_colour_chips](https://github.com/storytold/photocraft/blob/d36ec9a21e9c1ed70de2e0d185efd7e084644157/crates/ui-egui/src/theme.rs)
+  - `cargo test -p lienzo-ui-egui --locked studio_dark_keeps_square_colour_chips -- --nocapture` — [crates/ui-egui/src/theme.rs / studio_dark_keeps_square_colour_chips](https://github.com/storytold/photocraft/blob/d36ec9a21e9c1ed70de2e0d185efd7e084644157/crates/ui-egui/src/theme.rs)
 
 - Expected behavior: studio dark keeps square colour chips. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4221,13 +4221,13 @@ assert!(!Tokens::for_kind(ThemeKind::Studio).round_chips);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked flatten_keeps_the_inks_of_a_single_layer_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / flatten_keeps_the_inks_of_a_single_layer_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-engine --locked stamp_visible_keeps_the_inks_of_a_single_layer_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / stamp_visible_keeps_the_inks_of_a_single_layer_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-engine --locked background_from_layer_keeps_the_inks_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / background_from_layer_keeps_the_inks_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-engine --locked flatten_of_a_partly_transparent_layer_still_composites_over_white -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / flatten_of_a_partly_transparent_layer_still_composites_over_white](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-engine --locked merge_down_separates_through_the_document_profile -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / merge_down_separates_through_the_document_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-engine --locked merge_visible_separates_through_the_document_profile -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / merge_visible_separates_through_the_document_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
-  - `cargo test -p photocraft-io --locked cmyk_merged_composite_reads_through_the_embedded_profile -- --nocapture` — [crates/io/tests/color.rs / cmyk_merged_composite_reads_through_the_embedded_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/io/tests/color.rs)
+  - `cargo test -p lienzo-engine --locked flatten_keeps_the_inks_of_a_single_layer_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / flatten_keeps_the_inks_of_a_single_layer_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-engine --locked stamp_visible_keeps_the_inks_of_a_single_layer_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / stamp_visible_keeps_the_inks_of_a_single_layer_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-engine --locked background_from_layer_keeps_the_inks_exactly -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / background_from_layer_keeps_the_inks_exactly](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-engine --locked flatten_of_a_partly_transparent_layer_still_composites_over_white -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / flatten_of_a_partly_transparent_layer_still_composites_over_white](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-engine --locked merge_down_separates_through_the_document_profile -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / merge_down_separates_through_the_document_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-engine --locked merge_visible_separates_through_the_document_profile -- --nocapture` — [crates/engine/tests/cmyk_flatten_profile.rs / merge_visible_separates_through_the_document_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/engine/tests/cmyk_flatten_profile.rs)
+  - `cargo test -p lienzo-io --locked cmyk_merged_composite_reads_through_the_embedded_profile -- --nocapture` — [crates/io/tests/color.rs / cmyk_merged_composite_reads_through_the_embedded_profile](https://github.com/storytold/photocraft/blob/15ebf8fc940031abdf772e5fdd687c8b55938639/crates/io/tests/color.rs)
 
 - Expected behavior: flatten keeps the inks of a single layer exactly; stamp visible keeps the inks of a single layer exactly; background from layer keeps the inks exactly; flatten of a partly transparent layer still composites over white; merge down separates through the document profile; merge visible separates through the document profile; cmyk merged composite reads through the embedded profile. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4271,11 +4271,11 @@ Expected assertion context (overlapping windows merged):
 - Tester/date:
 - Tested SHA:
 
-## PR-4547: fix(icons): PhotoCraft icon corner radius matches other Craft apps (#4478)
+## PR-4547: fix(icons): Lienzo icon corner radius matches other Craft apps (#4478)
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft --locked windows_and_linux_icons_keep_the_round_corners -- --nocapture` — [apps/photocraft/src/app_icon.rs / windows_and_linux_icons_keep_the_round_corners](https://github.com/storytold/photocraft/blob/a08f7a2295488c2692f68902835a693322017b64/apps/photocraft/src/app_icon.rs)
+  - `cargo test -p lienzo --locked windows_and_linux_icons_keep_the_round_corners -- --nocapture` — [apps/lienzo/src/app_icon.rs / windows_and_linux_icons_keep_the_round_corners](https://github.com/storytold/photocraft/blob/a08f7a2295488c2692f68902835a693322017b64/apps/photocraft/src/app_icon.rs)
 
 - Expected behavior: windows and linux icons keep the round corners. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4285,7 +4285,7 @@ Expected assertion context (overlapping windows merged):
 
 ```rust
 // rx=112 of 512 leaves (10, 10) of a 256 px render transparent; the old crop filled it (#4478).
-        let png = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.photocraft.png");
+        let png = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/dev.danielmiguelt.Lienzo.png");
         let icon = eframe::icon_data::from_png_bytes(png).unwrap();
         assert_eq!(icon.width, 256);
         assert_eq!(icon.rgba[(10 * 256 + 10) * 4 + 3], 0, "corner is transparent");
@@ -4314,9 +4314,9 @@ assert_eq!(icon.width, 256);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked dragging_the_title_bar_moves_the_dialog -- --nocapture` — [crates/ui-egui/src/dialogs.rs / dragging_the_title_bar_moves_the_dialog](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_keeps_one_size_on_every_page -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_keeps_one_size_on_every_page](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_fits_a_short_screen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_fits_a_short_screen](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_the_title_bar_moves_the_dialog -- --nocapture` — [crates/ui-egui/src/dialogs.rs / dragging_the_title_bar_moves_the_dialog](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_keeps_one_size_on_every_page -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_keeps_one_size_on_every_page](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_fits_a_short_screen -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_fits_a_short_screen](https://github.com/storytold/photocraft/blob/63b7c921634835259139e4d3e7b9d3c396998b4d/crates/ui-egui/src/dialogs.rs)
 
 - Expected behavior: dragging the title bar moves the dialog; layer style keeps one size on every page; layer style fits a short screen. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4327,9 +4327,9 @@ assert_eq!(icon.width, 256);
 ```rust
 use egui_kittest::{Harness, kittest::Queryable};
 
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let mut harness = Harness::builder().with_size(egui::vec2(1400.0, 1100.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
         harness.state_mut().ui.open_dialog(DialogKind::LayerStyle, serde_json::Map::new());
         harness.run_steps(3);
         let before = harness.get_by_label("Layer Style").rect();
@@ -4385,20 +4385,20 @@ assert_eq!(frame(&h).size(), size, "{page}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked gradient_overlay_takes_explicit_stops -- --nocapture` — [crates/engine/src/layer_style.rs / gradient_overlay_takes_explicit_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/engine/src/layer_style.rs)
-  - `cargo test -p photocraft-ui-egui --locked layer_style_picker_control_binds_previews_confirms_and_cancels -- --nocapture` — [crates/ui-egui/src/control.rs / layer_style_picker_control_binds_previews_confirms_and_cancels](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/control.rs)
-  - `cargo test -p photocraft-ui-egui --locked every_exposed_color_field_uses_the_shared_picker_and_only_updates_its_target -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / every_exposed_color_field_uses_the_shared_picker_and_only_updates_its_target](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked preview_cancel_ok_parent_cancel_and_apply_are_transactional_at_every_depth -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / preview_cancel_ok_parent_cancel_and_apply_are_transactional_at_every_depth](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked unchanged_ok_preserves_missing_parameters_and_imported_effect_snapshot -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / unchanged_ok_preserves_missing_parameters_and_imported_effect_snapshot](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked stale_targets_and_invalid_colors_never_apply_or_leave_preview -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / stale_targets_and_invalid_colors_never_apply_or_leave_preview](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked preview_off_and_parent_confirmation_and_cancellation_keep_their_contract -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / preview_off_and_parent_confirmation_and_cancellation_keep_their_contract](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked eyedropper_edits_only_the_picker_and_invalid_samples_leave_it_unchanged -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / eyedropper_edits_only_the_picker_and_invalid_samples_leave_it_unchanged](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked gradient_stop_colors_go_through_the_picker -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / gradient_stop_colors_go_through_the_picker](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked ramp_adds_moves_and_deletes_stops -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / ramp_adds_moves_and_deletes_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
-  - `cargo test -p photocraft-ui-egui --locked presets_delete_and_location -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / presets_delete_and_location](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
-  - `cargo test -p photocraft-ui-egui --locked stops_round_trip_through_the_field_grammar -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / stops_round_trip_through_the_field_grammar](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
-  - `cargo test -p photocraft-ui-egui --locked factory_from_to_become_two_stops -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / factory_from_to_become_two_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
-  - `cargo test -p photocraft-ui-egui --locked the_fill_of_a_page_never_fails -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / the_fill_of_a_page_never_fails](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
+  - `cargo test -p lienzo-engine --locked gradient_overlay_takes_explicit_stops -- --nocapture` — [crates/engine/src/layer_style.rs / gradient_overlay_takes_explicit_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/engine/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_picker_control_binds_previews_confirms_and_cancels -- --nocapture` — [crates/ui-egui/src/control.rs / layer_style_picker_control_binds_previews_confirms_and_cancels](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/control.rs)
+  - `cargo test -p lienzo-ui-egui --locked every_exposed_color_field_uses_the_shared_picker_and_only_updates_its_target -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / every_exposed_color_field_uses_the_shared_picker_and_only_updates_its_target](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked preview_cancel_ok_parent_cancel_and_apply_are_transactional_at_every_depth -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / preview_cancel_ok_parent_cancel_and_apply_are_transactional_at_every_depth](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked unchanged_ok_preserves_missing_parameters_and_imported_effect_snapshot -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / unchanged_ok_preserves_missing_parameters_and_imported_effect_snapshot](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked stale_targets_and_invalid_colors_never_apply_or_leave_preview -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / stale_targets_and_invalid_colors_never_apply_or_leave_preview](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked preview_off_and_parent_confirmation_and_cancellation_keep_their_contract -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / preview_off_and_parent_confirmation_and_cancellation_keep_their_contract](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked eyedropper_edits_only_the_picker_and_invalid_samples_leave_it_unchanged -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / eyedropper_edits_only_the_picker_and_invalid_samples_leave_it_unchanged](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked gradient_stop_colors_go_through_the_picker -- --nocapture` — [crates/ui-egui/src/layer_style/color_picker/tests.rs / gradient_stop_colors_go_through_the_picker](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/color_picker/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked ramp_adds_moves_and_deletes_stops -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / ramp_adds_moves_and_deletes_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
+  - `cargo test -p lienzo-ui-egui --locked presets_delete_and_location -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / presets_delete_and_location](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
+  - `cargo test -p lienzo-ui-egui --locked stops_round_trip_through_the_field_grammar -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / stops_round_trip_through_the_field_grammar](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
+  - `cargo test -p lienzo-ui-egui --locked factory_from_to_become_two_stops -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / factory_from_to_become_two_stops](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
+  - `cargo test -p lienzo-ui-egui --locked the_fill_of_a_page_never_fails -- --nocapture` — [crates/ui-egui/src/layer_style/gradient_field.rs / the_fill_of_a_page_never_fails](https://github.com/storytold/photocraft/blob/9db1c7ae1d48ce4f31622b5f9029c70c590842f8/crates/ui-egui/src/layer_style/gradient_field.rs)
 
 - Expected behavior: gradient overlay takes explicit stops; layer style picker control binds previews confirms and cancels; every exposed color field uses the shared picker and only updates its target; preview cancel ok parent cancel and apply are transactional at every depth; unchanged ok preserves missing parameters and imported effect snapshot; stale targets and invalid colors never apply or leave preview; preview off and parent confirmation and cancellation keep their contract; eyedropper edits only the picker and invalid samples leave it unchanged; gradient stop colors go through the picker; ramp adds moves and deletes stops; presets delete and location; stops round trip through the field grammar; factory from to become two stops; the fill of a page never fails. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4412,7 +4412,7 @@ let mut s = session();
         s.execute("layer.layerStyle.gradientOverlay", json!({"stops": stops, "opacityStops": [[0, 100], [1, 50]]})).unwrap();
         let Effect::GradientOverlay { gradient, .. } = &effects(&s)[0] else { panic!() };
         assert_eq!(gradient.stops.len(), 3);
-        assert_eq!(gradient.stops[1], (0.5, photocraft_color::Color::rgb(0.0, 1.0, 0.0)));
+        assert_eq!(gradient.stops[1], (0.5, lienzo_color::Color::rgb(0.0, 1.0, 0.0)));
         assert_eq!(gradient.opacity_stops, vec![(0.0, 1.0), (1.0, 0.5)]);
         // Editing the same overlay: new stops replace the list (sorted), unsorted input is sorted,
         // and a geometry-only edit keeps the three stops.
@@ -4425,7 +4425,7 @@ Expected assertion context (overlapping windows merged):
 
 ```rust
 assert_eq!(gradient.stops.len(), 3);
-        assert_eq!(gradient.stops[1], (0.5, photocraft_color::Color::rgb(0.0, 1.0, 0.0)));
+        assert_eq!(gradient.stops[1], (0.5, lienzo_color::Color::rgb(0.0, 1.0, 0.0)));
         assert_eq!(gradient.opacity_stops, vec![(0.0, 1.0), (1.0, 0.5)]);
         // Editing the same overlay: new stops replace the list (sorted), unsorted input is sorted,
         // and a geometry-only edit keeps the three stops.
@@ -4458,7 +4458,7 @@ assert_eq!(gradient.stops.len(), 3);
 `layer_style_picker_control_binds_previews_confirms_and_cancels` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width":16,"height":16})).unwrap();
         let parent = call(&mut app, &ctx, "ui.dialog.open", json!({"kind":"layerStyle","effect":"gradientOverlay"}))["result"]["dialog"].as_u64();
@@ -4507,14 +4507,14 @@ assert_eq!(reply["ok"], true, "{reply}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked torn_off_document_is_not_drawn_again_in_the_main_window -- --nocapture` — [crates/ui-egui/src/canvas.rs / torn_off_document_is_not_drawn_again_in_the_main_window](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
-  - `cargo test -p photocraft-ui-egui --locked tab_reorder_keeps_floating_documents_in_place -- --nocapture` — [crates/ui-egui/src/canvas.rs / tab_reorder_keeps_floating_documents_in_place](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
-  - `cargo test -p photocraft-ui-egui --locked arrange_layout_only_includes_docked_documents -- --nocapture` — [crates/ui-egui/src/canvas.rs / arrange_layout_only_includes_docked_documents](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
-  - `cargo test -p photocraft-ui-egui --locked dragging_a_tab_off_the_strip_floats_it_in_a_window -- --nocapture` — [crates/ui-egui/src/canvas.rs / dragging_a_tab_off_the_strip_floats_it_in_a_window](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
-  - `cargo test -p photocraft-ui-egui --locked views_and_windows_stay_with_their_documents -- --nocapture` — [crates/ui-egui/src/file_open/tests.rs / views_and_windows_stay_with_their_documents](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/file_open/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked float_in_window_takes_a_document_and_position -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_in_window_takes_a_document_and_position](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked float_in_window_defaults_to_the_active_document -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_in_window_defaults_to_the_active_document](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked float_all_in_windows_gives_each_document_its_own_view -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_all_in_windows_gives_each_document_its_own_view](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked torn_off_document_is_not_drawn_again_in_the_main_window -- --nocapture` — [crates/ui-egui/src/canvas.rs / torn_off_document_is_not_drawn_again_in_the_main_window](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
+  - `cargo test -p lienzo-ui-egui --locked tab_reorder_keeps_floating_documents_in_place -- --nocapture` — [crates/ui-egui/src/canvas.rs / tab_reorder_keeps_floating_documents_in_place](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
+  - `cargo test -p lienzo-ui-egui --locked arrange_layout_only_includes_docked_documents -- --nocapture` — [crates/ui-egui/src/canvas.rs / arrange_layout_only_includes_docked_documents](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_a_tab_off_the_strip_floats_it_in_a_window -- --nocapture` — [crates/ui-egui/src/canvas.rs / dragging_a_tab_off_the_strip_floats_it_in_a_window](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/canvas.rs)
+  - `cargo test -p lienzo-ui-egui --locked views_and_windows_stay_with_their_documents -- --nocapture` — [crates/ui-egui/src/file_open/tests.rs / views_and_windows_stay_with_their_documents](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/file_open/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked float_in_window_takes_a_document_and_position -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_in_window_takes_a_document_and_position](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked float_in_window_defaults_to_the_active_document -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_in_window_defaults_to_the_active_document](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked float_all_in_windows_gives_each_document_its_own_view -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / float_all_in_windows_gives_each_document_its_own_view](https://github.com/storytold/photocraft/blob/50b1f6734799cf7b5d45dd84868976afd31aa711/crates/ui-egui/src/view_cmds/tests.rs)
 
 - Expected behavior: torn off document is not drawn again in the main window; tab reorder keeps floating documents in place; arrange layout only includes docked documents; dragging a tab off the strip floats it in a window; views and windows stay with their documents; float in window takes a document and position; float in window defaults to the active document; float all in windows gives each document its own view. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4524,7 +4524,7 @@ assert_eq!(reply["ok"], true, "{reply}");
 
 ```rust
 for kind in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 80, "height": 60, "name": "floating"})).unwrap();
             app.run("file.new", json!({"width": 80, "height": 60, "name": "docked"})).unwrap();
             app.sync_views();
@@ -4534,7 +4534,7 @@ for kind in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
             assert_eq!(app.session.active_index(), Some(0), "{kind:?}: the floated page remains active");
             assert_eq!(main_canvas_document(&app), Some(1), "{kind:?}: the main canvas picks a docked page instead");
             let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(680.0, 480.0)).build_ui_state(
-                |ui, (app, ready): &mut (PhotocraftApp, bool)| {
+                |ui, (app, ready): &mut (LienzoApp, bool)| {
 ```
 
 Expected assertion context (overlapping windows merged):
@@ -4544,7 +4544,7 @@ assert!(app.ui.windows[0].floating);
             assert_eq!(app.session.active_index(), Some(0), "{kind:?}: the floated page remains active");
             assert_eq!(main_canvas_document(&app), Some(1), "{kind:?}: the main canvas picks a docked page instead");
             let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(680.0, 480.0)).build_ui_state(
-                |ui, (app, ready): &mut (PhotocraftApp, bool)| {
+                |ui, (app, ready): &mut (LienzoApp, bool)| {
                     if *ready {
             assert_eq!(tabs, Some(vec![1]), "{kind:?}: only the docked document stays on the main tab strip");
         }
@@ -4580,8 +4580,8 @@ assert_eq!(move_target_after_filter(&visible, 0, 1, 3), 2);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked video_frames_to_layers_takes_every_tiff_page -- --nocapture` — [crates/engine/src/video_cmds/tests.rs / video_frames_to_layers_takes_every_tiff_page](https://github.com/storytold/photocraft/blob/8bfbbf816025942b74130adf16fb07265817b691/crates/engine/src/video_cmds/tests.rs)
-  - `cargo test -p photocraft-engine --locked video_frames_to_layers_refuses_a_tiff_with_an_incomplete_page_list -- --nocapture` — [crates/engine/src/video_cmds/tests.rs / video_frames_to_layers_refuses_a_tiff_with_an_incomplete_page_list](https://github.com/storytold/photocraft/blob/8bfbbf816025942b74130adf16fb07265817b691/crates/engine/src/video_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked video_frames_to_layers_takes_every_tiff_page -- --nocapture` — [crates/engine/src/video_cmds/tests.rs / video_frames_to_layers_takes_every_tiff_page](https://github.com/storytold/photocraft/blob/8bfbbf816025942b74130adf16fb07265817b691/crates/engine/src/video_cmds/tests.rs)
+  - `cargo test -p lienzo-engine --locked video_frames_to_layers_refuses_a_tiff_with_an_incomplete_page_list -- --nocapture` — [crates/engine/src/video_cmds/tests.rs / video_frames_to_layers_refuses_a_tiff_with_an_incomplete_page_list](https://github.com/storytold/photocraft/blob/8bfbbf816025942b74130adf16fb07265817b691/crates/engine/src/video_cmds/tests.rs)
 
 - Expected behavior: video frames to layers takes every tiff page; video frames to layers refuses a tiff with an incomplete page list. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4612,7 +4612,7 @@ assert_eq!(r["layers"], 2, "two pages, the thumbnail left out");
     for (name, (w, h), level) in [("Frame 1", (6, 4), 51.0), ("Frame 2", (3, 5), 204.0)] {
         let l = doc.layers.iter().find(|l| l.name == name).unwrap_or_else(|| panic!("{name}"));
         assert_eq!((b.width(), b.height()), (w, h), "{name}");
-        let px = surf.read_region(photocraft_geom::Rect::new(b.x0, b.y0, b.x0 + 1, b.y0 + 1));
+        let px = surf.read_region(lienzo_geom::Rect::new(b.x0, b.y0, b.x0 + 1, b.y0 + 1));
         assert!((px[0] * 255.0 - level).abs() < 0.6 && px[3] == 1.0, "{name}: {px:?}");
     }
     let single = format!("{dir}/single.tif");
@@ -4658,9 +4658,9 @@ assert!(err.contains("only the first 2 pages"), "{err}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked cmd_is_not_the_move_tool_for_selection_hand_zoom_pen_shape_or_type_tools -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_is_not_the_move_tool_for_selection_hand_zoom_pen_shape_or_type_tools](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked cmd_and_alt_with_the_hand_tool_zoom_in_and_out_while_held -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_and_alt_with_the_hand_tool_zoom_in_and_out_while_held](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked cmd_mid_pan_or_during_free_transform_is_not_the_hand_tools_zoom -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_mid_pan_or_during_free_transform_is_not_the_hand_tools_zoom](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked cmd_is_not_the_move_tool_for_selection_hand_zoom_pen_shape_or_type_tools -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_is_not_the_move_tool_for_selection_hand_zoom_pen_shape_or_type_tools](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked cmd_and_alt_with_the_hand_tool_zoom_in_and_out_while_held -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_and_alt_with_the_hand_tool_zoom_in_and_out_while_held](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked cmd_mid_pan_or_during_free_transform_is_not_the_hand_tools_zoom -- --nocapture` — [crates/ui-egui/src/hold_keys/tests.rs / cmd_mid_pan_or_during_free_transform_is_not_the_hand_tools_zoom](https://github.com/storytold/photocraft/blob/25c38a0b69b7bff31badcdbe2ef9f2ff6aba1c63/crates/ui-egui/src/hold_keys/tests.rs)
 
 - Expected behavior: cmd is not the move tool for selection hand zoom pen shape or type tools; cmd and alt with the hand tool zoom in and out while held; cmd mid pan or during free transform is not the hand tools zoom. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4752,7 +4752,7 @@ assert_eq!(held_tool(h.state(), &h.ctx), Some(Temporary::ZoomIn));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-engine --locked trim_and_duplicate_merged_on_too_large_document_fail_gracefully_without_panic -- --nocapture` — [crates/engine/src/image_cmds.rs / trim_and_duplicate_merged_on_too_large_document_fail_gracefully_without_panic](https://github.com/storytold/photocraft/blob/1b810052bc3a876c1eaf1a8766870ffdba9f8a80/crates/engine/src/image_cmds.rs)
+  - `cargo test -p lienzo-engine --locked trim_and_duplicate_merged_on_too_large_document_fail_gracefully_without_panic -- --nocapture` — [crates/engine/src/image_cmds.rs / trim_and_duplicate_merged_on_too_large_document_fail_gracefully_without_panic](https://github.com/storytold/photocraft/blob/1b810052bc3a876c1eaf1a8766870ffdba9f8a80/crates/engine/src/image_cmds.rs)
 
 - Expected behavior: trim and duplicate merged on too large document fail gracefully without panic. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4808,9 +4808,9 @@ assert!(trim_res.is_err(), "trim on too-large document must return error");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-algo --locked the_description_is_the_cpus_blur -- --nocapture` — [crates/algo/src/separable.rs / the_description_is_the_cpus_blur](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
-  - `cargo test -p photocraft-algo --locked an_impulse_spreads_no_further_than_the_reach -- --nocapture` — [crates/algo/src/separable.rs / an_impulse_spreads_no_further_than_the_reach](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
-  - `cargo test -p photocraft-algo --locked output_depends_only_on_the_input_region -- --nocapture` — [crates/algo/src/separable.rs / output_depends_only_on_the_input_region](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
+  - `cargo test -p lienzo-algo --locked the_description_is_the_cpus_blur -- --nocapture` — [crates/algo/src/separable.rs / the_description_is_the_cpus_blur](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
+  - `cargo test -p lienzo-algo --locked an_impulse_spreads_no_further_than_the_reach -- --nocapture` — [crates/algo/src/separable.rs / an_impulse_spreads_no_further_than_the_reach](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
+  - `cargo test -p lienzo-algo --locked output_depends_only_on_the_input_region -- --nocapture` — [crates/algo/src/separable.rs / output_depends_only_on_the_input_region](https://github.com/storytold/photocraft/blob/d42dd4c6302c77c1f9dc46b7b53ffa5eb0047a13/crates/algo/src/separable.rs)
 
 - Expected behavior: the description is the cpus blur; an impulse spreads no further than the reach; output depends only on the input region. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4950,9 +4950,9 @@ assert!(validate(version).is_err(), "validator accepted invalid version {version
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked screen_mode_button_is_inert_without_a_document -- --nocapture` — [crates/ui-egui/src/panels.rs / screen_mode_button_is_inert_without_a_document](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/panels.rs)
-  - `cargo test -p photocraft-ui-egui --locked long_press_screen_mode_opens_the_modes_without_cycling -- --nocapture` — [crates/ui-egui/src/panels.rs / long_press_screen_mode_opens_the_modes_without_cycling](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/panels.rs)
-  - `cargo test -p photocraft-ui-egui --locked full_screen_modes_need_a_document -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / full_screen_modes_need_a_document](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/view_cmds/tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked screen_mode_button_is_inert_without_a_document -- --nocapture` — [crates/ui-egui/src/panels.rs / screen_mode_button_is_inert_without_a_document](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/panels.rs)
+  - `cargo test -p lienzo-ui-egui --locked long_press_screen_mode_opens_the_modes_without_cycling -- --nocapture` — [crates/ui-egui/src/panels.rs / long_press_screen_mode_opens_the_modes_without_cycling](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/panels.rs)
+  - `cargo test -p lienzo-ui-egui --locked full_screen_modes_need_a_document -- --nocapture` — [crates/ui-egui/src/view_cmds/tests.rs / full_screen_modes_need_a_document](https://github.com/storytold/photocraft/blob/41eb1de5cff17f5f5b9c22913e48b71565b56a2a/crates/ui-egui/src/view_cmds/tests.rs)
 
 - Expected behavior: screen mode button is inert without a document; long press screen mode opens the modes without cycling; full screen modes need a document. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -4961,10 +4961,10 @@ assert!(validate(version).is_err(), "validator accepted invalid version {version
 `screen_mode_button_is_inert_without_a_document` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         frame(&mut app, &ctx, 0.0, vec![]);
         frame(&mut app, &ctx, 0.1, vec![]);
         let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -4990,11 +4990,11 @@ assert_eq!(crate::view_cmds::is_enabled(&app, "view.screenMode.cycle"), Some(fal
 `long_press_screen_mode_opens_the_modes_without_cycling` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         // A document open: Full Screen Mode needs one (#9349), so without it a click can't cycle.
         app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         frame(&mut app, &ctx, 0.0, vec![]);
         frame(&mut app, &ctx, 0.1, vec![]);
         let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -5046,13 +5046,13 @@ assert!(standard(&app));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-cms --locked three_dl_without_a_header_reads_low_nodes_as_12_bit -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_without_a_header_reads_low_nodes_as_12_bit](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-cms --locked three_dl_mesh_three_point_shaper_is_not_a_node -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_three_point_shaper_is_not_a_node](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-cms --locked three_dl_mesh_declares_the_output_depth -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_declares_the_output_depth](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-cms --locked three_dl_mesh_header_mismatch_is_rejected -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_header_mismatch_is_rejected](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-cms --locked three_dl_malformed_mesh_header_falls_back_to_inference -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_malformed_mesh_header_falls_back_to_inference](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-cms --locked three_dl_mesh_uses_declared_range_for_small_integer_codes -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_uses_declared_range_for_small_integer_codes](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
-  - `cargo test -p photocraft-engine --locked color_lookup_mesh_3dl_honours_the_header -- --nocapture` — [crates/engine/src/adjust_cmds/tests.rs / color_lookup_mesh_3dl_honours_the_header](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/engine/src/adjust_cmds/tests.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_without_a_header_reads_low_nodes_as_12_bit -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_without_a_header_reads_low_nodes_as_12_bit](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_mesh_three_point_shaper_is_not_a_node -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_three_point_shaper_is_not_a_node](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_mesh_declares_the_output_depth -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_declares_the_output_depth](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_mesh_header_mismatch_is_rejected -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_header_mismatch_is_rejected](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_malformed_mesh_header_falls_back_to_inference -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_malformed_mesh_header_falls_back_to_inference](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-cms --locked three_dl_mesh_uses_declared_range_for_small_integer_codes -- --nocapture` — [crates/cms/src/lutfile.rs / three_dl_mesh_uses_declared_range_for_small_integer_codes](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/cms/src/lutfile.rs)
+  - `cargo test -p lienzo-engine --locked color_lookup_mesh_3dl_honours_the_header -- --nocapture` — [crates/engine/src/adjust_cmds/tests.rs / color_lookup_mesh_3dl_honours_the_header](https://github.com/storytold/photocraft/blob/da4b838e54f6073cda4798fa7b63b3b7214aaf93/crates/engine/src/adjust_cmds/tests.rs)
 
 - Expected behavior: three dl without a header reads low nodes as 12 bit; three dl mesh three point shaper is not a node; three dl mesh declares the output depth; three dl mesh header mismatch is rejected; three dl malformed mesh header falls back to inference; three dl mesh uses declared range for small integer codes; color lookup mesh 3dl honours the header. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5129,7 +5129,7 @@ assert_eq!(l.size, 3);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked new_effects_start_from_the_made_default -- --nocapture` — [crates/ui-egui/src/layer_style.rs / new_effects_start_from_the_made_default](https://github.com/storytold/photocraft/blob/7937adff961027154d795b8905e821244ae4f929/crates/ui-egui/src/layer_style.rs)
+  - `cargo test -p lienzo-ui-egui --locked new_effects_start_from_the_made_default -- --nocapture` — [crates/ui-egui/src/layer_style.rs / new_effects_start_from_the_made_default](https://github.com/storytold/photocraft/blob/7937adff961027154d795b8905e821244ae4f929/crates/ui-egui/src/layer_style.rs)
 
 - Expected behavior: new effects start from the made default. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5138,7 +5138,7 @@ assert_eq!(l.size, 3);
 `new_effects_start_from_the_made_default` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("layer.layerStyle.makeDefault", json!({"kind": "stroke", "params": {"size": 7, "position": "outside"}})).unwrap();
@@ -5177,7 +5177,7 @@ assert_eq!(strokes.len(), 2);
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked cmd_z_is_recorded_while_capturing_and_undoes_otherwise -- --nocapture` — [crates/ui-egui/src/shortcut_capture_tests.rs / cmd_z_is_recorded_while_capturing_and_undoes_otherwise](https://github.com/storytold/photocraft/blob/993c9ed167c6acd9bc8f87c6cff6e2c7abba17a8/crates/ui-egui/src/shortcut_capture_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked cmd_z_is_recorded_while_capturing_and_undoes_otherwise -- --nocapture` — [crates/ui-egui/src/shortcut_capture_tests.rs / cmd_z_is_recorded_while_capturing_and_undoes_otherwise](https://github.com/storytold/photocraft/blob/993c9ed167c6acd9bc8f87c6cff6e2c7abba17a8/crates/ui-egui/src/shortcut_capture_tests.rs)
 
 - Expected behavior: cmd z is recorded while capturing and undoes otherwise. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5229,7 +5229,7 @@ assert_eq!(field(&h, id, "overrides")["edit.search"], json!("Cmd+Z"));
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked layer_style_buttons_stay_on_a_short_window -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_buttons_stay_on_a_short_window](https://github.com/storytold/photocraft/blob/81b434c6149732eadc94e0465fea81bd075facd4/crates/ui-egui/src/dialogs.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_style_buttons_stay_on_a_short_window -- --nocapture` — [crates/ui-egui/src/dialogs.rs / layer_style_buttons_stay_on_a_short_window](https://github.com/storytold/photocraft/blob/81b434c6149732eadc94e0465fea81bd075facd4/crates/ui-egui/src/dialogs.rs)
 
 - Expected behavior: layer style buttons stay on a short window. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5240,11 +5240,11 @@ assert_eq!(field(&h, id, "overrides")["edit.search"], json!("Cmd+Z"));
 ```rust
 use egui_kittest::{Harness, kittest::Queryable};
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
         app.run("layer.new.layer", serde_json::json!({})).unwrap();
         let mut h = Harness::builder().with_size(egui::vec2(1435.0, 858.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         crate::layer_style::open(h.state_mut(), Some("bevelEmboss")).unwrap();
         h.run_steps(4);
         for label in ["OK", "Cancel"] {
@@ -5272,7 +5272,7 @@ assert!(r.bottom() <= 858.0, "{label} is off the window: {r:?}");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked layer_rows_do_not_move_when_no_layer_is_selected -- --nocapture` — [crates/ui-egui/src/layer_pct_slider_tests.rs / layer_rows_do_not_move_when_no_layer_is_selected](https://github.com/storytold/photocraft/blob/9429df26b371c04c2afa65228a60ded739b5fbc2/crates/ui-egui/src/layer_pct_slider_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked layer_rows_do_not_move_when_no_layer_is_selected -- --nocapture` — [crates/ui-egui/src/layer_pct_slider_tests.rs / layer_rows_do_not_move_when_no_layer_is_selected](https://github.com/storytold/photocraft/blob/9429df26b371c04c2afa65228a60ded739b5fbc2/crates/ui-egui/src/layer_pct_slider_tests.rs)
 
 - Expected behavior: layer rows do not move when no layer is selected. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5283,9 +5283,9 @@ assert!(r.bottom() <= 858.0, "{label} is off the window: {r:?}");
 ```rust
 for theme in [crate::theme::ThemeKind::Studio, crate::theme::ThemeKind::Classic, crate::theme::ThemeKind::ProMedium] {
         let mut h = harness();
-        PhotocraftApp::setup_context(&h.ctx, theme);
+        LienzoApp::setup_context(&h.ctx, theme);
         h.run_steps(4);
-        let row_top = |h: &Harness<'_, PhotocraftApp>| by_role(h, "Paint", Role::Button).map(|r| r.top());
+        let row_top = |h: &Harness<'_, LienzoApp>| by_role(h, "Paint", Role::Button).map(|r| r.top());
         let selected = row_top(&h);
         h.state_mut().session.execute("select.deselectLayers", json!({})).unwrap();
         h.run_steps(4);
@@ -5316,8 +5316,8 @@ assert!(selected.is_some(), "{theme:?}: the layer row");
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked twirl_counterclockwise_has_its_own_mirrored_icon -- --nocapture` — [crates/ui-egui/src/liquify_ui.rs / twirl_counterclockwise_has_its_own_mirrored_icon](https://github.com/storytold/photocraft/blob/47aea89e9220b996f0d5a0d2bb8b5938100b4ad1/crates/ui-egui/src/liquify_ui.rs)
-  - `cargo test -p photocraft-ui-egui --locked alt_reversed_twirl_survives_replay_undo_and_redo -- --nocapture` — [crates/ui-egui/src/liquify_ui.rs / alt_reversed_twirl_survives_replay_undo_and_redo](https://github.com/storytold/photocraft/blob/47aea89e9220b996f0d5a0d2bb8b5938100b4ad1/crates/ui-egui/src/liquify_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked twirl_counterclockwise_has_its_own_mirrored_icon -- --nocapture` — [crates/ui-egui/src/liquify_ui.rs / twirl_counterclockwise_has_its_own_mirrored_icon](https://github.com/storytold/photocraft/blob/47aea89e9220b996f0d5a0d2bb8b5938100b4ad1/crates/ui-egui/src/liquify_ui.rs)
+  - `cargo test -p lienzo-ui-egui --locked alt_reversed_twirl_survives_replay_undo_and_redo -- --nocapture` — [crates/ui-egui/src/liquify_ui.rs / alt_reversed_twirl_survives_replay_undo_and_redo](https://github.com/storytold/photocraft/blob/47aea89e9220b996f0d5a0d2bb8b5938100b4ad1/crates/ui-egui/src/liquify_ui.rs)
 
 - Expected behavior: twirl counterclockwise has its own mirrored icon; alt reversed twirl survives replay undo and redo. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5409,9 +5409,9 @@ assert_eq!(d.opts.tool, LiquifyTool::TwirlCw, "Alt must not change the selected 
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 
-  - `cargo test -p photocraft-ui-egui --locked color_panel_options_survive_a_restart -- --nocapture` — [crates/ui-egui/src/color_panel_tests.rs / color_panel_options_survive_a_restart](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/color_panel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked an_outside_preference_change_reaches_the_live_panel -- --nocapture` — [crates/ui-egui/src/color_panel_tests.rs / an_outside_preference_change_reaches_the_live_panel](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/color_panel_tests.rs)
-  - `cargo test -p photocraft-ui-egui --locked dragging_the_splitter_resizes_and_survives_a_ui_state_round_trip -- --nocapture` — [crates/ui-egui/src/dock_tests.rs / dragging_the_splitter_resizes_and_survives_a_ui_state_round_trip](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/dock_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked color_panel_options_survive_a_restart -- --nocapture` — [crates/ui-egui/src/color_panel_tests.rs / color_panel_options_survive_a_restart](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/color_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked an_outside_preference_change_reaches_the_live_panel -- --nocapture` — [crates/ui-egui/src/color_panel_tests.rs / an_outside_preference_change_reaches_the_live_panel](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/color_panel_tests.rs)
+  - `cargo test -p lienzo-ui-egui --locked dragging_the_splitter_resizes_and_survives_a_ui_state_round_trip -- --nocapture` — [crates/ui-egui/src/dock_tests.rs / dragging_the_splitter_resizes_and_survives_a_ui_state_round_trip](https://github.com/storytold/photocraft/blob/6cc516a3d20120b678040050d95ccadc8d1dfd3f/crates/ui-egui/src/dock_tests.rs)
 
 - Expected behavior: color panel options survive a restart; an outside preference change reaches the live panel; dragging the splitter resizes and survives a ui state round trip. Each listed test must actually execute its assertions; these are distinct behavior-specific oracles, not a single interchangeable guard.
 
@@ -5420,18 +5420,18 @@ assert_eq!(d.opts.tool, LiquifyTool::TwirlCw, "Alt must not change the selected 
 `color_panel_options_survive_a_restart` setup/action excerpt:
 
 ```rust
-let mut first = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut first = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     first.ui.color_panel.mode = ColorPanelMode::HsbSliders;
     first.ui.color_panel.ramp = ColorRamp::GrayscaleRamp;
     crate::color_panel_ui::persist(&mut first);
     let saved = first.session.prefs().clone();
 
-    let mut next = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut next = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     next.session.prefs.edit(|p| *p = saved);
     crate::color_panel_ui::restore(&mut next);
     assert_eq!((next.ui.color_panel.mode, next.ui.color_panel.ramp), (ColorPanelMode::HsbSliders, ColorRamp::GrayscaleRamp));
 
-    let mut fresh = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut fresh = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 ```
 
 Expected assertion context (overlapping windows merged):
@@ -5439,7 +5439,7 @@ Expected assertion context (overlapping windows merged):
 ```rust
 assert_eq!((next.ui.color_panel.mode, next.ui.color_panel.ramp), (ColorPanelMode::HsbSliders, ColorRamp::GrayscaleRamp));
 
-    let mut fresh = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut fresh = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     crate::color_panel_ui::restore(&mut fresh);
     assert_eq!(fresh.ui.color_panel.mode, ColorPanelMode::HueCube, "no saved options: the default");
 }
@@ -5448,7 +5448,7 @@ assert_eq!((next.ui.color_panel.mode, next.ui.color_panel.ramp), (ColorPanelMode
 `an_outside_preference_change_reaches_the_live_panel` setup/action excerpt:
 
 ```rust
-let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.color_panel.mode = ColorPanelMode::HsbSliders;
     crate::color_panel_ui::persist(&mut app);
     // As prefs.set or a reset to defaults would: the stored options change under the panel.

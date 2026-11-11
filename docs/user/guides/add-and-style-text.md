@@ -1,6 +1,6 @@
 ---
 title: Add and style text
-description: Add point or paragraph text with the Horizontal Type Tool in PhotoCraft, then give it a drop shadow or glow.
+description: Add point or paragraph text with the Horizontal Type Tool in Lienzo, then give it a drop shadow or glow.
 order: 40
 verified: 0.8.2
 ---

@@ -26,8 +26,8 @@ fn bad_stored_values_are_sanitised() {
     assert_eq!(ui.dock, DockLayout::default());
 }
 
-fn app_with_layers() -> (PhotocraftApp, photocraft_doc::LayerId, photocraft_doc::LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_layers() -> (LienzoApp, lienzo_doc::LayerId, lienzo_doc::LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let pixel = app.session.active().unwrap().active_layer.unwrap();
@@ -38,10 +38,10 @@ fn app_with_layers() -> (PhotocraftApp, photocraft_doc::LayerId, photocraft_doc:
     (app, pixel, adj)
 }
 
-fn harness(app: PhotocraftApp, size: egui::Vec2, theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp, size: egui::Vec2, theme: ThemeKind) -> Harness<'static, LienzoApp> {
     // 60 fps steps, so two clicks a frame apart count as a double-click.
     let mut h = Harness::builder().with_size(size).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -51,7 +51,7 @@ fn harness(app: PhotocraftApp, size: egui::Vec2, theme: ThemeKind) -> Harness<'s
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.state_mut().ui.theme = theme;
     h.run_steps(4);
     h
@@ -62,18 +62,18 @@ fn panel_id(g: Group, tab: usize, pro: bool) -> &'static str {
     crate::panel_docking::normalize(g.tabs(pro)[tab]).unwrap()
 }
 
-fn rect_of(h: &Harness<'static, PhotocraftApp>, g: Group) -> Rect {
+fn rect_of(h: &Harness<'static, LienzoApp>, g: Group) -> Rect {
     probe::native_group_rect(h.state(), &h.ctx, g).unwrap_or_else(|| panic!("{g:?} not drawn"))
 }
 
 type Drawn = (Vec<(String, Rect)>, Vec<(craft_ui::docking::Hit<String>, Rect)>);
 
 /// Every panel body and docking control drawn last frame.
-fn drawn(h: &Harness<'static, PhotocraftApp>) -> Drawn {
-    (crate::panel_docking::last_bodies(&h.ctx), craft_ui::docking::DockArea::<String>::hit_rects(&h.ctx, egui::Id::unique("photocraft-panel-docking")))
+fn drawn(h: &Harness<'static, LienzoApp>) -> Drawn {
+    (crate::panel_docking::last_bodies(&h.ctx), craft_ui::docking::DockArea::<String>::hit_rects(&h.ctx, egui::Id::unique("lienzo-panel-docking")))
 }
 
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2) {
+fn drag(h: &mut Harness<'static, LienzoApp>, from: Pos2, to: Pos2) {
     h.event(egui::Event::PointerMoved(from));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -133,19 +133,19 @@ fn dragging_the_splitter_resizes_and_survives_a_ui_state_round_trip() {
 
     // Remembered in the preferences once the mouse is up, and restored at the next launch.
     let prefs = h.state().session.prefs_to_json();
-    let mut s2 = photocraft_engine::Session::new();
+    let mut s2 = lienzo_engine::Session::new();
     s2.load_prefs_json(&prefs).unwrap();
-    let mut app3 = PhotocraftApp::new(s2, crate::Services::default());
+    let mut app3 = LienzoApp::new(s2, crate::Services::default());
     restore(&mut app3);
     assert!(app3.ui.docking.is_some());
     assert_eq!(app3.ui.docking.as_ref().map(|w| &w.layout), h.state().ui.docking.as_ref().map(|w| &w.layout));
     crate::color_panel_ui::restore(&mut app3);
     assert_eq!(app3.ui.color_panel.mode, crate::state::ColorPanelMode::HsbSliders, "the Color panel's mode too");
     // …unless Remember Workspace Changes is off.
-    let mut s3 = photocraft_engine::Session::new();
+    let mut s3 = lienzo_engine::Session::new();
     s3.load_prefs_json(&prefs).unwrap();
     s3.prefs.edit(|p| p.workspace.remember_workspace_changes = false);
-    let mut app4 = PhotocraftApp::new(s3, crate::Services::default());
+    let mut app4 = LienzoApp::new(s3, crate::Services::default());
     restore(&mut app4);
     assert!(app4.ui.docking.is_none());
     assert_eq!(app4.ui.dock, DockLayout::default());
@@ -200,7 +200,7 @@ fn dragging_a_reordered_tab_onto_another_group_moves_that_panel() {
     // Gradients (original tab 2) drawn first: Gradients | Color | Swatches | Patterns.
     app.ui.dock.tab_order.insert(Group::Color, vec!["Gradients".into()]);
     let mut h = harness(app, vec2(1200.0, 800.0), ThemeKind::ProMedium);
-    let tab = |h: &Harness<'static, PhotocraftApp>, panel: &str| probe::tab_rect(&h.ctx, panel).unwrap_or_else(|| panic!("{panel} tab drawn"));
+    let tab = |h: &Harness<'static, LienzoApp>, panel: &str| probe::tab_rect(&h.ctx, panel).unwrap_or_else(|| panic!("{panel} tab drawn"));
     assert!(tab(&h, "gradients").left() < tab(&h, "color").left());
     let (source, destination) = (tab(&h, "gradients").center(), tab(&h, "layers").center());
 
@@ -276,7 +276,7 @@ fn the_rail_and_window_menu_never_lose_a_panel() {
 #[test]
 fn clicking_around_the_ui_keeps_the_panels_put() {
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let (app, _, _) = app_with_layers();
         app
     });
@@ -343,7 +343,7 @@ fn closing_tabs_keeps_stable_names_across_themes_and_workspace_round_trips() {
     assert_eq!(restored.visible_tabs(Group::Color, false).len(), 4);
 }
 
-fn right_click_tab(h: &mut Harness<'static, PhotocraftApp>, panel: &str) {
+fn right_click_tab(h: &mut Harness<'static, LienzoApp>, panel: &str) {
     let p = probe::tab_rect(&h.ctx, panel).unwrap_or_else(|| panic!("{panel} tab drawn")).center();
     h.hover_at(p);
     h.run_steps(1);
@@ -416,7 +416,7 @@ fn studio_properties_card_shows_the_adjustments_tab() {
     let (mut app, _, _) = app_with_layers();
     app.last_canvas_rect = Rect::from_min_size(Pos2::ZERO, vec2(900.0, 700.0));
     let mut h = Harness::builder().with_size(vec2(900.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::properties_window(app, &ctx);
@@ -424,7 +424,7 @@ fn studio_properties_card_shows_the_adjustments_tab() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, ThemeKind::Studio);
     h.state_mut().ui.theme = ThemeKind::Studio;
     h.run_steps(3);
     let ctx = h.ctx.clone();
@@ -484,10 +484,10 @@ fn theme_switch_keeps_the_selected_color_group_panel() {
 }
 
 /// Full app at `size` (1× scale) on a document with `n` layers named "Row 00", "Row 01", …
-fn app_harness_rows(size: egui::Vec2, theme: ThemeKind, n: usize) -> Harness<'static, PhotocraftApp> {
+fn app_harness_rows(size: egui::Vec2, theme: ThemeKind, n: usize) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(size).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, theme);
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.ui.theme = theme;
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         for i in 0..n {
@@ -501,7 +501,7 @@ fn app_harness_rows(size: egui::Vec2, theme: ThemeKind, n: usize) -> Harness<'st
 }
 
 /// Layer rows fully inside the Layers rows viewport.
-fn rows_in_view(h: &Harness<'static, PhotocraftApp>, n: usize) -> usize {
+fn rows_in_view(h: &Harness<'static, LienzoApp>, n: usize) -> usize {
     use egui_kittest::kittest::Queryable;
     let layers = rect_of(h, Group::Layers);
     (0..n)
@@ -596,7 +596,7 @@ fn tab_hides_all_panels_and_shift_tab_only_the_dock() {
     // brings back what it hid); ⇧Tab hides and shows the dock alone.
     let (mut app, _, _) = app_with_layers();
     let ctx = egui::Context::default();
-    let run = |app: &mut PhotocraftApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
+    let run = |app: &mut LienzoApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
     app.ui.panels.options_bar = false;
     run(&mut app, "window.togglePanels");
     let p = &app.ui.panels;
@@ -629,8 +629,8 @@ fn tab_in_full_screen_shows_and_hides_the_chrome_and_leaving_restores_the_panels
     // Full Screen brings them back exactly as they were, however many Tabs were pressed.
     let (mut app, _, _) = app_with_layers();
     let ctx = egui::Context::default();
-    let run = |app: &mut PhotocraftApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
-    let state = |app: &PhotocraftApp| {
+    let run = |app: &mut LienzoApp, id: &str| crate::menus::invoke(app, &ctx, id, json!({})).unwrap();
+    let state = |app: &LienzoApp| {
         let p = &app.ui.panels;
         (p.toolbar, p.options_bar, p.dock, p.hidden_by_tab)
     };
@@ -679,8 +679,8 @@ fn navigator_preview_fills_its_group_and_keeps_aspect() {
         let mut sizes = Vec::new();
         for tall in [150.0, 260.0, 420.0] {
             let mut h = Harness::builder().with_size(vec2(1200.0, 1000.0)).with_max_steps(64).build_eframe(move |cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                LienzoApp::setup_context(&cc.egui_ctx, theme);
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                 app.ui.theme = theme;
                 app.ui.panels.navigator = true;
                 app.ui.dock.heights.insert(Group::Navigator, tall);
@@ -706,7 +706,7 @@ fn navigator_preview_fills_its_group_and_keeps_aspect() {
     }
 }
 
-fn click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn click(h: &mut Harness<'static, LienzoApp>, p: Pos2) {
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -755,8 +755,8 @@ fn dragging_a_tab_reorders_the_group_and_the_order_persists() {
     for theme in [ThemeKind::ProMedium, ThemeKind::Studio] {
         let (app, _, _) = app_with_layers();
         let mut h = harness(app, vec2(1200.0, 800.0), theme);
-        let tab = |h: &Harness<'static, PhotocraftApp>, panel: &str| probe::tab_rect(&h.ctx, panel).unwrap_or_else(|| panic!("{panel} tab drawn"));
-        let others = |h: &Harness<'static, PhotocraftApp>| probe::group_of(h.state(), "color");
+        let tab = |h: &Harness<'static, LienzoApp>, panel: &str| probe::tab_rect(&h.ctx, panel).unwrap_or_else(|| panic!("{panel} tab drawn"));
+        let others = |h: &Harness<'static, LienzoApp>| probe::group_of(h.state(), "color");
         let color = others(&h);
         let (paths, layers) = (tab(&h, "paths"), tab(&h, "layers"));
         drag(&mut h, paths.center(), layers.left_center() + vec2(layers.width() / 4.0, 0.0));
@@ -796,7 +796,7 @@ fn dragging_a_tab_reorders_the_group_and_the_order_persists() {
 
 #[test]
 fn brush_settings_window_is_closed_on_restart_but_can_be_reopened() {
-    let mut first = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut first = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     first.ui.panels.brush_settings = true;
     first.ui.panels.history = true;
     let saved = snapshot(&first);
@@ -806,9 +806,9 @@ fn brush_settings_window_is_closed_on_restart_but_can_be_reopened() {
     });
     let persisted = first.session.prefs_to_json();
 
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.load_prefs_json(&persisted).unwrap();
-    let mut next = PhotocraftApp::new(session, crate::Services::default());
+    let mut next = LienzoApp::new(session, crate::Services::default());
     restore(&mut next);
     assert!(!next.ui.panels.brush_settings, "a floating Brush Settings window should not reopen on startup");
     assert!(next.ui.panels.history, "remembered dock panel visibility is preserved");
@@ -817,7 +817,7 @@ fn brush_settings_window_is_closed_on_restart_but_can_be_reopened() {
     crate::menus::invoke(&mut next, &ctx, "window.toggle.brushSettings", json!({})).unwrap();
     assert!(next.ui.panels.brush_settings, "Window > Brush Settings can still open it");
 
-    let mut workspace = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut workspace = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     apply(&mut workspace, &saved);
     assert!(workspace.ui.panels.brush_settings, "switching workspaces still restores their saved layout");
 }
@@ -830,7 +830,7 @@ fn brush_settings_window_is_closed_on_restart_but_can_be_reopened() {
 /// transition.
 #[test]
 fn an_unreadable_docking_layout_is_dropped_and_the_rest_applies() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut saved = snapshot(&app);
     saved["docking"] = json!({"root": "not-a-dock-node"});
     saved["timelineOpen"] = json!(true);
@@ -844,7 +844,7 @@ fn an_unreadable_docking_layout_is_dropped_and_the_rest_applies() {
 #[test]
 fn applying_a_workspace_keeps_the_toolbar_side_unless_it_saved_one() {
     use crate::state::ToolbarSide;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let saved = snapshot(&app);
     let cases = [
         (None, ToolbarSide::Right),
@@ -872,7 +872,7 @@ fn applying_a_workspace_keeps_the_toolbar_side_unless_it_saved_one() {
 /// so a workspace layout neither saves nor restores them.
 #[test]
 fn workspace_layouts_leave_the_layers_panel_options_alone() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.layers_panel_options.show_filters = false;
     crate::layers_panel_ui::persist_options(&mut app);
     let stored = app.session.prefs().dialogs.get("ui.layersPanelOptions").cloned();
@@ -895,8 +895,8 @@ fn a_panel_window_the_os_moves_is_saved_once_it_keeps_still() {
     app.session.prefs.edit(|p| p.workspace.remember_workspace_changes = true);
     app.run("window.panel.float", json!({"panel": "info"})).unwrap();
     let ctx = egui::Context::default();
-    let frame = |app: &mut PhotocraftApp| ctx.run_ui(Default::default(), |ui| persist(app, ui.ctx())).textures_delta.clear();
-    let place = |app: &mut PhotocraftApp, x: f32| {
+    let frame = |app: &mut LienzoApp| ctx.run_ui(Default::default(), |ui| persist(app, ui.ctx())).textures_delta.clear();
+    let place = |app: &mut LienzoApp, x: f32| {
         let window = app.ui.docking.as_mut().unwrap().layout.floating.iter_mut().find(|w| w.contains("info")).unwrap();
         window.native = Some([x, 100.0, 300.0, 200.0]);
     };
@@ -922,7 +922,7 @@ fn a_workspace_from_a_newer_version_shows_the_default_and_stays_saved() {
     restore(&mut app);
     assert!(app.ui.docking.is_none(), "the default layout shows");
     let ctx = egui::Context::default();
-    let frame = |app: &mut PhotocraftApp| ctx.run_ui(Default::default(), |ui| persist(app, ui.ctx())).textures_delta.clear();
+    let frame = |app: &mut LienzoApp| ctx.run_ui(Default::default(), |ui| persist(app, ui.ctx())).textures_delta.clear();
     frame(&mut app);
     assert_eq!(app.session.prefs().panel_layout, saved, "an idle frame leaves it saved");
 

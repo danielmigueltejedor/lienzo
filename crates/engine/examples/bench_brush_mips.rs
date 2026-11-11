@@ -1,13 +1,13 @@
 //! Sampled-tip preparation and live strokes on a materialized 24 MP layer. This harness also
 //! builds against the pre-cache revision for alternating before/after runs on the same runner.
-//! `cargo run --release -p photocraft-engine --example bench_brush_mips`
+//! `cargo run --release -p lienzo-engine --example bench_brush_mips`
 use std::hint::black_box;
 use std::time::Instant;
 
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_engine::{EngineError, Session, brush_cmds::LiveStroke};
-use photocraft_geom::Rect;
-use photocraft_paint::{BrushContext, GrayTile, StrokePoint, TipShape};
+use lienzo_color::{PixelFormat, SampleType};
+use lienzo_engine::{EngineError, Session, brush_cmds::LiveStroke};
+use lienzo_geom::Rect;
+use lienzo_paint::{BrushContext, GrayTile, StrokePoint, TipShape};
 use serde_json::json;
 
 fn ms(start: Instant) -> f64 {
@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         s.edit("materialize", |doc, active| {
             let id = active.ok_or_else(|| EngineError::Other("no active layer".into()))?;
             let surf = doc.layer_mut(id).and_then(|l| l.surface_mut()).ok_or_else(|| EngineError::Other("no pixel layer".into()))?;
-            surf.fill_rect(Rect::new(0, 0, 6000, 4000), &photocraft_raster::from_rgba(&fmt, [0.3, 0.6, 0.8, 0.7]));
+            surf.fill_rect(Rect::new(0, 0, 6000, 4000), &lienzo_raster::from_rgba(&fmt, [0.3, 0.6, 0.8, 0.7]));
             Ok(())
         })?;
         for side in [0, 1024, 2048, 5000] {

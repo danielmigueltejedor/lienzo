@@ -3,7 +3,7 @@
 //! save .pcraft / .psd, export PNG / JPEG, plus the canvas refresh each edit triggers.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example interactive_bench -- [--size 7360x4912] [--reps 5] [--json out.json] [--only text] [--cpu]
+//! cargo run --release -p lienzo-ui-egui --example interactive_bench -- [--size 7360x4912] [--reps 5] [--json out.json] [--only text] [--cpu]
 //! ```
 //!
 //! Every edit goes through `Session::execute` (the command path the UI, CLI and MCP share:
@@ -21,10 +21,10 @@
 use std::time::Instant;
 
 use eframe::wgpu;
-use photocraft_color::{BlendMode, Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Effect, FxCommon, Layer, LayerContent, LayerId, Size};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use lienzo_color::{BlendMode, Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Effect, FxCommon, Layer, LayerContent, LayerId, Size};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 fn arg(args: &[String], name: &str) -> Option<String> {
@@ -46,7 +46,7 @@ struct Gpu {
     adapter_name: String,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    comp: photocraft_gpu::Compositor,
+    comp: lienzo_gpu::Compositor,
 }
 
 /// Request the app's GPU limits, retaining adapter identity for reports; absence selects the CPU canvas.
@@ -58,14 +58,14 @@ fn gpu() -> Option<Gpu> {
     let adapter_name = adapter.get_info().name;
     eprintln!("adapter: {adapter_name}");
     // The limits the app requests (see `gpu_canvas::use_adapter_limits`).
-    let limits = photocraft_ui_egui::gpu_canvas::device_limits(&adapter);
+    let limits = lienzo_ui_egui::gpu_canvas::device_limits(&adapter);
     let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor { required_limits: limits, ..Default::default() })).ok()?;
-    let comp = photocraft_gpu::Compositor::new(&device);
+    let comp = lienzo_gpu::Compositor::new(&device);
     Some(Gpu { adapter_name, device, queue, comp })
 }
 
 /// A photo-like RGB image: smooth gradients, soft blobs, fine noise (so JPEG has real work).
-fn photo(w: u32, h: u32) -> photocraft_codecs::Image {
+fn photo(w: u32, h: u32) -> lienzo_codecs::Image {
     use rayon::prelude::*;
     let mut px = vec![0u8; w as usize * h as usize * 3];
     px.par_chunks_mut(w as usize * 3).enumerate().for_each(|(y, row)| {
@@ -81,7 +81,7 @@ fn photo(w: u32, h: u32) -> photocraft_codecs::Image {
             }
         }
     });
-    photocraft_codecs::Image::from_raw(w, h, photocraft_codecs::ChannelLayout::Rgb, photocraft_codecs::SampleType::U8, px).expect("image")
+    lienzo_codecs::Image::from_raw(w, h, lienzo_codecs::ChannelLayout::Rgb, lienzo_codecs::SampleType::U8, px).expect("image")
 }
 
 /// JSON metadata for one benchmark row, in the same order as `Bench::rows`.
@@ -103,7 +103,7 @@ struct Bench {
     rows: Vec<(String, f64, f64, f64, f64)>,
     /// Per row (same order as `rows`): the metadata for `--json` (`cargo xtask perf`).
     extra: Vec<RowExtra>,
-    rss: photocraft_testkit::perf::RssSampler,
+    rss: lienzo_testkit::perf::RssSampler,
 }
 
 impl Bench {
@@ -136,7 +136,7 @@ impl Bench {
         }
         self.rss.reset();
         let (cold, cold_path) = f(self);
-        let faults0 = photocraft_testkit::perf::minor_faults();
+        let faults0 = lienzo_testkit::perf::minor_faults();
         let mut v = Vec::with_capacity(self.reps);
         let mut path = "";
         let mut fallback = false;
@@ -152,7 +152,7 @@ impl Bench {
         // Minor page faults per warm run: memory mapped fresh from the kernel each time (#10479).
         // Counted over the whole of `f`, so it includes untimed setup and cleanup (an undo, an
         // extra refresh), not only the work the milliseconds measure.
-        let faults = faults0.zip(photocraft_testkit::perf::minor_faults()).map(|(a, b)| b.saturating_sub(a) / self.reps as u64);
+        let faults = faults0.zip(lienzo_testkit::perf::minor_faults()).map(|(a, b)| b.saturating_sub(a) / self.reps as u64);
         let report_paths = report_path && !path.is_empty();
         let warm_path = report_paths.then_some(path);
         let cold_path = (report_path && !cold_path.is_empty()).then_some(cold_path);
@@ -176,13 +176,13 @@ impl Bench {
             Some(g) => {
                 let ok = g.comp.render(&g.device, &g.queue, doc, region, |_, _| {}).is_ok();
                 if !ok {
-                    std::hint::black_box(photocraft_compose::render(doc, region));
+                    std::hint::black_box(lienzo_compose::render(doc, region));
                 }
                 let _ = g.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
                 if ok { "GPU" } else { "CPU fallback" }
             }
             None => {
-                std::hint::black_box(photocraft_compose::render(doc, region));
+                std::hint::black_box(lienzo_compose::render(doc, region));
                 "CPU canvas"
             }
         };
@@ -191,13 +191,13 @@ impl Bench {
 }
 
 /// How far an edit's composite change reaches beyond its damage (layer effects).
-fn reach(layers: &[photocraft_doc::Layer]) -> i32 {
+fn reach(layers: &[lienzo_doc::Layer]) -> i32 {
     layers
         .iter()
         .map(|l| {
-            let own = if photocraft_compose::effects::has_effects(l) { photocraft_compose::effects::margin(l) } else { 0 };
+            let own = if lienzo_compose::effects::has_effects(l) { lienzo_compose::effects::margin(l) } else { 0 };
             let kids = match &l.content {
-                photocraft_doc::LayerContent::Group(g) => reach(&g.children),
+                lienzo_doc::LayerContent::Group(g) => reach(&g.children),
                 _ => 0,
             };
             own + kids
@@ -272,7 +272,7 @@ fn cpu_adjust_preview_case(b: &mut Bench, doc: &Document, target: LayerId, name:
     b.time(name, |_| {
         v = (v + 7) % 120;
         let t = Instant::now();
-        let p = photocraft_ui_egui::filter_dialog::preview_document(
+        let p = lienzo_ui_egui::filter_dialog::preview_document(
             doc,
             Some(target),
             "image.adjustments.curves",
@@ -280,7 +280,7 @@ fn cpu_adjust_preview_case(b: &mut Bench, doc: &Document, target: LayerId, name:
             k,
         )
         .expect("preview");
-        std::hint::black_box(photocraft_compose::flatten(&p));
+        std::hint::black_box(lienzo_compose::flatten(&p));
         ms(t)
     });
 }
@@ -288,7 +288,7 @@ fn cpu_adjust_preview_case(b: &mut Bench, doc: &Document, target: LayerId, name:
 /// The CPU reference rows: the old proxy at the desktop factor, and (for path-reported rows) at
 /// the 100 % and zoomed-out resolutions the canvas would use, so the layer path compares fairly.
 fn cpu_preview_rows(b: &mut Bench, doc: &Document, target: LayerId, name: &str, sel: &str, report_path: bool) {
-    cpu_adjust_preview_case(b, doc, target, &format!("{name}, CPU proxy preview{sel}"), photocraft_ui_egui::proxy::factor(doc));
+    cpu_adjust_preview_case(b, doc, target, &format!("{name}, CPU proxy preview{sel}"), lienzo_ui_egui::proxy::factor(doc));
     if report_path {
         let zoom = 1600.0 / doc.size.width as f32 * 2.0;
         cpu_adjust_preview_case(b, doc, target, &format!("{name}, CPU proxy preview 100 % view{sel}"), 1);
@@ -297,7 +297,7 @@ fn cpu_preview_rows(b: &mut Bench, doc: &Document, target: LayerId, name: &str, 
             doc,
             target,
             &format!("{name}, CPU proxy preview zoomed out{sel}"),
-            photocraft_ui_egui::proxy::view_factor(photocraft_ui_egui::proxy::factor(doc), zoom),
+            lienzo_ui_egui::proxy::view_factor(lienzo_ui_egui::proxy::factor(doc), zoom),
         );
     }
 }
@@ -307,8 +307,8 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     let doc = &s.active().expect("doc").doc;
     let (w, h) = (doc.size.width, doc.size.height);
     let zoom = 1600.0 / w as f32 * 2.0;
-    let k = photocraft_ui_egui::adjust_preview::proxy_factor(zoom);
-    if let Some(why) = photocraft_ui_egui::adjust_preview::unsupported(doc, target) {
+    let k = lienzo_ui_egui::adjust_preview::proxy_factor(zoom);
+    if let Some(why) = lienzo_ui_egui::adjust_preview::unsupported(doc, target) {
         println!("  ({name}{sel}: no layer preview: {why}; CPU reference rows only)");
         cpu_preview_rows(b, doc, target, name, sel, report_path);
         return;
@@ -318,8 +318,8 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     let (base, region) = {
         let st = s.active().expect("doc");
         let t = Instant::now();
-        let base = photocraft_ui_egui::adjust_preview::base_document(&st.doc, target).expect("base");
-        let region = photocraft_ui_egui::adjust_preview::region(&st.doc, target);
+        let base = lienzo_ui_egui::adjust_preview::base_document(&st.doc, target).expect("base");
+        let region = lienzo_ui_egui::adjust_preview::region(&st.doc, target);
         println!("  ({name}{sel}: layer preview session setup: {:.1} ms, region {region:?})", ms(t));
         (base, region)
     };
@@ -327,7 +327,7 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     b.time_path(&format!("{name}, layer preview{sel}"), report_path, |b| {
         v = (v + 7) % 120;
         let t = Instant::now();
-        let p = photocraft_ui_egui::adjust_preview::with_settings(&base, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
+        let p = lienzo_ui_egui::adjust_preview::with_settings(&base, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
         let build = ms(t);
         let (render, path) = b.render_preview(&p, region);
         (build + render, path)
@@ -339,7 +339,7 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     b.time_path(&format!("{name}, layer preview 100 % view{sel}"), report_path, |b| {
         v = (v + 7) % 120;
         let t = Instant::now();
-        let p = photocraft_ui_egui::adjust_preview::with_settings(&base, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
+        let p = lienzo_ui_egui::adjust_preview::with_settings(&base, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
         let build = ms(t);
         let (render, path) = b.render_preview(&p, view);
         (build + render, path)
@@ -347,9 +347,9 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     // Zoomed out (fit to a 1600-pixel-wide view on a 2× display: k = 2 for 36 MP), the canvas
     // previews on a reduced copy built once per session, unless effects or vector masks make
     // that proxy inaccurate (the same eligibility check as adjust_preview::gpu_proxy).
-    let k = if photocraft_compose::proxy::proxy_faithful(&base) { k } else { 1 };
+    let k = if lienzo_compose::proxy::proxy_faithful(&base) { k } else { 1 };
     let t = Instant::now();
-    let proxy = photocraft_ui_egui::adjust_preview::proxy_base(&base, k);
+    let proxy = lienzo_ui_egui::adjust_preview::proxy_base(&base, k);
     println!("  ({name}{sel}: zoomed-out proxy k {k} setup: {:.1} ms)", ms(t));
     let kk = k as i32;
     let pregion = Rect::new(region.x0 / kk, region.y0 / kk, region.x1 / kk + 1, region.y1 / kk + 1).intersect(&proxy.bounds());
@@ -357,8 +357,8 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     b.time_path(&format!("{name}, layer preview zoomed out{sel}"), report_path, |b| {
         v = (v + 7) % 120;
         let t = Instant::now();
-        let p = photocraft_ui_egui::adjust_preview::proxy_with_settings(&proxy, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]}))
-            .expect("preview");
+        let p =
+            lienzo_ui_egui::adjust_preview::proxy_with_settings(&proxy, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
         let build = ms(t);
         let (render, path) = b.render_preview(&p, pregion);
         (build + render, path)
@@ -429,7 +429,7 @@ fn main() {
         only: arg(&args, "--only"),
         rows: Vec::new(),
         extra: Vec::new(),
-        rss: photocraft_testkit::perf::RssSampler::start(std::time::Duration::from_millis(2)),
+        rss: lienzo_testkit::perf::RssSampler::start(std::time::Duration::from_millis(2)),
     };
     println!("document {w}×{h} ({:.1} MP), 8-bit RGB, {} reps, {}", (w * h) as f64 / 1e6, reps, if b.gpu.is_some() { "GPU canvas" } else { "CPU canvas" });
 
@@ -447,13 +447,13 @@ fn main() {
     let mut jpeg = Vec::new();
     b.time("encode JPEG (codecs, q 90)", |_| {
         let t = Instant::now();
-        jpeg = photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &Default::default()).expect("jpeg");
+        jpeg = lienzo_codecs::encode(&img, lienzo_codecs::Format::Jpeg, &Default::default()).expect("jpeg");
         ms(t)
     });
     let mut s = Session::new();
     b.time("open JPEG (decode + document + refresh)", |b| {
         let t = Instant::now();
-        let doc = photocraft_io::import("photo.jpg", &jpeg).expect("import").document;
+        let doc = lienzo_io::import("photo.jpg", &jpeg).expect("import").document;
         s = Session::new();
         s.open_document(doc, Some("photo.jpg".into()));
         let t = ms(t);
@@ -466,7 +466,7 @@ fn main() {
     b.time("viewport 1920×1080 (CPU compose)", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        std::hint::black_box(photocraft_compose::render(&d, Rect::from_xywh(w as i32 / 3, h as i32 / 3, 1920, 1080)));
+        std::hint::black_box(lienzo_compose::render(&d, Rect::from_xywh(w as i32 / 3, h as i32 / 3, 1920, 1080)));
         ms(t)
     });
 
@@ -511,11 +511,11 @@ fn main() {
     for radius in [40.0, 250.0] {
         b.time(&format!("Gaussian Blur dialog preview r {radius}"), |_| {
             let st = s.active().expect("doc");
-            let k = photocraft_ui_egui::proxy::factor(&st.doc);
+            let k = lienzo_ui_egui::proxy::factor(&st.doc);
             let t = Instant::now();
-            let p = photocraft_ui_egui::filter_dialog::preview_document(&st.doc, st.active_layer, "filter.blur.gaussianBlur", &json!({"radius": radius}), k)
+            let p = lienzo_ui_egui::filter_dialog::preview_document(&st.doc, st.active_layer, "filter.blur.gaussianBlur", &json!({"radius": radius}), k)
                 .expect("preview");
-            std::hint::black_box(photocraft_compose::flatten(&p));
+            std::hint::black_box(lienzo_compose::flatten(&p));
             ms(t)
         });
     }
@@ -564,18 +564,18 @@ fn main() {
     b.time("save .pcraft (bytes, full)", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        std::hint::black_box(photocraft_format::save_to_bytes(&d, &photocraft_format::SaveOptions::default()).expect("pcraft"));
+        std::hint::black_box(lienzo_format::save_to_bytes(&d, &lienzo_format::SaveOptions::default()).expect("pcraft"));
         ms(t)
     });
     b.time("save .psd", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        psd = photocraft_io::export(&d, "x.psd", &Default::default()).expect("psd").bytes;
+        psd = lienzo_io::export(&d, "x.psd", &Default::default()).expect("psd").bytes;
         ms(t)
     });
     b.time("open .psd (3 layers) + refresh", |b| {
         let t = Instant::now();
-        let d = photocraft_io::import("x.psd", &psd).expect("psd").document;
+        let d = lienzo_io::import("x.psd", &psd).expect("psd").document;
         let mut s2 = Session::new();
         s2.open_document(d, None);
         ms(t) + b.refresh(&s2, true)
@@ -583,19 +583,19 @@ fn main() {
     b.time("flatten (CPU compositor, 3 layers)", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        std::hint::black_box(photocraft_compose::flatten(&d));
+        std::hint::black_box(lienzo_compose::flatten(&d));
         ms(t)
     });
     b.time("export PNG (flatten + encode)", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        std::hint::black_box(photocraft_io::export(&d, "x.png", &Default::default()).expect("png"));
+        std::hint::black_box(lienzo_io::export(&d, "x.png", &Default::default()).expect("png"));
         ms(t)
     });
     b.time("export JPEG (flatten + encode)", |_| {
         let d = doc(&s);
         let t = Instant::now();
-        std::hint::black_box(photocraft_io::export(&d, "x.jpg", &Default::default()).expect("jpg"));
+        std::hint::black_box(lienzo_io::export(&d, "x.jpg", &Default::default()).expect("jpg"));
         ms(t)
     });
 
@@ -613,7 +613,7 @@ fn main() {
         let d = doc(&s);
         let l = d.layer(gid).expect("layer");
         let LayerContent::Fill(f) = &l.content else { panic!("not a fill") };
-        let f = photocraft_engine::gradient_fill_cmds::apply_set(l, f, d.bounds(), &json!({"to": to}), [0.0, 0.0, 0.0, 1.0], [1.0; 4]).expect("set");
+        let f = lienzo_engine::gradient_fill_cmds::apply_set(l, f, d.bounds(), &json!({"to": to}), [0.0, 0.0, 0.0, 1.0], [1.0; 4]).expect("set");
         let mut shown = (*d).clone();
         shown.layer_mut(gid).expect("layer").content = LayerContent::Fill(f);
         std::hint::black_box(&shown);
@@ -626,7 +626,7 @@ fn main() {
         let d = doc(&s);
         let l = d.layer(gid).expect("layer");
         let LayerContent::Fill(f) = &l.content else { panic!("not a fill") };
-        let f = photocraft_engine::gradient_fill_cmds::apply_set(l, f, d.bounds(), &json!({"to": to}), [0.0, 0.0, 0.0, 1.0], [1.0; 4]).expect("set");
+        let f = lienzo_engine::gradient_fill_cmds::apply_set(l, f, d.bounds(), &json!({"to": to}), [0.0, 0.0, 0.0, 1.0], [1.0; 4]).expect("set");
         let mut shown = (*d).clone();
         shown.layer_mut(gid).expect("layer").content = LayerContent::Fill(f);
         ms(t) + b.render(&shown, shown.bounds())
@@ -654,7 +654,7 @@ mod reporting_tests {
             only: None,
             rows: Vec::new(),
             extra: Vec::new(),
-            rss: photocraft_testkit::perf::RssSampler::start(std::time::Duration::from_millis(2)),
+            rss: lienzo_testkit::perf::RssSampler::start(std::time::Duration::from_millis(2)),
         }
     }
 

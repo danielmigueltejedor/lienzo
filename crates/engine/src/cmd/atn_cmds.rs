@@ -1,11 +1,11 @@
 //! Photoshop Actions files (`.atn`): Load Actions (`actions.load`) and Save Actions
 //! (`actions.save`), plus the two step commands a Photoshop set needs: `actions.stopMessage`
-//! (Photoshop's Insert Stop) and `actions.photoshopStep` (a step PhotoCraft has no command for
+//! (Photoshop's Insert Stop) and `actions.photoshopStep` (a step Lienzo has no command for
 //! yet, kept verbatim so Save Actions writes it back unchanged).
 //!
-//! Parsing and writing live in `photocraft-psd` (`atn`); this module maps Photoshop *events*
+//! Parsing and writing live in `lienzo-psd` (`atn`); this module maps Photoshop *events*
 //! (`gaussianBlur` with `Rds`, `make` of an adjustment layer, `set` of the selection…) onto
-//! PhotoCraft commands and back. An event is keyed by both its four-character code (`GsnB`,
+//! Lienzo commands and back. An event is keyed by both its four-character code (`GsnB`,
 //! older files) and its string name (`gaussianBlur`, Photoshop 2024 and later), as the two are
 //! interchangeable in Photoshop. The table ([`EVENTS`]) is bidirectional: a step that was
 //! imported exports to the same event. Events outside it become `actions.photoshopStep` steps,
@@ -18,8 +18,8 @@
 //! {"offset"}`, the document that many places from the active one in opening order, not dragged
 //! tab order (#7103).
 
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D};
 use serde_json::{Map, Value, json};
 
 use crate::actions_cmds::Action;
@@ -94,7 +94,7 @@ use steps_make::make_from;
 #[cfg(test)]
 use tables::{blend_label, blend_ps, channel_ref};
 
-/// A step PhotoCraft cannot play yet, kept verbatim (`{"event", "name", "descriptor": base64}`).
+/// A step Lienzo cannot play yet, kept verbatim (`{"event", "name", "descriptor": base64}`).
 pub const PHOTOSHOP_STEP: &str = "actions.photoshopStep";
 /// Photoshop's Insert Stop: `{"message", "allowContinue"}`.
 pub const STOP_MESSAGE: &str = "actions.stopMessage";
@@ -141,7 +141,7 @@ pub fn specs() -> Vec<CommandSpec> {
             label: "Save Actions…",
             menu: &[],
             shortcut: None,
-            params: r##"{"path":".atn file"? (else the bytes come back as base64 `data`),"set":name? (that set's actions, none for an empty New Set set; default: every action, as the set "PhotoCraft Actions"),"action":name|index? (one action),"skipUnsupported":bool=false (leave out steps with no Photoshop equivalent instead of failing)} → {set, actions:[names], steps, bytes, skipped:[{action, step, id}], path|data}"##,
+            params: r##"{"path":".atn file"? (else the bytes come back as base64 `data`),"set":name? (that set's actions, none for an empty New Set set; default: every action, as the set "Lienzo Actions"),"action":name|index? (one action),"skipUnsupported":bool=false (leave out steps with no Photoshop equivalent instead of failing)} → {set, actions:[names], steps, bytes, skipped:[{action, step, id}], path|data}"##,
             enabled: always,
             run: save,
             journal: false,

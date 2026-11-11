@@ -4,11 +4,11 @@
 use crate::common;
 
 use common::*;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_format::zip::ZipReader;
-use photocraft_io::*;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_format::zip::ZipReader;
+use lienzo_io::*;
 
-fn doc() -> photocraft_doc::Document {
+fn doc() -> lienzo_doc::Document {
     let mut d = gen_doc(ColorMode::Rgb, SampleType::U8, Features::PIXELS);
     d.name = "FirstTest.psd".into();
     d
@@ -27,7 +27,7 @@ fn manifest_name(bytes: &[u8]) -> String {
 fn export_names_the_manifest_after_the_file() {
     let r = export(&doc(), "/tmp/somewhere/_nametest.pcraft", &ExportOptions::default()).expect("export");
     assert_eq!(manifest_name(&r.bytes), "_nametest.pcraft");
-    assert_eq!(photocraft_format::load_from_bytes(&r.bytes).expect("load").name, "_nametest.pcraft");
+    assert_eq!(lienzo_format::load_from_bytes(&r.bytes).expect("load").name, "_nametest.pcraft");
 }
 
 /// A bare extension names no file and leaves the document's own name alone.

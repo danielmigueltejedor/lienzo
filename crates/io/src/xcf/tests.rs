@@ -2,7 +2,7 @@
 //! every compression, precisions, groups, masks, channels, limits and malformed input.
 
 use super::*;
-use photocraft_raster::Interrupt;
+use lienzo_raster::Interrupt;
 
 /// A small XCF writer for tests: version 11+ layout (64-bit pointers) by default.
 pub(super) struct W {
@@ -728,9 +728,8 @@ fn gzipped_files_are_recognised_by_name_and_inflated() {
 /// A recognized raster signature wins over a misleading `.xcf` suffix, as with `.kra` and `.svg`.
 #[test]
 fn a_png_with_an_xcf_suffix_opens_by_content() {
-    let img =
-        photocraft_codecs::Image::from_raw(12, 8, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, vec![90; 12 * 8 * 4]).unwrap();
-    let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = lienzo_codecs::Image::from_raw(12, 8, lienzo_codecs::ChannelLayout::Rgba, lienzo_codecs::SampleType::U8, vec![90; 12 * 8 * 4]).unwrap();
+    let png = lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let r = crate::import("renamed.xcf", &png).unwrap();
     assert_eq!((r.document.size.width, r.document.size.height), (12, 8));
     assert!(crate::import("broken.xcf", b"not an image at all").is_err());

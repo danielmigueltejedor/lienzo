@@ -1,7 +1,7 @@
 //! Headless JSON-lines server: the control protocol's envelope
 //! (`{"id","method","params"}` → `{"id","ok","result"|"error"}`) over a
 //! [`Headless`] session, so scripts and agents can keep one editing session
-//! open without MCP or the GUI. `photocraft-cli serve` runs it on stdio or a
+//! open without MCP or the GUI. `lienzo-cli serve` runs it on stdio or a
 //! loopback TCP port.
 //!
 //! Methods (camelCase params):
@@ -65,8 +65,8 @@ pub const METHODS: &[&str] = &[
 /// from a typed admission error to a JSON error object, so clients can offer approval.
 fn attach_memory_error_details(obj: &mut Value, err: &AutomationError) {
     match err {
-        AutomationError::Import(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram })
-        | AutomationError::Engine(photocraft_engine::EngineError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram, .. }) => {
+        AutomationError::Import(lienzo_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram })
+        | AutomationError::Engine(lienzo_engine::EngineError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram, .. }) => {
             if let Some(m) = obj.as_object_mut() {
                 m.insert("required".into(), json!(required));
                 m.insert("soft".into(), json!(soft_limit));
@@ -79,8 +79,8 @@ fn attach_memory_error_details(obj: &mut Value, err: &AutomationError) {
                 }
             }
         }
-        AutomationError::Import(photocraft_io::IoError::PsdImportBudget { required, limit, free_memory })
-        | AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget { required, limit, free_memory, .. }) => {
+        AutomationError::Import(lienzo_io::IoError::PsdImportBudget { required, limit, free_memory })
+        | AutomationError::Engine(lienzo_engine::EngineError::PsdHardBudget { required, limit, free_memory, .. }) => {
             if let Some(m) = obj.as_object_mut() {
                 m.insert("required".into(), json!(required));
                 m.insert("hard".into(), json!(limit));
@@ -120,8 +120,8 @@ impl Headless {
         match method {
             "engine.execute" => {
                 let id = str_of(&p, "command").ok_or_else(|| bad("engine.execute needs `command`"))?;
-                if METHODS.contains(&id) && photocraft_engine::commands::find(id).is_none() {
-                    return Err(bad(photocraft_engine::command_hints::protocol_method_as_command(id)));
+                if METHODS.contains(&id) && lienzo_engine::commands::find(id).is_none() {
+                    return Err(bad(lienzo_engine::command_hints::protocol_method_as_command(id)));
                 }
                 let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
                 self.command_start(id, p.get("params").cloned().unwrap_or(Value::Null), wait)
@@ -134,7 +134,7 @@ impl Headless {
                 Ok(match str_of(&p, "filter").map(str::to_lowercase) {
                     None => all,
                     Some(n) => {
-                        Value::Array(all.as_array().into_iter().flatten().filter(|c| photocraft_engine::commands::list_entry_matches(c, &n)).cloned().collect())
+                        Value::Array(all.as_array().into_iter().flatten().filter(|c| lienzo_engine::commands::list_entry_matches(c, &n)).cloned().collect())
                     }
                 })
             }
@@ -167,24 +167,24 @@ impl Headless {
             }
             "doc.new" => self.command_run("file.new", p),
             "doc.save" => {
-                let tga_bits = photocraft_engine::file_cmds::tga_bits_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?;
-                let mut opts = photocraft_io::ExportOptions {
+                let tga_bits = lienzo_engine::file_cmds::tga_bits_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?;
+                let mut opts = lienzo_io::ExportOptions {
                     tiff_layers: p.get("tiffLayers").and_then(Value::as_bool).unwrap_or(false),
                     tga_bits,
-                    pcraft_full_composite: photocraft_engine::file_cmds::pcraft_full_composite_param(&p, "doc.save")
+                    pcraft_full_composite: lienzo_engine::file_cmds::pcraft_full_composite_param(&p, "doc.save")
                         .map_err(|e| bad(e.to_string()))?
                         .unwrap_or(false),
                     ..Default::default()
                 };
-                opts.encode.dpx_bits = photocraft_engine::file_cmds::dpx_bits_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?;
-                opts.encode.dds = photocraft_engine::file_cmds::dds_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?.unwrap_or_default();
-                if let Some(c) = photocraft_engine::file_cmds::tiff_compression_param(&p, "doc.save").map_err(|e| bad(e.to_string()))? {
+                opts.encode.dpx_bits = lienzo_engine::file_cmds::dpx_bits_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?;
+                opts.encode.dds = lienzo_engine::file_cmds::dds_param(&p, "doc.save").map_err(|e| bad(e.to_string()))?.unwrap_or_default();
+                if let Some(c) = lienzo_engine::file_cmds::tiff_compression_param(&p, "doc.save").map_err(|e| bad(e.to_string()))? {
                     opts.encode.tiff_compression = c;
                 }
-                let tiff_bool = |key| photocraft_engine::file_cmds::tiff_bool_param(&p, key, "doc.save").map_err(|e| bad(e.to_string()));
+                let tiff_bool = |key| lienzo_engine::file_cmds::tiff_bool_param(&p, key, "doc.save").map_err(|e| bad(e.to_string()));
                 opts.tiff_transparency = tiff_bool("tiffTransparency")?;
                 opts.encode.tiff_pyramid = tiff_bool("tiffPyramid")?.unwrap_or(false);
-                if let Some(maximize) = photocraft_engine::file_cmds::maximize_compatibility_param(&p, "doc.save").map_err(|e| bad(e.to_string()))? {
+                if let Some(maximize) = lienzo_engine::file_cmds::maximize_compatibility_param(&p, "doc.save").map_err(|e| bad(e.to_string()))? {
                     opts.psd_maximize_compatibility = maximize;
                 }
                 match p.get("quality") {
@@ -254,7 +254,7 @@ impl Headless {
             "doc.close" => self.close(index_of(&p)?),
             "batch" => self.batch(&p),
             "methods" => Ok(json!(METHODS)),
-            other => Err(bad(format!("{} (try `methods`)", photocraft_engine::command_hints::unknown_method(other, METHODS)))),
+            other => Err(bad(format!("{} (try `methods`)", lienzo_engine::command_hints::unknown_method(other, METHODS)))),
         }
     }
 

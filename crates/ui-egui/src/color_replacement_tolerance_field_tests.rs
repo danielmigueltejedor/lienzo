@@ -9,22 +9,22 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::eraser_ui::TOLERANCE_RANGE_ALERT;
 use crate::state::{DialogKind, Tool};
 
-fn bar() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = Tool::ColorReplacement;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
 /// Types `text` into the Tolerance field, then Tabs out of it.
-fn type_tolerance(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
+fn type_tolerance(h: &mut Harness<'static, LienzoApp>, text: &str) {
     h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some("Tolerance:")).expect("the Tolerance field").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -34,11 +34,11 @@ fn type_tolerance(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
     h.run_steps(3);
 }
 
-fn alert(h: &Harness<'static, PhotocraftApp>) -> Option<String> {
+fn alert(h: &Harness<'static, LienzoApp>) -> Option<String> {
     h.state().ui.dialogs.iter().find(|d| d.kind == DialogKind::Error).and_then(|d| d.fields.get("message")).and_then(|m| m.as_str()).map(str::to_owned)
 }
 
-fn tolerance(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn tolerance(h: &Harness<'static, LienzoApp>) -> f32 {
     h.state().ui.tool_options.cr_tolerance
 }
 
@@ -66,7 +66,7 @@ fn a_fraction_stores_a_whole_number_and_text_changes_nothing() {
 }
 
 /// Types `text` into the Tolerance field and leaves it there, with the keyboard.
-fn type_without_leaving(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
+fn type_without_leaving(h: &mut Harness<'static, LienzoApp>, text: &str) {
     h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some("Tolerance:")).expect("the Tolerance field").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -134,7 +134,7 @@ fn the_bar_has_the_reference_tooltips() {
 /// A pixel 2 levels off the sampled colour (red 222 against 220) after a Color Replacement click
 /// sampling the 220 red, with `tolerance`: 1 % (2.55 levels) reaches it, 0 % would not.
 fn near_red(tolerance: serde_json::Value) -> [f32; 4] {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 80, "height": 80})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("edit.fill", json!({"color": "#dc1e1e"})).unwrap();
@@ -156,7 +156,7 @@ fn the_command_runs_tolerance_below_one_as_one() {
     for t in [json!(0), json!(-5)] {
         assert_eq!(near_red(t.clone()), one, "tolerance {t} runs as 1");
     }
-    let spec = photocraft_engine::command_specs().iter().find(|s| s.id == "paint.colorReplacement").unwrap();
+    let spec = lienzo_engine::command_specs().iter().find(|s| s.id == "paint.colorReplacement").unwrap();
     assert!(spec.params.contains("\"tolerance\":1..100"), "{}", spec.params);
 }
 
@@ -164,7 +164,7 @@ fn the_command_runs_tolerance_below_one_as_one() {
 fn a_restored_fraction_reaches_the_stroke_as_a_whole_number() {
     // The options bar need not have drawn: the stroke's params round it themselves, so a stroke
     // replaces the same pixels before and after the bar shows the setting.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     for (saved, want) in [(12.5, 13.0), (23.4, 23.0), (0.0, 1.0), (150.0, 100.0)] {
         app.ui.tool_options.cr_tolerance = saved;
         let p = crate::retouch_ui::color_replacement_params(&app);

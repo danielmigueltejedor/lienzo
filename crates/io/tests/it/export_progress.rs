@@ -4,11 +4,11 @@
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, IoError};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent};
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, IoError};
+use lienzo_raster::{Interrupt, Surface};
 
 /// Three pixel layers (two in a group) of noise-like pixels at `depth`.
 fn layered(depth: SampleType) -> Document {
@@ -29,7 +29,7 @@ fn export_recorded(doc: &Document, name: &str, opts: &ExportOptions) -> (Vec<u8>
     let seen = Mutex::new(Vec::new());
     let cancel = || false;
     let progress = |f: f32| seen.lock().unwrap().push(f);
-    let r = photocraft_io::export_with(doc, name, opts, &Interrupt::new(&cancel, &progress)).unwrap();
+    let r = lienzo_io::export_with(doc, name, opts, &Interrupt::new(&cancel, &progress)).unwrap();
     (r.bytes, seen.into_inner().unwrap())
 }
 
@@ -52,7 +52,7 @@ fn export_reports_monotonic_progress_and_writes_the_same_bytes() {
                 continue;
             }
             let (bytes, seen) = export_recorded(&doc, name, opts);
-            let plain = photocraft_io::export(&doc, name, opts).unwrap().bytes;
+            let plain = lienzo_io::export(&doc, name, opts).unwrap().bytes;
             // .pcraft bundles carry a save time, so only the formats without one compare exactly.
             if !name.ends_with(".pcraft") {
                 assert!(bytes == plain, "{name} {depth:?}: progress reporting changed the bytes");
@@ -82,12 +82,12 @@ fn a_cancelled_export_stops_with_cancelled() {
     for name in ["a.psd", "a.tif", "a.pcraft", "a.png"] {
         // Cancelled from the start, and cancelled after the first progress report.
         let cancelled = || true;
-        let r = photocraft_io::export_with(&doc, name, &ExportOptions { tiff_layers: true, ..Default::default() }, &Interrupt::cancel_only(&cancelled));
+        let r = lienzo_io::export_with(&doc, name, &ExportOptions { tiff_layers: true, ..Default::default() }, &Interrupt::cancel_only(&cancelled));
         assert!(matches!(r, Err(IoError::Cancelled)), "{name}: {:?}", r.map(|r| r.bytes.len()));
         let stop = AtomicBool::new(false);
         let cancel = || stop.load(Ordering::Relaxed);
         let progress = |_: f32| stop.store(true, Ordering::Relaxed);
-        let r = photocraft_io::export_with(&doc, name, &ExportOptions { tiff_layers: true, ..Default::default() }, &Interrupt::new(&cancel, &progress));
+        let r = lienzo_io::export_with(&doc, name, &ExportOptions { tiff_layers: true, ..Default::default() }, &Interrupt::new(&cancel, &progress));
         assert!(matches!(r, Err(IoError::Cancelled)), "{name} midway: {:?}", r.map(|r| r.bytes.len()));
     }
 }
@@ -101,9 +101,9 @@ fn encoded_saves_write_exactly_the_exported_bytes() {
         let doc = layered(depth);
         for name in ["a.psd", "a.psb", "a.png"] {
             let opts = ExportOptions::default();
-            let want = photocraft_io::export(&doc, name, &opts).unwrap().bytes;
-            let r = photocraft_io::encode_with(&doc, name, &opts, &Interrupt::NONE).unwrap();
-            assert_eq!(matches!(r.encoded, photocraft_io::Encoded::Psd(_)), !name.ends_with(".png"), "{name}");
+            let want = lienzo_io::export(&doc, name, &opts).unwrap().bytes;
+            let r = lienzo_io::encode_with(&doc, name, &opts, &Interrupt::NONE).unwrap();
+            assert_eq!(matches!(r.encoded, lienzo_io::Encoded::Psd(_)), !name.ends_with(".png"), "{name}");
             assert_eq!(r.encoded.encoded_len().unwrap(), want.len() as u64, "{name} {depth:?}: the encoded length");
             let mut file = std::io::Cursor::new(Vec::new());
             r.encoded.write_to(&mut file).unwrap();

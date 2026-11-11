@@ -1,7 +1,7 @@
 //! One integration-test process keeps its global adjustment-table cache isolated from parallel
 //! unit tests.
-use photocraft_compose::lut_rows::{self, ROW_LEN};
-use photocraft_engine::Session;
+use lienzo_compose::lut_rows::{self, ROW_LEN};
+use lienzo_engine::Session;
 use serde_json::json;
 
 #[test]

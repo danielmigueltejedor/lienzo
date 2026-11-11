@@ -18,7 +18,7 @@ fn menu_bar_rows_use_the_capital_v() {
 
 #[test]
 fn command_labels_use_the_capital_v() {
-    let specs = photocraft_engine::cmd::command_specs();
+    let specs = lienzo_engine::cmd::command_specs();
     for (label, id) in NEW {
         let spec = specs.iter().find(|s| s.id == id).expect("command spec");
         assert_eq!(spec.label, label);

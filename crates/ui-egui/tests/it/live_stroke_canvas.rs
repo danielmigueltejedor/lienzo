@@ -8,17 +8,17 @@
 //! at several zooms, with smoothing, pressure, and 8- and 16-bit documents. Skips when no GPU
 //! adapter exists (like `color_managed_canvas.rs`).
 
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::control::{ControlRequest, handle};
+use lienzo_ui_egui::LienzoApp;
+use lienzo_ui_egui::control::{ControlRequest, handle};
 use serde_json::{Value, json};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 type Pixels = Vec<[u8; 4]>;
 
 #[test]
 fn raw_pointer_brush_and_mixer_pixels_appear_in_the_input_frame() {
-    use photocraft_ui_egui::state::Tool;
-    let _gpu = photocraft_testkit::gpu_lock();
+    use lienzo_ui_egui::state::Tool;
+    let _gpu = lienzo_testkit::gpu_lock();
     for flip in [false, true] {
         for tool in [Tool::Brush, Tool::MixerBrush] {
             let Some(mut h) = harness() else { return };
@@ -50,7 +50,7 @@ fn raw_pointer_brush_and_mixer_pixels_appear_in_the_input_frame() {
             assert_ne!(image.get_pixel(next.x as u32, next.y as u32).0, before, "{tool:?} flip={flip}: move visible in its own frame");
             if tool == Tool::MixerBrush
                 && !flip
-                && let Ok(path) = std::env::var("PHOTOCRAFT_TEST_SNAPSHOT")
+                && let Ok(path) = std::env::var("LIENZO_TEST_SNAPSHOT")
             {
                 image.save(path).unwrap();
             }
@@ -70,8 +70,8 @@ fn raw_pointer_brush_and_mixer_pixels_appear_in_the_input_frame() {
 fn harness() -> Option<Harness> {
     let built = std::panic::catch_unwind(|| {
         egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 640.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -171,7 +171,7 @@ fn max_diff(a: &[[u8; 4]], b: &[[u8; 4]]) -> u8 {
 }
 
 fn the_canvas_shows_the_committed_stroke_part(part: usize) {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(mut h) = harness() else { return };
     h.run_steps(4);
     let mut cases = Vec::new();
@@ -223,8 +223,8 @@ fn the_canvas_shows_the_committed_stroke_part_3() {
 /// A dialog-owned brush must remain above the image even when a live painting tool is selected.
 #[test]
 fn refine_edge_brush_stays_visible_above_the_canvas_with_live_tools() {
-    use photocraft_ui_egui::state::Tool;
-    let _gpu = photocraft_testkit::gpu_lock();
+    use lienzo_ui_egui::state::Tool;
+    let _gpu = lienzo_testkit::gpu_lock();
     for flip in [false, true] {
         for tool in [Tool::Brush, Tool::MixerBrush] {
             let Some(mut h) = harness() else { return };
@@ -248,7 +248,7 @@ fn refine_edge_brush_stays_visible_above_the_canvas_with_live_tools() {
             assert!(cross[0] > 100 && cross[1] > 100 && cross[2] > 100, "{tool:?} flip={flip}: Refine Edge cross is hidden: {cross:?}");
             if tool == Tool::MixerBrush
                 && !flip
-                && let Ok(path) = std::env::var("PHOTOCRAFT_DIALOG_SNAPSHOT")
+                && let Ok(path) = std::env::var("LIENZO_DIALOG_SNAPSHOT")
             {
                 image.save(path).unwrap();
             }
@@ -259,8 +259,8 @@ fn refine_edge_brush_stays_visible_above_the_canvas_with_live_tools() {
 /// Deferred live-tool painting uses the camera changed by this frame's navigation input.
 #[test]
 fn live_tool_camera_navigation_is_visible_in_the_input_frame() {
-    use photocraft_ui_egui::state::Tool;
-    let _gpu = photocraft_testkit::gpu_lock();
+    use lienzo_ui_egui::state::Tool;
+    let _gpu = lienzo_testkit::gpu_lock();
     for flip in [false, true] {
         for tool in [Tool::Brush, Tool::MixerBrush] {
             for zoom in [false, true] {
@@ -299,7 +299,7 @@ fn live_tool_camera_navigation_is_visible_in_the_input_frame() {
                 if tool == Tool::MixerBrush
                     && flip
                     && zoom
-                    && let Ok(path) = std::env::var("PHOTOCRAFT_NAV_SNAPSHOT")
+                    && let Ok(path) = std::env::var("LIENZO_NAV_SNAPSHOT")
                 {
                     settled.save(path).unwrap();
                 }

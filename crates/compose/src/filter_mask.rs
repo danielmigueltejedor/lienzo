@@ -8,8 +8,8 @@
 //! keep the mixed result as their pixels, so PSD import mixes ([`mix`]) and export unmixes
 //! ([`unmix`]).
 
-use photocraft_doc::LayerMask;
-use photocraft_raster::Surface;
+use lienzo_doc::LayerMask;
+use lienzo_raster::Surface;
 
 /// `filtered` mixed over `base` (the unfiltered pixels) through `mask`: premultiplied, any
 /// channel layout. Pixels the mask hides entirely are `base`'s.
@@ -123,9 +123,9 @@ pub fn unmix(base: &Surface, mixed: &Surface, mask: &LayerMask) -> Surface {
 
 #[cfg(test)]
 mod tests {
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::LayerMask;
-    use photocraft_raster::Surface;
+    use lienzo_color::{ColorMode, PixelFormat, SampleType};
+    use lienzo_doc::LayerMask;
+    use lienzo_raster::Surface;
 
     use super::*;
 

@@ -4,13 +4,13 @@
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 
-use photocraft_color::SampleType;
-use photocraft_doc::{AdvancedBlending, Document, Layer, LayerContent, LayerId};
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::Surface;
+use lienzo_color::SampleType;
+use lienzo_doc::{AdvancedBlending, Document, Layer, LayerContent, LayerId};
+use lienzo_geom::{Rect, TILE_SIZE, TileCoord};
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
-use crate::{PhotocraftApp, widgets};
+use crate::{LienzoApp, widgets};
 
 /// The attributes the Attribute filter picks from, in Photoshop's order: the nine attributes,
 /// then their opposites.
@@ -173,7 +173,7 @@ fn has_visible_pixels(s: &Surface, canvas: Option<Rect>) -> bool {
             block.chunks_exact(bpp).fold(0u8, |acc, px| px.get(at..at + size).map_or(acc, |a| a.iter().fold(acc, |acc, b| acc | b))) != 0
         }
     };
-    let tile_visible = |c: &TileCoord, t: &Arc<photocraft_raster::Tile>| {
+    let tile_visible = |c: &TileCoord, t: &Arc<lienzo_raster::Tile>| {
         let bytes = t.bytes();
         let r = c.rect();
         let Some(clip) = clip.filter(|clip| !clip.contains_rect(&r)) else { return bytes.chunks(bpp.saturating_mul(1024)).any(visible) };
@@ -222,7 +222,7 @@ type EmptyCache = (Weak<Document>, Arc<HashSet<LayerId>>);
 /// document: a layer erased to nothing has every pixel read, too much for every repaint of the
 /// Layers panel. Keyed by the document itself rather than its revision, which also moves when only
 /// the selection does.
-pub fn empty_layers(app: &PhotocraftApp, attribute: Attribute) -> Option<Arc<HashSet<LayerId>>> {
+pub fn empty_layers(app: &LienzoApp, attribute: Attribute) -> Option<Arc<HashSet<LayerId>>> {
     if !matches!(attribute, Attribute::Empty | Attribute::NotEmpty) {
         return None;
     }
@@ -253,7 +253,7 @@ pub fn parse(v: &serde_json::Value) -> Result<Attribute, String> {
 }
 
 /// The Attribute filter's controls: the attribute dropdown.
-pub fn controls(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn controls(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let attributes: Vec<(Attribute, &str)> = Attribute::ALL.into_iter().map(|a| (a, a.label())).collect();
     let width = ui.available_width().max(96.0);
     widgets::dropdown(ui, "layer-filter-attribute", tl!("Attribute"), &mut app.ui.layer_filter_attribute, &attributes, width);

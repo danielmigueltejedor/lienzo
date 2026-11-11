@@ -4046,6 +4046,568 @@ dependencies = [
 ]
 
 [[package]]
+name = "lienzo"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "async-io",
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "clap",
+ "core-graphics2",
+ "craft-update",
+ "dispatch2",
+ "eframe",
+ "egui",
+ "fmv-macos-events",
+ "futures-lite",
+ "lienzo-automation",
+ "lienzo-cms",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-engine",
+ "lienzo-format",
+ "lienzo-geom",
+ "lienzo-io",
+ "lienzo-raster",
+ "lienzo-tablet",
+ "lienzo-ui-egui",
+ "log",
+ "muda",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "open",
+ "plist",
+ "resvg",
+ "rfd",
+ "ron",
+ "roxmltree 0.21.1",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "winit",
+ "winresource",
+ "winsafe",
+ "wl-clipboard-rs",
+ "x11rb",
+ "xcap",
+ "zbus",
+]
+
+[[package]]
+name = "lienzo-affinity"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "proptest",
+ "ruzstd",
+]
+
+[[package]]
+name = "lienzo-algo"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "lienzo-color",
+ "lienzo-geom",
+ "lienzo-raster",
+ "lienzo-testkit",
+ "rayon",
+ "rustfft",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lienzo-automation"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "cap-std",
+ "clap",
+ "getrandom 0.3.4",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-engine",
+ "lienzo-format",
+ "lienzo-geom",
+ "lienzo-gpu",
+ "lienzo-io",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-raw",
+ "pollster 1.0.1",
+ "rmcp",
+ "rustix 1.1.5",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "wgpu",
+]
+
+[[package]]
+name = "lienzo-cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "clap_complete",
+ "clap_mangen",
+ "lienzo-automation",
+ "lienzo-cms",
+ "lienzo-codecs",
+ "lienzo-doc",
+ "lienzo-engine",
+ "lienzo-format",
+ "lienzo-io",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-raw",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "winresource",
+ "xtask",
+]
+
+[[package]]
+name = "lienzo-cms"
+version = "0.1.0"
+dependencies = [
+ "moxcms",
+ "rayon",
+]
+
+[[package]]
+name = "lienzo-codecs"
+version = "0.1.0"
+dependencies = [
+ "craft-jpeg",
+ "exr",
+ "flate2",
+ "half",
+ "image",
+ "image-webp",
+ "jpeg-encoder",
+ "jxl-oxide",
+ "lienzo-heif",
+ "png 0.18.1",
+ "proptest",
+ "rayon",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tiff",
+ "zune-core 0.5.3",
+ "zune-jpeg 0.5.15",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "lienzo-color"
+version = "0.1.0"
+dependencies = [
+ "lienzo-cms",
+ "serde",
+]
+
+[[package]]
+name = "lienzo-compose"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "lienzo-cms",
+ "lienzo-color",
+ "lienzo-doc",
+ "lienzo-geom",
+ "lienzo-paint",
+ "lienzo-raster",
+ "lienzo-vector",
+ "proptest",
+ "rayon",
+]
+
+[[package]]
+name = "lienzo-doc"
+version = "0.1.0"
+dependencies = [
+ "lienzo-color",
+ "lienzo-geom",
+ "lienzo-raster",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lienzo-engine"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "craft-print",
+ "exr",
+ "flate2",
+ "lienzo-affinity",
+ "lienzo-algo",
+ "lienzo-cms",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-format",
+ "lienzo-geom",
+ "lienzo-io",
+ "lienzo-ipp",
+ "lienzo-ops",
+ "lienzo-paint",
+ "lienzo-plugins",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-raw",
+ "lienzo-testkit",
+ "lienzo-text",
+ "lienzo-vector",
+ "rayon",
+ "roxmltree 0.21.1",
+ "same-file",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "wat",
+ "web-time",
+ "winsafe",
+]
+
+[[package]]
+name = "lienzo-format"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "craft-pcraft-format",
+ "crc32fast",
+ "exacl",
+ "flate2",
+ "libc",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-doc",
+ "lienzo-geom",
+ "lienzo-raster",
+ "proptest",
+ "rustix 1.1.5",
+ "ruzstd",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "winsafe",
+]
+
+[[package]]
+name = "lienzo-geom"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "lienzo-gpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "half",
+ "lienzo-algo",
+ "lienzo-cms",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-geom",
+ "lienzo-raster",
+ "lienzo-vector",
+ "log",
+ "pollster 1.0.1",
+ "rayon",
+ "thiserror 2.0.21",
+ "wgpu",
+]
+
+[[package]]
+name = "lienzo-heif"
+version = "0.1.0"
+dependencies = [
+ "heic-rs",
+]
+
+[[package]]
+name = "lienzo-io"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "craft-docpath",
+ "craft-pdf",
+ "crc32fast",
+ "flate2",
+ "imagesize",
+ "kurbo 0.13.1",
+ "lienzo-affinity",
+ "lienzo-algo",
+ "lienzo-cms",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-format",
+ "lienzo-geom",
+ "lienzo-paint",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-raw",
+ "lienzo-testkit",
+ "lienzo-text",
+ "lienzo-vector",
+ "lopdf",
+ "miniz_oxide 0.9.1",
+ "proptest",
+ "resvg",
+ "roxmltree 0.21.1",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tiff",
+ "ttf-parser",
+ "zune-core 0.5.3",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "lienzo-ipp"
+version = "0.1.0"
+
+[[package]]
+name = "lienzo-ops"
+version = "0.1.0"
+dependencies = [
+ "lienzo-doc",
+]
+
+[[package]]
+name = "lienzo-paint"
+version = "0.1.0"
+dependencies = [
+ "lienzo-cms",
+ "lienzo-color",
+ "lienzo-geom",
+ "lienzo-raster",
+ "rayon",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lienzo-plugins"
+version = "0.1.0"
+dependencies = [
+ "lienzo-color",
+ "lienzo-geom",
+ "lienzo-raster",
+ "rayon",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "wasmi",
+ "wat",
+]
+
+[[package]]
+name = "lienzo-psd"
+version = "0.1.0"
+dependencies = [
+ "encoding_rs",
+ "flate2",
+ "lienzo-psd",
+ "proptest",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "lienzo-raster"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "lienzo-color",
+ "lienzo-geom",
+ "lz4_flex",
+ "proptest",
+ "rayon",
+ "rustix 1.1.5",
+ "serde",
+ "sysinfo",
+ "winsafe",
+]
+
+[[package]]
+name = "lienzo-raw"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "image",
+ "jxl-oxide",
+ "lienzo-raw",
+ "png 0.18.1",
+ "rayon",
+ "zune-core 0.5.3",
+ "zune-jpeg 0.5.15",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "lienzo-tablet"
+version = "0.1.0"
+dependencies = [
+ "block2 0.6.2",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-graphics",
+ "objc2-foundation 0.3.2",
+ "windows",
+ "wintab",
+ "x11rb",
+]
+
+[[package]]
+name = "lienzo-testkit"
+version = "0.1.0"
+dependencies = [
+ "memory-stats",
+ "serde_json",
+]
+
+[[package]]
+name = "lienzo-text"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "lienzo-color",
+ "lienzo-doc",
+ "lienzo-geom",
+ "lienzo-psd",
+ "lienzo-raster",
+ "parley",
+ "rayon",
+ "skrifa 0.47.0",
+]
+
+[[package]]
+name = "lienzo-ui-egui"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "chrono",
+ "craft-print",
+ "craft-ui",
+ "craft-update",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "egui_kittest",
+ "epaint_default_fonts",
+ "flate2",
+ "icu_casemap",
+ "icu_locale_core",
+ "lienzo-algo",
+ "lienzo-cms",
+ "lienzo-codecs",
+ "lienzo-color",
+ "lienzo-compose",
+ "lienzo-doc",
+ "lienzo-engine",
+ "lienzo-format",
+ "lienzo-geom",
+ "lienzo-gpu",
+ "lienzo-io",
+ "lienzo-paint",
+ "lienzo-plugins",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-raw",
+ "lienzo-testkit",
+ "lienzo-text",
+ "lienzo-vector",
+ "log",
+ "nodalia-theme",
+ "rayon",
+ "serde",
+ "serde_json",
+ "sys-locale",
+ "tempfile",
+ "toml",
+ "unicode-bidi",
+ "web-time",
+ "winsafe",
+]
+
+[[package]]
+name = "lienzo-vector"
+version = "0.1.0"
+dependencies = [
+ "lienzo-color",
+ "lienzo-doc",
+ "lienzo-geom",
+ "lienzo-raster",
+ "rayon",
+]
+
+[[package]]
+name = "lienzo-web"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "lienzo-codecs",
+ "lienzo-doc",
+ "lienzo-engine",
+ "lienzo-io",
+ "lienzo-paint",
+ "lienzo-psd",
+ "lienzo-raster",
+ "lienzo-ui-egui",
+ "log",
+ "rfd",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "lienzo-web-boot"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5305,568 +5867,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "photocraft"
-version = "0.20.1"
-dependencies = [
- "arboard",
- "async-io",
- "base64 0.22.1",
- "blake3",
- "chrono",
- "clap",
- "core-graphics2",
- "craft-update",
- "dispatch2",
- "eframe",
- "egui",
- "fmv-macos-events",
- "futures-lite",
- "log",
- "muda",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "open",
- "photocraft-automation",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-io",
- "photocraft-raster",
- "photocraft-tablet",
- "photocraft-ui-egui",
- "plist",
- "resvg",
- "rfd",
- "ron",
- "roxmltree 0.21.1",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "winit",
- "winresource",
- "winsafe",
- "wl-clipboard-rs",
- "x11rb",
- "xcap",
- "zbus",
-]
-
-[[package]]
-name = "photocraft-affinity"
-version = "0.20.1"
-dependencies = [
- "crc32fast",
- "flate2",
- "proptest",
- "ruzstd",
-]
-
-[[package]]
-name = "photocraft-algo"
-version = "0.20.1"
-dependencies = [
- "criterion",
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
- "photocraft-testkit",
- "rayon",
- "rustfft",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "photocraft-automation"
-version = "0.20.1"
-dependencies = [
- "base64 0.23.1",
- "cap-std",
- "clap",
- "getrandom 0.3.4",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-gpu",
- "photocraft-io",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "pollster 1.0.1",
- "rmcp",
- "rustix 1.1.5",
- "schemars",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
- "wgpu",
-]
-
-[[package]]
-name = "photocraft-cli"
-version = "0.20.1"
-dependencies = [
- "clap",
- "clap_complete",
- "clap_mangen",
- "photocraft-automation",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-io",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "winresource",
- "xtask",
-]
-
-[[package]]
-name = "photocraft-cms"
-version = "0.20.1"
-dependencies = [
- "moxcms",
- "rayon",
-]
-
-[[package]]
-name = "photocraft-codecs"
-version = "0.20.1"
-dependencies = [
- "craft-jpeg",
- "exr",
- "flate2",
- "half",
- "image",
- "image-webp",
- "jpeg-encoder",
- "jxl-oxide",
- "photocraft-heif",
- "png 0.18.1",
- "proptest",
- "rayon",
- "serde_json",
- "thiserror 2.0.21",
- "tiff",
- "zune-core 0.5.3",
- "zune-jpeg 0.5.15",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "photocraft-color"
-version = "0.20.1"
-dependencies = [
- "photocraft-cms",
- "serde",
-]
-
-[[package]]
-name = "photocraft-compose"
-version = "0.20.1"
-dependencies = [
- "criterion",
- "photocraft-cms",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-paint",
- "photocraft-raster",
- "photocraft-vector",
- "proptest",
- "rayon",
-]
-
-[[package]]
-name = "photocraft-doc"
-version = "0.20.1"
-dependencies = [
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "photocraft-engine"
-version = "0.20.1"
-dependencies = [
- "base64 0.22.1",
- "blake3",
- "chrono",
- "craft-print",
- "exr",
- "flate2",
- "photocraft-affinity",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-io",
- "photocraft-ipp",
- "photocraft-ops",
- "photocraft-paint",
- "photocraft-plugins",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
- "rayon",
- "roxmltree 0.21.1",
- "same-file",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "wat",
- "web-time",
- "winsafe",
-]
-
-[[package]]
-name = "photocraft-format"
-version = "0.20.1"
-dependencies = [
- "blake3",
- "craft-pcraft-format",
- "crc32fast",
- "exacl",
- "flate2",
- "libc",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
- "proptest",
- "rustix 1.1.5",
- "ruzstd",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "winsafe",
-]
-
-[[package]]
-name = "photocraft-geom"
-version = "0.20.1"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "photocraft-gpu"
-version = "0.20.1"
-dependencies = [
- "bytemuck",
- "half",
- "log",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
- "photocraft-vector",
- "pollster 1.0.1",
- "rayon",
- "thiserror 2.0.21",
- "wgpu",
-]
-
-[[package]]
-name = "photocraft-heif"
-version = "0.20.1"
-dependencies = [
- "heic-rs",
-]
-
-[[package]]
-name = "photocraft-io"
-version = "0.20.1"
-dependencies = [
- "blake3",
- "craft-docpath",
- "craft-pdf",
- "crc32fast",
- "flate2",
- "imagesize",
- "kurbo 0.13.1",
- "lopdf",
- "miniz_oxide 0.9.1",
- "photocraft-affinity",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-paint",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
- "proptest",
- "resvg",
- "roxmltree 0.21.1",
- "serde_json",
- "thiserror 2.0.21",
- "tiff",
- "ttf-parser",
- "zune-core 0.5.3",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "photocraft-ipp"
-version = "0.20.1"
-
-[[package]]
-name = "photocraft-ops"
-version = "0.20.1"
-dependencies = [
- "photocraft-doc",
-]
-
-[[package]]
-name = "photocraft-paint"
-version = "0.20.1"
-dependencies = [
- "photocraft-cms",
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "photocraft-plugins"
-version = "0.20.1"
-dependencies = [
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "wasmi",
- "wat",
-]
-
-[[package]]
-name = "photocraft-psd"
-version = "0.20.1"
-dependencies = [
- "encoding_rs",
- "flate2",
- "photocraft-psd",
- "proptest",
- "serde",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "photocraft-raster"
-version = "0.20.1"
-dependencies = [
- "crc32fast",
- "lz4_flex",
- "photocraft-color",
- "photocraft-geom",
- "proptest",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "sysinfo",
- "winsafe",
-]
-
-[[package]]
-name = "photocraft-raw"
-version = "0.20.1"
-dependencies = [
- "flate2",
- "image",
- "jxl-oxide",
- "photocraft-raw",
- "png 0.18.1",
- "rayon",
- "zune-core 0.5.3",
- "zune-jpeg 0.5.15",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "photocraft-tablet"
-version = "0.20.1"
-dependencies = [
- "block2 0.6.2",
- "log",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-core-graphics",
- "objc2-foundation 0.3.2",
- "windows",
- "wintab",
- "x11rb",
-]
-
-[[package]]
-name = "photocraft-testkit"
-version = "0.20.1"
-dependencies = [
- "memory-stats",
- "serde_json",
-]
-
-[[package]]
-name = "photocraft-text"
-version = "0.20.1"
-dependencies = [
- "flate2",
- "parley",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-psd",
- "photocraft-raster",
- "rayon",
- "skrifa 0.47.0",
-]
-
-[[package]]
-name = "photocraft-ui-egui"
-version = "0.20.1"
-dependencies = [
- "base64 0.23.1",
- "chrono",
- "craft-print",
- "craft-ui",
- "craft-update",
- "eframe",
- "egui",
- "egui_extras",
- "egui_kittest",
- "epaint_default_fonts",
- "flate2",
- "icu_casemap",
- "icu_locale_core",
- "log",
- "nodalia-theme",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-gpu",
- "photocraft-io",
- "photocraft-paint",
- "photocraft-plugins",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
- "rayon",
- "serde",
- "serde_json",
- "sys-locale",
- "tempfile",
- "toml",
- "unicode-bidi",
- "web-time",
- "winsafe",
-]
-
-[[package]]
-name = "photocraft-vector"
-version = "0.20.1"
-dependencies = [
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
- "rayon",
-]
-
-[[package]]
-name = "photocraft-web"
-version = "0.20.1"
-dependencies = [
- "eframe",
- "egui",
- "js-sys",
- "log",
- "photocraft-codecs",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-io",
- "photocraft-paint",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-ui-egui",
- "rfd",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "photocraft-web-boot"
-version = "0.20.1"
-dependencies = [
- "flate2",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -9745,7 +9745,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.20.1"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "serde",

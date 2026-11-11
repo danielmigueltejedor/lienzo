@@ -2,19 +2,19 @@
 
 use crate::common;
 use common::*;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::text::{CharStyle, ParagraphStyle, TextRun};
-use photocraft_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer, VarKind, VariableDef};
-use photocraft_format::*;
-use photocraft_raster::Rgba8Image;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::text::{CharStyle, ParagraphStyle, TextRun};
+use lienzo_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer, VarKind, VariableDef};
+use lienzo_format::*;
+use lienzo_raster::Rgba8Image;
 
 const MODES: [ColorMode; 4] = [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab];
 
 #[test]
 fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
-    use photocraft_doc::effects::GradientInterpolation;
-    use photocraft_doc::{Color, Effect, FxCommon, Gradient};
+    use lienzo_doc::effects::GradientInterpolation;
+    use lienzo_doc::{Color, Effect, FxCommon, Gradient};
 
     for mode in MODES {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
@@ -25,7 +25,7 @@ fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
                 stops: vec![(0.0, Color::rgb(0.123456, 0.4, 0.9)), (0.4, Color::WHITE), (1.0, Color::BLACK)],
             };
             let effect = Effect::GradientOverlay {
-                common: FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
+                common: FxCommon::new(lienzo_doc::BlendMode::Normal, 1.0),
                 gradient: Gradient::default(),
                 dither: true,
                 interpolation: Some(source),
@@ -40,15 +40,15 @@ fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
 
 #[test]
 fn old_effect_snapshots_need_no_interpolation_record() {
-    let effect = photocraft_doc::Effect::GradientOverlay {
-        common: photocraft_doc::FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
-        gradient: photocraft_doc::Gradient::default(),
+    let effect = lienzo_doc::Effect::GradientOverlay {
+        common: lienzo_doc::FxCommon::new(lienzo_doc::BlendMode::Normal, 1.0),
+        gradient: lienzo_doc::Gradient::default(),
         dither: false,
         interpolation: None,
     };
     let json = serde_json::to_value(&effect).unwrap();
     assert!(json["GradientOverlay"].get("interpolation").is_none());
-    assert_eq!(serde_json::from_value::<photocraft_doc::Effect>(json).unwrap(), effect);
+    assert_eq!(serde_json::from_value::<lienzo_doc::Effect>(json).unwrap(), effect);
 }
 
 #[test]
@@ -56,12 +56,12 @@ fn custom_shape_stroke_roundtrip_keeps_every_style_field() {
     for mode in MODES {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
             let mut d = rich_doc(mode, depth);
-            let stroke = photocraft_doc::ShapeStroke {
+            let stroke = lienzo_doc::ShapeStroke {
                 width: 5.5,
                 opacity: 0.35,
-                align: photocraft_doc::StrokeAlign::Outside,
-                cap: photocraft_doc::LineCap::Square,
-                join: photocraft_doc::LineJoin::Bevel,
+                align: lienzo_doc::StrokeAlign::Outside,
+                cap: lienzo_doc::LineCap::Square,
+                join: lienzo_doc::LineJoin::Bevel,
                 miter_limit: 2.0,
                 dashes: vec![0.0, 2.0, 4.0, 1.0, 1.5, 3.0],
                 dash_offset: -0.5,
@@ -69,8 +69,8 @@ fn custom_shape_stroke_roundtrip_keeps_every_style_field() {
             };
             d.layers.push(Layer::new(
                 "Custom stroke",
-                LayerContent::Shape(photocraft_doc::ShapeLayer {
-                    path: photocraft_doc::Path::new(vec![photocraft_doc::Subpath::polygon(&[(10.0, 10.0), (40.0, 10.0), (25.0, 40.0)])]),
+                LayerContent::Shape(lienzo_doc::ShapeLayer {
+                    path: lienzo_doc::Path::new(vec![lienzo_doc::Subpath::polygon(&[(10.0, 10.0), (40.0, 10.0), (25.0, 40.0)])]),
                     stroke: Some(stroke),
                     ..Default::default()
                 }),
@@ -180,7 +180,7 @@ impl ByteSource for FsDir {
 
 /// Deepest group nesting in `layers` (0 when there are no groups).
 fn group_depth(layers: &[Layer]) -> usize {
-    layers.iter().map(|l| if let photocraft_doc::LayerContent::Group(g) = &l.content { 1 + group_depth(&g.children) } else { 0 }).max().unwrap_or(0)
+    layers.iter().map(|l| if let lienzo_doc::LayerContent::Group(g) = &l.content { 1 + group_depth(&g.children) } else { 0 }).max().unwrap_or(0)
 }
 
 /// [`rich_doc`] with its layers wrapped in groups until they are nested `levels` deep.
@@ -225,13 +225,13 @@ fn group_depth_matches_craft_pcraft_format() {
 
 #[test]
 fn empty_document_roundtrips() {
-    let doc = Document::new("empty", photocraft_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    let doc = Document::new("empty", lienzo_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     assert_eq!(load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap(), doc);
 }
 
 #[test]
 fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
-    let mut doc = Document::new("exhausted", photocraft_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("exhausted", lienzo_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
     doc.slices.list.push(Slice { id: u32::MAX, ..Default::default() });
     doc.text_styles.character.push(CharacterStyleDef { id: u32::MAX, ..Default::default() });
     doc.text_styles.paragraph.push(ParagraphStyleDef { id: u32::MAX, ..Default::default() });
@@ -241,8 +241,8 @@ fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
             text: "ab".into(),
             runs: vec![TextRun { len: 1, style: CharStyle::default() }, TextRun { len: usize::MAX, style: CharStyle { size_pt: 24.0, ..Default::default() } }],
             paragraphs: vec![
-                photocraft_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
-                photocraft_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
+                lienzo_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
+                lienzo_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
             ],
             ..Default::default()
         }),
@@ -262,8 +262,8 @@ fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
 
 #[test]
 fn text_run_baseline_roundtrips() {
-    use photocraft_doc::text::FontBaseline;
-    let mut doc = Document::new("scripts", photocraft_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    use lienzo_doc::text::FontBaseline;
+    let mut doc = Document::new("scripts", lienzo_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
     doc.layers.push(Layer::new(
         "Text",
         LayerContent::Text(TextLayer {
@@ -428,7 +428,7 @@ fn directory_save_rejects_manifest_symlink_without_overwriting_target() {
 
 #[test]
 fn identical_tiles_are_stored_once() {
-    let mut doc = Document::new("d", photocraft_doc::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("d", lienzo_doc::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
     let mut a = Layer::raster("a", doc.pixel_format());
     scribble(a.surface_mut().unwrap(), 5, false);
     let b = a.duplicate();
@@ -445,10 +445,10 @@ fn identical_tiles_are_stored_once() {
 #[test]
 fn solid_fill_reopens_with_one_shared_tile() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        let size = photocraft_doc::Size::new(2048, 2048);
+        let size = lienzo_doc::Size::new(2048, 2048);
         let mut doc = Document::new("d", size, ColorMode::Rgb, depth);
         let mut l = Layer::raster("solid", doc.pixel_format());
-        l.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::from_size(size), &[1.0, 0.5, 0.25, 1.0]);
+        l.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::from_size(size), &[1.0, 0.5, 0.25, 1.0]);
         doc.layers.push(l);
         let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
         let one_tile = (256 * 256 * doc.pixel_format().bytes_per_pixel()) as u64;
@@ -500,7 +500,7 @@ fn previews_embedded_and_readable() {
     let opts = SaveOptions { thumbnail: Some(thumb.clone()), composite: Some(thumb.clone()), ..Default::default() };
     let bytes = save_to_bytes(&doc, &opts).unwrap();
     let png = read_thumbnail(&bytes).unwrap().unwrap();
-    let img = photocraft_codecs::decode(&png).unwrap();
+    let img = lienzo_codecs::decode(&png).unwrap();
     assert_eq!(img.dimensions(), (4, 3));
     assert_eq!(img.to_rgba8(), thumb.pixels);
     let m = read_manifest(&bytes).unwrap();
@@ -629,14 +629,14 @@ fn vector_fields_roundtrip_and_default_when_absent() {
         }
     }
     strip(&mut v["layers"]);
-    let old: photocraft_format::manifest::DocM = serde_json::from_value(v).unwrap();
+    let old: lienzo_format::manifest::DocM = serde_json::from_value(v).unwrap();
     assert!(old.paths.is_empty() && old.work_path.is_none());
     assert!(old.layers.iter().all(|l| l.vector_mask.is_none()));
     let shapes: Vec<_> = old
         .layers
         .iter()
         .filter_map(|l| match &l.content {
-            photocraft_format::manifest::ContentM::Shape { density, feather, .. } => Some((*density, *feather)),
+            lienzo_format::manifest::ContentM::Shape { density, feather, .. } => Some((*density, *feather)),
             _ => None,
         })
         .collect();
@@ -647,8 +647,8 @@ fn vector_fields_roundtrip_and_default_when_absent() {
 /// before `kern` existed load with no manual kerning.
 #[test]
 fn text_kerning_roundtrips_and_defaults() {
-    use photocraft_doc::LayerContent;
-    use photocraft_doc::text::Kerning;
+    use lienzo_doc::LayerContent;
+    use lienzo_doc::text::Kerning;
     let doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
     let back = load_from_bytes(&bytes).unwrap();
@@ -677,7 +677,7 @@ fn text_kerning_roundtrips_and_defaults() {
     }
     strip(&mut v);
     assert!(!v.to_string().contains("\"kern\""));
-    let old: photocraft_format::manifest::DocM = serde_json::from_value(v).unwrap();
+    let old: lienzo_format::manifest::DocM = serde_json::from_value(v).unwrap();
     let s = serde_json::to_string(&old).unwrap();
     assert!(s.contains("\"kern\":0.0"), "kern defaults to 0");
 }
@@ -685,8 +685,8 @@ fn text_kerning_roundtrips_and_defaults() {
 /// Type on a path (#218): the path, start and end offsets, and flip survive .pcraft.
 #[test]
 fn path_text_shape_roundtrips() {
-    use photocraft_doc::text::TextShape;
-    use photocraft_doc::vector::Subpath;
+    use lienzo_doc::text::TextShape;
+    use lienzo_doc::vector::Subpath;
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let path = Subpath::polyline(&[(0.0, 0.0), (50.0, 20.0), (120.0, 5.5)]);
     let ids: Vec<LayerId> = doc.walk().into_iter().filter(|(_, _, l)| matches!(l.content, LayerContent::Text(_))).map(|(_, _, l)| l.id).collect();
@@ -706,8 +706,8 @@ fn path_text_shape_roundtrips() {
 /// Area type (#218): the whole path, ops and fill rule included, survives .pcraft.
 #[test]
 fn area_text_shape_roundtrips() {
-    use photocraft_doc::text::TextShape;
-    use photocraft_doc::vector::{FillRule, Path, PathOp, Subpath};
+    use lienzo_doc::text::TextShape;
+    use lienzo_doc::vector::{FillRule, Path, PathOp, Subpath};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let mut path = Path::new(vec![
         Subpath::polygon(&[(0.0, 0.0), (200.0, 0.0), (200.0, 120.0), (0.0, 120.0)]),
@@ -731,13 +731,13 @@ fn area_text_shape_roundtrips() {
 
 #[test]
 fn channel_restrictions_and_bevel_elements_roundtrip() {
-    use photocraft_doc::{Bevel, BevelContour, BevelTexture, Contour, Effect};
+    use lienzo_doc::{Bevel, BevelContour, BevelTexture, Contour, Effect};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     doc.layers[0].excluded_channels = 0b101;
     let mut b = Bevel {
         enabled: true,
-        style: photocraft_doc::BevelStyle::Emboss,
-        technique: photocraft_doc::BevelTechnique::ChiselHard,
+        style: lienzo_doc::BevelStyle::Emboss,
+        technique: lienzo_doc::BevelTechnique::ChiselHard,
         depth: 1.2,
         up: false,
         size: 9.0,
@@ -747,10 +747,10 @@ fn channel_restrictions_and_bevel_elements_roundtrip() {
         use_global_light: false,
         gloss_contour: Contour::Linear,
         gloss_anti_alias: false,
-        highlight: photocraft_doc::FxCommon::new(photocraft_color::BlendMode::Screen, 0.7),
-        highlight_color: photocraft_color::Color::WHITE,
-        shadow: photocraft_doc::FxCommon::new(photocraft_color::BlendMode::Multiply, 0.6),
-        shadow_color: photocraft_color::Color::BLACK,
+        highlight: lienzo_doc::FxCommon::new(lienzo_color::BlendMode::Screen, 0.7),
+        highlight_color: lienzo_color::Color::WHITE,
+        shadow: lienzo_doc::FxCommon::new(lienzo_color::BlendMode::Multiply, 0.6),
+        shadow_color: lienzo_color::Color::BLACK,
         contour: None,
         texture: None,
     };
@@ -764,7 +764,7 @@ fn channel_restrictions_and_bevel_elements_roundtrip() {
 
 #[test]
 fn blend_if_roundtrips() {
-    use photocraft_doc::{BlendIf, BlendRange};
+    use lienzo_doc::{BlendIf, BlendRange};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U16);
     let mut bi = BlendIf::default();
     bi.set(0, [BlendRange { black: [20, 60], white: [255, 255] }, BlendRange::FULL]);
@@ -782,7 +782,7 @@ fn blend_if_roundtrips() {
 /// Photoshop's defaults, and default layers don't write it.
 #[test]
 fn advanced_blending_roundtrips_and_defaults_when_absent() {
-    use photocraft_doc::{AdvancedBlending, Knockout};
+    use lienzo_doc::{AdvancedBlending, Knockout};
     for depth in SampleType::ALL {
         let mut doc = rich_doc(ColorMode::Rgb, depth);
         let a = AdvancedBlending {
@@ -811,24 +811,24 @@ fn advanced_blending_roundtrips_and_defaults_when_absent() {
         for l in old["layers"].as_array_mut().unwrap() {
             l.as_object_mut().unwrap().remove("advanced");
         }
-        let old: photocraft_format::manifest::DocM = serde_json::from_value(old).unwrap();
+        let old: lienzo_format::manifest::DocM = serde_json::from_value(old).unwrap();
         assert!(old.layers.iter().all(|l| l.advanced.is_default()));
     }
 }
 
 #[test]
 fn video_layer_frames_survive_roundtrip() {
-    use photocraft_doc::{Timeline, VideoData, VideoSource};
-    use photocraft_geom::Rect;
-    let mut doc = Document::new("Vid", photocraft_geom::Size { width: 8, height: 6 }, ColorMode::Rgb, SampleType::U8);
+    use lienzo_doc::{Timeline, VideoData, VideoSource};
+    use lienzo_geom::Rect;
+    let mut doc = Document::new("Vid", lienzo_geom::Size { width: 8, height: 6 }, ColorMode::Rgb, SampleType::U8);
     doc.timeline = Some(Timeline::new(3, 24.0));
     let fmt = doc.pixel_format();
     let mut l = Layer::raster("Clip", fmt);
     let mut frames = Vec::new();
     for i in 0..3u8 {
-        let mut s = photocraft_raster::Surface::new(fmt);
+        let mut s = lienzo_raster::Surface::new(fmt);
         let v = i as f32 / 2.0;
-        s.fill_rect(Rect::new(0, 0, 8, 6), &photocraft_raster::from_rgba(&fmt, [v, 0.0, 1.0 - v, 1.0]));
+        s.fill_rect(Rect::new(0, 0, 8, 6), &lienzo_raster::from_rgba(&fmt, [v, 0.0, 1.0 - v, 1.0]));
         frames.push(s);
     }
     let mut vd = VideoData::new(frames, 24.0);
@@ -859,7 +859,7 @@ fn video_layer_frames_survive_roundtrip() {
 /// save is refused instead, naming the value; finite documents are unaffected.
 #[test]
 fn a_non_finite_float_is_refused_at_save_rather_than_breaking_every_later_load() {
-    use photocraft_doc::Adjustment;
+    use lienzo_doc::Adjustment;
     type Mutate = Box<dyn Fn(&mut Document)>;
     let base = rich_doc(ColorMode::Rgb, SampleType::U8);
     let cases: Vec<(&str, Mutate)> = vec![
@@ -950,12 +950,12 @@ fn variables_follow_layer_id_remapping() {
 
 #[test]
 fn color_lookup_lut_file_round_trips_and_old_files_load() {
-    use photocraft_doc::Adjustment;
-    use photocraft_doc::adjust::{LutFormat, LutSource};
+    use lienzo_doc::Adjustment;
+    use lienzo_doc::adjust::{LutFormat, LutSource};
     let lut = Some(std::sync::Arc::new(vec![0.5f32; 24]));
     let source = Some(LutSource { format: LutFormat::ThreeDl, bytes: std::sync::Arc::new(b"0 1023\n0 0 0\n".to_vec()) });
     let adj = Adjustment::ColorLookup { name: "Film.3dl".into(), lut, size: 2, tetrahedral: false, dither: false, source };
-    let mut doc = Document::new("d", photocraft_doc::Size::new(4, 4), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("d", lienzo_doc::Size::new(4, 4), ColorMode::Rgb, SampleType::U8);
     doc.insert_above(None, Layer::new("lookup", LayerContent::Adjustment(adj.clone())));
     let back = load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap();
     assert_eq!(back, doc, "the LUT file survives a .pcraft round trip (#6544)");
@@ -970,7 +970,7 @@ fn color_lookup_lut_file_round_trips_and_old_files_load() {
 /// Removing previews is post-commit housekeeping, not part of publishing the new document.
 #[test]
 fn directory_save_without_previews_removes_stale_files_after_commit() {
-    let mut doc = Document::new("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("before", lienzo_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
     let dir = temp_dir("preview-cleanup");
     let mut writer = PcraftWriter::new();
     let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -990,7 +990,7 @@ fn failed_manifest_commit_preserves_omitted_previews() {
     use std::os::windows::fs::OpenOptionsExt;
 
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        let mut doc = Document::with_background("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, depth, photocraft_color::Color::WHITE);
+        let mut doc = Document::with_background("before", lienzo_doc::Size::new(4, 3), ColorMode::Rgb, depth, lienzo_color::Color::WHITE);
         let dir = temp_dir("locked-manifest-previews");
         let mut writer = PcraftWriter::new();
         let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -1021,7 +1021,7 @@ fn failed_manifest_commit_preserves_omitted_previews() {
 fn locked_stale_preview_does_not_fail_committed_save() {
     use std::os::windows::fs::OpenOptionsExt;
 
-    let mut doc = Document::new("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("before", lienzo_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
     let dir = temp_dir("locked-stale-preview");
     let mut writer = PcraftWriter::new();
     let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -1040,20 +1040,20 @@ fn locked_stale_preview_does_not_fail_committed_save() {
 
 #[test]
 fn arrow_document_is_backward_compatible() {
-    use photocraft_doc::{Fill, LiveShape, Path, ShapeLayer, Subpath};
+    use lienzo_doc::{Fill, LiveShape, Path, ShapeLayer, Subpath};
 
     let arrow =
         LiveShape::ArrowLine { from: [12.0, 64.0], to: [140.0, 64.0], weight: 16.0, start: false, end: true, width: 52.0, length: 50.0, concavity: 20.0 };
 
     let path = Path::new(vec![Subpath::polygon(&[(12.0, 56.0), (100.0, 56.0), (100.0, 44.0), (140.0, 64.0), (100.0, 84.0), (100.0, 72.0), (12.0, 72.0)])]);
 
-    let mut doc = Document::new("Arrow compatibility", photocraft_doc::Size::new(256, 256), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("Arrow compatibility", lienzo_doc::Size::new(256, 256), ColorMode::Rgb, SampleType::U8);
 
     doc.layers.push(Layer::new(
         "Editable arrow",
         LayerContent::Shape(ShapeLayer {
             path: path.clone(),
-            fill: Some(Fill::Solid(photocraft_doc::Color::BLACK)),
+            fill: Some(Fill::Solid(lienzo_doc::Color::BLACK)),
             live: Some(arrow.clone()),
             ..Default::default()
         }),

@@ -1,8 +1,8 @@
 //! #10868: crop fill samples the Background and editable active raster independently.
 
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, TextLayer};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, TextLayer};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -27,7 +27,7 @@ fn doc(s: &Session) -> &Document {
 fn raster(d: &Document, name: &str, bounds: Rect, color: [f32; 4]) -> Layer {
     let fmt = d.pixel_format();
     let mut layer = Layer::raster(name, fmt);
-    layer.surface_mut().unwrap().fill_rect(bounds, &photocraft_raster::from_rgba(&fmt, color));
+    layer.surface_mut().unwrap().fill_rect(bounds, &lienzo_raster::from_rgba(&fmt, color));
     layer
 }
 
@@ -51,7 +51,7 @@ fn scene(turned: bool) -> (Session, Layers) {
             let fmt = d.pixel_format();
             let surf = quads.surface_mut().unwrap();
             for (bounds, color) in [(rect(400, 0, 800, 250), GREEN), (rect(0, 250, 400, 500), BLUE), (rect(400, 250, 800, 500), YELLOW)] {
-                surf.fill_rect(bounds, &photocraft_raster::from_rgba(&fmt, color));
+                surf.fill_rect(bounds, &lienzo_raster::from_rgba(&fmt, color));
             }
             let small = raster(d, "Small", rect(350, 200, 450, 300), RED);
             let edge = raster(d, "EdgeHalf", rect(600, 0, 800, 250), BLUE);
@@ -187,7 +187,7 @@ fn turned_rows_sample_each_target_and_leave_other_layers_at_plain_crop() {
         s.edit("Uniform Quads", |d, _| {
             let fmt = d.pixel_format();
             let bounds = d.bounds();
-            d.layer_mut(ids.quads).unwrap().surface_mut().unwrap().fill_rect(bounds, &photocraft_raster::from_rgba(&fmt, GREEN));
+            d.layer_mut(ids.quads).unwrap().surface_mut().unwrap().fill_rect(bounds, &lienzo_raster::from_rgba(&fmt, GREEN));
             if row == 2 {
                 d.layer_mut(ids.background).unwrap().locks = Default::default();
             }
@@ -310,7 +310,7 @@ fn overhang_scene(held_active: bool) -> (Session, LayerId, LayerId) {
             let mut layer = raster(d, "Active", Rect::new(0, 0, 64, 48), GREEN);
             let fmt = d.pixel_format();
             let surf = if held_active { layer.surface_mut().unwrap() } else { d.layer_mut(bg).unwrap().surface_mut().unwrap() };
-            surf.fill_rect(Rect::new(-16, 0, 0, 48), &photocraft_raster::from_rgba(&fmt, if held_active { BLUE } else { RED }));
+            surf.fill_rect(Rect::new(-16, 0, 0, 48), &lienzo_raster::from_rgba(&fmt, if held_active { BLUE } else { RED }));
             let id = layer.id;
             d.layers.push(layer);
             *active = Some(id);

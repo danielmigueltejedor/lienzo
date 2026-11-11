@@ -483,7 +483,7 @@ fn a_never_issued_request_times_out() {
 }
 
 /// Execute the same logic→UI order as eframe, with genuinely new host geometry before logic.
-fn actual_capture_frame(app: &mut crate::PhotocraftApp, ctx: &Context, size: egui::Vec2, scale: f32, minimized: bool) -> egui::FullOutput {
+fn actual_capture_frame(app: &mut crate::LienzoApp, ctx: &Context, size: egui::Vec2, scale: f32, minimized: bool) -> egui::FullOutput {
     use eframe::App as _;
     let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, size);
     let mut viewports = egui::ViewportIdMap::default();
@@ -513,7 +513,7 @@ type ScreenshotWrites = std::rc::Rc<std::cell::RefCell<Vec<(String, Vec<u8>)>>>;
 type ScreenshotEncodes = std::rc::Rc<std::cell::RefCell<Vec<(u32, u32, Vec<u8>)>>>;
 
 struct ActualCallbackFixture {
-    app: crate::PhotocraftApp,
+    app: crate::LienzoApp,
     ctx: Context,
     writes: ScreenshotWrites,
     encodes: ScreenshotEncodes,
@@ -537,12 +537,12 @@ fn actual_callback_fixture() -> ActualCallbackFixture {
         })),
         encode_png: Some(Box::new(move |w, h, rgba| {
             encoded.borrow_mut().push((w, h, rgba.get(..4).unwrap_or_default().to_vec()));
-            let image = photocraft_codecs::Image::from_u8(w, h, photocraft_codecs::ChannelLayout::Rgba, rgba.to_vec()).map_err(|error| error.to_string())?;
-            photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).map_err(|error| error.to_string())
+            let image = lienzo_codecs::Image::from_u8(w, h, lienzo_codecs::ChannelLayout::Rgba, rgba.to_vec()).map_err(|error| error.to_string())?;
+            lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &lienzo_codecs::EncodeOptions::default()).map_err(|error| error.to_string())
         })),
         ..Default::default()
     };
-    let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = crate::LienzoApp::new(lienzo_engine::Session::new(), services);
     app.run("file.new", serde_json::json!({"width": 32, "height": 32})).unwrap();
     let ctx = Context::default();
     for _ in 0..4 {

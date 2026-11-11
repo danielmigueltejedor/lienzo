@@ -44,7 +44,7 @@ fn a_family_font_gets_the_installed_postscript_name() {
     // layout still matches the requested weight instead of a nearby face's.
     apply_char_props(&mut style, &json!({"weight": 650}));
     assert!(style.postscript_name.is_none(), "{:?}", style.postscript_name);
-    // A family PhotoCraft does not have keeps no name; the export falls back as before.
+    // A family Lienzo does not have keeps no name; the export falls back as before.
     let mut absent = CharStyle { font_family: "No Such Family 123".into(), ..Default::default() };
     apply_char_props(&mut absent, &json!({"font": "No Such Family 123"}));
     assert!(absent.postscript_name.is_none());
@@ -104,7 +104,7 @@ fn refreshing_type_layers_takes_no_history_step() {
         st.saved_revision = st.revision;
     }
     let rev = s.active().unwrap().revision;
-    let layers = [(doc_id, id), (doc_id, LayerId(u64::MAX)), (photocraft_doc::DocId(u64::MAX), id)];
+    let layers = [(doc_id, id), (doc_id, LayerId(u64::MAX)), (lienzo_doc::DocId(u64::MAX), id)];
     let layers: Vec<_> = layers.iter().map(|&(doc, layer)| crate::TypeLayerRef { doc, layer, first_snapshot: false }).collect();
     assert!(s.refresh_type_layers(&layers).is_empty());
     assert!(text_layer(&s, id.0).cache.is_some());
@@ -222,7 +222,7 @@ fn create_renders_and_is_undoable() {
     let r = c.content_bounds();
     assert!(c.read_region(r).as_chunks::<4>().0.iter().any(|p| p[3] > 0.9 && p[0] > 0.9 && p[1] < 0.1));
     // The TySh we generated parses back to the same model.
-    let back = photocraft_text::psd::text_layer_from_tysh(t.psd_raw.as_ref().unwrap(), 72.0).unwrap();
+    let back = lienzo_text::psd::text_layer_from_tysh(t.psd_raw.as_ref().unwrap(), 72.0).unwrap();
     assert_eq!(back.text, "Hello");
     let strip = |mut r: Vec<TextRun>| {
         for x in &mut r {
@@ -569,7 +569,7 @@ fn trailing_empty_paragraph_styles_without_changing_previous_lines() {
     assert_eq!(styled["paragraphs"][1]["style"]["align"], "Right");
     assert_eq!(styled["lines"][1], previous_line, "the preceding paragraph must not move");
     let raw = text_layer(&s, id).psd_raw.clone().unwrap();
-    let round_trip = photocraft_text::psd::text_layer_from_tysh(&raw, 72.0).unwrap();
+    let round_trip = lienzo_text::psd::text_layer_from_tysh(&raw, 72.0).unwrap();
     assert_eq!(round_trip.paragraph_runs().last().unwrap().style.align, TextAlign::Right);
 
     // Typing directly into the previously empty final paragraph retains its style.
@@ -787,9 +787,9 @@ b", "size": 20}),
 Xb"}),
     )
     .unwrap();
-    let paragraphs: Vec<(usize, photocraft_doc::text::TextAlign)> = text_layer(&s, id).paragraph_runs().into_iter().map(|r| (r.len, r.style.align)).collect();
+    let paragraphs: Vec<(usize, lienzo_doc::text::TextAlign)> = text_layer(&s, id).paragraph_runs().into_iter().map(|r| (r.len, r.style.align)).collect();
     assert_eq!(paragraphs.first().map(|p| p.0), Some(2), "{paragraphs:?}");
-    assert_eq!(paragraphs.get(1).copied(), Some((2, photocraft_doc::text::TextAlign::Right)), "{paragraphs:?}");
+    assert_eq!(paragraphs.get(1).copied(), Some((2, lienzo_doc::text::TextAlign::Right)), "{paragraphs:?}");
 }
 
 /// #206: `type.edit {"kerning"}` over a range takes a number (manual, 1/1000 em) or a mode.
@@ -857,7 +857,7 @@ fn kerning_params_fail_gracefully() {
 
 /// Cost of one Alt+←/→ press (`kernPair`: two measuring layouts + the edit's re-render) on
 /// a headline and on a 2000-character paragraph. Release timings for the dev log:
-/// `cargo test --release -p photocraft-engine kern_pair_cost -- --ignored --nocapture`.
+/// `cargo test --release -p lienzo-engine kern_pair_cost -- --ignored --nocapture`.
 #[test]
 #[ignore]
 fn kern_pair_cost() {
@@ -897,7 +897,7 @@ fn kern_pair_steps_from_the_shown_kerning() {
     let id = s.execute("type.create", json!({"x": 5, "y": 50, "text": "AVA", "size": 40, "font": "Inter"})).unwrap()["layer"].as_u64().unwrap();
     let metric = {
         let t = text_layer(&s, id);
-        photocraft_text::shared().lock().unwrap().pair_kerning(&t, 72.0, 0).unwrap()
+        lienzo_text::shared().lock().unwrap().pair_kerning(&t, 72.0, 0).unwrap()
     };
     assert!(metric < -10.0, "Inter kerns AV: {metric}");
     let steps = s.active().unwrap().history.entries().len();

@@ -5,7 +5,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
+use lienzo_geom::{Rect, TILE_SIZE, TileCoord};
 
 use super::{Surface, Tile, TileBytes, UniformTiles, scratch};
 

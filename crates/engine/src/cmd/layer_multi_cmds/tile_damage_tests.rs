@@ -2,7 +2,7 @@
 //! checked against them.
 
 use super::*;
-use photocraft_geom::TILE_SIZE;
+use lienzo_geom::TILE_SIZE;
 
 fn session(w: u32, h: u32) -> Session {
     let mut s = Session::new();
@@ -20,7 +20,7 @@ fn damage(s: &Session) -> Option<Rect> {
 
 /// The composite of `after` equals `before`'s outside `damage`.
 fn unchanged_outside(before: &Document, after: &Document, damage: Rect) -> bool {
-    let (x, y) = (photocraft_compose::render(before, before.bounds()), photocraft_compose::render(after, after.bounds()));
+    let (x, y) = (lienzo_compose::render(before, before.bounds()), lienzo_compose::render(after, after.bounds()));
     let w = before.bounds().width() as i32;
     x.px.iter().zip(&y.px).enumerate().all(|(i, (p, q))| p == q || damage.contains(i as i32 % w, i as i32 / w))
 }
@@ -106,7 +106,7 @@ fn a_move_still_damages_both_extents() {
     s.execute("layer.translate", json!({"layer": id.0, "dx": 300, "dy": 50})).unwrap();
     let after = doc(&s);
     let canvas = after.bounds();
-    let extents = |d: &Document| photocraft_compose::change_bounds(d.layer(id).unwrap(), canvas).unwrap();
+    let extents = |d: &Document| lienzo_compose::change_bounds(d.layer(id).unwrap(), canvas).unwrap();
     let both = extents(&before).union(&extents(&after));
     assert_eq!(both, r.union(&r.translate(300, 50)));
     assert_eq!(damage(&s), Some(both));
@@ -134,7 +134,7 @@ fn a_mask_edit_damages_its_tiles_grown_by_the_feather() {
     let id = full_layer(&mut s);
     let feather = 10.0;
     s.edit("mask", |doc, _| {
-        doc.layer_mut(id).unwrap().mask = Some(photocraft_doc::LayerMask { feather, ..photocraft_doc::LayerMask::reveal_all() });
+        doc.layer_mut(id).unwrap().mask = Some(lienzo_doc::LayerMask { feather, ..lienzo_doc::LayerMask::reveal_all() });
         Ok(())
     })
     .unwrap();
@@ -147,7 +147,7 @@ fn a_mask_edit_damages_its_tiles_grown_by_the_feather() {
     .unwrap();
     let after = doc(&s);
     let d = step_damage(&before, &after).unwrap();
-    let grown = photocraft_vector::feather::grow(tiles_of(hole), photocraft_vector::feather::feather_sigma(feather));
+    let grown = lienzo_vector::feather::grow(tiles_of(hole), lienzo_vector::feather::feather_sigma(feather));
     assert_eq!(d, grown.intersect(&after.bounds()));
     assert!(d.contains_rect(&tiles_of(hole)) && d != after.bounds(), "{d:?}");
     assert!(unchanged_outside(&before, &after, d));
@@ -159,24 +159,24 @@ fn tile_damage_grows_by_the_layer_effect_margin() {
     let (a, b) = (Rect::new(50, 50, 150, 150), Rect::new(600, 400, 700, 500));
     let id = layer_with(&mut s, &[(a, [1.0, 0.0, 0.0, 1.0]), (b, [1.0, 0.0, 0.0, 1.0])]);
     s.edit("fx", |doc, _| {
-        doc.layer_mut(id).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(id).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
-    let m = photocraft_compose::effects::margin(doc(&s).layer(id).unwrap());
+    let m = lienzo_compose::effects::margin(doc(&s).layer(id).unwrap());
     assert!(m > 0);
     let (before, after) = paint(&mut s, id, Rect::new(640, 440, 660, 460), [0.0, 0.0, 0.0, 0.0]);
     let d = step_damage(&before, &after).unwrap();
-    let whole = photocraft_compose::change_bounds(after.layer(id).unwrap(), after.bounds()).unwrap();
+    let whole = lienzo_compose::change_bounds(after.layer(id).unwrap(), after.bounds()).unwrap();
     assert_eq!(d, tiles_of(b).inflate(m).intersect(&whole));
     assert!(d.x0 < tiles_of(b).x0 && d.y0 < tiles_of(b).y0, "the shadow reaches past the tile: {d:?}");
     assert!(unchanged_outside(&before, &after, d));
 }
 
 /// The default drop shadow, `distance` px away and `size` px soft.
-fn drop_shadow(distance: f32, size: f32) -> photocraft_doc::Effect {
-    match photocraft_doc::Effect::default_drop_shadow() {
-        photocraft_doc::Effect::DropShadow(sh) => photocraft_doc::Effect::DropShadow(photocraft_doc::Shadow { distance, size, ..sh }),
+fn drop_shadow(distance: f32, size: f32) -> lienzo_doc::Effect {
+    match lienzo_doc::Effect::default_drop_shadow() {
+        lienzo_doc::Effect::DropShadow(sh) => lienzo_doc::Effect::DropShadow(lienzo_doc::Shadow { distance, size, ..sh }),
         e => e,
     }
 }
@@ -196,7 +196,7 @@ fn a_dab_inside_a_group_with_a_drop_shadow_damages_the_shadow() {
         Ok(())
     })
     .unwrap();
-    assert!(photocraft_compose::effects::margin(doc(&s).layer(g).unwrap()) > 40);
+    assert!(lienzo_compose::effects::margin(doc(&s).layer(g).unwrap()) > 40);
     // A brush dab (a hinted edit) in empty space left of a tile's right edge. Each shadow falls
     // about 20 px right and 35 px down, so the group's shadow of the child's shadow lands about
     // 40 px right and 70 px down, in the next tile and past either shadow's reach alone.
@@ -229,7 +229,7 @@ fn a_brush_hint_ignores_the_effects_of_hidden_layers() {
         Ok(())
     })
     .unwrap();
-    assert!(photocraft_compose::effects::margin(doc(&s).layer(hidden).unwrap()) > 40);
+    assert!(lienzo_compose::effects::margin(doc(&s).layer(hidden).unwrap()) > 40);
     // A dab in the middle of a tile, far from every tile edge.
     s.execute("layer.select", json!({"layer": plain.0})).unwrap();
     let before = doc(&s);
@@ -248,7 +248,7 @@ fn painting_a_clip_base_under_a_styled_clipped_layer_is_covered() {
     s.edit("clip", |doc, _| {
         let l = doc.layer_mut(top).unwrap();
         l.clipped = true;
-        l.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        l.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -269,12 +269,12 @@ fn painting_a_clip_base_under_a_styled_clipped_layer_is_covered() {
 /// #4053: effects laid out over the layer's frame repaint it everywhere when it grows.
 #[test]
 fn a_frame_spanning_effect_still_redraws_its_whole_frame() {
-    use photocraft_doc::{Effect, FxCommon, Gradient};
+    use lienzo_doc::{Effect, FxCommon, Gradient};
     let mut s = session(1024, 768);
     let id = layer_with(&mut s, &[(Rect::new(100, 100, 700, 200), [1.0, 0.0, 0.0, 1.0])]);
     s.edit("fx", |doc, _| {
         doc.layer_mut(id).unwrap().effects.items.push(Effect::GradientOverlay {
-            common: FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
+            common: FxCommon::new(lienzo_doc::BlendMode::Normal, 1.0),
             gradient: Gradient::default(),
             dither: false,
             interpolation: None,
@@ -284,7 +284,7 @@ fn a_frame_spanning_effect_still_redraws_its_whole_frame() {
     .unwrap();
     let (before, after) = paint(&mut s, id, Rect::new(700, 100, 800, 200), [0.0, 1.0, 0.0, 1.0]);
     let d = step_damage(&before, &after).unwrap();
-    let extents = |d: &Document| photocraft_compose::change_bounds(d.layer(id).unwrap(), d.bounds()).unwrap();
+    let extents = |d: &Document| lienzo_compose::change_bounds(d.layer(id).unwrap(), d.bounds()).unwrap();
     let whole = extents(&before).union(&extents(&after));
     assert!(whole.contains_rect(&Rect::new(100, 100, 800, 200)), "{whole:?}");
     assert_eq!(d, whole);
@@ -301,7 +301,7 @@ fn refreshing_type_layers_damages_only_those_layers() {
     assert!(busy.is_empty());
     let after = doc(&s);
     let d = damage(&s).expect("a bounded refresh");
-    let bounds = |d: &Document, id: LayerId| photocraft_compose::change_bounds(d.layer(id).unwrap(), d.bounds()).unwrap();
+    let bounds = |d: &Document, id: LayerId| lienzo_compose::change_bounds(d.layer(id).unwrap(), d.bounds()).unwrap();
     assert!(bounds(&before, one).union(&bounds(&after, one)).contains_rect(&d), "{d:?}");
     assert!(d.intersect(&bounds(&after, two)).is_empty(), "{d:?}");
     assert!(unchanged_outside(&before, &after, d));
@@ -330,7 +330,7 @@ fn a_brush_hint_on_a_feathered_mask_keeps_the_ring() {
     let mut s = session(1024, 768);
     let id = full_layer(&mut s);
     s.edit("mask", |doc, _| {
-        doc.layer_mut(id).unwrap().mask = Some(photocraft_doc::LayerMask { feather: 10.0, ..photocraft_doc::LayerMask::reveal_all() });
+        doc.layer_mut(id).unwrap().mask = Some(lienzo_doc::LayerMask { feather: 10.0, ..lienzo_doc::LayerMask::reveal_all() });
         Ok(())
     })
     .unwrap();
@@ -347,7 +347,7 @@ fn a_brush_hint_on_a_layer_with_a_drop_shadow_keeps_the_shadow() {
     let mut s = session(1024, 768);
     let id = layer_with(&mut s, &[(Rect::new(600, 400, 700, 500), [1.0, 0.0, 0.0, 1.0])]);
     s.edit("fx", |doc, _| {
-        doc.layer_mut(id).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(id).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -495,7 +495,7 @@ fn a_same_named_new_pattern_a_reference_still_resolves_past_is_bounded() {
     s.execute("layer.newFillLayer.pattern", json!({"pattern": "Checkerboard"})).unwrap();
     let mut with = (*doc(&s)).clone();
     with.layers.iter_mut().for_each(|l| l.fill_cache = None);
-    let refers_by_id = with.layers.iter().any(|l| matches!(&l.content, LayerContent::Fill(photocraft_doc::Fill::Pattern { id, .. }) if !id.is_empty()));
+    let refers_by_id = with.layers.iter().any(|l| matches!(&l.content, LayerContent::Fill(lienzo_doc::Fill::Pattern { id, .. }) if !id.is_empty()));
     assert!(refers_by_id, "the fill layer refers to its pattern by id");
     let mut twin = with.patterns[0].clone();
     twin.id = "another-id".into();

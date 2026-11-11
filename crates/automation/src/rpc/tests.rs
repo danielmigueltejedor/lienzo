@@ -120,15 +120,15 @@ fn poisoned_session_keeps_serving() {
 #[test]
 fn a_panicking_renderer_diagnostic_drain_still_writes_the_reply() {
     struct PanickyDiagnostics;
-    impl photocraft_io::BandRenderer for PanickyDiagnostics {
+    impl lienzo_io::BandRenderer for PanickyDiagnostics {
         fn render_bands(
             &mut self,
-            _doc: &photocraft_doc::Document,
-            _rect: photocraft_doc::Rect,
+            _doc: &lienzo_doc::Document,
+            _rect: lienzo_doc::Rect,
             _band_rows: i32,
-            _ctl: &photocraft_raster::Interrupt<'_>,
-            _sink: &mut dyn FnMut(photocraft_io::RenderBand) -> Result<(), photocraft_io::IoError>,
-        ) -> Result<(), photocraft_io::RenderError> {
+            _ctl: &lienzo_raster::Interrupt<'_>,
+            _sink: &mut dyn FnMut(lienzo_io::RenderBand) -> Result<(), lienzo_io::IoError>,
+        ) -> Result<(), lienzo_io::RenderError> {
             Ok(())
         }
 
@@ -183,12 +183,12 @@ fn render_to_file_and_base64() {
     g.handle("doc.new", json!({"width": 40, "height": 20, "background": "black"})).unwrap();
     let b = g.handle("doc.render", json!({"maxSide": 10})).unwrap();
     let png = base64::engine::general_purpose::STANDARD.decode(b["base64"].as_str().unwrap()).unwrap();
-    let img = photocraft_codecs::decode(&png).unwrap();
+    let img = lienzo_codecs::decode(&png).unwrap();
     assert_eq!(img.dimensions(), (10, 5));
     let path = std::env::temp_dir().join(format!("pc-rpc-{}.png", std::process::id()));
     let r = g.handle("doc.render", json!({"path": path.to_string_lossy(), "maxSide": 0})).unwrap();
     assert!(r["bytes"].as_u64().unwrap() > 0);
-    assert_eq!(photocraft_codecs::decode(&std::fs::read(&path).unwrap()).unwrap().dimensions(), (40, 20));
+    assert_eq!(lienzo_codecs::decode(&std::fs::read(&path).unwrap()).unwrap().dimensions(), (40, 20));
     let _ = std::fs::remove_file(path);
 }
 
@@ -276,7 +276,7 @@ fn every_request_sees_a_finished_background_job() {
     let history = h.handle("doc.inspect", json!({})).unwrap()["history"].clone();
     assert_eq!(history.as_array().unwrap().last().unwrap(), "Gaussian Blur", "{history}");
     h.handle("doc.save", json!({"path": after.to_string_lossy()})).unwrap();
-    let decode = |p: &std::path::Path| photocraft_codecs::decode(&std::fs::read(p).unwrap()).unwrap().to_rgba8();
+    let decode = |p: &std::path::Path| lienzo_codecs::decode(&std::fs::read(p).unwrap()).unwrap().to_rgba8();
     assert_ne!(decode(&before), decode(&after), "the export holds the blur");
     assert_ne!(render(&mut h), unblurred, "the preview holds the blur");
     std::fs::remove_dir_all(dir).unwrap();
@@ -312,7 +312,7 @@ fn doc_save_takes_maximize_compatibility() {
     let mut h = Headless::trusted_local();
     h.handle("doc.new", json!({"width": 64, "height": 32})).unwrap();
     h.handle("engine.execute", json!({"command": "layer.new.layer"})).unwrap();
-    let real_merged = |p: &std::path::Path| photocraft_psd::PsdFile::from_bytes(&std::fs::read(p).unwrap()).unwrap().has_real_merged_data();
+    let real_merged = |p: &std::path::Path| lienzo_psd::PsdFile::from_bytes(&std::fs::read(p).unwrap()).unwrap().has_real_merged_data();
     for (name, maximize, real) in [("default.psd", json!(null), true), ("off.psd", json!(false), false), ("on.psd", json!(true), true)] {
         let path = dir.join(name);
         h.handle("doc.save", json!({"path": path.to_string_lossy(), "maximizeCompatibility": maximize})).unwrap();
@@ -335,7 +335,7 @@ fn automation_preview_rejects_oversized_full_size_and_numeric_wraparound() {
     // A smaller preview still works, and rejection leaves the source document intact.
     let rendered = h.handle("doc.render", json!({"maxSide": 32})).unwrap();
     let png = base64::engine::general_purpose::STANDARD.decode(rendered["base64"].as_str().unwrap()).unwrap();
-    assert_eq!(photocraft_codecs::decode(&png).unwrap().dimensions(), (32, 1));
+    assert_eq!(lienzo_codecs::decode(&png).unwrap().dimensions(), (32, 1));
     assert_eq!(h.session.active().unwrap().doc.size.width, 2049);
 }
 
@@ -399,8 +399,8 @@ fn doc_place_reads_through_the_read_root_and_never_outside_it() {
     for dir in [&root, &outside] {
         std::fs::create_dir_all(dir).unwrap();
     }
-    let img = photocraft_codecs::Image::from_u8(8, 6, photocraft_codecs::ChannelLayout::Rgb, vec![42; 8 * 6 * 3]).unwrap();
-    let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(8, 6, lienzo_codecs::ChannelLayout::Rgb, vec![42; 8 * 6 * 3]).unwrap();
+    let png = lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     std::fs::write(root.join("logo.png"), &png).unwrap();
     std::fs::write(outside.join("logo.png"), &png).unwrap();
     let absolute = outside.join("logo.png").to_string_lossy().into_owned();
@@ -430,7 +430,7 @@ fn doc_place_reads_through_the_read_root_and_never_outside_it() {
     std::fs::remove_dir_all(base).unwrap();
 }
 
-/// A save or render never turns a file PhotoCraft doesn't write (source, settings, notes)
+/// A save or render never turns a file Lienzo doesn't write (source, settings, notes)
 /// into image bytes, whatever `format` says; images and new files are written as before (#9439).
 #[test]
 fn workspace_writes_refuse_to_replace_a_file_that_is_not_an_image() {
@@ -477,8 +477,8 @@ fn doc_replace_smart_object_reads_through_the_read_root_and_never_outside_it() {
         std::fs::create_dir_all(dir).unwrap();
     }
     let png = |w: u32, h: u32, v: u8| {
-        let img = photocraft_codecs::Image::from_u8(w, h, photocraft_codecs::ChannelLayout::Rgb, vec![v; (w * h * 3) as usize]).unwrap();
-        photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+        let img = lienzo_codecs::Image::from_u8(w, h, lienzo_codecs::ChannelLayout::Rgb, vec![v; (w * h * 3) as usize]).unwrap();
+        lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap()
     };
     std::fs::write(root.join("logo.png"), png(8, 6, 42)).unwrap();
     std::fs::write(root.join("red.png"), png(8, 6, 200)).unwrap();
@@ -496,7 +496,7 @@ fn doc_replace_smart_object_reads_through_the_read_root_and_never_outside_it() {
         let name = so["smartSource"]["fileName"].as_str().unwrap_or_default().to_owned();
         let rendered = h.handle("doc.render", json!({"maxSide": 0})).unwrap();
         let png = base64::engine::general_purpose::STANDARD.decode(rendered["base64"].as_str().unwrap()).unwrap();
-        let img = photocraft_codecs::decode(&png).unwrap();
+        let img = lienzo_codecs::decode(&png).unwrap();
         let (w, ht) = img.dimensions();
         let data = img.as_u8().unwrap();
         let channels = data.len() / (w * ht) as usize;
@@ -609,7 +609,7 @@ fn doc_export_layers_writes_only_beneath_the_write_root() {
     for name in names {
         assert!(name.starts_with("card_") && name.ends_with(".png"), "{name}");
         let bytes = std::fs::read(out.join(&name)).unwrap();
-        assert_eq!(photocraft_codecs::decode(&bytes).unwrap().dimensions(), (12, 8), "{name}");
+        assert_eq!(lienzo_codecs::decode(&bytes).unwrap().dimensions(), (12, 8), "{name}");
     }
     // Outside the write root nothing is created, not even the directory.
     let escaped = base.join("escaped");
@@ -671,8 +671,8 @@ fn indexed_place_replace_and_data_set_methods_keep_the_active_document() {
     let base = std::env::temp_dir().join(format!("pc-doc-index-active-{}", std::process::id()));
     let root = base.join("workspace");
     std::fs::create_dir_all(&root).unwrap();
-    let img = photocraft_codecs::Image::from_u8(4, 4, photocraft_codecs::ChannelLayout::Rgb, vec![42; 4 * 4 * 3]).unwrap();
-    std::fs::write(root.join("logo.png"), photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(4, 4, lienzo_codecs::ChannelLayout::Rgb, vec![42; 4 * 4 * 3]).unwrap();
+    std::fs::write(root.join("logo.png"), lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     std::fs::write(root.join("sets.csv"), "Data Set,show\none,true\ntwo,false\n").unwrap();
     let mut h = Headless::with_workspace(crate::AuthorizedWorkspace::new(Some(&root), Some(&root)).unwrap());
     h.handle("doc.new", json!({"width": 8, "height": 8, "background": "white", "name": "first"})).unwrap();
@@ -711,9 +711,9 @@ fn doc_export_data_sets_judges_pixel_replacement_paths_like_apply() {
     let base = std::env::temp_dir().join(format!("pc-doc-data-set-pixels-{}", std::process::id()));
     let root = base.join("workspace");
     std::fs::create_dir_all(&root).unwrap();
-    let red = photocraft_codecs::Image::from_u8(4, 4, photocraft_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(16)).unwrap();
+    let red = lienzo_codecs::Image::from_u8(4, 4, lienzo_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(16)).unwrap();
     let photo = base.join("photo.png");
-    std::fs::write(&photo, photocraft_codecs::encode(&red, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    std::fs::write(&photo, lienzo_codecs::encode(&red, lienzo_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     let mut h = Headless::with_workspace(crate::AuthorizedWorkspace::new(Some(&root), Some(&root)).unwrap());
     h.handle("doc.new", json!({"width": 8, "height": 8, "background": "white", "name": "card"})).unwrap();
     let layer = h.handle("engine.execute", json!({"command": "layer.new.layer", "params": {}})).unwrap()["layer"].clone();
@@ -743,12 +743,12 @@ fn doc_export_data_sets_judges_pixel_replacement_paths_like_apply() {
 
 #[test]
 fn workspace_psd_saves_embed_no_file_a_linked_smart_object_names() {
-    use photocraft_engine::doc::{LayerContent, SmartSource};
+    use lienzo_engine::doc::{LayerContent, SmartSource};
 
-    // An image PhotoCraft can open (other linked files are never embedded): an embedded copy
+    // An image Lienzo can open (other linked files are never embedded): an embedded copy
     // carries these exact bytes, while pixels written for the layer don't.
-    let image = photocraft_codecs::Image::from_u8(8, 8, photocraft_codecs::ChannelLayout::Rgb, (0..192u8).collect()).unwrap();
-    let marker = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = lienzo_codecs::Image::from_u8(8, 8, lienzo_codecs::ChannelLayout::Rgb, (0..192u8).collect()).unwrap();
+    let marker = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let has_marker = |bytes: &[u8]| bytes.windows(marker.len()).any(|w| w == marker.as_slice());
     let base = std::env::temp_dir().join(format!("pc-psd-linked-embed-{}", std::process::id()));
     let root = base.join("workspace");
@@ -756,15 +756,15 @@ fn workspace_psd_saves_embed_no_file_a_linked_smart_object_names() {
     let outside = base.join("outside.png");
     std::fs::write(&outside, &marker).unwrap();
     // A document whose smart object names a file outside the roots as its source.
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
     session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let state = session.active_mut().unwrap();
     let LayerContent::Smart(smart) = &mut std::sync::Arc::make_mut(&mut state.doc).layers[0].content else { panic!("smart object") };
     smart.source = SmartSource::Linked { path: outside.to_string_lossy().into_owned() };
-    std::fs::write(root.join("in.pcraft"), photocraft_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
+    std::fs::write(root.join("in.pcraft"), lienzo_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
     // A trusted export embeds the linked file, as before.
-    assert!(has_marker(&photocraft_io::export(&state.doc, "psd", &Default::default()).unwrap().bytes));
+    assert!(has_marker(&lienzo_io::export(&state.doc, "psd", &Default::default()).unwrap().bytes));
 
     let mut h = Headless::with_workspace(crate::AuthorizedWorkspace::new(Some(&root), Some(&root)).unwrap());
     h.handle("doc.open", json!({"path": "in.pcraft"})).unwrap();
@@ -779,22 +779,22 @@ fn workspace_psd_saves_embed_no_file_a_linked_smart_object_names() {
 
 #[test]
 fn allowed_filters_do_not_rerender_a_smart_object_from_its_linked_file() {
-    use photocraft_engine::doc::{LayerContent, SmartSource};
+    use lienzo_engine::doc::{LayerContent, SmartSource};
 
     let base = std::env::temp_dir().join(format!("pc-linked-rerender-{}", std::process::id()));
     let root = base.join("workspace");
     std::fs::create_dir_all(&root).unwrap();
-    let red = photocraft_codecs::Image::from_u8(8, 8, photocraft_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(64)).unwrap();
+    let red = lienzo_codecs::Image::from_u8(8, 8, lienzo_codecs::ChannelLayout::Rgb, [255, 0, 0].repeat(64)).unwrap();
     let outside = base.join("red.png");
-    std::fs::write(&outside, photocraft_codecs::encode(&red, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    std::fs::write(&outside, lienzo_codecs::encode(&red, lienzo_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     // A document whose white smart object names a file outside the roots as its source.
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
     session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let state = session.active_mut().unwrap();
     let LayerContent::Smart(smart) = &mut std::sync::Arc::make_mut(&mut state.doc).layers[0].content else { panic!("smart object") };
     smart.source = SmartSource::Linked { path: outside.to_string_lossy().into_owned() };
-    std::fs::write(root.join("p.pcraft"), photocraft_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
+    std::fs::write(root.join("p.pcraft"), lienzo_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
 
     let mut h = Headless::with_workspace(crate::AuthorizedWorkspace::new(Some(&root), Some(&root)).unwrap());
     h.handle("doc.open", json!({"path": "p.pcraft"})).unwrap();
@@ -810,9 +810,9 @@ fn allowed_filters_do_not_rerender_a_smart_object_from_its_linked_file() {
 
 #[test]
 fn workspace_layer_exports_keep_linked_smart_objects_as_pixels() {
-    use photocraft_engine::doc::{LayerContent, SmartSource};
+    use lienzo_engine::doc::{LayerContent, SmartSource};
 
-    const MARKER: &[u8] = b"PHOTOCRAFT-LINKED-0002";
+    const MARKER: &[u8] = b"LIENZO-LINKED-0002";
     let has_marker = |bytes: &[u8]| bytes.windows(MARKER.len()).any(|w| w == MARKER);
     let base = std::env::temp_dir().join(format!("pc-export-layers-linked-{}", std::process::id()));
     let root = base.join("workspace");
@@ -820,13 +820,13 @@ fn workspace_layer_exports_keep_linked_smart_objects_as_pixels() {
     let outside = base.join("outside.txt");
     std::fs::write(&outside, MARKER).unwrap();
     // A document whose smart object names a file outside the roots as its source.
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
     session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let state = session.active_mut().unwrap();
     let LayerContent::Smart(smart) = &mut std::sync::Arc::make_mut(&mut state.doc).layers[0].content else { panic!("smart object") };
     smart.source = SmartSource::Linked { path: outside.to_string_lossy().into_owned() };
-    std::fs::write(root.join("in.pcraft"), photocraft_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
+    std::fs::write(root.join("in.pcraft"), lienzo_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
 
     let mut h = Headless::with_workspace(crate::AuthorizedWorkspace::new(Some(&root), Some(&root)).unwrap());
     h.handle("doc.open", json!({"path": "in.pcraft"})).unwrap();
@@ -851,7 +851,7 @@ fn trusted_local_render_keeps_full_size_behavior() {
     h.handle("doc.new", json!({"width": 2049, "height": 1})).unwrap();
     let rendered = h.handle("doc.render", json!({"maxSide": 0})).unwrap();
     let png = base64::engine::general_purpose::STANDARD.decode(rendered["base64"].as_str().unwrap()).unwrap();
-    assert_eq!(photocraft_codecs::decode(&png).unwrap().dimensions(), (2049, 1));
+    assert_eq!(lienzo_codecs::decode(&png).unwrap().dimensions(), (2049, 1));
 }
 
 #[test]
@@ -1095,7 +1095,7 @@ fn approve_high_memory_rejects_invalid_types_and_formats_structured_error() {
 
     // Verify attach_memory_error_details adds machine-readable fields
     let mut err_obj = json!({"id": 1, "ok": false, "error": "test"});
-    let auto_err = crate::AutomationError::Import(photocraft_io::IoError::PsdApprovalRequired {
+    let auto_err = crate::AutomationError::Import(lienzo_io::IoError::PsdApprovalRequired {
         required: 5000,
         soft_limit: 2000,
         hard_limit: 8000,
@@ -1114,12 +1114,8 @@ fn approve_high_memory_rejects_invalid_types_and_formats_structured_error() {
     // fields, and only the fields an approval request has: no soft limit and no capacity, since
     // no approval can raise the ceiling.
     let mut hard_obj = json!({"id": 2, "ok": false, "error": "test"});
-    let hard = crate::AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget {
-        name: "big.psd".into(),
-        required: 9000,
-        limit: 8000,
-        free_memory: None,
-    });
+    let hard =
+        crate::AutomationError::Engine(lienzo_engine::EngineError::PsdHardBudget { name: "big.psd".into(), required: 9000, limit: 8000, free_memory: None });
     super::attach_memory_error_details(&mut hard_obj, &hard);
     assert_eq!(hard_obj["required"], 9000);
     assert_eq!(hard_obj["hard"], 8000);
@@ -1130,7 +1126,7 @@ fn approve_high_memory_rejects_invalid_types_and_formats_structured_error() {
 
     // When measured free memory set the limit, the refusal also reports it.
     let mut low_obj = json!({"id": 3, "ok": false, "error": "test"});
-    let low = crate::AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget {
+    let low = crate::AutomationError::Engine(lienzo_engine::EngineError::PsdHardBudget {
         name: "big.psd".into(),
         required: 9000,
         limit: 8000,
@@ -1155,16 +1151,16 @@ fn doc_place_forwards_high_memory_approval() {
     let gb = 1u64 << 30;
     let root = std::env::temp_dir().join(format!("pc-doc-place-approval-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
-    let psd = photocraft_psd::testgen::small(photocraft_psd::Version::Psd, photocraft_psd::Compression::Zip).to_bytes().unwrap();
+    let psd = lienzo_psd::testgen::small(lienzo_psd::Version::Psd, lienzo_psd::Compression::Zip).to_bytes().unwrap();
     std::fs::write(root.join("high.psd"), &psd).unwrap();
     // Known 5 GiB RAM: S = 2.5 GiB, H = 3.75 GiB. A 3 GiB estimate charge lands in (S, H].
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    let snap = lienzo_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
     let trial = |h: &mut Headless, path: &str| {
-        photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-            photocraft_io::memory::with_mock_memory(snap, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+            lienzo_io::memory::with_mock_memory(snap, || {
                 let refused = h.handle("doc.place", json!({"path": path})).unwrap_err();
                 assert!(
-                    matches!(refused, crate::AutomationError::Engine(photocraft_engine::EngineError::PsdApprovalRequired { .. })),
+                    matches!(refused, crate::AutomationError::Engine(lienzo_engine::EngineError::PsdApprovalRequired { .. })),
                     "an unapproved high-memory place must ask for approval: {refused}"
                 );
                 let placed = h.handle("doc.place", json!({"path": path, "approveHighMemory": true})).unwrap();

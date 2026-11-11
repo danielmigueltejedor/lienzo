@@ -1,6 +1,6 @@
 //! Edit › Transform › Warp's Cylinder in Warp mode (#4112): the preset that wraps the contents
 //! round a horizontal cylinder, for the label on a can, a jar or a bottle. Photoshop keeps it as
-//! seven values rather than a mesh ([`photocraft_geom::warp::cylinder_mesh`]): the left and right
+//! seven values rather than a mesh ([`lienzo_geom::warp::cylinder_mesh`]): the left and right
 //! silhouettes, the top and bottom edges, the depth of the upper and lower ellipse (in units of
 //! the half axis) and how far the contents wrap round (0..1). This is its editor: five handles
 //! set those values, and the warp stays a cylinder through the commit, so a smart object keeps
@@ -18,7 +18,7 @@
 //! greyed, as for a custom warp, and a cylinder has no splits and no grid menu.
 
 use super::warp::surface_at;
-use super::{Color32, CursorIcon, PhotocraftApp, Pos2, Stroke, ToolEvent, TransformPreview, ViewXform, Warp, WarpDrag, WarpStyle, vec2};
+use super::{Color32, CursorIcon, LienzoApp, Pos2, Stroke, ToolEvent, TransformPreview, ViewXform, Warp, WarpDrag, WarpStyle, vec2};
 
 /// What a press on the cylinder grabbed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -182,7 +182,7 @@ fn depth_dragged(depth0: f64, step: f64) -> f64 {
 /// Pointer input on a cylinder in Warp mode: a press grabs a handle or the surface
 /// ([`cylinder_hit`]), and the drag sets the values ([`cylinder_dragged`]) and rebuilds the mesh
 /// from them on every move, so the preview follows. A press off the cylinder grabs nothing.
-pub(super) fn cylinder_pointer(app: &mut PhotocraftApp, ev: ToolEvent, tol: f64) {
+pub(super) fn cylinder_pointer(app: &mut LienzoApp, ev: ToolEvent, tol: f64) {
     let (Some(t), Some(pv)) = (app.ui.transform.as_mut(), app.transform_preview.as_mut()) else { return };
     let Some(w) = t.warp.as_mut() else { return };
     match ev {

@@ -5,7 +5,7 @@
 Validated and packaged source: `f5b3f1238bb414b43851ebe86f3a58ce83bb9b48`. Base: `5f9b4391874aabc9deb2fcb905267613e4d93ec8`.
 Version: `0.17.0-integration.20261029.f5b3f123`; Windows x64; pinned fonts `b076417b5880bd4154bd22f00695b1d28c6bea83`.
 [Full-sweep CI](https://github.com/FredApps/photocraft/actions/runs/40858867520); [portable build](https://github.com/FredApps/photocraft/actions/runs/40867283787);
-[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `photocraft-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
+[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `lienzo-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
 SHA256: `4125eccd5b009f30dc2d72f64bfafcf32220dc5574f765d0b3664ac4d9f992ba`. Artifact ID `12895845995`, job ID `123425396034`.
 The source SHA was checked against the run and artifact metadata. The ZIP was inspected for portable
 content and x64 PE executables; this is not a claim that GUI/manual cases passed.
@@ -85,7 +85,7 @@ These proposals are pending parent semantic review. Mechanical moved-test/catalo
 - [#3461](https://github.com/storytold/photocraft/pull/3461) Replay recorded layer visibility on the intended named layer — INTEGRATED
 - [#3748](https://github.com/storytold/photocraft/pull/3748) control: suggest near matches for unknown command ids and methods (#3674) — INTEGRATED
 - [#4993](https://github.com/storytold/photocraft/pull/4993) Prevent control-channel engine commands from editing behind modal dialogs — INTEGRATED
-- [#5090](https://github.com/storytold/photocraft/pull/5090) Actions: add editable PhotoCraft Essentials starter presets — INTEGRATED
+- [#5090](https://github.com/storytold/photocraft/pull/5090) Actions: add editable Lienzo Essentials starter presets — INTEGRATED
 - [#5176](https://github.com/storytold/photocraft/pull/5176) Play CopyCat, AJ and Line and Color action sets; keep patterns across restarts; Shift Edge scale — INTEGRATED
 - [#6492](https://github.com/storytold/photocraft/pull/6492) Fail control startup promptly when its port is occupied — INTEGRATED
 - [#6510](https://github.com/storytold/photocraft/pull/6510) Automation: resolve configured root aliases for absolute paths (#6426) — INTEGRATED
@@ -148,7 +148,7 @@ These proposals are pending parent semantic review. Mechanical moved-test/catalo
 ### Platform and reliability (8)
 
 - [#3554](https://github.com/storytold/photocraft/pull/3554) fix(packaging): launch bundled CLI directly from AppImage — INTEGRATED
-- [#4742](https://github.com/storytold/photocraft/pull/4742) fix(macos): bundle photocraft-cli and resolve it from droplet scripts — INTEGRATED
+- [#4742](https://github.com/storytold/photocraft/pull/4742) fix(macos): bundle lienzo-cli and resolve it from droplet scripts — INTEGRATED
 - [#6383](https://github.com/storytold/photocraft/pull/6383) Windows releases ship a symbols zip: the release build's PDBs for profilers (#688) — INTEGRATED
 - [#7743](https://github.com/storytold/photocraft/pull/7743) packaging: the portable zip holds the files, not a folder with the files in it — INTEGRATED
 - [#9015](https://github.com/storytold/photocraft/pull/9015) fix(xtask): reject leading zeroes in numeric prerelease identifiers — INTEGRATED
@@ -187,7 +187,7 @@ These proposals are pending parent semantic review. Mechanical moved-test/catalo
 - [#3520](https://github.com/storytold/photocraft/pull/3520) fix(ui): restore square color chips in Studio Dark theme — INTEGRATED
 - [#4023](https://github.com/storytold/photocraft/pull/4023) i18n(es): add 548 missing rows, fix five filter and video terms — INTEGRATED
 - [#4042](https://github.com/storytold/photocraft/pull/4042) feat(canvas): rotate view with Shift + middle-mouse drag — INTEGRATED
-- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): PhotoCraft icon corner radius matches other Craft apps (#4478) — INTEGRATED
+- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): Lienzo icon corner radius matches other Craft apps (#4478) — INTEGRATED
 - [#4883](https://github.com/storytold/photocraft/pull/4883) feat(ui): show selection and active-layer bounds in the status bar — INTEGRATED
 - [#4890](https://github.com/storytold/photocraft/pull/4890) Add scrollbar visibility preferences (#3262) — INTEGRATED
 - [#4938](https://github.com/storytold/photocraft/pull/4938) Layer Style: one dialog size on every page, and it fits short screens — INTEGRATED
@@ -235,7 +235,7 @@ index b86d7b2af..5d9e8bd97 100644
          // Clicking the layer thumbnail leaves mask view (#196).
 @@ -3500,19 +3499,20 @@ fn layer_row(
              let mask = if v.filter { "filter" } else { "layer" };
-             actions.push((photocraft_engine::mask_view_cmds::ID.into(), json!({"layer": l.id.0, "mode": "off", "mask": mask})));
+             actions.push((lienzo_engine::mask_view_cmds::ID.into(), json!({"layer": l.id.0, "mode": "off", "mask": mask})));
          }
 -        let content_less = matches!(l.content, LayerContent::Adjustment(_) | LayerContent::Fill(_));
 +        let adjustment = matches!(l.content, LayerContent::Adjustment(_));
@@ -269,7 +269,7 @@ diff --git a/crates/ui-egui/src/panels.rs b/crates/ui-egui/src/panels.rs
 index b86d7b2af..1f76a0f90 100644
 --- a/crates/ui-egui/src/panels.rs
 +++ b/crates/ui-egui/src/panels.rs
-@@ -1868,6 +1868,7 @@ pub fn dock_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -1868,6 +1868,7 @@ pub fn dock_area(app: &mut LienzoApp, ui: &mut egui::Ui) {
      }
      egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| crate::panel_docking::show(app, ui));
      crate::dock::persist(app, ui.ctx());
@@ -281,7 +281,7 @@ diff --git a/crates/ui-egui/src/prefs_ui.rs b/crates/ui-egui/src/prefs_ui.rs
 index 68ebf5bd9..2369b38fd 100644
 --- a/crates/ui-egui/src/prefs_ui.rs
 +++ b/crates/ui-egui/src/prefs_ui.rs
-@@ -250,6 +250,7 @@ pub fn load(app: &mut PhotocraftApp) {
+@@ -250,6 +250,7 @@ pub fn load(app: &mut LienzoApp) {
          }
      }
      crate::dock::restore(app);
@@ -508,32 +508,32 @@ diff --git a/crates/ui-egui/src/type_tool.rs b/crates/ui-egui/src/type_tool.rs
 index e8fdbe95d..7139e693a 100644
 --- a/crates/ui-egui/src/type_tool.rs
 +++ b/crates/ui-egui/src/type_tool.rs
-@@ -192,12 +192,12 @@ pub(crate) fn offset_at(app: &mut PhotocraftApp, id: LayerId, x: f64, y: f64) ->
+@@ -192,12 +192,12 @@ pub(crate) fn offset_at(app: &mut LienzoApp, id: LayerId, x: f64, y: f64) ->
      let (tx, ty) = to_text(&aff, x, y);
      // Type on a path: the point's place along the path is the position in the (single) line.
      let shape = app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape.clone()));
 -    let (tx, ty) = match shape {
--        Some(photocraft_doc::text::TextShape::Path { path, start, flip }) => {
--            photocraft_text::warp::arc_length_at(&path, flip, f64::from(tx), f64::from(ty)).map_or((tx, ty), |s| ((s - f64::from(start)) as f32, -1.0))
+-        Some(lienzo_doc::text::TextShape::Path { path, start, flip }) => {
+-            lienzo_text::warp::arc_length_at(&path, flip, f64::from(tx), f64::from(ty)).map_or((tx, ty), |s| ((s - f64::from(start)) as f32, -1.0))
 -        }
 -        _ => (tx, ty),
 -    };
 +    let text_start = l.bounds().map_or(0.0, |bounds| f64::from(bounds[0]));
 +    let (tx, ty) = shape
 +        .as_ref()
-+        .and_then(|shape| photocraft_text::warp::Warp::on_path_with_text_start(shape, text_start))
++        .and_then(|shape| lienzo_text::warp::Warp::on_path_with_text_start(shape, text_start))
 +        .and_then(|warp| warp.path_text_x_near_text(f64::from(tx), f64::from(ty), l.bounds().map_or(0.0, |bounds| f64::from(bounds[2]))))
 +        .map_or((tx, ty), |offset| (offset as f32, -1.0));
-     photocraft_text::hit_char(&l, &text, tx, ty).0
+     lienzo_text::hit_char(&l, &text, tx, ty).0
  }
  
-@@ -1297,7 +1297,8 @@ pub fn draw_overlay(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewX
+@@ -1297,7 +1297,8 @@ pub fn draw_overlay(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewX
      };
      let shape = app.session.active().and_then(|s| text_layer(&s.doc, id).map(|t| t.shape.clone()));
      // Type on a path: the caret, selection and underline follow the curve the glyphs sit on.
--    let bend = shape.as_ref().and_then(photocraft_text::warp::Warp::on_path);
+-    let bend = shape.as_ref().and_then(lienzo_text::warp::Warp::on_path);
 +    let text_start = l.bounds().map_or(0.0, |bounds| f64::from(bounds[0]));
-+    let bend = shape.as_ref().and_then(|shape| photocraft_text::warp::Warp::on_path_with_text_start(shape, text_start));
++    let bend = shape.as_ref().and_then(|shape| lienzo_text::warp::Warp::on_path_with_text_start(shape, text_start));
      // Line space (lines, clusters, carets) → screen: vertical type turns it 90° clockwise.
      let scr = |x: f32, y: f32| -> Pos2 {
          let (x, y) = l.to_text(x, y);
@@ -559,8 +559,8 @@ index e8fdbe95d..7139e693a 100644
 +        for align in ["left", "center", "right"] {
 +            let mut app = app();
 +            app.ui.tool_options.type_align = align.into();
-+            let path = photocraft_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
-+            app.run("path.set", json!({"path": photocraft_engine::vector_cmds::path_json(&path)})).unwrap();
++            let path = lienzo_vector::shapes::rect(20.0, 20.0, 200.0, 100.0);
++            app.run("path.set", json!({"path": lienzo_engine::vector_cmds::path_json(&path)})).unwrap();
 +            pointer_up(&mut app, [20.0, 45.0], [20.0, 45.0]);
 +            insert(&mut app, "ssssssssssss");
 +            let id = LayerId(app.ui.text_edit.as_ref().unwrap().layer);
@@ -581,7 +581,7 @@ diff --git a/crates/ui-egui/src/dialogs.rs b/crates/ui-egui/src/dialogs.rs
 index 2c683bce3..f91d5208c 100644
 --- a/crates/ui-egui/src/dialogs.rs
 +++ b/crates/ui-egui/src/dialogs.rs
-@@ -503,7 +503,12 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+@@ -503,7 +503,12 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
                  DialogKind::Command if crate::new_guide_ui::owns(&fields) => crate::new_guide_ui::body(ui, &mut fields),
                  DialogKind::Command if fields.contains_key("__form") => crate::view_cmds::form_body(ui, &mut fields),
                  DialogKind::Command => {}
@@ -605,11 +605,11 @@ index 2c683bce3..f91d5208c 100644
 +    fn layer_style_buttons_stay_on_a_short_window() {
 +        use egui_kittest::{Harness, kittest::Queryable};
 +
-+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
++        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 +        app.run("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
 +        app.run("layer.new.layer", serde_json::json!({})).unwrap();
 +        let mut h = Harness::builder().with_size(egui::vec2(1435.0, 858.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-+        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
++        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
 +        crate::layer_style::open(h.state_mut(), Some("bevelEmboss")).unwrap();
 +        h.run_steps(4);
 +        for label in ["OK", "Cancel"] {
@@ -712,7 +712,7 @@ index b65487c4f..7051c57be 100644
      MULTI.contains(&kind)
  }
 @@ -76,9 +79,15 @@ fn defaults(kind: &str) -> Value {
-     photocraft_engine::layer_style::effect_defaults(kind)
+     lienzo_engine::layer_style::effect_defaults(kind)
  }
  
 -/// Factory params for a new instance, with the shared light angle filled in.
@@ -753,7 +753,7 @@ index b65487c4f..7051c57be 100644
      f.insert("layer".into(), json!(layer.id.0));
      f.insert("globalLight".into(), json!(light));
      f.insert("preview".into(), json!(true));
-@@ -581,7 +597,8 @@ pub fn open(app: &mut PhotocraftApp, select: Option<&str>) -> Option<u64> {
+@@ -581,7 +597,8 @@ pub fn open(app: &mut LienzoApp, select: Option<&str>) -> Option<u64> {
      let layer = st.doc.layer(st.active_layer?)?.clone();
      let light = st.doc.global_light.angle;
      let mode = st.doc.mode;
@@ -835,9 +835,9 @@ index e8566b439..e3316a079 100644
                  // succeeds for a document whose Finder tag could not come along.
                  if let Ok(old) = root.dir.open(&relative) {
 +                    let old = old.into_std();
-                     let _ = photocraft_format::atomic::meta::copy_xattrs(old.as_fd(), file.as_fd());
+                     let _ = lienzo_format::atomic::meta::copy_xattrs(old.as_fd(), file.as_fd());
 +                    // The creation time too (#9388), through the same handles.
-+                    let _ = photocraft_format::atomic::meta::copy_created_file(&old, &file);
++                    let _ = lienzo_format::atomic::meta::copy_created_file(&old, &file);
                  }
              }
              // Falls back to a plain fsync on shares that refuse a full flush (#1336).
@@ -876,7 +876,7 @@ diff --git a/crates/ui-egui/src/lib.rs b/crates/ui-egui/src/lib.rs
 index 4db3dc2a3..dbb9dd165 100644
 --- a/crates/ui-egui/src/lib.rs
 +++ b/crates/ui-egui/src/lib.rs
-@@ -2297,6 +2297,7 @@ impl eframe::App for PhotocraftApp {
+@@ -2297,6 +2297,7 @@ impl eframe::App for LienzoApp {
          }
          self.drain_control(ctx);
          native_menu::run(self, ctx);
@@ -888,7 +888,7 @@ diff --git a/crates/ui-egui/src/panels.rs b/crates/ui-egui/src/panels.rs
 index b6bd34d9d..aa35d04a4 100644
 --- a/crates/ui-egui/src/panels.rs
 +++ b/crates/ui-egui/src/panels.rs
-@@ -336,7 +336,14 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -336,7 +336,14 @@ pub fn toolbar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                  {
                      let _ = crate::menus::invoke(app, &ctx, "select.editInQuickMaskMode", json!({}));
                  }
@@ -904,7 +904,7 @@ index b6bd34d9d..aa35d04a4 100644
                  paint_toolbar_flyout_indicator(ui, &t, &sm);
  
                  // Right-click, or click and hold like the tool flyouts (#4444), lists the modes,
-@@ -376,7 +383,8 @@ pub fn toolbar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -376,7 +383,8 @@ pub fn toolbar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                          ("view.screenMode.fullScreen", tl!("Full Screen Mode")),
                      ] {
                          let on = crate::view_cmds::checked(app, id).unwrap_or(false);
@@ -922,10 +922,10 @@ index b6bd34d9d..aa35d04a4 100644
 +    /// Change Screen Mode is greyed out: a click sends no viewport command.
 +    #[test]
 +    fn screen_mode_button_is_inert_without_a_document() {
-+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
++        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 +        app.run("file.new", serde_json::json!({"width": 64, "height": 48})).unwrap();
 +        let ctx = egui::Context::default();
-+        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
++        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
 +        frame(&mut app, &ctx, 0.0, vec![]);
 +        frame(&mut app, &ctx, 0.1, vec![]);
 +        let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -943,12 +943,12 @@ index 3738aa6ca..5e2694325 100644
 +++ b/crates/engine/src/web_cmds.rs
 @@ -900,7 +900,10 @@ fn save_for_web_impl(s: &mut Session, p: &Value, write: &mut dyn FnMut(&str, &[u
      let (wdoc, sx, sy) = web_document(&doc, p, &st)?;
-     let buf = photocraft_compose::flatten(&wdoc);
+     let buf = lienzo_compose::flatten(&wdoc);
      let bw = wdoc.size.width as usize;
 -    let icc = wdoc.icc_profile.as_deref().map(|v| v.as_slice());
 +    // An untagged document is treated as sRGB (see [`web_document`]); with Embed Color Profile
 +    // on, the file says so, as Photoshop's does (#9325).
-+    let srgb = (st.embed_icc && wdoc.icc_profile.is_none()).then(|| photocraft_cms::Builtin::Srgb.profile().to_bytes().to_vec());
++    let srgb = (st.embed_icc && wdoc.icc_profile.is_none()).then(|| lienzo_cms::Builtin::Srgb.profile().to_bytes().to_vec());
 +    let icc = wdoc.icc_profile.as_deref().map(|v| v.as_slice()).or(srgb.as_deref());
      let xmp = web_xmp(&doc, st.metadata);
      let exif = web_exif(&doc, st.metadata);
@@ -969,21 +969,21 @@ index 29ee74b1a..06490f096 100644
  #[cfg(not(target_arch = "wasm32"))]
  use std::sync::Mutex;
  
--use photocraft_doc::Document;
-+use photocraft_cms::Profile;
-+use photocraft_doc::{ColorMode, Document};
+-use lienzo_doc::Document;
++use lienzo_cms::Profile;
++use lienzo_doc::{ColorMode, Document};
  use serde_json::{Map, Value, json};
  
- use photocraft_engine::export_preset_cmds::{DEFAULT_RESAMPLE, RESAMPLE, export_resample};
-@@ -259,6 +260,14 @@ fn source_document(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Arc<Do
+ use lienzo_engine::export_preset_cmds::{DEFAULT_RESAMPLE, RESAMPLE, export_resample};
+@@ -259,6 +260,14 @@ fn source_document(app: &LienzoApp, f: &Map<String, Value>) -> Result<Arc<Do
      source_document_from(app.session.active().ok_or("no document")?.doc.clone(), f)
  }
  
-+fn effective_source_profile(app: &PhotocraftApp, doc: &Document) -> Arc<Profile> {
++fn effective_source_profile(app: &LienzoApp, doc: &Document) -> Arc<Profile> {
 +    doc.icc_profile
 +        .as_ref()
-+        .and_then(|bytes| photocraft_engine::color_cmds::profile_from_bytes(bytes).ok())
-+        .filter(|profile| profile.color_space == photocraft_engine::color_cmds::mode_space(doc.mode))
++        .and_then(|bytes| lienzo_engine::color_cmds::profile_from_bytes(bytes).ok())
++        .filter(|profile| profile.color_space == lienzo_engine::color_cmds::mode_space(doc.mode))
 +        .unwrap_or_else(|| app.session.color.working(doc.mode))
 +}
 +
@@ -1002,11 +1002,11 @@ index 29ee74b1a..06490f096 100644
 +    if srgb {
 +        copy.icc_profile = Some(source_profile.to_bytes());
 +    }
-     let mut session = photocraft_engine::Session::new();
+     let mut session = lienzo_engine::Session::new();
 -    session.add_document(doc.clone(), None);
 -    if s(f, "profile") == "srgb" && doc.icc_profile.is_some() {
 +    session.add_document(copy, None);
-+    if srgb && (doc.mode != ColorMode::Rgb || !source_profile.same_bytes(photocraft_cms::Builtin::Srgb.profile())) {
++    if srgb && (doc.mode != ColorMode::Rgb || !source_profile.same_bytes(lienzo_cms::Builtin::Srgb.profile())) {
          session.execute("edit.convertToProfile", json!({"profile": "srgb", "intent": "perceptual"})).map_err(|e| e.to_string())?;
      }
      let (w, h) = export_pixels(f64::from(doc.size.width), f64::from(doc.size.height), f, max_side)?;
@@ -1025,7 +1025,7 @@ index 29ee74b1a..06490f096 100644
      PreviewPixels { estimate, width: img.width as usize, height: img.height as usize, rgba: img.pixels }
  }
  
--fn preview_sync(app: &PhotocraftApp, d
+-fn preview_sync(app: &LienzoApp, d
 ```
 
 ### #9282: feat(ui): Preset menus for Levels, Exposure, Black & White and Channel Mixer
@@ -1054,10 +1054,10 @@ index 18e32e486..55826aea9 100644
 +            ("channelMixer", "Black & White with Red Filter (RGB)", "monochrome"),
 +        ] {
 +            let mut h = Harness::builder().with_size(egui::vec2(1200.0, 900.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app_with_image());
-+            PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
++            LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
 +            let id = open(h.state_mut(), &format!("image.adjustments.{kind}")).unwrap();
 +            h.run_steps(4);
-+            let preset = |h: &Harness<'_, PhotocraftApp>| {
++            let preset = |h: &Harness<'_, LienzoApp>| {
 +                h.query_all_by_role(egui::accesskit::Role::ComboBox).next().and_then(|n| n.accesskit_node().value().map(|s| s.to_string()))
 +            };
 +            assert_eq!(preset(&h).as_deref(), Some("Default"), "{kind} opens on Default");
@@ -1126,7 +1126,7 @@ index c1890d1cb..f1aa01671 100644
  
 +    #[test]
 +    fn unknown_bench_is_rejected_before_updating_the_baseline() {
-+        let root = std::env::temp_dir().join(format!("photocraft-perf-unknown-bench-{}", std::process::id()));
++        let root = std::env::temp_dir().join(format!("lienzo-perf-unknown-bench-{}", std::process::id()));
 +        std::fs::create_dir(&root).unwrap();
 +        std::fs::create_dir(root.join("perf")).unwrap();
 +        std::fs::write(root.join(BUDGETS), "[[bench]]\nname = \"known\"\npackage = \"unused\"\nrequires = \"missing.rs\"\n").unwrap();
@@ -1168,7 +1168,7 @@ index 56036a852..2ab48a671 100644
      Work,
  }
  
-@@ -923,8 +925,8 @@ pub(crate) fn delete_key_deletes_work_path(app: &PhotocraftApp) -> bool {
+@@ -923,8 +925,8 @@ pub(crate) fn delete_key_deletes_work_path(app: &LienzoApp) -> bool {
          && matches!(target_path(app), Some((PathTarget::Work, _)))
  }
  
@@ -1176,10 +1176,10 @@ index 56036a852..2ab48a671 100644
 -/// the work path.
 +/// The path Path Selection edits: the targeted vector mask, the active shape layer's path, the
 +/// saved path selected in the Paths panel (#8478), else the work path.
- fn target_path(app: &PhotocraftApp) -> Option<(PathTarget, Path)> {
+ fn target_path(app: &LienzoApp) -> Option<(PathTarget, Path)> {
      if let Some((id, p)) = targeted_vector_mask(app) {
          return Some((PathTarget::VectorMask(id), p));
-@@ -932,6 +934,11 @@ fn target_path(app: &PhotocraftApp) -> Option<(PathTarget, Path)> {
+@@ -932,6 +934,11 @@ fn target_path(app: &LienzoApp) -> Option<(PathTarget, Path)> {
      if let Some((id, p)) = active_shape_path(app) {
          return Some((PathTarget::Shape(id), p));
      }
@@ -1191,7 +1191,7 @@ index 56036a852..2ab48a671 100644
      app.session.active()?.doc.work_path.clone().map(|p| (PathTarget::Work, p))
  }
  
-@@ -945,6 +952,7 @@ pub(crate) fn free_transform_path(app: &PhotocraftApp) -> Option<(Value, Path)>
+@@ -945,6 +952,7 @@ pub(crate) fn free_transform_path(app: &LienzoApp) -> Option<(Value, Path)>
      path.control_bounds()?;
      let params = match target {
          PathTarget::Shape(id) | PathTarget::VectorMask(id) => json!({"name": "layer", "layer": id}),
@@ -1199,24 +1199,24 @@ index 56036a852..2ab48a671 100644
          PathTarget::Work => json!({"name": "work"}),
      };
      Some((params, path))
-@@ -1049,6 +1057,10 @@ pub fn path_selection_finish(app: &mut PhotocraftApp, start: [f64; 2], end: [f64
+@@ -1049,6 +1057,10 @@ pub fn path_selection_finish(app: &mut LienzoApp, start: [f64; 2], end: [f64
              let moved = path.transform(&Affine::translate(dx.round(), dy.round()));
-             app.run("layer.vectorMask.edit", json!({"layer": id, "path": photocraft_engine::vector_cmds::path_json(&moved)}))
+             app.run("layer.vectorMask.edit", json!({"layer": id, "path": lienzo_engine::vector_cmds::path_json(&moved)}))
          }
 +        PathTarget::Saved(name) => {
 +            let moved = path.transform(&Affine::translate(dx.round(), dy.round()));
-+            app.run("path.set", json!({"name": name, "path": photocraft_engine::vector_cmds::path_json(&moved)}))
++            app.run("path.set", json!({"name": name, "path": lienzo_engine::vector_cmds::path_json(&moved)}))
 +        }
          PathTarget::Work => {
              let moved = path.transform(&Affine::translate(dx.round(), dy.round()));
-             app.run("path.set", json!({"name": "work", "path": photocraft_engine::vector_cmds::path_json(&moved)}))
-@@ -1165,6 +1177,13 @@ pub(crate) fn selected_saved_path(app: &PhotocraftApp) -> Option<&Path> {
+             app.run("path.set", json!({"name": "work", "path": lienzo_engine::vector_cmds::path_json(&moved)}))
+@@ -1165,6 +1177,13 @@ pub(crate) fn selected_saved_path(app: &LienzoApp) -> Option<&Path> {
      app.session.active()?.doc.paths.iter().find(|p| p.name == sel).map(|p| &p.path)
  }
  
 +/// [`selected_saved_path`] with its index in the document's `paths`: the saved path Path
 +/// Selection and Direct Selection edit (#8478).
-+pub(crate) fn selected_saved_path_index(app: &PhotocraftApp) -> Option<(usize, Path)> {
++pub(crate) fn selected_saved_path_index(app: &LienzoApp) -> Option<(usize, Path)> {
 +    let sel = app.ui.selected_path.as_deref().filter(|s| !matches!(*s, "work" | "layer"))?;
 +    app.session.active()?.doc.paths.iter().enumerate().find(|(_, p)| p.name == sel).map(|(i, p)| (i, p.path.clone()))
 +}
@@ -1233,7 +1233,7 @@ diff --git a/crates/ui-egui/src/panels.rs b/crates/ui-egui/src/panels.rs
 index b6bd34d9d..7c380130b 100644
 --- a/crates/ui-egui/src/panels.rs
 +++ b/crates/ui-egui/src/panels.rs
-@@ -4191,8 +4191,10 @@ pub(crate) fn color_field(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -4191,8 +4191,10 @@ pub(crate) fn color_field(app: &mut LienzoApp, ui: &mut egui::Ui) {
          }
          let (kx, ky) = if brightness { (hsva.h, 1.0 - hsva.s) } else { (hsva.s, 1.0 - hsva.v) };
          let knob = pos2(field.left() + kx * field.width(), field.top() + ky * field.height());
@@ -1254,7 +1254,7 @@ index b6bd34d9d..7c380130b 100644
 +    /// (over the hue strip or the chips).
 +    #[test]
 +    fn color_field_cursor_stays_inside_the_field() {
-+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
++        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 +        // Black is s = 0, v = 0: the bottom-left corner.
 +        app.session.tools.foreground = [0.0, 0.0, 0.0, 1.0];
 +        let h = field_harness(app);
@@ -1280,7 +1280,7 @@ index b6bd34d9d..7c380130b 100644
 +        }
 +    }
 +
-     fn field_harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+     fn field_harness(app: LienzoApp) -> egui_kittest::Harness<'static, LienzoApp> {
          // 60 fps steps, so two clicks a frame apart are a double-click.
          let mut h = egui_kittest::Harness::builder().with_size(vec2(300.0, 200.0)).with_step_dt(1.0 / 60.0).build_ui_state(
 
@@ -1296,7 +1296,7 @@ index a75eedd88..d95f0edd9 100644
 --- a/crates/plugins/tests/abi.rs
 +++ b/crates/plugins/tests/abi.rs
 @@ -317,3 +317,36 @@ fn folder_loading_skips_bad_files() {
-     assert!(photocraft_plugins::registry::load_file(&dir, Limits::default()).is_err(), "a directory is not a module");
+     assert!(lienzo_plugins::registry::load_file(&dir, Limits::default()).is_err(), "a directory is not a module");
      std::fs::remove_dir_all(&dir).ok();
  }
 +
@@ -1351,7 +1351,7 @@ index fd07adde5..e8ae58378 100644
 -                    let bytes = std::fs::read(file).map_err(|e| format!("the linked file {path} can't be read: {e}"))?;
 +                    // Regular files only, in bounded reads: a link to a FIFO would block the save
 +                    // and one to a device such as `/dev/zero` would never end (#8601).
-+                    let bytes = photocraft_format::read_file(&file).map_err(|e| format!("the linked file {path} can't be read: {e}"))?;
++                    let bytes = lienzo_format::read_file(&file).map_err(|e| format!("the linked file {path} can't be read: {e}"))?;
                      let name = path.rsplit(['/', '\\']).next().unwrap_or(path).to_string();
                      self.warnings.push(format!("the linked smart object {name} was embedded (PSD export keeps no external links)"));
                      self.embed(sm.contents_id, &name, &bytes)
@@ -1368,16 +1368,16 @@ index fd07adde5..e8ae58378 100644
 +    #[cfg(unix)]
 +    #[test]
 +    fn a_linked_fifo_is_not_read() {
-+        let dir = std::env::temp_dir().join(format!("photocraft-linked-fifo-{}", std::process::id()));
++        let dir = std::env::temp_dir().join(format!("lienzo-linked-fifo-{}", std::process::id()));
 +        std::fs::create_dir_all(&dir).unwrap();
 +        let fifo = dir.join("link.png");
 +        let _ = std::fs::remove_file(&fifo);
 +        assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success(), "mkfifo failed");
 +        let mut doc = document(8, 6);
-+        let smart = photocraft_doc::SmartObject {
++        let smart = lienzo_doc::SmartObject {
 +            contents_id: SmartContentsId::fresh(),
-+            source: photocraft_doc::SmartSource::Linked { path: fifo.to_string_lossy().into_owned() },
-+            transform: photocraft_geom::Affine::IDENTITY,
++            source: lienzo_doc::SmartSource::Linked { path: fifo.to_string_lossy().into_owned() },
++            transform: lienzo_geom::Affine::IDENTITY,
 +            smart_filters: vec![],
 +            cache: Some(Surface::new(doc.pixel_format())),
 +            psd_raw: None,
@@ -1407,7 +1407,7 @@ diff --git a/crates/ui-egui/src/file_ui.rs b/crates/ui-egui/src/file_ui.rs
 index e014ca9e3..6041f6a06 100644
 --- a/crates/ui-egui/src/file_ui.rs
 +++ b/crates/ui-egui/src/file_ui.rs
-@@ -331,10 +331,9 @@ fn web_pane(app: &PhotocraftApp, ui: &mut egui::Ui, size: egui::Vec2, p: Option<
+@@ -331,10 +331,9 @@ fn web_pane(app: &LienzoApp, ui: &mut egui::Ui, size: egui::Vec2, p: Option<
                  None => (px.iter().flat_map(|q| q.map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8)).collect::<Vec<u8>>(), None),
                  Some(p) => match web_preview::optimized(ui, key, &format!("{}|{rev}|{frame:?}|{size_sig}", doc.id.0), p, &px, w, h) {
                      Ok((preview, bytes, colors, ext)) => (preview, Some(((bytes as f64 * ratio) as usize, colors, ext))),
@@ -1500,7 +1500,7 @@ index b9ed13083..18705ec21 100644
          tick(&mut app, &ctx);
          app.ui.tool_options.move_auto_select = false;
          app.ui.tool_options.feather = 12.0;
-+        app.ui.tool_options.transform_interpolation = Some(photocraft_engine::prefs::Interpolation::Nearest);
++        app.ui.tool_options.transform_interpolation = Some(lienzo_engine::prefs::Interpolation::Nearest);
          crate::tool_memory::persist(&mut app, &ctx);
          tick(&mut app, &ctx);
          // Only what differs from the defaults is stored.
@@ -1511,7 +1511,7 @@ index b9ed13083..18705ec21 100644
          tick(&mut app2, &ctx);
          assert!(!app2.ui.tool_options.move_auto_select);
          assert_eq!(app2.ui.tool_options.feather, 12.0);
-+        assert_eq!(app2.ui.tool_options.transform_interpolation, Some(photocraft_engine::prefs::Interpolation::Nearest));
++        assert_eq!(app2.ui.tool_options.transform_interpolation, Some(lienzo_engine::prefs::Interpolation::Nearest));
          assert_eq!(app2.ui.tool_options.tolerance, crate::state::ToolOptions::default().tolerance);
          // A hand-edited file: unreadable fields keep their defaults, the good ones still load.
          for bad in [json!("junk"), json!({"move_auto_select": "no", "feather": 1e300, "tolerance": 5.0, "unknown": 1})] {
@@ -1525,7 +1525,7 @@ index 313186157..77ebcd5b1 100644
      pub move_show_transform: bool,
 +    /// Last interpolation selected in the Transform options bar; unset follows General's default.
 +    #[serde(default)]
-+    pub transform_interpolation: Option<photocraft_engine::prefs::Interpolation>,
++    pub transform_interpolation: Option<lienzo_engine::prefs::Interpolation>,
      /// Crop options bar: aspect ratio ("" = Ratio/unconstrained, "w:h", or "original") and
      /// Delete Cropped Pixels.
      #[serde(default)]
@@ -1546,8 +1546,8 @@ index 65a5c7014..f63f4be0b 100644
  }
  
 +/// The transform choices supported by the options bar, using its remembered choice or the general default.
-+pub(crate) fn default_interpolation(app: &PhotocraftApp) -> &'static str {
-+    use photocraft_engine::prefs::Interpolation;
++pub(crate) fn default_interpolation(app: &LienzoApp) -> &'static str {
++    use lienzo_engine::prefs::Interpolation;
 +    match app.ui.tool_options.transform_interpolation.unwrap_or(app.session.prefs().general.image_interpolation) {
 +        Interpolation::Nearest => "nearest",
 +        Interpolation::Bilinear => "bilinear",
@@ -1555,7 +1555,7 @@ index 65a5c7014..f63f4be0b 100644
 +    }
 +}
 +
-+fn interpolation_preference(interpolation: &str) -> Option<photocraft_engine::prefs::Interpola
++fn interpolation_preference(interpolation: &str) -> Option<lienzo_engine::prefs::Interpola
 ```
 
 ### #8039: Compose: Extend Softer outer glows past Size (#7899)
@@ -1575,8 +1575,8 @@ index cbdf7f35a..1c751225b 100644
 +//! cheaper chamfer. Soft falloffs are two box blurs (a tent); Softer outer glows retain a short
 +//! fading tail beyond Size.
  
- use photocraft_color::blend::BlendMode;
- use photocraft_doc::Pattern;
+ use lienzo_color::blend::BlendMode;
+ use lienzo_doc::Pattern;
 @@ -62,7 +63,14 @@ pub fn margin(layer: &Layer) -> i32 {
      for e in layer.effects.items.iter().filter(|e| e.enabled()) {
          let r = match e {
@@ -1675,7 +1675,7 @@ index fdbee1cb2..1a2530d3d 100644
 +        }
 +    }
 +
-+    fn read_rect(self, rect: Rect, dab: &photocraft_paint::Dab) -> Rect {
++    fn read_rect(self, rect: Rect, dab: &lienzo_paint::Dab) -> Rect {
 +        match self {
 +            Self::Halo(radius) => rect.inflate(radius),
 +            Self::Smudge(radius) => {
@@ -1719,7 +1719,7 @@ index fdbee1cb2..1a2530d3d 100644
              None => effect(work, fp),
          }))
 @@ -1120,7 +1152,7 @@ pub struct LiveDab {
-     renderer: photocraft_paint::StrokeRenderer,
+     renderer: lienzo_paint::StrokeRenderer,
      done: usize,
      effect: DabEffect,
 -    halo: i32,
@@ -1773,7 +1773,7 @@ index 9e8eb6cb7..decaed9a7 100644
 +    LongExact,
      Dbl,
      Bool,
-     /// An enumeration: its type id and the Photoshop ↔ PhotoCraft value pairs.
+     /// An enumeration: its type id and the Photoshop ↔ Lienzo value pairs.
 @@ -406,7 +420,7 @@ fn fields_from(d: &Descriptor, fields: &[F]) -> Option<Map<String, Value>> {
      let mut m = Map::new();
      for F(key, param, kind) in fields {
@@ -1817,12 +1817,12 @@ index 6d5342b93..d4308fb7e 100644
  }
  
 +/// Flatten the document only if its dimensions are within the compositor's render limit.
-+fn flatten_within_render_limit(doc: &Document, op: &str) -> Result<photocraft_compose::Buffer> {
++fn flatten_within_render_limit(doc: &Document, op: &str) -> Result<lienzo_compose::Buffer> {
 +    let bounds = doc.bounds();
-+    if !bounds.is_empty() && u64::from(bounds.width()) * u64::from(bounds.height()) > photocraft_compose::MAX_RENDER_PIXELS {
++    if !bounds.is_empty() && u64::from(bounds.width()) * u64::from(bounds.height()) > lienzo_compose::MAX_RENDER_PIXELS {
 +        return Err(EngineError::Other(format!("the document is too large to {op}")));
 +    }
-+    let buf = photocraft_compose::flatten(doc);
++    let buf = lienzo_compose::flatten(doc);
 +    if buf.px.is_empty() && !bounds.is_empty() {
 +        return Err(EngineError::Other(format!("the document is too large to {op}")));
 +    }
@@ -1833,20 +1833,20 @@ index 6d5342b93..d4308fb7e 100644
  fn trim(s: &mut Session, p: &Value) -> Result<Value> {
      let d = s.active().ok_or(EngineError::NoDocument)?;
      let canvas = d.doc.bounds();
--    let buf = photocraft_compose::flatten(&d.doc);
+-    let buf = lienzo_compose::flatten(&d.doc);
 +    let buf = flatten_within_render_limit(&d.doc, "trim")?;
      let based = p.get("basedOn").and_then(Value::as_str).unwrap_or("transparent");
      let w = canvas.width() as usize;
      let reference = match based {
 @@ -803,7 +816,7 @@ fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
-     doc.id = photocraft_doc::DocId::fresh();
+     doc.id = lienzo_doc::DocId::fresh();
      doc.name = p.get("name").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| format!("{} copy", d.doc.name));
      if p.get("mergedOnly").and_then(Value::as_bool).unwrap_or(false) {
--        let buf = photocraft_compose::flatten(&doc);
+-        let buf = lienzo_compose::flatten(&doc);
 +        let buf = flatten_within_render_limit(&doc, "duplicate merged")?;
          let fmt = doc.pixel_format();
          let mut surf = Surface::new(fmt);
-         let vals: Vec<f32> = buf.px.iter().flat_map(|q| photocraft_raster::from_rgba(&fmt, *q)).collect();
+         let vals: Vec<f32> = buf.px.iter().flat_map(|q| lienzo_raster::from_rgba(&fmt, *q)).collect();
 @@ -1687,4 +1700,31 @@ mod tests {
          assert_eq!(doc(&s).layers.len(), 1);
          assert!(doc(&s).name.ends_with("copy"));
@@ -1882,7 +1882,7 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index ab3e6939a..948e24e8f 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -4272,6 +4272,9 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -4272,6 +4272,9 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
              // menu belongs to the selected Zoom or Hand, not to Space or a held zoom key.
              if crate::canvas_tool_menu::pasteboard_at(app, tool, xf.to_doc(p)) {
                  crate::canvas_tool_menu::open_pasteboard(app, &ctx, tool, [p.x, p.y]);
@@ -1892,7 +1892,7 @@ index ab3e6939a..948e24e8f 100644
              } else if crate::canvas_tool_menu::is_view_tool(tool) {
                  if tool == app.ui.tool {
                      crate::canvas_tool_menu::open_view(app, &ctx, tool, [p.x, p.y], xf.to_doc(p));
-@@ -6840,12 +6843,14 @@ pub fn commit_crop(app: &mut PhotocraftApp) {
+@@ -6840,12 +6843,14 @@ pub fn commit_crop(app: &mut LienzoApp) {
      // The crop's default mode leaves the view upright (`crop_mode`).
      crate::crop_mode::upright(app);
      // The untouched default frame around the whole canvas crops nothing (Photoshop's ↵ on it does
@@ -1941,15 +1941,15 @@ index e4256949e..6cadb706a 100644
 
 ### #6492: Fail control startup promptly when its port is occupied
 
-`apps/photocraft/src/control_server.rs`, `apps/photocraft/src/main.rs`, `apps/photocraft/tests/it/control_exit_code.rs`
+`apps/lienzo/src/control_server.rs`, `apps/lienzo/src/main.rs`, `apps/lienzo/tests/it/control_exit_code.rs`
 
 ```diff
-diff --git a/apps/photocraft/src/control_server.rs b/apps/photocraft/src/control_server.rs
+diff --git a/apps/lienzo/src/control_server.rs b/apps/lienzo/src/control_server.rs
 index 30ae610b7..f8462e73f 100644
---- a/apps/photocraft/src/control_server.rs
-+++ b/apps/photocraft/src/control_server.rs
-@@ -16,16 +16,12 @@ use photocraft_ui_egui::ControlRequest;
- use photocraft_ui_egui::control::REPLY_DEADLINE;
+--- a/apps/lienzo/src/control_server.rs
++++ b/apps/lienzo/src/control_server.rs
+@@ -16,16 +16,12 @@ use lienzo_ui_egui::ControlRequest;
+ use lienzo_ui_egui::control::REPLY_DEADLINE;
  use serde_json::{Value, json};
  
 -pub fn start(port: u16, token: String, ctx: egui::Context) -> Receiver<ControlRequest> {
@@ -1959,13 +1959,13 @@ index 30ae610b7..f8462e73f 100644
 -    let listener = match TcpListener::bind(("127.0.0.1", port)) {
 -        Ok(l) => l,
 -        Err(e) => {
--            eprintln!("photocraft: control server failed to bind 127.0.0.1:{port}: {e}");
+-            eprintln!("lienzo: control server failed to bind 127.0.0.1:{port}: {e}");
 -            return rx;
 -        }
 -    };
--    eprintln!("photocraft: control server listening on 127.0.0.1:{port}");
+-    eprintln!("lienzo: control server listening on 127.0.0.1:{port}");
 +    if let Ok(address) = listener.local_addr() {
-+        eprintln!("photocraft: control server listening on {address}");
++        eprintln!("lienzo: control server listening on {address}");
 +    }
      std::thread::spawn(move || {
          let limiter = ConnectionLimiter::new(MAX_CONNECTIONS);
@@ -2001,10 +2001,10 @@ index 30ae610b7..f8462e73f 100644
      /// #4965: a connection that keeps sending without authenticating is closed at the deadline
      /// (releasing its connection permit), and nothing it sent is dispatched.
      #[test]
-diff --git a/apps/photocraft/src/main.rs b/apps/photocraft/src/main.rs
+diff --git a/apps/lienzo/src/main.rs b/apps/lienzo/src/main.rs
 index c0f93bd31..d8ead0674 100644
---- a/apps/photocraft/src/main.rs
-+++ b/apps/photocraft/src/main.rs
+--- a/apps/lienzo/src/main.rs
++++ b/apps/lienzo/src/main.rs
 @@ -284,6 +284,43 @@ fn main() -> eframe::Result {
          std::process::exit(code);
      }
@@ -2033,14 +2033,14 @@ index 3f2845cae..1da497021 100644
  //! - `~` (the backtick key) with the Brush or Pencil: a stroke started while it is held erases,
  //!   with that tool's own brush ([`erase_held`], #3439).
  //!
-@@ -118,6 +120,23 @@ fn cmd_move_held(app: &PhotocraftApp, i: &InputState) -> bool {
+@@ -118,6 +120,23 @@ fn cmd_move_held(app: &LienzoApp, i: &InputState) -> bool {
      i.modifiers.command && cmd_moves(app.ui.tool) && app.ui.transform.is_none() && app.ui.text_edit.is_none()
  }
  
 +/// The Hand tool's own temporary zoom (#6434): ⌘ held is Zoom In, ⌥ (with or without ⌘) Zoom Out,
 +/// as in Photoshop. Not while a Free Transform keeps ⌘ for its handles, and not from the middle of
 +/// a Hand drag: a modifier pressed while panning must not stop the pan.
-+fn hand_zoom_held(app: &PhotocraftApp, i: &InputState) -> Option<Temporary> {
++fn hand_zoom_held(app: &LienzoApp, i: &InputState) -> Option<Temporary> {
 +    let panning = i.pointer.primary_down() && !i.pointer.primary_pressed();
 +    if app.ui.tool != Tool::Hand || app.ui.transform.is_some() || panning {
 +        return None;
@@ -2056,8 +2056,8 @@ index 3f2845cae..1da497021 100644
 +
  /// Is `id` a held temporary tool rather than a command?
  pub fn is_temporary(id: &str) -> bool {
-     photocraft_engine::prefs::TEMPORARY_TOOLS.iter().any(|t| t.0 == id)
-@@ -159,6 +178,7 @@ pub fn held_tool(app: &PhotocraftApp, ctx: &egui::Context) -> Option<Temporary>
+     lienzo_engine::prefs::TEMPORARY_TOOLS.iter().any(|t| t.0 == id)
+@@ -159,6 +178,7 @@ pub fn held_tool(app: &LienzoApp, ctx: &egui::Context) -> Option<Temporary>
      };
      let mut best: Option<(u8, Temporary, KeyboardShortcut)> = None;
      let mut cmd_move = false;
@@ -2065,7 +2065,7 @@ index 3f2845cae..1da497021 100644
      let mut alt = false;
      ctx.input(|i| {
          for t in Temporary::BOUND {
-@@ -170,13 +190,14 @@ pub fn held_tool(app: &PhotocraftApp, ctx: &egui::Context) -> Option<Temporary>
+@@ -170,13 +190,14 @@ pub fn held_tool(app: &LienzoApp, ctx: &egui::Context) -> Option<Temporary>
              }
          }
          cmd_move = cmd_move_held(app, i);
@@ -2119,7 +2119,7 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index ab3e6939a..a48307db7 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -2587,6 +2587,8 @@ pub fn document_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -2587,6 +2587,8 @@ pub fn document_area(app: &mut LienzoApp, ui: &mut egui::Ui) {
      crate::layer_transfer::finish(app, ui.ctx());
      // Once a frame, not per document view: the right-click or options-bar Brush Preset picker.
      crate::paint_mouse::show_picker(app, ui.ctx());
@@ -2144,7 +2144,7 @@ diff --git a/crates/ui-egui/src/paint_mouse.rs b/crates/ui-egui/src/paint_mouse.
 index 84695522d..75a8d6392 100644
 --- a/crates/ui-egui/src/paint_mouse.rs
 +++ b/crates/ui-egui/src/paint_mouse.rs
-@@ -136,12 +136,24 @@ pub fn canvas_buttons(app: &mut PhotocraftApp, response: &Response, tool: Tool)
+@@ -136,12 +136,24 @@ pub fn canvas_buttons(app: &mut LienzoApp, response: &Response, tool: Tool)
      // ⌘/Ctrl+right-click lists the layers under the pointer instead (layer_pick_ui.rs, #307).
      let layer_menu = crate::layer_pick_ui::is_gesture(tool, mods);
      let erase = right_erases(app, tool) && !resize_start && !resizing && !layer_menu;
@@ -2208,7 +2208,7 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index 391ad464f..6fbb502fe 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -3272,6 +3272,10 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -3272,6 +3272,10 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
      crate::crop_ui::cancel_stale(app);
      crate::crop_ui::ensure_frame(app);
      let mut drawing = crate::crop_ui::active(app);
@@ -2219,7 +2219,7 @@ index 391ad464f..6fbb502fe 100644
      if let Some(d) = app.drag.as_mut().filter(|d| crate::hold_keys::repositions(d.tool)) {
          d.reposition = reposition;
          drawing = true;
-@@ -4009,6 +4013,8 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -4009,6 +4013,8 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
                          pen_cursor(ui.ctx(), tool, p)
                      }
                  }
@@ -2227,7 +2227,7 @@ index 391ad464f..6fbb502fe 100644
 +                Tool::Move if crate::move_mods::copying(app, alt) => egui::CursorIcon::Copy,
                  // Preferences › Cursors › Other Cursors: Precise shows a crosshair for every tool.
                  Tool::Move | Tool::Type | Tool::VerticalType | Tool::HorizontalTypeMask | Tool::VerticalTypeMask
-                     if app.session.prefs().cursors.other == photocraft_engine::prefs::OtherCursor::Precise =>
+                     if app.session.prefs().cursors.other == lienzo_engine::prefs::OtherCursor::Precise =>
 @@ -4295,7 +4301,7 @@ pub(crate) fn marching_ants_lines(painter: &egui::Painter, lines: impl Iterator<
      };
      for (pa, pb) in lines {
@@ -2237,10 +2237,10 @@ index 391ad464f..6fbb502fe 100644
              continue;
          }
          let (pa, pb) = if pa.distance(pb) > LONG {
-@@ -4993,9 +4999,12 @@ fn alt_eyedropper(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers)
+@@ -4993,9 +4999,12 @@ fn alt_eyedropper(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers)
  }
  
- fn sample_eyedropper(app: &mut PhotocraftApp, x: f64, y: f6
+ fn sample_eyedropper(app: &mut LienzoApp, x: f64, y: f6
 ```
 
 ### #6026: Marquee: Fixed Size selects exactly the entered width and height (fixes #6015)
@@ -2314,15 +2314,15 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index 7a9592b69..413e29872 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -1968,11 +1968,28 @@ pub fn document_area(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -1968,11 +1968,28 @@ pub fn document_area(app: &mut LienzoApp, ui: &mut egui::Ui) {
  
  /// Window › Arrange tiles: each document shown with its tile in `rect`, or `None` when the
  /// active document fills the area.
-+fn docked_document_indices(app: &PhotocraftApp) -> Vec<usize> {
++fn docked_document_indices(app: &LienzoApp) -> Vec<usize> {
 +    (0..app.session.documents().len()).filter(|&doc| !crate::view_cmds::document_is_floating(app, doc)).collect()
 +}
 +
-+fn main_canvas_document(app: &PhotocraftApp) -> Option<usize> {
++fn main_canvas_document(app: &LienzoApp) -> Option<usize> {
 +    let active = app.session.active_index()?;
 +    if !crate::view_cmds::document_is_floating(app, active) {
 +        return Some(active);
@@ -2330,7 +2330,7 @@ index 7a9592b69..413e29872 100644
 +    docked_document_indices(app).into_iter().next()
 +}
 +
- pub(crate) fn arranged_cells(app: &PhotocraftApp, rect: Rect) -> Option<Vec<(usize, Rect)>> {
+ pub(crate) fn arranged_cells(app: &LienzoApp, rect: Rect) -> Option<Vec<(usize, Rect)>> {
 -    let idx = app.session.active_index()?;
 -    let n = app.session.documents().len();
 +    let documents = docked_document_indices(app);
@@ -2346,7 +2346,7 @@ index 7a9592b69..413e29872 100644
      shown.sort_by_key(|(d, _)| *d);
      Some(shown)
  }
-@@ -1996,6 +2013,12 @@ fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -1996,6 +2013,12 @@ fn documents(app: &mut LienzoApp, ui: &mut egui::Ui) {
          paint_dots(ui, ui.available_rect_before_wrap(), app.session.prefs().interface.show_canvas_dots);
          return;
      }
@@ -2359,7 +2359,7 @@ index 7a9592b69..413e29872 100644
      if !app.ui.view.hides_tabs() || opening {
          // Flat Spectrum tabs sit directly against the canvas. The parent's default vertical
          // item spacing would otherwise leave a visible gap below the tab strip (#2188).
-@@ -2011,7 +2034,12 @@ fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -2011,7 +2034,12 @@ fn documents(app: &mut LienzoApp, ui: &mut egui::Ui) {
          crate::jobs_ui::open_card(app, ui, job);
          return;
      }
@@ -2373,7 +2373,7 @@ index 7a9592b69..413e29872 100644
      let rect = ui.available_rect_before_wrap();
      app.last_canvas_rect = rect;
      app.drop_canvas_rect = Some(rect);
-@@ -2022,20 +2050,23 @@ fn documents(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -2022,20 +2050,23 @@ fn documents(app: &mut LienzoApp, ui: &mut egui::Ui) {
          for (d, cell) in shown {
              let cell = cell.shrink(1.0);
              let view = app.ui.views[d].clone();
@@ -2549,12 +2549,12 @@ index 9f0143f88..d541de7ec 100644
  use std::hash::{Hash, Hasher};
  use std::sync::{Mutex, OnceLock};
  
--use photocraft_color::{PixelFormat, SampleType};
-+use photocraft_color::{ColorMode, PixelFormat, SampleType};
- use photocraft_doc::vector::ShapeLayer;
-+use photocraft_doc::{Fill, Pattern};
- use photocraft_geom::Rect;
- use photocraft_raster::Surface;
+-use lienzo_color::{PixelFormat, SampleType};
++use lienzo_color::{ColorMode, PixelFormat, SampleType};
+ use lienzo_doc::vector::ShapeLayer;
++use lienzo_doc::{Fill, Pattern};
+ use lienzo_geom::Rect;
+ use lienzo_raster::Surface;
  
  /// (fill, stroke), last use, and the shape's pixels the stroke was fitted to (kept alive so
  /// their tile addresses, part of the key, can't be reused).
@@ -2741,7 +2741,7 @@ index ebeda4868..6d2793a22 100644
 +++ b/crates/engin
 ```
 
-### #5090: Actions: add editable PhotoCraft Essentials starter presets
+### #5090: Actions: add editable Lienzo Essentials starter presets
 
 `crates/engine/src/actions_cmds.rs`, `crates/engine/src/lib.rs`, `crates/engine/src/preset_store.rs`, `crates/ui-egui/src/actions.rs`
 
@@ -2868,7 +2868,7 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index 91644b5f7..19e1737f8 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -4017,7 +4017,7 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -4017,7 +4017,7 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
                  t if resizing && crate::brush_resize::applies(t) => egui::CursorIcon::None,
                  // ⌥ turns a painting tool into the Eyedropper (`alt_eyedropper`): its cursor too,
                  // unless Preferences › Cursors › Other Cursors asks for the precise crosshair.
@@ -2977,7 +2977,7 @@ index 013c79e82..2b577b32d 100644
          } else {
              contents(ui)
          }
-@@ -207,7 +241,8 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+@@ -207,7 +241,8 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
          // Photoshop doesn't dim the window behind dialogs: previews must be judged at true contrast.
          let web
 ```
@@ -2991,7 +2991,7 @@ diff --git a/crates/ui-egui/src/control.rs b/crates/ui-egui/src/control.rs
 index e797b27cc..4fc782442 100644
 --- a/crates/ui-egui/src/control.rs
 +++ b/crates/ui-egui/src/control.rs
-@@ -407,18 +407,16 @@ fn dispatch(app: &mut PhotocraftApp, ctx: &egui::Context, req: &ControlRequest)
+@@ -407,18 +407,16 @@ fn dispatch(app: &mut LienzoApp, ctx: &egui::Context, req: &ControlRequest)
          "engine.execute" | "ui.menu.invoke" => {
              let Some(id) = s("command").or(s("id")) else { return err("missing `command`") };
              let params = p.get("params").cloned().unwrap_or(json!({}));
@@ -3020,7 +3020,7 @@ index e797b27cc..4fc782442 100644
  
 +    #[test]
 +    fn engine_execute_cannot_change_document_behind_adjustment_dialog() {
-+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
++        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 +        let ctx = egui::Context::default();
 +        app.run("file.new", json!({"width": 60, "height": 40, "background": "#3366cc"})).unwrap();
 +        let opened = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "image.adjustments.hueSaturation"}));
@@ -3208,7 +3208,7 @@ index 013c79e82..e40288aab 100644
          } else {
              contents(ui)
          }
-@@ -207,7 +241,8 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+@@ -207,7 +241,8 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
          // Photoshop doesn't dim the window behind dialogs: previews must be judged at true contrast.
          let web = fields.cont
 ```
@@ -3297,7 +3297,7 @@ index 87fda102f..5541fd207 100644
      }
 +    // This best-effort fallback cannot bypass the text parser's geometry safety gate.
 +    // Unusable matrices use identity instead of corrupting canvas or panel rectangles.
-+    if !photocraft_text::psd::usable_tysh_transform(&m) {
++    if !lienzo_text::psd::usable_tysh_transform(&m) {
 +        return None;
 +    }
      // text version (2) at 50, descriptor version (4) at 52, descriptor at 56.
@@ -3380,7 +3380,7 @@ diff --git a/crates/ui-egui/src/brush_resize.rs b/crates/ui-egui/src/brush_resiz
 index dfba8e516..297e7fc48 100644
 --- a/crates/ui-egui/src/brush_resize.rs
 +++ b/crates/ui-egui/src/brush_resize.rs
-@@ -170,7 +170,7 @@ fn preview_tint(app: &PhotocraftApp) -> Color32 {
+@@ -170,7 +170,7 @@ fn preview_tint(app: &LienzoApp) -> Color32 {
  
  /// A round tip of `radius` screen points: solid out to `hardness` of the radius, fading to clear
  /// at the edge. One mesh (two rings and a centre), so its cost doesn't grow with the brush.
@@ -3490,7 +3490,7 @@ index fa7cb9524..3e3d1eeb0 100644
                  | "select.convertToShape"
 +                | "layer.frequencySeparation"
          ))
-         && photocraft_engine::commands::find(command).is_some_and(|c| !parse_spec(c.params).is_empty())
+         && lienzo_engine::commands::find(command).is_some_and(|c| !parse_spec(c.params).is_empty())
  }
 diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
 index 7f47e6ea6..8b24728ed 100644
@@ -3503,7 +3503,7 @@ index 7f47e6ea6..8b24728ed 100644
 +    ("layer.frequencySeparation", "filter.other.colorToAlpha"),
  ];
  
- pub fn menu_items(app: &PhotocraftApp) -> Vec<MenuItem> {
+ pub fn menu_items(app: &LienzoApp) -> Vec<MenuItem> {
 @@ -1747,6 +1748,22 @@ mod tests {
          assert!(!others.iter().any(|p| p.as_str() == "Other"), "no duplicate Other submenu: {others:?}");
      }
@@ -3512,7 +3512,7 @@ index 7f47e6ea6..8b24728ed 100644
 +    /// there): it follows Color to Alpha in Filter › Other and asks for its radius.
 +    #[test]
 +    fn frequency_separation_sits_in_filter_other_after_color_to_alpha() {
-+        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
++        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
 +        app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
 +        let items = menu_items(&app);
 +        let at = |id: &str| items.iter().position(|i| i.id == id).unwrap_or_else(|| panic!("{id} missing"));
@@ -3539,7 +3539,7 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index 676d06807..f8e430346 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -3270,7 +3270,8 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -3270,7 +3270,8 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
      // (Space) and a middle-button drag still pan, and a secondary window's Hand never stops, as the
      // box is only drawn and driven on the primary canvas.
      let transform_owns_pointer = primary && app.ui.transform.is_some() && temporary.is_none() && !middle;
@@ -3549,7 +3549,7 @@ index 676d06807..f8e430346 100644
      // Preferences › Tools › Enable Flick Panning: a Hand drag let go while moving glides on.
      let flick_id = egui::Id::new(("pc-flick-pan", idx, primary, ctx.viewport_id()));
      let flick_on = app.session.prefs().tools.enable_flick_panning;
-@@ -3285,7 +3286,14 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -3285,7 +3286,14 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
              ctx.data_mut(|m| m.get_temp_mut_or_default::<crate::flick_pan::Flick>(flick_id).stop());
          }
      }
@@ -3565,7 +3565,7 @@ index 676d06807..f8e430346 100644
          let d = xf.unmap_vec(response.drag_delta()) / (view.zoom / ppp);
          view.center[0] -= d.x;
          view.center[1] -= d.y;
-@@ -3310,7 +3318,7 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -3310,7 +3318,7 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
              let d = xf.to_doc(p);
              crate::layer_picker::sample_at(app, d[0], d[1]);
          }
@@ -3616,7 +3616,7 @@ index 37c6167e9..8b3184688 100644
 +/// read with. A CMYK document whose composite is one plain CMYK pixel layer (Normal, 100 %, no
 +/// mask or effects) keeps that layer's inks exactly, as in Photoshop: separating the composite
 +/// again would regenerate black and clip inks outside the display gamut (#3778).
- pub fn flatten_to_surface(doc: &Document, fmt: photocraft_color::PixelFormat, background: Option<[f32; 3]>) -> Surface {
+ pub fn flatten_to_surface(doc: &Document, fmt: lienzo_color::PixelFormat, background: Option<[f32; 3]>) -> Surface {
      let mut s = Surface::new(fmt);
      let n = fmt.channels();
      let mut data = Vec::new();
@@ -3631,22 +3631,22 @@ index 37c6167e9..8b3184688 100644
      let _ = render_bands(doc, doc.bounds(), 0, |band| -> Result<(), ()> {
          let band = match background {
              Some(bg) => band.over_background(bg),
-@@ -243,9 +256,11 @@ pub fn flatten_to_surface(doc: &Document, fmt: photocraft_color::PixelFormat, ba
+@@ -243,9 +256,11 @@ pub fn flatten_to_surface(doc: &Document, fmt: lienzo_color::PixelFormat, ba
          };
          data.clear();
          data.resize(band.px.len() * n, 0.0);
 -        for (p, out) in band.px.iter().zip(data.chunks_exact_mut(n)) {
--            photocraft_raster::from_rgba_into(&fmt, *p, out);
+-            lienzo_raster::from_rgba_into(&fmt, *p, out);
 -        }
-+        photocraft_color::convert::with_cmyk_space(cmyk.as_ref(), || {
++        lienzo_color::convert::with_cmyk_space(cmyk.as_ref(), || {
 +            for (p, out) in band.px.iter().zip(data.chunks_exact_mut(n)) {
-+                photocraft_raster::from_rgba_into(&fmt, *p, out);
++                lienzo_raster::from_rgba_into(&fmt, *p, out);
 +            }
 +        });
          s.write_region(band.rect, &data);
          Ok(())
      });
-@@ -253,6 +268,64 @@ pub fn flatten_to_surface(doc: &Document, fmt: photocraft_color::PixelFormat, ba
+@@ -253,6 +268,64 @@ pub fn flatten_to_surface(doc: &Document, fmt: lienzo_color::PixelFormat, ba
      s
  }
  
@@ -3655,8 +3655,8 @@ index 37c6167e9..8b3184688 100644
 +/// Blend If, channel exclusion or advanced blending. The flag says whether its pixels must also
 +/// be opaque: when it is flattened over a `background`, or `fmt` has no alpha to carry its
 +/// transparency.
-+fn plain_cmyk_layer(doc: &Document, fmt: photocraft_color::PixelFormat, background: Option<[f32; 3]>) -> Option<(&Surface, bool)> {
-+    use photocraft_color::ColorMode;
++fn plain_cmyk_layer(doc: &Document, fmt: lienzo_color::PixelFormat, background: Option<[f32; 3]>) -> Option<(&Surface, bool)> {
++    use lienzo_color::ColorMode;
 +    if doc.mode != ColorMode::Cmyk || fmt.mode != ColorMode::Cmyk {
 +        return None;
 +    }
@@ -3693,12 +3693,12 @@ index 1d3259a71..7f5e4907b 100644
 @@ -2113,6 +2113,7 @@ fn opacity_row_layout(available: f32, label_width: f32, gap: f32) -> (f32, bool)
  }
  
- fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+ fn layers(app: &mut LienzoApp, ui: &mut egui::Ui) {
 +    crate::smart_ui::context_menu::close_stale(app, ui.ctx());
      // A new active layer opens its parent groups and is scrolled into view (#152).
      let reveal = crate::layer_reveal::track(app, ui.ctx());
      let Some(st) = app.session.active() else {
-@@ -2498,7 +2499,12 @@ fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -2498,7 +2499,12 @@ fn layers(app: &mut LienzoApp, ui: &mut egui::Ui) {
              }
              continue;
          }
@@ -3723,9 +3723,9 @@ index fd1ed6f01..847a805ec 100644
 +pub(crate) mod context_menu;
 +
  use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
- use photocraft_doc::{Document, Layer, LayerContent, LayerId, SmartObject};
+ use lienzo_doc::{Document, Layer, LayerContent, LayerId, SmartObject};
  use serde_json::{Value, json};
-@@ -135,6 +137,9 @@ pub fn filter_rows(app: &mut PhotocraftApp, ui: &mut egui::Ui, l: &Layer, depth:
+@@ -135,6 +137,9 @@ pub fn filter_rows(app: &mut LienzoApp, ui: &mut egui::Ui, l: &Layer, depth:
          {
              open_editor(app, ui.ctx(), l.id.0, sm, i);
          }
@@ -3761,8 +3761,8 @@ index 507010b9c..62cd46919 100644
          match method {
              "engine.execute" => {
                  let id = str_of(&p, "command").ok_or_else(|| bad("engine.execute needs `command`"))?;
-+                if METHODS.contains(&id) && photocraft_engine::commands::find(id).is_none() {
-+                    return Err(bad(photocraft_engine::command_hints::protocol_method_as_command(id)));
++                if METHODS.contains(&id) && lienzo_engine::commands::find(id).is_none() {
++                    return Err(bad(lienzo_engine::command_hints::protocol_method_as_command(id)));
 +                }
                  let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(true);
                  self.command_start(id, p.get("params").cloned().unwrap_or(Value::Null), wait)
@@ -3772,7 +3772,7 @@ index 507010b9c..62cd46919 100644
              "batch" => self.batch(&p),
              "methods" => Ok(json!(METHODS)),
 -            other => Err(bad(format!("unknown method `{other}` (try `methods`)"))),
-+            other => Err(bad(format!("{} (try `methods`)", photocraft_engine::command_hints::unknown_method(other, METHODS)))),
++            other => Err(bad(format!("{} (try `methods`)", lienzo_engine::command_hints::unknown_method(other, METHODS)))),
          }
      }
  
@@ -3812,7 +3812,7 @@ index ff3cde6e4..81d2c2827 100644
  pub mod commands;
  pub mod comps_cmds;
  pub mod cutout_cmds;
-@@ -140,7 +141,8 @@ pub use photocraft_paint::BrushSettings;
+@@ -140,7 +141,8 @@ pub use lienzo_paint::BrushSettings;
  
  #[derive(Debug, thiserror::Error)]
  pub enum EngineError {
@@ -3851,7 +3851,7 @@ index 7689f3967..f00c06408 100644
 +        if trim {
 +            // Measure the isolated layer's rendered alpha, including masks and effects.
 +            // Track the extrema without constructing a rectangle for every pixel.
-+            let rendered = photocraft_compose::flatten(&one);
++            let rendered = lienzo_compose::flatten(&one);
 +            let width = one.size.width as usize;
 +            let (mut x0, mut y0, mut x1, mut y1) = (usize::MAX, usize::MAX, 0, 0);
 +            if width > 0 {
@@ -3964,10 +3964,10 @@ index db0efe31f..46b78b873 100644
 +/// The document, revision and target a vector drag started on.
 +#[derive(Clone, Debug)]
 +struct VectorGestureOwner {
-+    doc: photocraft_doc::DocId,
++    doc: lienzo_doc::DocId,
 +    document: std::sync::Weak<Document>,
 +    revision: u64,
-+    layer: Option<photocraft_doc::LayerId>,
++    layer: Option<lienzo_doc::LayerId>,
 +    selected_path: Option<String>,
 +    vector_mask: bool,
 +    mode: String,
@@ -3975,7 +3975,7 @@ index db0efe31f..46b78b873 100644
 +}
 +
 +impl VectorGestureOwner {
-+    fn capture(app: &PhotocraftApp) -> Option<Self> {
++    fn capture(app: &LienzoApp) -> Option<Self> {
 +        let st = app.session.active()?;
 +     
 ```
@@ -3999,7 +3999,7 @@ index 348011f75..4ae0a79e0 100644
 +        return p;
 +    }
 +    let Some(st) = s.active() else { return p };
-+    let Some(layer) = p.get("layer").and_then(Value::as_u64).map(photocraft_doc::LayerId).or(st.active_layer).and_then(|id| st.doc.layer(id)) else { return p };
++    let Some(layer) = p.get("layer").and_then(Value::as_u64).map(lienzo_doc::LayerId).or(st.active_layer).and_then(|id| st.doc.layer(id)) else { return p };
 +    let ordinal = st.doc.walk().into_iter().filter(|(_, _, l)| l.name == layer.name).position(|(_, _, l)| l.id == layer.id).unwrap_or(0);
 +    if let Some(object) = p.as_object_mut() {
 +        object.remove("layer");
@@ -4163,13 +4163,13 @@ index 348011f75..e8a3be636 100644
 
 ### #3387: feat(codecs): add lossless JPEG XL export for 8/16-bit images
 
-`apps/photocraft/src/services.rs`, `crates/codecs/Cargo.toml`, `crates/codecs/src/format.rs`, `crates/codecs/src/lib.rs`
+`apps/lienzo/src/services.rs`, `crates/codecs/Cargo.toml`, `crates/codecs/src/format.rs`, `crates/codecs/src/lib.rs`
 
 ```diff
-diff --git a/apps/photocraft/src/services.rs b/apps/photocraft/src/services.rs
+diff --git a/apps/lienzo/src/services.rs b/apps/lienzo/src/services.rs
 index 20de0d6be..03218e47a 100644
---- a/apps/photocraft/src/services.rs
-+++ b/apps/photocraft/src/services.rs
+--- a/apps/lienzo/src/services.rs
++++ b/apps/lienzo/src/services.rs
 @@ -89,6 +89,7 @@ const SAVE_FILTERS: &[(&str, &[&str])] = &[
      ("OpenRaster", &["ora"]),
      ("PNG", &["png"]),
@@ -4258,7 +4258,7 @@ diff --git a/crates/ui-egui/src/panels.rs b/crates/ui-egui/src/panels.rs
 index 733f923c8..ee50b7fd8 100644
 --- a/crates/ui-egui/src/panels.rs
 +++ b/crates/ui-egui/src/panels.rs
-@@ -1238,25 +1238,16 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+@@ -1238,25 +1238,16 @@ pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                          if widgets::dropdown(ui, "gradient-mode", &mut classic, &[(false, "Gradient"), (true, "Classic gradient")], 118.0) {
                              app.ui.tool_options.gradient_classic = classic;
                          }
@@ -4296,7 +4296,7 @@ index db908ae23..d97556f36 100644
          "appearanceMode" => return "Appearance Mode".into(),
          "darkTheme" => return "Dark Theme".into(),
          "lightTheme" => return "Light Theme".into(),
-+        "nativeGradientIcons" => return "Use PhotoCraft-native gradient icons".into(),
++        "nativeGradientIcons" => return "Use Lienzo-native gradient icons".into(),
          _ => {}
      }
      // These controls appear only for WebP, so reuse the existing translated labels.
@@ -4401,13 +4401,13 @@ diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
 index 391ad464f..f27bec347 100644
 --- a/crates/ui-egui/src/canvas.rs
 +++ b/crates/ui-egui/src/canvas.rs
-@@ -2879,6 +2879,49 @@ fn hdr_preview(app: &PhotocraftApp, doc: &photocraft_doc::Document) -> Option<[f
+@@ -2879,6 +2879,49 @@ fn hdr_preview(app: &LienzoApp, doc: &lienzo_doc::Document) -> Option<[f
      app.session.color.hdr_preview(doc).map(|h| [h.exposure, h.gamma])
  }
  
 +/// Between Polygonal Lasso clicks, reveal more of the image near or beyond the viewport edge.
 +/// Only the view moves: fixed vertices stay in document coordinates, including while button-up.
-+fn polygon_edge_scroll(app: &PhotocraftApp, ctx: &egui::Context, idx: usize, rect: Rect, view: &mut View, ppp: f32) {
++fn polygon_edge_scroll(app: &LienzoApp, ctx: &egui::Context, idx: usize, rect: Rect, view: &mut View, ppp: f32) {
 +    if app.ui.polygon.is_empty()
 +        || app.ui.tool != Tool::PolygonLasso
 +        || app.session.active_index() != Some(idx)
@@ -4449,9 +4449,9 @@ index 391ad464f..f27bec347 100644
 +}
 +
  /// Draw one canvas view and handle its input. `primary` = main window (tools active).
- pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect: Rect, mut view: View, primary: bool) -> View {
+ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect: Rect, mut view: View, primary: bool) -> View {
      let ctx = ui.ctx().clone();
-@@ -2922,8 +2965,16 @@ pub fn canvas_view(app: &mut PhotocraftApp, ui: &mut egui::Ui, idx: usize, rect:
+@@ -2922,8 +2965,16 @@ pub fn canvas_view(app: &mut LienzoApp, ui: &mut egui::Ui, idx: usize, rect:
      if view.fill_pending && rect.width() > 50.0 {
          fill_view(&mut view, &doc, rect.size(), ppp, aspect);
      }

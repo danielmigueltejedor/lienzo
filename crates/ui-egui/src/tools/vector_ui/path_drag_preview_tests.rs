@@ -2,19 +2,19 @@
 //! it, instead of leaving it in place until the release. The document only changes on release.
 
 use egui::{Modifiers, Pos2};
-use photocraft_doc::vector::Path;
-use photocraft_geom::{Affine, Point};
+use lienzo_doc::vector::Path;
+use lienzo_geom::{Affine, Point};
 use serde_json::json;
 
 use super::path_ops::{MovedPath, path_selection_preview};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform, tool_event};
 use crate::state::Tool;
 
 const NAME: &str = "Path 1";
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::PathSelection;
@@ -26,25 +26,25 @@ fn square(x: f64, y: f64, w: f64) -> serde_json::Value {
     json!({"closed": true, "knots": [[x, y], [x + w, y], [x + w, y + w], [x, y + w]]})
 }
 
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &LienzoApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().unwrap()
 }
 
-fn revision(app: &PhotocraftApp) -> u64 {
+fn revision(app: &LienzoApp) -> u64 {
     app.session.active().unwrap().revision
 }
 
-fn preview(app: &PhotocraftApp) -> Option<(MovedPath, Path)> {
+fn preview(app: &LienzoApp) -> Option<(MovedPath, Path)> {
     path_selection_preview(app, &app.session.active().unwrap().doc)
 }
 
-fn press_and_move(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn press_and_move(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, Modifiers::NONE);
     assert!(app.drag.is_some());
 }
 
-fn release(app: &mut PhotocraftApp, at: [f64; 2]) {
+fn release(app: &mut LienzoApp, at: [f64; 2]) {
     tool_event(app, ToolEvent::Up { x: at[0], y: at[1] }, Modifiers::NONE);
 }
 
@@ -53,7 +53,7 @@ fn anchors(p: &Path) -> Vec<Point> {
 }
 
 /// The centres of the anchor squares the vector overlay draws, document = screen pixels.
-fn drawn_anchors(app: &PhotocraftApp) -> Vec<Pos2> {
+fn drawn_anchors(app: &LienzoApp) -> Vec<Pos2> {
     let xf = ViewXform {
         rect: egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(200., 200.)),
         zoom: 1.0,
@@ -132,7 +132,7 @@ fn the_selected_saved_path_previews_too() {
     let mut app = app();
     app.run("path.set", json!({"name": NAME, "path": {"subpaths": [square(40.0, 40.0, 80.0)]}})).unwrap();
     app.ui.selected_path = Some(NAME.into());
-    let saved = |app: &PhotocraftApp| app.session.active().unwrap().doc.paths.iter().find(|p| p.name == NAME).unwrap().path.clone();
+    let saved = |app: &LienzoApp| app.session.active().unwrap().doc.paths.iter().find(|p| p.name == NAME).unwrap().path.clone();
     let before = saved(&app);
     press_and_move(&mut app, [40.0, 80.0], [52.0, 71.0]);
     let (which, shown) = preview(&app).expect("the drag previews the saved path");
@@ -151,7 +151,7 @@ fn a_shape_layer_drag_previews_no_outline() {
     assert!(preview(&app).is_none());
     release(&mut app, [50.0, 50.0]);
     let st = app.session.active().unwrap();
-    let photocraft_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("not a shape layer") };
+    let lienzo_doc::LayerContent::Shape(sh) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("not a shape layer") };
     assert_eq!(sh.path.control_bounds().map(|b| [b.0, b.1]), Some([30.0, 30.0]), "the release still moves it");
 }
 

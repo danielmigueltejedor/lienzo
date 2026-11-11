@@ -4,19 +4,19 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use photocraft_automation::security::authentication_reply;
-use photocraft_automation::{Backend, BridgeClient, PhotocraftMcp};
+use lienzo_automation::security::authentication_reply;
+use lienzo_automation::{Backend, BridgeClient, LienzoMcp};
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, DuplexStream, Lines};
 
 struct Wire {
     input: DuplexStream,
     lines: Lines<BufReader<DuplexStream>>,
-    server: tokio::task::JoinHandle<Result<(), photocraft_automation::AutomationError>>,
+    server: tokio::task::JoinHandle<Result<(), lienzo_automation::AutomationError>>,
 }
 
 impl Wire {
-    async fn start(mcp: PhotocraftMcp) -> Wire {
+    async fn start(mcp: LienzoMcp) -> Wire {
         let (input, server_in) = tokio::io::duplex(1 << 20);
         let (server_out, output) = tokio::io::duplex(1 << 20);
         let server = tokio::spawn(mcp.serve_io(server_in, server_out));
@@ -119,7 +119,7 @@ const BLUR: fn() -> Value = || json!({"id": "filter.blur.gaussianBlur", "params"
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_waited_command_reports_progress_serves_other_calls_and_cancels_cleanly() {
-    let mut wire = Wire::start(PhotocraftMcp::headless()).await;
+    let mut wire = Wire::start(LienzoMcp::headless()).await;
     wire.big_document().await;
     let before = wire.history(4).await;
 
@@ -149,7 +149,7 @@ async fn a_waited_command_reports_progress_serves_other_calls_and_cancels_cleanl
 
 #[tokio::test(flavor = "multi_thread")]
 async fn cancelling_a_batch_cancels_its_waited_step_and_runs_no_later_step() {
-    let mut wire = Wire::start(PhotocraftMcp::headless()).await;
+    let mut wire = Wire::start(LienzoMcp::headless()).await;
     wire.big_document().await;
     let before = wire.history(4).await;
 
@@ -268,8 +268,8 @@ impl FakeApp {
 }
 
 /// An MCP server bridged to `addr` whose every call times out after 300ms.
-fn bridged(addr: &str) -> PhotocraftMcp {
-    PhotocraftMcp::with_backend(Backend::Bridge(Arc::new(BridgeClient::new(addr, TOKEN).unwrap().with_timeout(Duration::from_millis(300)))))
+fn bridged(addr: &str) -> LienzoMcp {
+    LienzoMcp::with_backend(Backend::Bridge(Arc::new(BridgeClient::new(addr, TOKEN).unwrap().with_timeout(Duration::from_millis(300)))))
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -287,7 +287,7 @@ async fn a_bridged_job_that_outlives_the_reply_timeout_returns_its_result_with_p
     assert!(FakeApp::sent(&app, "jobs.cancel").is_empty());
 
     // A command the engine doesn't know (a UI command) still lets the app wait.
-    assert!(photocraft_engine::commands::find("view.zoomIn").is_none());
+    assert!(lienzo_engine::commands::find("view.zoomIn").is_none());
     wire.call(6, "command_run", json!({"id": "view.zoomIn"}), None).await;
     wire.reply(6, None).await;
     assert_eq!(FakeApp::sent(&app, "engine.execute").last(), Some(&json!({"command": "view.zoomIn", "params": {}, "wait": true})));
@@ -348,7 +348,7 @@ async fn cancelling_during_a_slow_poll_cancels_without_waiting_for_it() {
     app.lock().unwrap().hold_polls = Duration::from_secs(600);
     // The poll would hold the cancel for this long if it waited for it.
     let bridge = BridgeClient::new(&addr, TOKEN).unwrap().with_timeout(Duration::from_secs(30));
-    let mut wire = Wire::start(PhotocraftMcp::with_backend(Backend::Bridge(Arc::new(bridge)))).await;
+    let mut wire = Wire::start(LienzoMcp::with_backend(Backend::Bridge(Arc::new(bridge)))).await;
     wire.call(5, "command_run", BLUR(), Some("blur")).await;
     let t = Instant::now();
     while FakeApp::sent(&app, "jobs.list").is_empty() {
@@ -381,10 +381,10 @@ async fn a_lost_start_reply_is_reported_and_never_resent() {
 
 #[test]
 fn polling_a_job_directly_returns_its_result_once_it_ends() {
-    use photocraft_automation::headless::JobPoll;
-    use photocraft_engine::jobs::Started;
+    use lienzo_automation::headless::JobPoll;
+    use lienzo_engine::jobs::Started;
 
-    let mut h = photocraft_automation::Headless::trusted_local();
+    let mut h = lienzo_automation::Headless::trusted_local();
     h.command_run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let Started::Job(job) = h.command_begin("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap() else {
         panic!("Gaussian Blur runs as a job");
@@ -405,9 +405,9 @@ fn polling_a_job_directly_returns_its_result_once_it_ends() {
 
 #[test]
 fn abandoning_a_job_that_already_ended_returns_its_result_not_cancelled() {
-    use photocraft_engine::jobs::Started;
+    use lienzo_engine::jobs::Started;
 
-    let mut h = photocraft_automation::Headless::trusted_local();
+    let mut h = lienzo_automation::Headless::trusted_local();
     h.command_run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let Started::Job(job) = h.command_begin("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap() else {
         panic!("Gaussian Blur runs as a job");

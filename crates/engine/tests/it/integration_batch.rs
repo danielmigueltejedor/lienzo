@@ -1,6 +1,6 @@
 //! Cross-PR acceptance checks for the merged parity batch: each test pins one fix through the
 //! public command surface, so a bad merge between the PRs shows up here.
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn session(width: u32, height: u32) -> Session {

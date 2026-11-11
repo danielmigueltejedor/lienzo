@@ -13,9 +13,9 @@
 //! Work is tiled: only tiles near the selection boundary are processed (in parallel on native
 //! targets), so cost scales with the boundary length rather than the selection area.
 
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::PixelFormat;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 use crate::segment::{RgbImage, Sampler};
@@ -502,8 +502,8 @@ pub fn refine_surface(
     canvas: Rect,
     p: &RefineParams,
     brush: Option<&EdgeBrush>,
-) -> Result<Option<Surface>, photocraft_raster::AllocationError> {
-    refine_surface_with_interrupt(sampler, mask, canvas, p, brush, &photocraft_raster::Interrupt::NONE)
+) -> Result<Option<Surface>, lienzo_raster::AllocationError> {
+    refine_surface_with_interrupt(sampler, mask, canvas, p, brush, &lienzo_raster::Interrupt::NONE)
 }
 
 /// Interruptible refinement. Cancellation discards the partial result and returns `Ok(None)`.
@@ -514,8 +514,8 @@ pub fn refine_surface_with_interrupt(
     canvas: Rect,
     p: &RefineParams,
     brush: Option<&EdgeBrush>,
-    interrupt: &photocraft_raster::Interrupt<'_>,
-) -> Result<Option<Surface>, photocraft_raster::AllocationError> {
+    interrupt: &lienzo_raster::Interrupt<'_>,
+) -> Result<Option<Surface>, lienzo_raster::AllocationError> {
     if interrupt.cancelled() {
         return Ok(None);
     }
@@ -530,7 +530,7 @@ pub fn refine_surface_with_interrupt(
     let halo = p.halo().saturating_add(brush.map_or(0, |b| (b.window() as i32).saturating_mul(4)));
     // Preserve the dense implementation's block origin, including non-aligned selections.
     let mut blocks = BTreeSet::new();
-    let mut include = |area: Rect| -> Result<(), photocraft_raster::AllocationError> {
+    let mut include = |area: Rect| -> Result<(), lienzo_raster::AllocationError> {
         let area = area.intersect(&bbox);
         if area.is_empty() {
             return Ok(());
@@ -546,7 +546,7 @@ pub fn refine_surface_with_interrupt(
                 }
                 blocks.insert((y, x));
                 if blocks.len() > 1_048_576 {
-                    return Err(photocraft_raster::AllocationError::NotEnoughMemory { bytes: blocks.len().saturating_mul(64) });
+                    return Err(lienzo_raster::AllocationError::NotEnoughMemory { bytes: blocks.len().saturating_mul(64) });
                 }
             }
         }
@@ -613,7 +613,7 @@ pub fn refine_surface_with_interrupt(
         }
         (t, data)
     };
-    let flush = |pending: &mut Vec<Work>, output: &mut Surface| -> Result<(), photocraft_raster::AllocationError> {
+    let flush = |pending: &mut Vec<Work>, output: &mut Surface| -> Result<(), lienzo_raster::AllocationError> {
         if interrupt.cancelled() {
             pending.clear();
             return Ok(());
@@ -656,13 +656,13 @@ pub fn refine_surface_with_interrupt(
         let y = (i64::from(bbox.y0) + by * i64::from(TILE)) as i32;
         let t = Rect::new(x, y, x.saturating_add(TILE).min(bbox.x1), y.saturating_add(TILE).min(bbox.y1));
         let r = t.inflate(halo).intersect(&canvas);
-        let scratch_pixels = (r.width() as usize).checked_mul(r.height() as usize).ok_or(photocraft_raster::AllocationError::SizeOverflow)?;
-        let scratch_bytes = scratch_pixels.checked_mul(256).ok_or(photocraft_raster::AllocationError::SizeOverflow)?;
+        let scratch_pixels = (r.width() as usize).checked_mul(r.height() as usize).ok_or(lienzo_raster::AllocationError::SizeOverflow)?;
+        let scratch_bytes = scratch_pixels.checked_mul(256).ok_or(lienzo_raster::AllocationError::SizeOverflow)?;
         let painted = brush
             .filter(|b| b.tile_coords().any(|tc| !tc.rect().intersect(&r).is_empty()))
             .map(|b| {
                 if scratch_bytes > MAX_SCRATCH_BYTES {
-                    return Err(photocraft_raster::AllocationError::NotEnoughMemory { bytes: scratch_bytes });
+                    return Err(lienzo_raster::AllocationError::NotEnoughMemory { bytes: scratch_bytes });
                 }
                 Ok(b.read(r))
             })
@@ -698,7 +698,7 @@ pub fn refine_surface_with_interrupt(
             continue;
         }
         if !adds && all_uniform && matches!(constant, Some(1.0)) {
-            let tc = photocraft_geom::TileCoord::containing(t.x0, t.y0);
+            let tc = lienzo_geom::TileCoord::containing(t.x0, t.y0);
             if tc.rect() == t {
                 output.put_tiles([(tc, solid.clone())]);
                 continue;
@@ -706,7 +706,7 @@ pub fn refine_surface_with_interrupt(
             output.fill_rect(t, &[1.0]);
         } else {
             if scratch_bytes > MAX_SCRATCH_BYTES {
-                return Err(photocraft_raster::AllocationError::NotEnoughMemory { bytes: scratch_bytes });
+                return Err(lienzo_raster::AllocationError::NotEnoughMemory { bytes: scratch_bytes });
             }
             if !pending.is_empty() && (pending.len() >= MAX_FILTER_BATCH || pending_bytes.saturating_add(scratch_bytes) > MAX_SCRATCH_BYTES) {
                 flush(&mut pending, &mut output)?;
@@ -1005,7 +1005,7 @@ pub fn masked_copy_surface(src: &Surface, alpha: &Surface, bounds: Rect) -> Surf
 mod tests {
     use super::*;
     use crate::segment::ImageSampler;
-    use photocraft_color::SampleType;
+    use lienzo_color::SampleType;
 
     #[test]
     fn sparse_refine_matches_dense_at_unaligned_origins() {
@@ -1035,7 +1035,7 @@ mod tests {
         }
         let cancelled = AtomicBool::new(false);
         let cancel = || cancelled.load(Ordering::Relaxed);
-        let interrupt = photocraft_raster::Interrupt::cancel_only(&cancel);
+        let interrupt = lienzo_raster::Interrupt::cancel_only(&cancel);
         let canvas = Rect::new(0, 0, 1024, 1024);
         let mut mask = Surface::new(PixelFormat::GRAY8);
         mask.fill_rect(Rect::new(100, 100, 800, 800), &[1.0]);
@@ -1050,7 +1050,7 @@ mod tests {
         // guide sample triggers cancellation. The partial output must be discarded.
         let multi_cancelled = AtomicBool::new(false);
         let multi_cancel = || multi_cancelled.load(Ordering::Relaxed);
-        let multi_interrupt = photocraft_raster::Interrupt::cancel_only(&multi_cancel);
+        let multi_interrupt = lienzo_raster::Interrupt::cancel_only(&multi_cancel);
         struct MultiBatchGuide<'a> {
             cancelled: &'a AtomicBool,
             samples: std::sync::atomic::AtomicUsize,
@@ -1123,10 +1123,7 @@ mod tests {
         assert_eq!(output.sample_channel(0, 0, 0), 1.0);
         assert_eq!(output.sample_channel(99_999, 99_999, 0), 1.0);
         assert_eq!(output.sample_channel(100_000, 100_000, 0), 0.0);
-        assert!(std::sync::Arc::ptr_eq(
-            output.tile(photocraft_geom::TileCoord::new(10, 10)).unwrap(),
-            output.tile(photocraft_geom::TileCoord::new(20, 20)).unwrap()
-        ));
+        assert!(std::sync::Arc::ptr_eq(output.tile(lienzo_geom::TileCoord::new(10, 10)).unwrap(), output.tile(lienzo_geom::TileCoord::new(20, 20)).unwrap()));
     }
 
     /// Horizontal blend from `a` (left) to `b` (right) across a Gaussian-blurred edge at x = 40.

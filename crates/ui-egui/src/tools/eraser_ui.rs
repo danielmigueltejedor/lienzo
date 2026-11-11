@@ -3,12 +3,12 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 use crate::theme::Tokens;
 use crate::{icons, widgets};
 
-fn report(app: &mut PhotocraftApp, r: Result<Value, String>) {
+fn report(app: &mut LienzoApp, r: Result<Value, String>) {
     if let Err(e) = r {
         app.ui.status = e;
         app.ui.status_error = true;
@@ -16,7 +16,7 @@ fn report(app: &mut PhotocraftApp, r: Result<Value, String>) {
 }
 
 /// Magic Eraser click at document `(x, y)`. Returns false for other tools.
-pub fn click(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64) -> bool {
+pub fn click(app: &mut LienzoApp, tool: Tool, x: f64, y: f64) -> bool {
     if tool != Tool::MagicEraser {
         return false;
     }
@@ -36,7 +36,7 @@ pub fn click(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64) -> bool {
 }
 
 /// Finishes a Background Eraser stroke. Returns false for other tools.
-pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], line: bool) -> bool {
+pub fn finish_stroke(app: &mut LienzoApp, tool: Tool, points: &[[f64; 3]], line: bool) -> bool {
     if tool != Tool::BackgroundEraser {
         return false;
     }
@@ -49,7 +49,7 @@ pub fn finish_stroke(app: &mut PhotocraftApp, tool: Tool, points: &[[f64; 3]], l
 
 /// `paint.backgroundEraser` params for a stroke along `points`: shared by the live preview and
 /// the commit, with the jitter seed from the first point (`retouch_ui::stroke_seed`).
-pub(crate) fn background_eraser_params(app: &PhotocraftApp, points: &[[f64; 3]]) -> Value {
+pub(crate) fn background_eraser_params(app: &LienzoApp, points: &[[f64; 3]]) -> Value {
     let o = &app.ui.tool_options;
     json!({
         "points": points,
@@ -63,26 +63,26 @@ pub(crate) fn background_eraser_params(app: &PhotocraftApp, points: &[[f64; 3]])
 
 /// The tool a drag with `tool` runs as: the History Brush for an Eraser that erases to history. ⌥
 /// at the press reverses the option for that stroke, as in Photoshop.
-pub fn drag_tool(app: &PhotocraftApp, tool: Tool, alt: bool) -> Tool {
+pub fn drag_tool(app: &LienzoApp, tool: Tool, alt: bool) -> Tool {
     if tool == Tool::Eraser && app.ui.tool_options.erase_to_history != alt { Tool::HistoryBrush } else { tool }
 }
 
 /// Whether `tool` is the Eraser in Pencil mode: it erases hard, aliased pixels through
 /// `paint.pencil` (`"erase": true`) and shows the Pencil's pixel-grid cursor (#2662).
-pub fn pencil_mode(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn pencil_mode(app: &LienzoApp, tool: Tool) -> bool {
     tool == Tool::Eraser && app.ui.tool_options.eraser_mode == "pencil"
 }
 
 /// Whether `tool` is the Eraser in Block mode: it erases a hard square of 16 screen pixels
 /// (`16 / zoom` document pixels) through `paint.pencil` (`"block": true`); Size, Hardness,
 /// Opacity and Flow don't apply (#2770).
-pub fn block_mode(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn block_mode(app: &LienzoApp, tool: Tool) -> bool {
     tool == Tool::Eraser && app.ui.tool_options.eraser_mode == "block"
 }
 
 /// The Block's edge in document pixels at the current zoom (what the engine erases).
-pub fn block_size(app: &PhotocraftApp) -> f32 {
-    photocraft_engine::brush_cmds::block_size(f64::from(app.point_zoom()))
+pub fn block_size(app: &LienzoApp) -> f32 {
+    lienzo_engine::brush_cmds::block_size(f64::from(app.point_zoom()))
 }
 
 /// The Eraser's Mode dropdown (Brush / Pencil / Block). Returns whether it changed.
@@ -104,7 +104,7 @@ pub(crate) const ANGLE_RANGE_MESSAGE: &str = "An integer between -180 ° and 180
 /// The Background Eraser's Angle: an angle icon and a whole-degree field on the brush tip's
 /// angle, −180…180, default 0. Returns true when a typed value was out of range and was clamped
 /// (400 → 180): the caller shows [`ANGLE_RANGE_MESSAGE`] once the entry is committed.
-fn angle_field(ui: &mut egui::Ui, b: &mut photocraft_engine::BrushSettings) -> bool {
+fn angle_field(ui: &mut egui::Ui, b: &mut lienzo_engine::BrushSettings) -> bool {
     let t = Tokens::get(ui.ctx());
     let tip = tl!("Set the brush angle");
     ui.add(icons::image("rotate-cw", 15.0, t.text_dim)).on_hover_text(tip);
@@ -142,7 +142,7 @@ fn angle_field(ui: &mut egui::Ui, b: &mut photocraft_engine::BrushSettings) -> b
 const ANGLE_TYPED_MAX: f32 = 1.0e6;
 
 /// Options bar for the Magic Eraser and Background Eraser. Returns false for other tools.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     let o = &mut app.ui.tool_options;
     match tool {
         Tool::MagicEraser => {
@@ -300,7 +300,7 @@ fn range_alert_owed_id() -> egui::Id {
 /// pass while it held a value typed out of range (the tool changed by a shortcut, #12268). The
 /// options bar calls it before drawing a tool's options. An edit older than that (the bar was
 /// hidden meanwhile) is dropped, as the field drops it once entered again.
-pub(crate) fn alert_for_a_field_gone(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn alert_for_a_field_gone(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(seen) = ctx.data(|d| d.get_temp::<u64>(range_alert_owed_id())) else { return };
     let now = ctx.cumulative_pass_nr();
     if seen.saturating_add(1) >= now {
@@ -320,7 +320,7 @@ pub(crate) fn stored_tolerance(v: f32) -> f32 {
 }
 
 /// Shows [`TOLERANCE_RANGE_ALERT`]: a modal with OK, once even if more than one pass asks.
-pub(crate) fn open_range_alert(app: &mut PhotocraftApp) {
+pub(crate) fn open_range_alert(app: &mut LienzoApp) {
     let message = tl!(TOLERANCE_RANGE_ALERT).to_owned();
     let shown = app.ui.dialogs.iter().any(|d| d.kind == crate::state::DialogKind::Error && d.fields.get("message").and_then(|m| m.as_str()) == Some(&message));
     if !shown {

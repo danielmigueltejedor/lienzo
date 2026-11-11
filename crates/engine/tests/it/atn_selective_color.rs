@@ -1,6 +1,6 @@
 //! #7672: strict ATN export must preserve both accepted Selective Color parameter forms.
-use photocraft_engine::actions_cmds::Action;
-use photocraft_engine::{Session, atn_cmds};
+use lienzo_engine::actions_cmds::Action;
+use lienzo_engine::{Session, atn_cmds};
 use serde_json::{Value, json};
 
 const RANGES: [&str; 9] = ["reds", "yellows", "greens", "cyans", "blues", "magentas", "whites", "neutrals", "blacks"];
@@ -24,7 +24,7 @@ fn fixture(depth: u32) -> Session {
     s.edit("synthetic colours", |doc, active| {
         let surface = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
         let format = surface.format();
-        let bytes: Vec<_> = palette.iter().cycle().take(20).flat_map(|rgba| photocraft_raster::from_rgba(&format, *rgba)).collect();
+        let bytes: Vec<_> = palette.iter().cycle().take(20).flat_map(|rgba| lienzo_raster::from_rgba(&format, *rgba)).collect();
         surface.write_region(doc_bounds(), &bytes);
         Ok(())
     })
@@ -32,12 +32,12 @@ fn fixture(depth: u32) -> Session {
     s
 }
 
-fn doc_bounds() -> photocraft_doc::Rect {
-    photocraft_doc::Rect::from_xywh(0, 0, 10, 2)
+fn doc_bounds() -> lienzo_doc::Rect {
+    lienzo_doc::Rect::from_xywh(0, 0, 10, 2)
 }
 
 fn pixels(s: &Session) -> Vec<[f32; 4]> {
-    photocraft_compose::flatten(&s.active().unwrap().doc).into_px()
+    lienzo_compose::flatten(&s.active().unwrap().doc).into_px()
 }
 
 fn check_cases(id: &str, cases: &[Value], require_effect: bool) {

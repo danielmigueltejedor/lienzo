@@ -6,19 +6,19 @@
 //! `spacing`, `layer`), respects the active selection as a mask and the layer's transparency lock, and
 //! works at any depth (8/16/32f) and colour model. Like the Brush, each paints the targeted surface:
 //! the layer's pixels, its mask (`"target":"mask"`), an alpha channel or the Quick Mask (`"target"`,
-//! filled in from the Channels panel when absent). The pixel algorithms live in `photocraft-algo`
-//! (`poisson`, `inpaint`, `retouch`) and the dab machinery in `photocraft-paint::retouch`; this module
+//! filled in from the Channels panel when absent). The pixel algorithms live in `lienzo-algo`
+//! (`poisson`, `inpaint`, `retouch`) and the dab machinery in `lienzo-paint::retouch`; this module
 //! only parses parameters and wires them together.
 
-use photocraft_algo::inpaint::{self, CompleteParams};
-use photocraft_algo::poisson;
-use photocraft_algo::retouch::{ToneRange, dodge_burn, local_blur, local_sharpen, sponge};
-use photocraft_color::{BlendMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
-use photocraft_paint::retouch::{Footprint, Region, Smudge, alpha_index, apply_coverage, apply_dab_stroke};
-use photocraft_paint::{BrushSettings, Stroke, StrokePoint};
-use photocraft_raster::{Surface, from_rgba_into, to_rgba};
+use lienzo_algo::inpaint::{self, CompleteParams};
+use lienzo_algo::poisson;
+use lienzo_algo::retouch::{ToneRange, dodge_burn, local_blur, local_sharpen, sponge};
+use lienzo_color::{BlendMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, LayerContent, LayerId};
+use lienzo_geom::Rect;
+use lienzo_paint::retouch::{Footprint, Region, Smudge, alpha_index, apply_coverage, apply_dab_stroke};
+use lienzo_paint::{BrushSettings, Stroke, StrokePoint};
+use lienzo_raster::{Surface, from_rgba_into, to_rgba};
 use rayon::prelude::*;
 use serde_json::{Value, json};
 
@@ -89,7 +89,7 @@ fn reject_huge_stroke(cmd: &str, stroke: &Stroke) -> Result<()> {
 /// every dab is placed (tips, dynamics and scattering included) and checked against `max`, and
 /// only a stroke that fits is made dense. `max` is a parameter so tests can inject a small budget.
 fn coverage_within(cmd: &str, stroke: &Stroke, max: u64) -> Result<(Rect, Vec<f32>)> {
-    photocraft_paint::retouch::stroke_coverage_within(stroke, max).ok_or_else(|| bad(cmd, format!("stroke too large (at most {max} px)")))
+    lienzo_paint::retouch::stroke_coverage_within(stroke, max).ok_or_else(|| bad(cmd, format!("stroke too large (at most {max} px)")))
 }
 
 /// [`coverage_within`] at the shared allowance.
@@ -144,7 +144,7 @@ pub fn stroke_brush(base: &BrushSettings, p: &Value) -> BrushSettings {
         spacing: pct("spacing", base.spacing * 100.0, 1.0, 1000.0),
         // The options bar's Smoothing; the UI sends 0 for a ⇧-click line, which isn't smoothed (#11887).
         smoothing: match p.get("smoothing") {
-            Some(_) => photocraft_paint::Smoothing { enabled: true, amount: pct("smoothing", 0.0, 0.0, 100.0), ..base.smoothing.clone() },
+            Some(_) => lienzo_paint::Smoothing { enabled: true, amount: pct("smoothing", 0.0, 0.0, 100.0), ..base.smoothing.clone() },
             None => base.smoothing.clone(),
         },
         erase: false,

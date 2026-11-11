@@ -1,9 +1,9 @@
 use super::appearance::{canvas_style, sync_appearance, sync_display_scale, sync_tooltips};
 use super::startup::{load, presets_store, recovery, sync_rulers};
-use super::{DocId, HashMap, PhotocraftApp, Value, prefs};
+use super::{DocId, HashMap, LienzoApp, Value, prefs};
 
 /// Per-frame upkeep: theme sync, persistence, autosave and the history log.
-pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn tick(app: &mut LienzoApp, ctx: &egui::Context) {
     if !app.prefs_rt.loaded {
         load(app);
     }
@@ -58,7 +58,7 @@ pub(super) struct SaveRetry {
 /// Save changed preferences. A failed write stays pending and is retried with a backoff (a newer
 /// change retries sooner); the status bar reports the first failure and a notice a persistent
 /// one. Returns the seconds until the next retry while one is pending.
-pub(super) fn persist(app: &mut PhotocraftApp, now: f64) -> Option<f64> {
+pub(super) fn persist(app: &mut LienzoApp, now: f64) -> Option<f64> {
     let rev = app.session.prefs.rev();
     if rev == app.prefs_rt.saved_rev {
         return None;
@@ -111,7 +111,7 @@ pub(super) fn persist(app: &mut PhotocraftApp, now: f64) -> Option<f64> {
 
 /// Write `ours` over the stored preferences, keeping what another instance (a second browser
 /// tab, another app window) changed there since this one last loaded or saved them.
-fn write_prefs(app: &mut PhotocraftApp, ours: &Value) -> Result<(), String> {
+fn write_prefs(app: &mut LienzoApp, ours: &Value) -> Result<(), String> {
     let Some(save) = app.services.save_prefs.as_mut() else { return Ok(()) };
     let stored = app.services.load_prefs.as_mut().and_then(|load| load()).and_then(|t| serde_json::from_str::<Value>(&t).ok());
     let text = match (stored, &app.prefs_rt.saved_value) {
@@ -181,7 +181,7 @@ pub(super) fn merge_changes(base: &Value, ours: &Value, theirs: &mut Value) {
 
 /// Write the preferences now, through the same merge as [`persist`], for recovery choices that
 /// need the result immediately. The pending revision stays unsaved when the write fails.
-pub(crate) fn save_preferences(app: &mut PhotocraftApp) -> Result<(), String> {
+pub(crate) fn save_preferences(app: &mut LienzoApp) -> Result<(), String> {
     let rev = app.session.prefs.rev();
     let ours = app.session.prefs_value();
     write_prefs(app, &ours)?;
@@ -196,9 +196,9 @@ pub(crate) fn save_preferences(app: &mut PhotocraftApp) -> Result<(), String> {
 /// Linked smart objects follow their files while the document is open, as in Photoshop: every two
 /// seconds, and as soon as the window comes back to the front (after saving in another app), stamp
 /// the active document's linked files on a worker thread and re-render the layers of the ones that
-/// changed ([`photocraft_engine::link_watch`]).
+/// changed ([`lienzo_engine::link_watch`]).
 #[cfg(not(target_arch = "wasm32"))]
-fn link_updates(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn link_updates(app: &mut LienzoApp, ctx: &egui::Context) {
     match app.session.poll_link_scan() {
         Some(Ok(r)) => {
             if let Some(n) = r["updated"].as_array().map(Vec::len).filter(|n| *n > 0) {
@@ -218,7 +218,7 @@ fn link_updates(app: &mut PhotocraftApp, ctx: &egui::Context) {
     let focused = ctx.input(|i| i.focused);
     let was_focused: bool = ctx.data(|d| d.get_temp(focus_key)).unwrap_or(focused);
     ctx.data_mut(|d| d.insert_temp(focus_key, focused));
-    let has_links = app.session.active().is_some_and(|d| !photocraft_engine::link_watch::linked_files(&d.doc).is_empty());
+    let has_links = app.session.active().is_some_and(|d| !lienzo_engine::link_watch::linked_files(&d.doc).is_empty());
     if !has_links {
         return;
     }
@@ -232,7 +232,7 @@ fn link_updates(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Background autosave of documents with unsaved changes every N minutes (File Handling).
-fn autosave(app: &mut PhotocraftApp) {
+fn autosave(app: &mut LienzoApp) {
     let fh = &app.session.prefs().file_handling;
     let (on, minutes) = (fh.autosave, fh.autosave_minutes.max(1));
     if app.services.autosave.is_none() {
@@ -312,12 +312,12 @@ fn autosave(app: &mut PhotocraftApp) {
 }
 
 /// Force the autosave timer to fire on the next tick (tests, `prefs` changes).
-pub fn autosave_now(app: &mut PhotocraftApp) {
+pub fn autosave_now(app: &mut LienzoApp) {
     app.prefs_rt.next_autosave_ms = f64::MIN_POSITIVE;
 }
 
 /// History Log preference: append executed commands to a text file.
-fn history_log(app: &mut PhotocraftApp) {
+fn history_log(app: &mut LienzoApp) {
     let n = app.session.journal.len();
     if n <= app.prefs_rt.log_len {
         app.prefs_rt.log_len = n;
@@ -332,7 +332,7 @@ fn history_log(app: &mut PhotocraftApp) {
     let Some(append) = app.services.append_text.as_mut() else { return };
     let mut text = String::new();
     for (id, params) in &app.session.journal[start..] {
-        let label = photocraft_engine::commands::find(id).map_or(id.as_str(), |c| c.label).trim_end_matches('…');
+        let label = lienzo_engine::commands::find(id).map_or(id.as_str(), |c| c.label).trim_end_matches('…');
         match hl.detail {
             prefs::LogDetail::SessionsOnly => {
                 if matches!(id.as_str(), "file.new" | "file.open" | "file.close" | "file.openAs") {

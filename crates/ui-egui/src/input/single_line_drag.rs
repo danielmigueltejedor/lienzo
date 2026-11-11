@@ -15,7 +15,7 @@
 
 use egui::{Context, Event, Pos2, RawInput, Rect};
 
-/// Installed by `PhotocraftApp::setup_context`.
+/// Installed by `LienzoApp::setup_context`.
 #[derive(Default)]
 pub struct SingleLineDrag {
     /// The y the pointer is kept on during the next input, found at the end of the last pass.
@@ -90,7 +90,7 @@ mod tests {
     /// A context set up as the app sets it up (fonts, theme, plugins).
     fn ctx() -> Context {
         let ctx = Context::default();
-        crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
         ctx
     }
 

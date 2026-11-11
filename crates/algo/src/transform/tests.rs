@@ -227,7 +227,7 @@ fn identity_and_translation_are_exact() {
 
 #[test]
 fn translation_preserves_colour_range_at_every_depth() {
-    use photocraft_color::{ColorMode, SampleType};
+    use lienzo_color::{ColorMode, SampleType};
 
     let h = Homography([1.0, 0.0, 7.0, 0.0, 1.0, -3.0, 0.0, 0.0, 1.0]);
     for sample in SampleType::ALL {
@@ -326,7 +326,7 @@ fn large_downscale_is_prefiltered() {
 
 #[test]
 fn surfaces_without_alpha_gain_it() {
-    let mut s = Surface::new(PixelFormat::new(photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8, false));
+    let mut s = Surface::new(PixelFormat::new(lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8, false));
     s.fill_rect(Rect::new(0, 0, 10, 10), &[1.0, 0.0, 0.0]);
     let h = Homography([1.0, 0.0, 5.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
     let o = warp_surface(&s, Rect::new(0, 0, 10, 10), &h, Interp::Nearest).unwrap();

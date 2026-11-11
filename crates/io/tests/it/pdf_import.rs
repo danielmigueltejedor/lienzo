@@ -7,11 +7,11 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use lienzo_doc::LayerContent;
+use lienzo_geom::Rect;
+use lienzo_io::{ImportOptions, IoError, import_with_options_and_interrupt};
+use lienzo_raster::Interrupt;
 use lopdf::{Document as PdfDocument, Object, Stream, dictionary};
-use photocraft_doc::LayerContent;
-use photocraft_geom::Rect;
-use photocraft_io::{ImportOptions, IoError, import_with_options_and_interrupt};
-use photocraft_raster::Interrupt;
 
 const PAGE_W: f64 = 200.0;
 const PAGE_H: f64 = 100.0;
@@ -93,7 +93,7 @@ fn one_page_pdf(width: f32, height: f32) -> Vec<u8> {
 }
 
 /// The first artboard rectangle of `document`.
-fn first_artboard(document: &photocraft_doc::Document) -> Rect {
+fn first_artboard(document: &lienzo_doc::Document) -> Rect {
     let layer = document.layers.first().expect("an imported page group");
     let group = match &layer.content {
         LayerContent::Group(group) => group,

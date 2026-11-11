@@ -1,9 +1,9 @@
 use super::lifecycle::{apply, cancel, close, fill_edit, redo, report, reset, set_sampling, undo};
 use super::preview::{rebase, wait_preview};
-use super::{CafTool, CafWorkspace, LASSO_OPS, PhotocraftApp, ToolEvent, Value, json};
+use super::{CafTool, CafWorkspace, LASSO_OPS, LienzoApp, ToolEvent, Value, json};
 
 /// Control channel: `edit.contentAwareFill {"ui": {...}}` while the workspace is open.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut LienzoApp, ui: &Value) -> Result<Value, String> {
     let flag = |k: &str| ui.get(k).and_then(Value::as_bool) == Some(true);
     if flag("cancel") {
         cancel(app);
@@ -103,7 +103,7 @@ pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
 }
 
 /// Pointer in document coordinates (from the view or the control channel).
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: egui::Modifiers) {
     let Some(w) = app.distort.caf.as_mut() else { return };
     match (w.tool, ev) {
         (CafTool::Brush, ToolEvent::Down { x, y, .. }) => w.begin_stroke([x, y], mods.alt),
@@ -148,7 +148,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
     }
 }
 
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) {
     if crate::color_picker_ui::any_open(app) {
         return;
     }

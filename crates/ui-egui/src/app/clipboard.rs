@@ -1,4 +1,4 @@
-use super::PhotocraftApp;
+use super::LienzoApp;
 
 fn clip_signature(w: u32, h: u32, px: &[u8]) -> u64 {
     let mut sig = (w as u64) << 32 | h as u64;
@@ -9,7 +9,7 @@ fn clip_signature(w: u32, h: u32, px: &[u8]) -> u64 {
 }
 
 /// Match the bitmap signature by sampling the bounded SVG mirror, without another full pixel buffer.
-fn svg_clip_signature(clip: &photocraft_engine::edit_cmds::Clip) -> u64 {
+fn svg_clip_signature(clip: &lienzo_engine::edit_cmds::Clip) -> u64 {
     let b = clip.bounds;
     let (w, h) = (b.width(), b.height());
     let mut sig = (u64::from(w) << 32) | u64::from(h);
@@ -20,14 +20,14 @@ fn svg_clip_signature(clip: &photocraft_engine::edit_cmds::Clip) -> u64 {
         let x = b.x0.saturating_add((i / 4 % u64::from(w)) as i32);
         let y = b.y0.saturating_add((i / 4 / u64::from(w)) as i32);
         let mut pixel = [[0; 4]];
-        clip.surface.read_rgba8_into(photocraft_geom::Rect::from_xywh(x, y, 1, 1), &mut pixel);
+        clip.surface.read_rgba8_into(lienzo_geom::Rect::from_xywh(x, y, 1, 1), &mut pixel);
         let value = pixel[0].get((i % 4) as usize).copied().unwrap_or_default();
         sig = sig.rotate_left(5) ^ u64::from(value);
     }
     sig
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Capture SVG and its raster mirror together; failures leave the previous copy intact.
     pub(super) fn import_os_svg_clipboard(&mut self) -> Result<bool, String> {
         let Some(get) = self.services.clipboard_get_svg.as_mut() else { return Ok(false) };
@@ -57,7 +57,7 @@ impl PhotocraftApp {
         if self.os_clip_svg.as_deref().is_some_and(|old| old == &source) && holds_vectors_or_newer {
             return Ok(true);
         }
-        let clip = photocraft_engine::edit_cmds::Clip::from_svg(&source).map_err(|error| {
+        let clip = lienzo_engine::edit_cmds::Clip::from_svg(&source).map_err(|error| {
             let error = error.to_string();
             self.ui.status = error.clone();
             self.ui.status_error = true;
@@ -152,19 +152,11 @@ impl PhotocraftApp {
         if self.os_clip_sig == Some(sig) && self.session.clipboard.is_some() {
             return Ok(false);
         }
-        let r = photocraft_geom::Rect::new(0, 0, w as i32, h as i32);
-        let mut surface = photocraft_raster::Surface::from_interleaved(photocraft_color::PixelFormat::RGBA8, r, &bytes);
+        let r = lienzo_geom::Rect::new(0, 0, w as i32, h as i32);
+        let mut surface = lienzo_raster::Surface::from_interleaved(lienzo_color::PixelFormat::RGBA8, r, &bytes);
         surface.prune();
-        self.session.clipboard = Some(photocraft_engine::edit_cmds::Clip {
-            components: None,
-            surface,
-            bounds: r,
-            layers: None,
-            resolution: None,
-            source: None,
-            svg: None,
-            board: None,
-        });
+        self.session.clipboard =
+            Some(lienzo_engine::edit_cmds::Clip { components: None, surface, bounds: r, layers: None, resolution: None, source: None, svg: None, board: None });
         // The SVG that came with this image (a vector app puts both): a later internal copy is
         // newer than it, so Paste As must not bring it back while it is unchanged.
         self.os_clip_svg = self.os_svg_now().flatten();

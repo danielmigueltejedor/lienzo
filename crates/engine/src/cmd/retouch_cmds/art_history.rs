@@ -1,10 +1,10 @@
 //! Art History Brush: stylized, oriented dabs sampled from a history state.
 
-use photocraft_algo::art_history::{self, Dab, MAX_COVERAGE, MAX_DABS, RNG_SEED, StampError, StampParams, Style};
-use photocraft_color::BlendMode;
-use photocraft_geom::Rect;
-use photocraft_paint::MAX_BRUSH_SIZE;
-use photocraft_paint::retouch::{Region, alpha_index};
+use lienzo_algo::art_history::{self, Dab, MAX_COVERAGE, MAX_DABS, RNG_SEED, StampError, StampParams, Style};
+use lienzo_color::BlendMode;
+use lienzo_geom::Rect;
+use lienzo_paint::MAX_BRUSH_SIZE;
+use lienzo_paint::retouch::{Region, alpha_index};
 use serde_json::{Value, json};
 
 use super::{EngineError, Result, Session, bad, blend_param, damage_json, parse_brush, run_stroke};
@@ -96,7 +96,7 @@ fn union_bounds(dabs: &[Dab]) -> Result<Rect> {
     Ok(r)
 }
 
-fn selection_mask(sel: Option<&photocraft_raster::Surface>, rect: Rect) -> Option<Vec<f32>> {
+fn selection_mask(sel: Option<&lienzo_raster::Surface>, rect: Rect) -> Option<Vec<f32>> {
     let sel = sel?;
     let w = rect.width() as usize;
     let h = rect.height() as usize;
@@ -260,8 +260,8 @@ pub fn run(s: &mut Session, p: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::ColorMode;
-    use photocraft_doc::LayerContent;
+    use lienzo_color::ColorMode;
+    use lienzo_doc::LayerContent;
     use serde_json::json;
 
     fn session(w: u32, h: u32, depth: u64, mode: &str) -> Session {
@@ -283,7 +283,7 @@ mod tests {
             let mut data = Vec::new();
             for y in b.y0..b.y1 {
                 for x in b.x0..b.x1 {
-                    data.extend(photocraft_raster::from_rgba(&fmt, f(x, y)));
+                    data.extend(lienzo_raster::from_rgba(&fmt, f(x, y)));
                 }
             }
             surf.write_region(b, &data);

@@ -1,5 +1,5 @@
 use super::{Normal, Placement, par_map, par_rows};
-use photocraft_raster::AllocationError;
+use lienzo_raster::AllocationError;
 
 fn alloc_plane(len: usize) -> Result<Vec<f32>, AllocationError> {
     let bytes = len.checked_mul(std::mem::size_of::<f32>()).ok_or(AllocationError::SizeOverflow)?;

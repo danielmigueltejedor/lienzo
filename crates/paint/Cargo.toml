@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-paint"
+name = "lienzo-paint"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,9 +8,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-raster = { workspace = true }
+lienzo-geom = { workspace = true }
+lienzo-color = { workspace = true }
+lienzo-raster = { workspace = true }
 serde = { workspace = true }
 rustc-hash = { workspace = true }
 
@@ -19,5 +19,5 @@ rustc-hash = { workspace = true }
 rayon = { workspace = true }
 
 [dev-dependencies]
-photocraft-cms = { workspace = true }
+lienzo-cms = { workspace = true }
 serde_json = { workspace = true }

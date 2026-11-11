@@ -6,10 +6,10 @@
 //! `{"layer": id, "removeLayer": true}`, so the whole session is one undo step that leaves no
 //! layer behind. Scripts can skip the layer and pass `type.create`'s keys directly.
 
-use photocraft_algo::selection::{self as sel, SelectionMode};
-use photocraft_doc::text::AntiAlias;
-use photocraft_doc::{Document, LayerContent, TextLayer};
-use photocraft_geom::Rect;
+use lienzo_algo::selection::{self as sel, SelectionMode};
+use lienzo_doc::text::AntiAlias;
+use lienzo_doc::{Document, LayerContent, TextLayer};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -46,7 +46,7 @@ fn coverage(doc: &Document, t: &TextLayer) -> (Vec<f32>, Rect) {
     for r in &mut t.runs {
         r.style.color.alpha = 1.0;
     }
-    let mut eng = photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner());
+    let mut eng = lienzo_text::shared().lock().unwrap_or_else(|e| e.into_inner());
     let surface = eng.render(&t, doc.resolution_dpi, doc.pixel_format()).1.surface;
     let area = surface.content_bounds().intersect(&doc.bounds());
     if area.is_empty() {
@@ -151,7 +151,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::LayerId;
+    use lienzo_doc::LayerId;
 
     fn session() -> Session {
         let mut s = Session::new();

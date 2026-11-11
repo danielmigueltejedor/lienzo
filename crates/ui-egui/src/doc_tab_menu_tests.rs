@@ -11,11 +11,11 @@ use serde_json::{Value, json};
 
 use crate::canvas::tabs::{TAB_MENU_SEPARATORS_AFTER, tab_context_items, tab_context_menu};
 use crate::state::DialogKind;
-use crate::{FileDialogRequest, PhotocraftApp, Services};
+use crate::{FileDialogRequest, LienzoApp, Services};
 
 /// The app, what the menu is drawn for, and the command the last click returned.
 struct Probe {
-    app: PhotocraftApp,
+    app: LienzoApp,
     index: usize,
     has_path: bool,
     picked: Option<(&'static str, Value)>,
@@ -27,7 +27,7 @@ fn probe(documents: usize, index: usize, has_path: bool) -> (Harness<'static, Pr
     let requests: Requests = Default::default();
     let held = requests.clone();
     let services = Services { file_dialog: Some(Box::new(move |request, _parent, _reply| held.borrow_mut().push(request))), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     for n in 0..documents {
         app.run("file.new", json!({"width": 10 + n, "height": 8})).unwrap();
     }
@@ -41,7 +41,7 @@ fn probe(documents: usize, index: usize, has_path: bool) -> (Harness<'static, Pr
         },
         state,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     (h, requests)
 }
@@ -105,7 +105,7 @@ fn separators_follow_move_to_new_window_and_open_document() {
 #[test]
 fn each_row_names_its_command_and_the_clicked_tabs_index() {
     let items = tab_context_items(2, 3, true);
-    let menu = crate::menus::menu_items(&PhotocraftApp::new(photocraft_engine::Session::new(), Services::default()));
+    let menu = crate::menus::menu_items(&LienzoApp::new(lienzo_engine::Session::new(), Services::default()));
     let want = [
         ("Consolidate All to Here", "window.arrange.consolidateAllToTabs", json!({})),
         ("Close", "file.close", json!({"document": 2})),
@@ -118,7 +118,7 @@ fn each_row_names_its_command_and_the_clicked_tabs_index() {
     ];
     for ((label, id, params, _), (wl, wi, wp)) in items.iter().zip(want) {
         assert_eq!((*label, *id, params), (wl, wi, &wp));
-        assert!(menu.iter().any(|i| i.id == *id) || photocraft_engine::commands::find(id).is_some(), "{id} is a command");
+        assert!(menu.iter().any(|i| i.id == *id) || lienzo_engine::commands::find(id).is_some(), "{id} is a command");
     }
 }
 

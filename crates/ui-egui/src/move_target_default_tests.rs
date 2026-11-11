@@ -8,11 +8,11 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Move;
@@ -46,7 +46,7 @@ fn a_saved_choice_is_kept_and_only_a_missing_key_gets_layer() {
 #[test]
 fn the_target_dropdown_lists_group_then_layer() {
     let mut h = Harness::builder().with_size(vec2(1600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -54,7 +54,7 @@ fn the_target_dropdown_lists_group_then_layer() {
         },
         app(),
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     let combo = h
         .get_all_by_role(Role::ComboBox)

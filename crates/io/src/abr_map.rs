@@ -1,6 +1,6 @@
 //! Photoshop brushes (`.abr`) → brush presets.
 //!
-//! [`photocraft_psd::abr`] reads the file; this module maps its tips and `brushPreset`
+//! [`lienzo_psd::abr`] reads the file; this module maps its tips and `brushPreset`
 //! descriptors onto [`BrushSettings`] (Brush Tip Shape, Shape Dynamics, Scattering, Texture,
 //! Dual Brush, Color Dynamics, Transfer, Brush Pose, Noise, Wet Edges, Build-up, Smoothing and
 //! the captured tool options). Settings without an equivalent are listed in
@@ -9,12 +9,12 @@
 
 use std::collections::BTreeSet;
 
-use photocraft_paint::{
+use lienzo_paint::{
     BrushPreset, BrushSettings, Control, DualBrush, Dynamic, GrayTile, MaskMode, MixerSettings, Pattern, PatternStyle, Pose, ShapeDynamics, TipShape, Transfer,
 };
-use photocraft_psd::abr::{self, AbrFile, AbrSample, LegacyTip};
-use photocraft_psd::descriptor::{Descriptor, Value};
-use photocraft_psd::patterns::PsdPattern;
+use lienzo_psd::abr::{self, AbrFile, AbrSample, LegacyTip};
+use lienzo_psd::descriptor::{Descriptor, Value};
+use lienzo_psd::patterns::PsdPattern;
 
 /// Largest sampled tip edge kept as is; bigger tips are downsampled to it.
 pub const MAX_TIP_EDGE: u32 = 2500;
@@ -34,32 +34,32 @@ pub struct AbrImport {
 /// folders (Photoshop CC's preset hierarchy) become each preset's [`BrushPreset::folder`] inside
 /// that group, the way Photoshop's Import Brushes puts them in a folder named after the file.
 pub fn read_abr(bytes: &[u8], group: &str) -> Result<AbrImport, String> {
-    read_abr_with(bytes, group, &photocraft_raster::Interrupt::NONE)
+    read_abr_with(bytes, group, &lienzo_raster::Interrupt::NONE)
 }
 
 /// [`read_abr`] that checks `ctl` before each brush (and reports progress): a cancelled import
 /// fails with "cancelled".
-pub fn read_abr_with(bytes: &[u8], group: &str, ctl: &photocraft_raster::Interrupt) -> Result<AbrImport, String> {
+pub fn read_abr_with(bytes: &[u8], group: &str, ctl: &lienzo_raster::Interrupt) -> Result<AbrImport, String> {
     let f = abr::parse(bytes).map_err(|e| format!("not a readable brush file (.abr): {e}"))?;
     // Parsing is the small part; mapping (tip decoding) reports 10–100 %.
     ctl.progress(0.1);
     let cancel = || ctl.cancelled();
     let progress = |p: f32| ctl.progress(0.1 + 0.9 * p);
-    map_file_with(&f, group, &photocraft_raster::Interrupt::new(&cancel, &progress)).map_err(|e| e.to_string())
+    map_file_with(&f, group, &lienzo_raster::Interrupt::new(&cancel, &progress)).map_err(|e| e.to_string())
 }
 
 /// Map a parsed file.
 pub fn map_file(f: &AbrFile, group: &str) -> AbrImport {
     // Never cancelled, so always `Ok`.
-    map_file_with(f, group, &photocraft_raster::Interrupt::NONE).unwrap_or_default()
+    map_file_with(f, group, &lienzo_raster::Interrupt::NONE).unwrap_or_default()
 }
 
 /// [`map_file`] that checks `ctl` before each brush.
-pub fn map_file_with(f: &AbrFile, group: &str, ctl: &photocraft_raster::Interrupt) -> Result<AbrImport, photocraft_raster::Cancelled> {
+pub fn map_file_with(f: &AbrFile, group: &str, ctl: &lienzo_raster::Interrupt) -> Result<AbrImport, lienzo_raster::Cancelled> {
     let mut out = AbrImport { version: f.version, warnings: f.warnings.clone(), ..Default::default() };
     let mut m = Mapper { file: f, warnings: BTreeSet::new(), unknown: BTreeSet::new(), tips: Default::default() };
     let total = f.legacy.len().max(f.samples.len()).max(f.presets.len()).max(1) as f32;
-    let step = |i: usize| -> Result<(), photocraft_raster::Cancelled> {
+    let step = |i: usize| -> Result<(), lienzo_raster::Cancelled> {
         ctl.check()?;
         ctl.progress(i as f32 / total);
         Ok(())
@@ -257,7 +257,7 @@ struct Mapper<'a> {
     unknown: BTreeSet<String>,
     /// Tips already converted, by sample: presets can name one sample thousands of times, and a
     /// tile clones by sharing its data.
-    tips: std::collections::HashMap<*const AbrSample, (photocraft_paint::tile::GrayTile, f32)>,
+    tips: std::collections::HashMap<*const AbrSample, (lienzo_paint::tile::GrayTile, f32)>,
 }
 
 impl Mapper<'_> {

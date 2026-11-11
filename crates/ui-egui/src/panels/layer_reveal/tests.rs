@@ -2,18 +2,18 @@
 
 use egui::{Rect, vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::ThemeKind;
 
 /// 30 layers above a closed group holding `inner` (near the bottom of the panel).
-fn tall_doc() -> (PhotocraftApp, LayerId, LayerId, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn tall_doc() -> (LienzoApp, LayerId, LayerId, LayerId, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.run("layer.new.layer", json!({"name": "Deep inside"})).unwrap();
-    let active = |app: &PhotocraftApp| app.session.active().unwrap().active_layer.unwrap();
+    let active = |app: &LienzoApp| app.session.active().unwrap().active_layer.unwrap();
     let inner = active(&app);
     app.run("layer.groupLayers", json!({})).unwrap();
     let group = app.session.active().unwrap().doc.walk().into_iter().find(|(_, _, l)| l.is_group()).map(|(_, _, l)| l.id).unwrap();
@@ -28,9 +28,9 @@ fn tall_doc() -> (PhotocraftApp, LayerId, LayerId, LayerId, LayerId) {
     (app, inner, group, stack[29], stack[28])
 }
 
-fn harness(app: PhotocraftApp, theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp, theme: ThemeKind) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -39,30 +39,30 @@ fn harness(app: PhotocraftApp, theme: ThemeKind) -> Harness<'static, PhotocraftA
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.state_mut().ui.theme = theme;
     h.run_steps(4);
     h
 }
 
-fn layers_group(h: &Harness<'static, PhotocraftApp>) -> Option<Rect> {
+fn layers_group(h: &Harness<'static, LienzoApp>) -> Option<Rect> {
     crate::panel_docking::probe::group_rect(h.state(), &h.ctx, "layers")
 }
 
 /// The Layers panel row of `name`, if drawn.
-fn row(h: &Harness<'static, PhotocraftApp>, name: &str) -> Option<Rect> {
+fn row(h: &Harness<'static, LienzoApp>, name: &str) -> Option<Rect> {
     let layers = layers_group(h)?;
     h.query_all_by_label(name).map(|n| n.rect()).find(|r| layers.contains(r.center()) || (r.left() >= layers.left() && r.right() <= layers.right()))
 }
 
 /// Fully inside the rows viewport (below the strip and the blend/lock rows, above the footer).
-fn in_view(h: &Harness<'static, PhotocraftApp>, r: Rect) -> bool {
+fn in_view(h: &Harness<'static, LienzoApp>, r: Rect) -> bool {
     let layers = layers_group(h).unwrap();
     r.top() >= layers.top() + 26.0 && r.bottom() <= layers.bottom() - (crate::widgets::FOOTER_BAR + 1.0)
 }
 
-fn expanded(app: &PhotocraftApp, group: LayerId) -> bool {
-    matches!(&app.session.active().unwrap().doc.layer(group).unwrap().content, photocraft_doc::LayerContent::Group(g) if g.expanded)
+fn expanded(app: &LienzoApp, group: LayerId) -> bool {
+    matches!(&app.session.active().unwrap().doc.layer(group).unwrap().content, lienzo_doc::LayerContent::Group(g) if g.expanded)
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn a_new_active_layer_opens_its_groups_and_scrolls_into_view() {
 #[test]
 fn reveal_survives_odd_documents() {
     // No document, a document without layers in groups, a layer deleted between frames.
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut h = harness(app, ThemeKind::ProMedium);
     h.run_steps(2);
     h.state_mut().run("file.new", json!({"width": 20, "height": 20})).unwrap();

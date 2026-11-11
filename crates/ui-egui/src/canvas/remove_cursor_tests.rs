@@ -7,19 +7,19 @@ use egui::CursorIcon;
 use egui_kittest::Harness;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// The canvas at 100 % with `tool` and a 40 px tip, the pointer over its centre.
-fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(tool: Tool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.ui.tool = tool;
     app.run("tools.setBrush", json!({"brush": {"size": 40, "hardness": 1.0}})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -27,7 +27,7 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -40,14 +40,14 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn set_pref(h: &mut Harness<'_, PhotocraftApp>, path: &str, value: serde_json::Value) {
+fn set_pref(h: &mut Harness<'_, LienzoApp>, path: &str, value: serde_json::Value) {
     h.state_mut().run("prefs.set", json!({"path": path, "value": value})).unwrap();
     h.run_steps(2);
 }
 
 /// Whether the brush-tip bitmap marks its hotspot: the bare circle leaves the pixel under the
 /// pointer transparent, the centre + covers it.
-fn centre_marked(h: &Harness<'_, PhotocraftApp>) -> bool {
+fn centre_marked(h: &Harness<'_, LienzoApp>) -> bool {
     let out = h.output();
     let image = out.platform_output.cursor_image.as_ref().expect("the brush tip cursor bitmap");
     let [x, y] = image.hotspot.map(usize::from);
@@ -56,7 +56,7 @@ fn centre_marked(h: &Harness<'_, PhotocraftApp>) -> bool {
 
 /// Whether the brush-tip bitmap draws the 40 px tip's circle: an opaque pixel on the diagonal
 /// below-right of the hotspot, about 20 px out, where no arm of the centre + reaches.
-fn circle_drawn(h: &Harness<'_, PhotocraftApp>) -> bool {
+fn circle_drawn(h: &Harness<'_, LienzoApp>) -> bool {
     let out = h.output();
     let image = out.platform_output.cursor_image.as_ref().expect("the brush tip cursor bitmap");
     let [x, y] = image.hotspot.map(usize::from);
@@ -68,7 +68,7 @@ fn circle_drawn(h: &Harness<'_, PhotocraftApp>) -> bool {
 type Cursor = (CursorIcon, Option<([u16; 2], [u16; 2], Vec<u8>)>);
 
 /// The cursor the canvas asks for this frame.
-fn cursor(h: &Harness<'_, PhotocraftApp>) -> Cursor {
+fn cursor(h: &Harness<'_, LienzoApp>) -> Cursor {
     let out = h.output();
     let image = out.platform_output.cursor_image.as_ref().map(|i| (i.size, i.hotspot, i.rgba.to_vec()));
     (out.platform_output.cursor_icon, image)

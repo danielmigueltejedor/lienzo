@@ -4,7 +4,7 @@
 use egui::{Rect, pos2};
 use egui_kittest::kittest::Queryable;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::dock::Group;
 use crate::theme::{ThemeKind, Tokens};
 
@@ -14,12 +14,12 @@ fn left_top() -> egui::Id {
 
 /// The Color tab of `kind`, alone in a 300 pt wide panel, starting from a red foreground. `fill`
 /// is the group body height the dock offers, if any.
-fn color_tab(kind: ThemeKind, fill: Option<f32>) -> egui_kittest::Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn color_tab(kind: ThemeKind, fill: Option<f32>) -> egui_kittest::Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.tools.foreground = [1.0, 0.0, 0.0, 1.0];
     let tab = Group::Color.tabs(Tokens::for_kind(kind).pro).iter().position(|name| *name == "Color").unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(300.0, 400.0)).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 let origin = ui.cursor().min;
                 ui.data_mut(|d| d.insert_temp(left_top(), Rect::from_min_size(origin, egui::Vec2::ZERO)));
@@ -31,13 +31,13 @@ fn color_tab(kind: ThemeKind, fill: Option<f32>) -> egui_kittest::Harness<'stati
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, kind);
+    LienzoApp::setup_context(&h.ctx, kind);
     h.run_steps(3);
     h
 }
 
 /// Drag on the saturation/brightness field at `y` below its top, on its left edge (no saturation).
-fn pick_at(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, y: f32) -> [f32; 4] {
+fn pick_at(h: &mut egui_kittest::Harness<'static, LienzoApp>, y: f32) -> [f32; 4] {
     let origin = h.ctx.data(|d| d.get_temp::<Rect>(left_top())).unwrap().min;
     // After the 38 pt chips and the 8 pt gap.
     let p = pos2(origin.x + 38.0 + 8.0 + 1.0, origin.y + y);

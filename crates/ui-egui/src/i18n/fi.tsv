@@ -4095,7 +4095,7 @@ curves	Smooth	Tasoita
 	Multiple Flames Path Directions	Useita liekkejä polun suuntiin
 	Multiple Flames Various Length	Useita eripituisia liekkejä
 	My Brushes	Omat siveltimet
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Tiedostojen natiivia vedä ja pudota -toimintoa ei vielä tueta Waylandissa. Käytä komentoa Tiedosto › Avaa tai suorita Lienzo XWaylandissa komennolla `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Tiedostojen natiivia vedä ja pudota -toimintoa ei vielä tueta Waylandissa. Käytä komentoa Tiedosto › Avaa tai suorita Lienzo XWaylandissa komennolla `WAYLAND_DISPLAY= lienzo`.
 	Nearest	Lähin
 	Neon Glow	Neonhehku
 	Neutralize	Neutraloi

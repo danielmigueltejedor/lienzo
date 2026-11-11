@@ -1,4 +1,4 @@
-//! The control and automation launch options, as clap types: `photocraft-cli mcp` and `serve`
+//! The control and automation launch options, as clap types: `lienzo-cli mcp` and `serve`
 //! flatten them, and so does the desktop app (#7071), so each flag and its environment variable
 //! are declared once. A flag wins over its variable.
 //!
@@ -21,17 +21,17 @@ use crate::{AuthorizedWorkspace, AutomationError};
 #[derive(Args)]
 pub struct ControlArgs {
     /// The control token (64 hex digits)
-    #[arg(long, value_name = "64-HEX", env = "PHOTOCRAFT_CONTROL_TOKEN", hide_env_values = true, value_parser = NonEmptyStringValueParser::new())]
+    #[arg(long, value_name = "64-HEX", env = "LIENZO_CONTROL_TOKEN", hide_env_values = true, value_parser = NonEmptyStringValueParser::new())]
     pub control_token: Option<String>,
     /// A file holding the control token, used instead of --control-token (a server creates it
     /// when missing)
-    #[arg(long, value_name = "PATH", env = "PHOTOCRAFT_CONTROL_TOKEN_FILE")]
+    #[arg(long, value_name = "PATH", env = "LIENZO_CONTROL_TOKEN_FILE")]
     pub control_token_file: Option<PathBuf>,
 }
 
 /// The folders automation may touch. Without a root, that direction of access is denied. No
 /// variable stands in for them here: one exported for the desktop app must not widen headless
-/// `photocraft-cli` access (#1551); the desktop app adds its own.
+/// `lienzo-cli` access (#1551); the desktop app adds its own.
 #[derive(Args)]
 pub struct AutomationArgs {
     /// Ordered folders automation may read from; repeat for more roots (none without it)
@@ -53,8 +53,8 @@ impl AutomationArgs {
     }
 }
 
-/// A control port, for clap's `value_parser`: `photocraft --control`, `photocraft-cli serve --port`
-/// and PHOTOCRAFT_CONTROL_PORT, which may carry spaces.
+/// A control port, for clap's `value_parser`: `lienzo --control`, `lienzo-cli serve --port`
+/// and LIENZO_CONTROL_PORT, which may carry spaces.
 pub fn control_port(s: &str) -> Result<u16, NotAPort> {
     s.trim().parse().map_err(|_| NotAPort)
 }
@@ -64,7 +64,7 @@ pub fn control_port(s: &str) -> Result<u16, NotAPort> {
 #[error("expected a port, 0-65535")]
 pub struct NotAPort;
 
-/// For `Command::mut_args`: an empty or blank variable counts as unset, so `PHOTOCRAFT_CONTROL_PORT=`
+/// For `Command::mut_args`: an empty or blank variable counts as unset, so `LIENZO_CONTROL_PORT=`
 /// turns a fallback off without `unset` (#2491). clap would pass the empty value to the parser.
 pub fn blank_env_is_unset(arg: Arg) -> Arg {
     let blank = arg.get_env().and_then(std::env::var_os).is_some_and(|v| v.to_str().is_some_and(|v| v.trim().is_empty()));

@@ -1,7 +1,8 @@
 name: Weekly upstream sync
 
 # Every Monday: merge what upstream published during the week into a branch and open a pull
-# request, so engine fixes reach this project. Nothing is merged into the default branch here:
+# request, so engine fixes reach this project. Upstream's tree is first renamed to this app's
+# names by scripts/rebrand.py (rules in .github/rebrand.toml), so the merge speaks one language. Nothing is merged into the default branch here:
 # the pull request is the review step. Files listed in .github/upstream-keep stay as they are
 # in this repository even when upstream changes them.
 
@@ -22,6 +23,8 @@ concurrency:
 env:
   UPSTREAM_REPO: storytold/photocraft
   UPSTREAM_BRANCH: main
+  # Upstream's commits with this app's names, which is what gets merged (docs/upstream.md).
+  MIRROR_BRANCH: upstream-lienzo
 
 jobs:
   sync:
@@ -52,7 +55,23 @@ jobs:
           git fetch --no-tags upstream "refs/heads/${UPSTREAM_BRANCH}:refs/remotes/upstream/${UPSTREAM_BRANCH}"
           up="upstream/${UPSTREAM_BRANCH}"
 
-          if git merge-base --is-ancestor "$up" HEAD; then
+          new="$(git rev-parse "$up")"
+          ours="$(git rev-parse HEAD)"
+
+          # Upstream arrives through a mirror branch holding its tree with this app's names
+          # (scripts/rebrand.py, rules in .github/rebrand.toml). Each mirror commit has the previous
+          # mirror commit and the upstream commit it renames as parents, and names that commit in
+          # an "Upstream-Commit:" trailer.
+          prev=""
+          if git fetch --no-tags origin "refs/heads/${MIRROR_BRANCH}:refs/remotes/origin/${MIRROR_BRANCH}" 2>/dev/null; then
+            prev="$(git rev-parse "origin/${MIRROR_BRANCH}")"
+          fi
+          if [ -z "$prev" ]; then
+            echo "::error::No ${MIRROR_BRANCH} branch: see docs/upstream.md for how it starts."
+            exit 1
+          fi
+          last="$(git log -1 --format=%B "$prev" | sed -n 's/^Upstream-Commit: //p' | tail -1)"
+          if [ "$last" = "$new" ] || git merge-base --is-ancestor "$up" "$last"; then
             echo "Already up to date with ${UPSTREAM_REPO}." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -61,9 +80,17 @@ jobs:
             echo "An upstream sync pull request is already open; not opening another." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          count="$(git rev-list --count "HEAD..${up}")"
-          ours="$(git rev-parse HEAD)"
-          new="$(git rev-parse "$up")"
+          count="$(git rev-list --count "${last}..${up}")"
+
+          # Rename upstream's tree with this app's own rules, then record it on the mirror.
+          tree_dir="${RUNNER_TEMP}/upstream-tree"
+          git worktree add -q --detach "$tree_dir" "$up"
+          python3 scripts/rebrand.py apply --root "$tree_dir" --pin-from .
+          git -C "$tree_dir" add -A
+          tree="$(git -C "$tree_dir" write-tree)"
+          git worktree remove --force "$tree_dir"
+          mirror="$(printf 'Upstream %s with this app'"'"'s names\n\nUpstream-Commit: %s\n' "${new:0:8}" "$new" | git commit-tree "$tree" -p "$prev" -p "$new")"
+          up="$mirror"
 
           # Files this project owns: on a conflict our version wins without a manual step.
           git config merge.ours.driver true
@@ -99,6 +126,7 @@ jobs:
             fi
             kept=""
             if [ -f .github/upstream-keep ]; then
+              # shellcheck disable=SC2016 # the backticks are Markdown, printed as they are
               kept="$(git diff --name-only "${ours}...${up}" 2>/dev/null | git check-attr --stdin merge | awk -F': ' '$3=="ours"{print "- `"$1"`"}' | head -40 || true)"
             fi
             kept_text=""
@@ -115,19 +143,21 @@ jobs:
 
           ${kept_text}Review the CI result before merging. \`docs/upstream.md\` is updated in this pull request."
           else
-            # The merge needs a person. Offer upstream's commits as they are, so the pull request
-            # shows the conflicts and they can be resolved on the branch.
+            # The merge needs a person. Offer upstream's commits (already renamed) as they are, so
+            # the pull request shows the conflicts and they can be resolved on the branch.
             git checkout -q -B "$branch" "$up"
+            # shellcheck disable=SC2016 # the backticks are Markdown, printed as they are
+            conflict_list="$(printf '%s\n' "$conflicts" | sed 's/^/- `/; s/$/`/')"
             body="Brings **${count} commits** from \`${UPSTREAM_REPO}\` (up to \`${new:0:8}\`).
 
           **Result: conflicts.** The automatic merge stopped and changed nothing in \`${base}\`. These files need a decision:
 
-          $(printf '%s\n' "$conflicts" | sed 's/^/- `/; s/$/`/')
+          ${conflict_list}
 
-          This branch holds upstream's commits unchanged. Resolve the conflicts on it (keeping this project's changes) and merge."
+          This branch holds upstream's commits, renamed to this app's names but otherwise unchanged. Resolve the conflicts on it (keeping this project's changes) and merge."
           fi
 
-          if ! git push -q -f origin "$branch" 2>/tmp/push.log; then
+          if ! git push -q -f origin "$branch" "${mirror}:refs/heads/${MIRROR_BRANCH}" 2>/tmp/push.log; then
             cat /tmp/push.log
             note="The weekly sync found ${count} new commits in \`${UPSTREAM_REPO}\` (up to \`${new:0:8}\`, merge result: ${status}) but could not push the branch."
             if grep -qi 'workflow' /tmp/push.log; then

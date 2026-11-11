@@ -86,7 +86,7 @@ eraser. Live-update cases time one 50-pixel extension after stroke creation. Tim
 exclude display refresh and do not claim end-to-end stylus latency.
 The observed maximum of six samples is reported as p95 in the raw output.
 
-Run with `RAYON_NUM_THREADS=8 cargo +1.99.0 run --release -p photocraft-engine
+Run with `RAYON_NUM_THREADS=8 cargo +1.99.0 run --release -p lienzo-engine
 --example multi_channel_bench -- --subset`. For the unchanged base, use the same
 fixture, parameters and timing loop and omit
 `--subset`. The base cannot execute the new partial-set target. Add `--region` for the
@@ -187,7 +187,7 @@ and [source/binary hashes](benchmarks/multi-channel-editing/environment.json) ar
 
 The images below use an original synthetic gradient, rendered offscreen without
 opening a window. Their JSON scripts are adjacent to the images. Reproduce them with
-`cargo run -p photocraft-ui-egui --example snapshot -- --safe-gpu --size 1440x900
+`cargo run -p lienzo-ui-egui --example snapshot -- --safe-gpu --size 1440x900
 --scale 1 --out <image.png> --script "$(cat <script.json>)"`; add `--click-at 720,242`
 for the Curves dropdown capture.
 

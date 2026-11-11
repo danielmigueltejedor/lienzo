@@ -2,9 +2,9 @@ use super::*;
 
 /// A small valid Photoshop set, generated without external action files.
 fn action_set_bytes(set: &str, action: &str) -> Vec<u8> {
-    use photocraft_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
-    use photocraft_psd::descriptor::UnicodeString;
-    photocraft_psd::atn::write(&AtnFile {
+    use lienzo_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
+    use lienzo_psd::descriptor::UnicodeString;
+    lienzo_psd::atn::write(&AtnFile {
         name: UnicodeString::new_nul(set),
         actions: vec![AtnAction {
             name: UnicodeString::new_nul(action),
@@ -20,7 +20,7 @@ fn action_set_bytes(set: &str, action: &str) -> Vec<u8> {
 #[test]
 fn single_history_dialog_confirmation_and_cancel() {
     for (single, confirm, background) in [(true, true, false), (true, true, true), (true, false, false), (false, true, false)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width":4,"height":4,"background":"#804020"})).unwrap();
         app.run("actions.setHistory", json!({"singleState":single})).unwrap();
         app.background_jobs = background;
@@ -75,7 +75,7 @@ fn single_history_dialog_confirmation_and_cancel() {
 #[test]
 fn single_history_dialog_refuses_intervening_edit_or_document_switch() {
     for (single_state, switch) in [(true, false), (true, true), (false, false), (false, true)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width":4,"height":4,"background":"#804020"})).unwrap();
         app.run("actions.setHistory", json!({"singleState":single_state})).unwrap();
         let mut action =
@@ -101,8 +101,8 @@ fn single_history_dialog_refuses_intervening_edit_or_document_switch() {
 }
 
 /// Prepare a real paused spelling step with a known document and history boundary, under either grouping policy.
-fn paused_history_spelling(single: bool, gate: Option<Gate>) -> (PhotocraftApp, std::sync::Arc<photocraft_doc::Document>, usize) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn paused_history_spelling(single: bool, gate: Option<Gate>) -> (LienzoApp, std::sync::Arc<lienzo_doc::Document>, usize) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width":300,"height":100})).unwrap();
     app.run("type.create", json!({"x":10,"y":50,"text":"Teh brwon"})).unwrap();
     app.run("actions.setHistory", json!({"singleState":single})).unwrap();
@@ -148,7 +148,7 @@ fn paused_spelling_repeated_changes_and_errors_keep_one_owned_history() {
             .walk()
             .into_iter()
             .filter_map(|(_, _, layer)| match &layer.content {
-                photocraft_doc::LayerContent::Text(text) => Some(text.text.as_str()),
+                lienzo_doc::LayerContent::Text(text) => Some(text.text.as_str()),
                 _ => None,
             })
             .collect();
@@ -174,8 +174,8 @@ fn paused_spelling_repeated_changes_and_errors_keep_one_owned_history() {
     }
 }
 
-fn deny_second_spelling_change(id: &str, params: &Value) -> photocraft_engine::Result<()> {
-    if id == "edit.checkSpelling" && params["word"] == "brwon" { Err(photocraft_engine::EngineError::Other("original spelling gate".into())) } else { Ok(()) }
+fn deny_second_spelling_change(id: &str, params: &Value) -> lienzo_engine::Result<()> {
+    if id == "edit.checkSpelling" && params["word"] == "brwon" { Err(lienzo_engine::EngineError::Other("original spelling gate".into())) } else { Ok(()) }
 }
 
 #[test]
@@ -230,7 +230,7 @@ fn bulk_load_imports_every_chosen_action_file() {
     use crate::file_dialog::{FileDialogAnswer, FileDialogRequest};
     let files = vec![("first.atn".into(), action_set_bytes("First set", "First")), ("second.atn".into(), action_set_bytes("Second set", "Second"))];
     let (show, asked) = crate::file_dialog::fake(vec![Some(FileDialogAnswer::ContentsMany(files))]);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
     load_dialog(&mut app).unwrap();
     app.poll_file_dialog(&egui::Context::default(), None);
     assert_eq!(app.session.actions.list.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["First", "Second"]);
@@ -247,9 +247,9 @@ fn bulk_load_keeps_selection_order_and_earlier_warnings_and_errors() {
     let first = dir.path().join("z-first.atn");
     let broken = dir.path().join("broken.atn");
     let last = dir.path().join("a-last.atn");
-    let mut unsupported = photocraft_psd::atn::parse(&action_set_bytes("Same set", "Old")).unwrap();
-    unsupported.actions[0].items[0].event = photocraft_psd::atn::AtnEvent::Code(*b"Xxxx");
-    std::fs::write(&first, photocraft_psd::atn::write(&unsupported).unwrap()).unwrap();
+    let mut unsupported = lienzo_psd::atn::parse(&action_set_bytes("Same set", "Old")).unwrap();
+    unsupported.actions[0].items[0].event = lienzo_psd::atn::AtnEvent::Code(*b"Xxxx");
+    std::fs::write(&first, lienzo_psd::atn::write(&unsupported).unwrap()).unwrap();
     std::fs::write(&broken, b"not an action file").unwrap();
     std::fs::write(&last, action_set_bytes("Same set", "Replacement")).unwrap();
     let paths = [first, broken, last].map(|p| p.to_string_lossy().into_owned()).to_vec();
@@ -268,7 +268,7 @@ fn bulk_load_keeps_selection_order_and_earlier_warnings_and_errors() {
 }
 
 /// Load `files` (name, bytes) in one Load Actions… selection and return the status bar text.
-fn bulk_load_status(app: &mut PhotocraftApp, files: Vec<(String, Vec<u8>)>) -> String {
+fn bulk_load_status(app: &mut LienzoApp, files: Vec<(String, Vec<u8>)>) -> String {
     use crate::file_dialog::FileDialogAnswer;
     let (show, _) = crate::file_dialog::fake(vec![Some(FileDialogAnswer::ContentsMany(files))]);
     app.services.file_dialog = Some(show);
@@ -281,10 +281,10 @@ fn bulk_load_status(app: &mut PhotocraftApp, files: Vec<(String, Vec<u8>)>) -> S
 /// Two files whose sets share a name: the later replaces the earlier, and the summary counts only
 /// what the panel holds afterwards and says which set was replaced.
 fn bulk_load_summary_counts_a_replaced_set_once() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-    let mut a = photocraft_psd::atn::parse(&action_set_bytes("Set 1", "A")).unwrap();
-    a.actions[0].items[0].event = photocraft_psd::atn::AtnEvent::Code(*b"Xxxx");
-    let files = vec![("a.atn".into(), photocraft_psd::atn::write(&a).unwrap()), ("b.atn".into(), action_set_bytes("Set 1", "B"))];
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
+    let mut a = lienzo_psd::atn::parse(&action_set_bytes("Set 1", "A")).unwrap();
+    a.actions[0].items[0].event = lienzo_psd::atn::AtnEvent::Code(*b"Xxxx");
+    let files = vec![("a.atn".into(), lienzo_psd::atn::write(&a).unwrap()), ("b.atn".into(), action_set_bytes("Set 1", "B"))];
     let status = bulk_load_status(&mut app, files);
     assert_eq!(app.session.actions.list.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["B"]);
     assert!(!app.ui.status_error, "{status}");
@@ -295,7 +295,7 @@ fn bulk_load_summary_counts_a_replaced_set_once() {
 /// Distinct set names: every set counts, nothing is reported as replaced, and the file count reads
 /// right for one loaded file as well as several.
 fn bulk_load_summary_counts_distinct_sets_and_pluralises_files() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let files = vec![("a.atn".into(), action_set_bytes("Set A", "A")), ("b.atn".into(), action_set_bytes("Set B", "B"))];
     assert_eq!(bulk_load_status(&mut app, files), "2 action files loaded (2 actions)");
     let files = vec![("c.atn".into(), action_set_bytes("Set C", "C")), ("bad.atn".into(), b"not an action file".to_vec())];
@@ -307,7 +307,7 @@ fn bulk_load_summary_counts_distinct_sets_and_pluralises_files() {
 #[test]
 /// The multi-file summary is translated like the rest of the Actions panel.
 fn bulk_load_summary_is_translated() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let files = vec![("a.atn".into(), action_set_bytes("Set 1", "A")), ("b.atn".into(), action_set_bytes("Set 1", "B"))];
     let status = crate::i18n::with_language(crate::i18n::Lang::from_code("de").unwrap(), || bulk_load_status(&mut app, files));
     assert_eq!(status, "2 Aktionsdateien geladen (1 Aktion; Satz Set 1 aus b.atn hat den aus a.atn ersetzt)");
@@ -339,7 +339,7 @@ fn bulk_load_keeps_cancel_empty_and_single_file_behavior() {
 #[test]
 fn panel_menu_lists_load_save_and_existing_action_commands() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut empty_app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty_app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     empty_app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let mut empty = Harness::builder().with_size(vec2(240.0, 280.0)).build_ui_state(|ui, app| panel_menu(app, ui), empty_app);
     empty.run_steps(2);
@@ -350,7 +350,7 @@ fn panel_menu_lists_load_save_and_existing_action_commands() {
     empty.run_steps(2);
     assert_eq!(empty.state().session.actions.list.len(), 1);
 
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.session.actions.list.push(Action::new("Make Layer", vec![("layer.new.layer".into(), json!({}))]));
     app.ui.actions.selected = Some(0);
@@ -368,7 +368,7 @@ fn panel_menu_lists_load_save_and_existing_action_commands() {
 #[test]
 fn selected_layer_name_is_visible_during_recording_and_after_stop() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width":4,"height":4})).unwrap();
     app.run("layer.setProps", json!({"name":"Background"})).unwrap();
     let layer = app.session.active().unwrap().active_layer.unwrap();
@@ -389,7 +389,7 @@ fn selected_layer_name_is_visible_during_recording_and_after_stop() {
 fn actions_list_grows_with_panel_and_keeps_footer_visible() {
     use egui_kittest::{Harness, kittest::Queryable};
     let bottom = |height: f32| {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         for i in 0..50 {
             app.session.actions.list.push(Action { name: format!("Action {i}"), steps: vec![], disabled: Default::default(), ..Default::default() });
         }
@@ -408,7 +408,7 @@ fn actions_list_grows_with_panel_and_keeps_footer_visible() {
 #[test]
 fn a_function_key_with_shift_and_command_plays_its_action() {
     use egui::{Event, Key, Modifiers};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.session.actions.list.push(Action {
         name: "Action 1".into(),
@@ -416,11 +416,11 @@ fn a_function_key_with_shift_and_command_plays_its_action() {
         disabled: Default::default(),
         ..Default::default()
     });
-    let key = photocraft_engine::atn_cmds::function_key_name(2, true, true);
+    let key = lienzo_engine::atn_cmds::function_key_name(2, true, true);
     assert_eq!(key, "Cmd+Shift+F2");
     assign_shortcut(&mut app, "Action 1", &key).unwrap();
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, modifiers| {
+    let press = |app: &mut LienzoApp, modifiers| {
         ctx.begin_pass(egui::RawInput {
             events: vec![
                 Event::ModifiersChanged(modifiers),
@@ -432,7 +432,7 @@ fn a_function_key_with_shift_and_command_plays_its_action() {
         crate::shortcuts::handle(app, &ctx);
         ctx.end_pass().textures_delta.clear();
     };
-    let layers = |app: &PhotocraftApp| app.session.active().unwrap().doc.layers.len();
+    let layers = |app: &LienzoApp| app.session.active().unwrap().doc.layers.len();
     let before = layers(&app);
     press(&mut app, Modifiers::NONE);
     press(&mut app, Modifiers::SHIFT);
@@ -443,7 +443,7 @@ fn a_function_key_with_shift_and_command_plays_its_action() {
 
 #[test]
 fn shell_playback_resolves_recorded_eye_target_on_new_document() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.run("layer.new.layer", json!({"name": "Target"})).unwrap();
     app.run("actions.record", json!({"name": "Hide"})).unwrap();
@@ -461,7 +461,7 @@ fn shell_playback_resolves_recorded_eye_target_on_new_document() {
 #[test]
 fn double_clicking_an_action_name_renames_it_in_place() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.session.actions.list.push(Action {
         name: "Action 1".into(),
@@ -473,7 +473,7 @@ fn double_clicking_an_action_name_renames_it_in_place() {
     // 60 fps steps, so two clicks a frame apart count as a double-click.
     let mut h = Harness::builder().with_size(vec2(320.0, 260.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app| panel(app, ui), app);
     h.run_steps(3);
-    let rename = |h: &mut Harness<'_, PhotocraftApp>, text: &str| {
+    let rename = |h: &mut Harness<'_, LienzoApp>, text: &str| {
         let name = h.get_by_label("Action 1").rect().left_center() + vec2(52.0, 0.0);
         h.event(egui::Event::PointerMoved(name));
         // Wait out the double-click window of the previous attempt.
@@ -499,7 +499,7 @@ fn double_clicking_an_action_name_renames_it_in_place() {
 
 #[test]
 fn play_button_targets_first_action_if_nothing_is_selected() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     assert_eq!(playback_selection(&app), None);
     app.session.actions.list.push(Action {
@@ -534,7 +534,7 @@ fn play_button_targets_first_action_if_nothing_is_selected() {
 #[test]
 fn step_check_box_excludes_the_step_from_playback_and_batch() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let steps = ["A", "B", "C"].map(|n| ("layer.new.layer".to_string(), json!({"name": n})));
     app.session.actions.list.push(Action::new("Three", steps.to_vec()));
@@ -558,7 +558,7 @@ fn step_check_box_excludes_the_step_from_playback_and_batch() {
 #[test]
 fn playback_errors_are_visible_in_status_bar() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.session.actions.list.push(Action {
         name: "Bad action".into(),
@@ -577,7 +577,7 @@ fn playback_errors_are_visible_in_status_bar() {
 #[test]
 fn recording_reveals_new_action_and_latest_step_in_a_long_panel() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width":4,"height":4})).unwrap();
     for i in 0..30 {
         app.session.actions.list.push(Action { name: format!("Existing {i}"), steps: vec![], disabled: Default::default(), ..Default::default() });
@@ -600,7 +600,7 @@ fn recording_reveals_new_action_and_latest_step_in_a_long_panel() {
 #[test]
 fn drag_steps_and_action_headers_reorders_and_keeps_selection() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.actions.list.push(Action {
         name: "First".into(),
         steps: vec![("view.zoomOut".into(), json!({})), ("view.fitOnScreen".into(), json!({})), ("view.actualPixels".into(), json!({}))],
@@ -611,7 +611,7 @@ fn drag_steps_and_action_headers_reorders_and_keeps_selection() {
     app.ui.actions.expanded = vec![true, false];
     let mut h = Harness::builder().with_size(vec2(320.0, 400.0)).build_ui_state(|ui, app| panel(app, ui), app);
     h.run_steps(4);
-    fn drag(h: &mut Harness<'_, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2) {
+    fn drag(h: &mut Harness<'_, LienzoApp>, from: egui::Pos2, to: egui::Pos2) {
         h.event(egui::Event::PointerMoved(from));
         h.run_steps(1);
         h.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
@@ -642,7 +642,7 @@ fn drag_steps_and_action_headers_reorders_and_keeps_selection() {
 /// Shell playback retains nested failures and Batch file outcomes without running later steps.
 #[test]
 fn nested_shell_actions_include_view_steps_and_propagate_failures() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width":40,"height":40})).unwrap();
     app.session.actions.list.push(Action {
         name: "Child".into(),
@@ -659,8 +659,7 @@ fn nested_shell_actions_include_view_steps_and_propagate_failures() {
     let r = app.run("actions.play", json!({"action":"Parent"})).unwrap();
     assert!(r.get("failed").is_none(), "{r}");
     assert!(app.ui.views[0].fit_pending);
-    app.session.authorize =
-        Some(|id, _| if id == "view.fitOnScreen" { Err(photocraft_engine::EngineError::Other("denied nested view".into())) } else { Ok(()) });
+    app.session.authorize = Some(|id, _| if id == "view.fitOnScreen" { Err(lienzo_engine::EngineError::Other("denied nested view".into())) } else { Ok(()) });
     let r = app.run("actions.play", json!({"action":"Parent"})).unwrap();
     assert!(r["failed"]["error"].as_str().unwrap().contains("denied nested view"));
     assert!(app.session.actions.playback_stack.is_empty());
@@ -670,7 +669,7 @@ fn nested_shell_actions_include_view_steps_and_propagate_failures() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("valid.png");
     let corrupt = dir.path().join("corrupt.png");
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
     std::fs::write(&input, bytes).unwrap();
     std::fs::write(&corrupt, b"not a PNG").unwrap();
     let before = app.session.documents().len();
@@ -706,7 +705,7 @@ fn nested_shell_actions_include_view_steps_and_propagate_failures() {
 #[test]
 fn panel_shows_pending_steps_and_trash_deletes_only_the_clicked_step() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 40})).unwrap();
     begin_recording(&mut app, false);
     app.run("view.fitOnScreen", json!({})).unwrap();
@@ -741,7 +740,7 @@ fn panel_shows_pending_steps_and_trash_deletes_only_the_clicked_step() {
 
 #[test]
 fn view_menu_commands_record_append_and_replay_after_resize() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 160, "height": 100})).unwrap();
     begin_recording(&mut app, false);
@@ -772,7 +771,7 @@ fn view_menu_commands_record_append_and_replay_after_resize() {
 
 #[test]
 fn view_action_failure_resume_and_authorization() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.actions.list.push(Action {
         name: "Fit".into(),
         steps: vec![("view.fitOnScreen".into(), json!({})), ("view.actualPixels".into(), json!({}))],
@@ -785,11 +784,7 @@ fn view_action_failure_resume_and_authorization() {
     assert_eq!(app.session.actions.playing, 0);
     app.run("file.new", json!({"width": 40, "height": 40})).unwrap();
     app.session.authorize =
-        Some(
-            |id, _| {
-                if id == "view.fitOnScreen" { Err(photocraft_engine::EngineError::BadParams { cmd: id.into(), msg: "denied view".into() }) } else { Ok(()) }
-            },
-        );
+        Some(|id, _| if id == "view.fitOnScreen" { Err(lienzo_engine::EngineError::BadParams { cmd: id.into(), msg: "denied view".into() }) } else { Ok(()) });
     let result = app.run("actions.play", json!({"action": 0})).unwrap();
     assert_eq!(result["ran"], 0);
     assert!(result["failed"]["error"].as_str().unwrap().contains("denied view"));
@@ -803,7 +798,7 @@ fn view_action_failure_resume_and_authorization() {
 
 #[test]
 fn record_and_replay_on_another_document() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 40})).unwrap();
     app.sync_views();
     app.run("actions.record", json!({})).unwrap();
@@ -829,14 +824,14 @@ fn recorded_save_as_and_save_replay_and_write_the_file() {
     let written = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
     let log = written.clone();
     let services = crate::Services {
-        export: Some(Box::new(|doc, path, _| photocraft_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
+        export: Some(Box::new(|doc, path, _| lienzo_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
         write: Some(Box::new(move |path, _| {
             log.borrow_mut().push(path.to_string());
             Ok(())
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     app.run("actions.record", json!({})).unwrap();
@@ -855,17 +850,17 @@ fn recorded_save_as_and_save_replay_and_write_the_file() {
 }
 
 /// An app with the real importer/exporter and writer whose Save dialogs answer `answers`.
-fn disk_app(answers: Vec<Option<crate::file_dialog::FileDialogAnswer>>) -> PhotocraftApp {
+fn disk_app(answers: Vec<Option<crate::file_dialog::FileDialogAnswer>>) -> LienzoApp {
     let services = crate::Services {
         import: Some(Box::new(|name, bytes, opts| {
-            photocraft_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+            lienzo_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
         })),
-        export: Some(Box::new(|doc, path, _| photocraft_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
+        export: Some(Box::new(|doc, path, _| lienzo_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
         write: Some(Box::new(|path, bytes| std::fs::write(path, bytes).map_err(|e| e.to_string()))),
         file_dialog: Some(crate::file_dialog::fake(answers).0),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     app.background_jobs = false;
     app
 }
@@ -875,7 +870,7 @@ fn disk_app(answers: Vec<Option<crate::file_dialog::FileDialogAnswer>>) -> Photo
 /// changed on disk.
 fn record_save_on_a_play_on_b(ext: &str, layered: bool) -> (Value, bool, bool) {
     use crate::file_dialog::FileDialogAnswer::SaveTo;
-    let dir = std::env::temp_dir().join(format!("photocraft-rec-save-{ext}-{layered}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-rec-save-{ext}-{layered}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = |n: &str| dir.join(format!("{n}.{ext}")).to_string_lossy().into_owned();
     let (a, b) = (path("a"), path("b"));
@@ -931,9 +926,9 @@ fn recorded_save_never_flattens_layers_over_a_flat_file() {
 /// Photoshop's "save in directory", `out` itself) and plays it on each PSD in `sources`.
 /// Returns the played results, whether any PSD changed on disk and the files in `out`.
 fn play_imported_save_as(dest: &str, in_folder: bool, sources: &[&str]) -> (Vec<Value>, bool, Vec<String>) {
-    use photocraft_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
-    use photocraft_psd::descriptor::{Descriptor, UnicodeString, Value as D};
-    let dir = std::env::temp_dir().join(format!("photocraft-atn-save-as-{dest}-{in_folder}-{}", std::process::id()));
+    use lienzo_psd::atn::{AtnAction, AtnEvent, AtnFile, AtnItem};
+    use lienzo_psd::descriptor::{Descriptor, UnicodeString, Value as D};
+    let dir = std::env::temp_dir().join(format!("lienzo-atn-save-as-{dest}-{in_folder}-{}", std::process::id()));
     let out = dir.join("out");
     std::fs::create_dir_all(&out).unwrap();
     let path = |text: &str| {
@@ -974,7 +969,7 @@ fn play_imported_save_as(dest: &str, in_folder: bool, sources: &[&str]) -> (Vec<
         app.save_as(Some(src.clone())).unwrap();
         before.push(std::fs::read(src).unwrap());
     }
-    app.run("actions.load", json!({"data": photocraft_engine::paint::tile::b64_encode(&photocraft_psd::atn::write(&set).unwrap())})).unwrap();
+    app.run("actions.load", json!({"data": lienzo_engine::paint::tile::b64_encode(&lienzo_psd::atn::write(&set).unwrap())})).unwrap();
     let mut played = Vec::new();
     for src in &sources {
         app.open_path(src).unwrap();
@@ -1026,14 +1021,14 @@ fn recorded_save_as_with_the_suggested_name_saves_each_document_under_its_own() 
     let written = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
     let log = written.clone();
     let services = crate::Services {
-        export: Some(Box::new(|doc, path, _| photocraft_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
+        export: Some(Box::new(|doc, path, _| lienzo_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string()))),
         write: Some(Box::new(move |path, _| {
             log.borrow_mut().push(path.to_string());
             Ok(())
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     app.background_jobs = false;
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 16, "height": 16, "name": "first"})).unwrap();
@@ -1063,7 +1058,7 @@ fn recorded_save_as_with_the_suggested_name_saves_each_document_under_its_own() 
 #[test]
 fn set_folders_group_actions_and_collapse() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut sharpen = Action::new("Sharpen", vec![("filter.sharpen.sharpen".into(), json!({}))]);
     sharpen.set = Some("Retouch".into());
     let mut soften = Action::new("Soften", vec![("filter.blur.blur".into(), json!({}))]);
@@ -1093,8 +1088,8 @@ fn set_folders_group_actions_and_collapse() {
 
 /// Two sets, Web listed first: "Resize" (Web) adds a layer "w", "Sharpen" and "Soften" (Retouch)
 /// add "r1" and "r2".
-fn two_set_panel() -> egui_kittest::Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn two_set_panel() -> egui_kittest::Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for (name, set, layer) in [("Resize", "Web", "w"), ("Sharpen", "Retouch", "r1"), ("Soften", "Retouch", "r2")] {
         let mut a = Action::new(name, vec![("layer.new.layer".into(), json!({"name": layer}))]);
@@ -1106,13 +1101,13 @@ fn two_set_panel() -> egui_kittest::Harness<'static, PhotocraftApp> {
     h
 }
 
-fn layer_names(app: &PhotocraftApp) -> Vec<String> {
+fn layer_names(app: &LienzoApp) -> Vec<String> {
     app.session.active().unwrap().doc.walk().iter().map(|(_, _, l)| l.name.clone()).filter(|n| n != "Background").collect()
 }
 
 /// Click a set folder row's disclosure triangle (a plain `click()` lands on the row's middle,
 /// which selects the set).
-fn click_set_triangle(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, set: &str) {
+fn click_set_triangle(h: &mut egui_kittest::Harness<'_, LienzoApp>, set: &str) {
     use egui_kittest::kittest::Queryable;
     let pos = h.get_by_label(set).rect().left_center() + vec2(12.0, 0.0);
     h.event(egui::Event::PointerMoved(pos));
@@ -1242,7 +1237,7 @@ fn a_selected_step_replaces_the_selected_set() {
 fn a_set_paused_at_a_step_dialog_plays_its_other_actions_after_ok() {
     use egui_kittest::kittest::Queryable;
     for ok in [true, false] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
         let mut a = Action::new(
             "A",
@@ -1293,7 +1288,7 @@ fn a_set_paused_at_a_step_dialog_plays_its_other_actions_after_ok() {
 #[test]
 fn a_set_paused_at_a_dialog_plays_its_own_actions_after_a_move() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for (name, set, layer) in [("A", "S", "a"), ("B", "S", "b"), ("C", "S", "c"), ("X", "Other", "x")] {
         let mut a = Action::new(name, vec![("layer.new.layer".into(), json!({"name": layer}))]);
@@ -1323,7 +1318,7 @@ fn a_set_paused_at_a_dialog_plays_its_own_actions_after_a_move() {
 #[test]
 fn a_set_paused_at_a_dialog_ends_at_an_action_replaced_under_its_name() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for (name, layer) in [("A", "a"), ("B", "b"), ("C", "c")] {
         let mut a = Action::new(name, vec![("layer.new.layer".into(), json!({"name": layer}))]);
@@ -1355,7 +1350,7 @@ fn a_set_paused_at_a_dialog_ends_at_an_action_replaced_under_its_name() {
 #[test]
 fn a_set_paused_inside_a_called_action_continues_into_its_caller_then_the_set() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let before = app.session.active().unwrap().doc.clone();
     let count = app.session.active().unwrap().history.past_len();
@@ -1400,7 +1395,7 @@ fn a_set_folder_toggles_without_a_pointer() {
     let mut h = two_set_panel();
     use egui::accesskit::Toggled;
     use egui_kittest::kittest::NodeT;
-    let selected = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.get_by_label("Retouch").accesskit_node().toggled();
+    let selected = |h: &egui_kittest::Harness<'_, LienzoApp>| h.get_by_label("Retouch").accesskit_node().toggled();
     assert_eq!(selected(&h), Some(Toggled::False));
     h.get_by_label("Retouch").click_accesskit();
     h.run_steps(2);
@@ -1417,7 +1412,7 @@ fn a_set_folder_toggles_without_a_pointer() {
 #[test]
 fn new_set_makes_an_empty_folder_that_new_action_records_into() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let mut retouch = Action::new("Sharpen", vec![]);
     retouch.set = Some("Retouch".into());
@@ -1455,7 +1450,7 @@ fn new_set_makes_an_empty_folder_that_new_action_records_into() {
 #[test]
 fn new_action_with_no_set_selected_is_in_no_set() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let mut retouch = Action::new("Sharpen", vec![]);
     retouch.set = Some("Retouch".into());
@@ -1476,7 +1471,7 @@ fn new_action_with_no_set_selected_is_in_no_set() {
 #[test]
 fn reopening_the_actions_panel_keeps_the_selected_set_and_empty_sets() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let mut retouch = Action::new("Sharpen", vec![]);
     retouch.set = Some("Retouch".into());
@@ -1493,7 +1488,7 @@ fn reopening_the_actions_panel_keeps_the_selected_set_and_empty_sets() {
         app,
     );
     let ctx = h.ctx.clone();
-    let toggle = |h: &mut Harness<'_, PhotocraftApp>| {
+    let toggle = |h: &mut Harness<'_, LienzoApp>| {
         crate::menus::invoke(h.state_mut(), &ctx, "window.panel.actions", json!({})).unwrap();
         h.run_steps(2);
     };
@@ -1523,7 +1518,7 @@ fn reopening_the_actions_panel_keeps_the_selected_set_and_empty_sets() {
 #[test]
 fn start_recording_with_a_set_selected_records_a_new_action_into_it() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let mut retouch = Action::new("Sharpen", vec![]);
     retouch.set = Some("Retouch".into());
@@ -1554,7 +1549,7 @@ fn start_recording_with_a_set_selected_records_a_new_action_into_it() {
 fn recording_into_a_collapsed_set_expands_it() {
     use egui_kittest::{Harness, kittest::Queryable};
     for label in ["Create new action", "Start Recording"] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
         let mut retouch = Action::new("Sharpen", vec![]);
         retouch.set = Some("Retouch".into());
@@ -1587,7 +1582,7 @@ fn save_actions_with_a_set_selected_saves_that_set() {
     use egui_kittest::{Harness, kittest::Queryable};
     let (file_dialog, asked) = crate::file_dialog::fake(vec![None]);
     let services = crate::Services { file_dialog: Some(file_dialog), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for (name, set) in [("Sharpen", "Retouch"), ("Resize", "Web")] {
         let mut action = Action::new(name, vec![("layer.new.layer".into(), json!({}))]);
@@ -1619,7 +1614,7 @@ fn save_actions_suggests_a_file_name_without_path_characters() {
     use egui_kittest::{Harness, kittest::Queryable};
     let (file_dialog, asked) = crate::file_dialog::fake(vec![None]);
     let services = crate::Services { file_dialog: Some(file_dialog), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.session.actions.list.push(Action::new("Loose", vec![]));
     let set = "Web/Print\\Mail: v2";
@@ -1650,10 +1645,10 @@ fn save_actions_suggests_a_file_name_without_path_characters() {
 /// menu, and a fake Save dialog whose requests the test reads.
 fn empty_set_save_harness(
     set: &str,
-) -> (egui_kittest::Harness<'static, PhotocraftApp>, std::rc::Rc<std::cell::RefCell<Vec<crate::file_dialog::FileDialogRequest>>>) {
+) -> (egui_kittest::Harness<'static, LienzoApp>, std::rc::Rc<std::cell::RefCell<Vec<crate::file_dialog::FileDialogRequest>>>) {
     let (file_dialog, asked) = crate::file_dialog::fake(vec![None]);
     let services = crate::Services { file_dialog: Some(file_dialog), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.run("actions.newSet", json!({"name": set})).unwrap();
     // With no action, the panel shows its "Record ● … play ▶" hint, which the test fonts lack.
@@ -1748,7 +1743,7 @@ fn save_actions_suggests_a_file_name_of_at_most_255_bytes() {
 
 #[test]
 fn moving_an_action_next_to_another_set_joins_it() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut a = Action::new("A", vec![]);
     a.set = Some("One".into());
     let mut b = Action::new("B", vec![]);
@@ -1769,7 +1764,7 @@ fn moving_an_action_next_to_another_set_joins_it() {
 
 #[test]
 fn insert_stop_dialog_adds_a_stop_after_the_selected_step() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.session.actions.list.push(Action::new("A", vec![("select.all".into(), json!({})), ("select.inverse".into(), json!({}))]));
     assert!(insert_stop_dialog(&mut app).is_err(), "needs a selected action");
@@ -1783,7 +1778,7 @@ fn insert_stop_dialog_adds_a_stop_after_the_selected_step() {
     d.fields.insert("allowContinue".into(), json!(true));
     crate::dialogs::confirm(&mut app, id).unwrap();
     let steps = &app.session.actions.list[0].steps;
-    assert_eq!(steps[1], (photocraft_engine::atn_cmds::STOP_MESSAGE.to_string(), json!({"message": "Check the mask", "allowContinue": true})));
+    assert_eq!(steps[1], (lienzo_engine::atn_cmds::STOP_MESSAGE.to_string(), json!({"message": "Check the mask", "allowContinue": true})));
     assert!(app.session.actions.list[0].dialogs.contains(&1), "an inserted Stop has its dialog toggle on");
     assert_eq!((app.ui.actions.selected, app.ui.actions.selected_step), (Some(0), Some(1)));
     assert_eq!(step_label(&steps[1].0, &steps[1].1), "Stop: Check the mask");
@@ -1798,7 +1793,7 @@ fn insert_stop_dialog_adds_a_stop_after_the_selected_step() {
 #[test]
 fn dialog_worker_failure_stops_action_before_following_steps() {
     for (background, locked) in [(true, true), (false, true), (true, false)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 6, "background": "#203040"})).unwrap();
         let mut action = Action::new(
             "Worker Result",
@@ -1834,7 +1829,7 @@ fn dialog_worker_failure_stops_action_before_following_steps() {
 
 #[test]
 fn a_check_spelling_step_with_its_dialog_opens_it_and_done_continues() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let mut a = Action::new("Spell", vec![("edit.checkSpelling".into(), json!({"allLayers": false})), ("layer.new.layer".into(), json!({"name": "after"}))]);
@@ -1861,7 +1856,7 @@ fn a_check_spelling_step_with_its_dialog_opens_it_and_done_continues() {
         .walk()
         .into_iter()
         .filter_map(|(_, _, l)| match &l.content {
-            photocraft_doc::LayerContent::Text(t) => Some(t.text.clone()),
+            lienzo_doc::LayerContent::Text(t) => Some(t.text.clone()),
             _ => None,
         })
         .collect();
@@ -1872,7 +1867,7 @@ fn a_check_spelling_step_with_its_dialog_opens_it_and_done_continues() {
 /// of replacing it.
 #[test]
 fn a_check_spelling_step_fails_while_the_dialog_is_open_by_hand() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let mut a = Action::new("Spell", vec![("edit.checkSpelling".into(), json!({"allLayers": false})), ("layer.new.layer".into(), json!({"name": "after"}))]);
@@ -1890,7 +1885,7 @@ fn a_check_spelling_step_fails_while_the_dialog_is_open_by_hand() {
 /// Spelling: its dialog switch opens nothing.
 #[test]
 fn a_check_spelling_correction_with_its_dialog_on_runs_without_opening_it() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let change = json!({"action": "change", "start": 0, "end": 3, "word": "Teh", "replace": "The"});
@@ -1906,7 +1901,7 @@ fn a_check_spelling_correction_with_its_dialog_on_runs_without_opening_it() {
         .walk()
         .into_iter()
         .filter_map(|(_, _, l)| match &l.content {
-            photocraft_doc::LayerContent::Text(t) => Some(t.text.clone()),
+            lienzo_doc::LayerContent::Text(t) => Some(t.text.clone()),
             _ => None,
         })
         .collect();
@@ -1917,7 +1912,7 @@ fn a_check_spelling_correction_with_its_dialog_on_runs_without_opening_it() {
 /// don't run on the other document.
 #[test]
 fn check_spelling_done_on_another_document_ends_the_waiting_action() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let mut a = Action::new("Spell", vec![("edit.checkSpelling".into(), json!({"allLayers": false})), ("layer.new.layer".into(), json!({"name": "after"}))]);
@@ -1935,15 +1930,15 @@ fn check_spelling_done_on_another_document_ends_the_waiting_action() {
     assert!(app.ui.status.contains("document"), "{}", app.ui.status);
 }
 
-fn deny_spelling(id: &str, p: &Value) -> photocraft_engine::Result<()> {
-    if id == "edit.checkSpelling" && p.get("action").is_none() { Err(photocraft_engine::EngineError::Other("spelling denied".into())) } else { Ok(()) }
+fn deny_spelling(id: &str, p: &Value) -> lienzo_engine::Result<()> {
+    if id == "edit.checkSpelling" && p.get("action").is_none() { Err(lienzo_engine::EngineError::Other("spelling denied".into())) } else { Ok(()) }
 }
 
 /// Done records the step and continues the waiting action: when recording it fails, the status
 /// keeps that error next to the playback's outcome.
 #[test]
 fn check_spelling_done_keeps_a_recording_error_beside_the_playback_status() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let mut a = Action::new("Spell", vec![("edit.checkSpelling".into(), json!({"allLayers": false})), ("layer.new.layer".into(), json!({"name": "after"}))]);
@@ -1963,7 +1958,7 @@ fn check_spelling_done_keeps_a_recording_error_beside_the_playback_status() {
 
 #[test]
 fn check_spelling_opened_again_while_an_action_waits_keeps_its_continuation() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 100})).unwrap();
     app.run("type.create", json!({"x": 10, "y": 50, "text": "Teh cat"})).unwrap();
     let mut a = Action::new("Spell", vec![("edit.checkSpelling".into(), json!({"allLayers": false})), ("layer.new.layer".into(), json!({"name": "after"}))]);
@@ -1989,7 +1984,7 @@ fn check_spelling_opened_again_while_an_action_waits_keeps_its_continuation() {
 
 #[test]
 fn a_dialog_toggled_step_pauses_playback_and_resumes_on_ok() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let mut a = Action::new(
         "Blur",
@@ -2038,7 +2033,7 @@ fn a_dialog_toggled_step_pauses_playback_and_resumes_on_ok() {
 
 #[test]
 fn equalize_step_with_a_selection_opens_its_choices() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 16, "height": 8})).unwrap();
@@ -2049,7 +2044,7 @@ fn equalize_step_with_a_selection_opens_its_choices() {
     let mut action = Action::new("Equalize", vec![(crate::equalize_ui::COMMAND.into(), json!({}))]);
     action.dialogs.insert(0);
     app.session.actions.list.push(action);
-    let gray = |app: &PhotocraftApp, x: i32, y: i32| {
+    let gray = |app: &LienzoApp, x: i32, y: i32| {
         let st = app.session.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().pixel(x, y)[0]
     };
@@ -2069,8 +2064,8 @@ fn equalize_step_with_a_selection_opens_its_choices() {
 
 /// An 8×6 document, a Child action whose first step (a blur) shows its dialog and whose
 /// second step adds a "Suffix" layer, and recording into Owner started.
-fn recording_with_dialog_child() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn recording_with_dialog_child() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 6, "background": "#203040"})).unwrap();
     let mut child =
         Action::new("Child", vec![("filter.blur.gaussianBlur".into(), json!({"radius": 1.5})), ("layer.new.layer".into(), json!({"name": "Suffix"}))]);
@@ -2080,7 +2075,7 @@ fn recording_with_dialog_child() -> PhotocraftApp {
     app
 }
 
-fn suffixes(app: &PhotocraftApp) -> usize {
+fn suffixes(app: &LienzoApp) -> usize {
     app.session.active().unwrap().doc.walk().iter().filter(|(_, _, l)| l.name == "Suffix").count()
 }
 
@@ -2089,7 +2084,7 @@ fn child_call() -> Vec<(String, Value)> {
 }
 
 /// Play Child and return the id of its step dialog.
-fn pause_child(app: &mut PhotocraftApp) -> u64 {
+fn pause_child(app: &mut LienzoApp) -> u64 {
     let v = play(app, &json!({"action": "Child"})).unwrap();
     v["paused"]["dialog"].as_u64().unwrap()
 }
@@ -2103,7 +2098,7 @@ fn a_recorded_call_paused_by_a_dialog_records_one_call_and_replays_once() {
     let live = app.session.journal.len();
     let id = pause_child(&mut app);
     assert!(app.session.actions.recording.is_none(), "recording stays suspended while the step dialog is open");
-    let names = |app: &PhotocraftApp| app.session.actions.list.iter().map(|a| a.name.clone()).collect::<Vec<_>>();
+    let names = |app: &LienzoApp| app.session.actions.list.iter().map(|a| a.name.clone()).collect::<Vec<_>>();
     let before = names(&app);
     assert_eq!(app.run("actions.record", json!({"name": "Intruder"})), Err(refusal.clone()), "no second recording while the call is suspended");
     assert_eq!(app.run("actions.delete", json!({"action": "Owner"})), Err(refusal.clone()), "the suspended owner can't be deleted");
@@ -2193,7 +2188,7 @@ fn a_suspended_call_is_recorded_into_its_action_after_the_list_changes() {
 fn escape_on_a_step_dialog_ends_the_recorded_call_once() {
     let app = recording_with_dialog_child();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 700.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
     pause_child(h.state_mut());
     h.run_steps(4);
@@ -2209,7 +2204,7 @@ fn escape_on_a_step_dialog_ends_the_recorded_call_once() {
 
 #[test]
 fn a_step_dialog_keeps_its_continuation_token() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.background_jobs = false;
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for (name, steps) in [
@@ -2239,14 +2234,14 @@ fn a_step_dialog_keeps_its_continuation_token() {
     assert!(app.paused_playbacks.paused.is_empty());
 }
 
-fn recording_with_displace_child() -> PhotocraftApp {
+fn recording_with_displace_child() -> LienzoApp {
     let mut app = recording_with_dialog_child();
     app.background_jobs = false;
     app.session.actions.list[0].steps[0] = ("filter.distort.displace".into(), json!({}));
     app
 }
 
-fn assert_displace_call_finished(app: &mut PhotocraftApp, suffix_count: usize) {
+fn assert_displace_call_finished(app: &mut LienzoApp, suffix_count: usize) {
     assert!(!app.file_dialog_open());
     assert!(app.ui.dialogs.is_empty());
     assert!(app.paused_playbacks.paused.is_empty());
@@ -2294,7 +2289,7 @@ fn a_displace_step_resumes_and_records_its_call_once_after_choosing_a_map() {
     let mut app = recording_with_displace_child();
     let dir = tempfile::tempdir().unwrap();
     let map = dir.path().join("map.png");
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
     std::fs::write(&map, bytes).unwrap();
     let (show, _) = crate::file_dialog::fake(vec![Some(crate::file_dialog::FileDialogAnswer::Paths(vec![map.to_string_lossy().into_owned()]))]);
     app.services.file_dialog = Some(show);
@@ -2306,7 +2301,7 @@ fn a_displace_step_resumes_and_records_its_call_once_after_choosing_a_map() {
 
 #[test]
 fn a_step_dialog_takes_only_the_steps_values() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let mut a = Action::new("Blur", vec![("filter.blur.gaussianBlur".into(), json!({"radius": 2, "__command": "select.all", "__label": "Other"}))]);
     a.dialogs.insert(0);
@@ -2318,22 +2313,22 @@ fn a_step_dialog_takes_only_the_steps_values() {
     assert_ne!(d.fields["__label"], "Other");
 }
 
-fn deny_blur(id: &str, _: &Value) -> photocraft_engine::Result<()> {
-    if id == "filter.blur.gaussianBlur" { Err(photocraft_engine::EngineError::Other("blur denied".into())) } else { Ok(()) }
+fn deny_blur(id: &str, _: &Value) -> lienzo_engine::Result<()> {
+    if id == "filter.blur.gaussianBlur" { Err(lienzo_engine::EngineError::Other("blur denied".into())) } else { Ok(()) }
 }
 
 /// Permit the recorded small blur but reject an edited radius, so admission is tested against final dialog parameters.
-fn deny_wide_blur(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn deny_wide_blur(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if id == "filter.blur.gaussianBlur" && params["radius"].as_f64().is_some_and(|radius| radius > 1.0) {
-        Err(photocraft_engine::EngineError::Other("edited blur radius denied".into()))
+        Err(lienzo_engine::EngineError::Other("edited blur radius denied".into()))
     } else {
         Ok(())
     }
 }
 
 /// Build a two-tone raster whose blur changes pixels, with a real action step configured to open its dialog.
-fn gated_blur_fixture(single: bool, background: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn gated_blur_fixture(single: bool, background: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16, "background": "#000000"})).unwrap();
     app.run("select.rect", json!({"x": 8, "y": 0, "width": 8, "height": 16})).unwrap();
     app.run("edit.fill", json!({"color": "#ffffff"})).unwrap();
@@ -2347,7 +2342,7 @@ fn gated_blur_fixture(single: bool, background: bool) -> PhotocraftApp {
 }
 
 /// Simulate a temporary control gate: capture it at the pause and release the session gate before later confirmation.
-fn pause_gated_blur(app: &mut PhotocraftApp, gate: Option<Gate>) -> u64 {
+fn pause_gated_blur(app: &mut LienzoApp, gate: Option<Gate>) -> u64 {
     app.session.authorize = gate;
     let paused = play(app, &json!({"action": "Gated blur"})).unwrap();
     app.session.authorize = None; // The temporary control gate ends before a later human OK.
@@ -2429,8 +2424,8 @@ fn a_stricter_current_gate_still_denies_the_captured_dialog_edit() {
 #[test]
 /// Spelling corrections consult live Session and automation-service policies before resuming the owned history.
 fn paused_spelling_checks_the_live_gate_before_resuming_history() {
-    fn deny_correction(id: &str, p: &Value) -> photocraft_engine::Result<()> {
-        if id == "edit.checkSpelling" && p["action"] == "changeAll" { Err(photocraft_engine::EngineError::Other("live spelling gate".into())) } else { Ok(()) }
+    fn deny_correction(id: &str, p: &Value) -> lienzo_engine::Result<()> {
+        if id == "edit.checkSpelling" && p["action"] == "changeAll" { Err(lienzo_engine::EngineError::Other("live spelling gate".into())) } else { Ok(()) }
     }
     for service in 0..3 {
         let (mut app, _, _) = paused_history_spelling(true, Some(deny_second_spelling_change));
@@ -2465,8 +2460,8 @@ fn paused_spelling_checks_the_live_gate_before_resuming_history() {
 #[test]
 /// A changed authority context cancels both direct and nested tails while keeping the admitted prefix undoable.
 fn a_changed_live_gate_cannot_be_replaced_for_the_remaining_action() {
-    fn deny_tail(id: &str, _: &Value) -> photocraft_engine::Result<()> {
-        if id == "layer.renameLayer" { Err(photocraft_engine::EngineError::Other("live tail denied".into())) } else { Ok(()) }
+    fn deny_tail(id: &str, _: &Value) -> lienzo_engine::Result<()> {
+        if id == "layer.renameLayer" { Err(lienzo_engine::EngineError::Other("live tail denied".into())) } else { Ok(()) }
     }
     for service in [false, true] {
         for nested in [false, true] {
@@ -2498,7 +2493,7 @@ fn a_changed_live_gate_cannot_be_replaced_for_the_remaining_action() {
 #[test]
 /// Distinct captured/live gates fail before applying the dialog or starting a worker, even if the edit is allowed.
 fn a_changed_context_is_rejected_before_dialog_or_worker_admission() {
-    fn allow_all(_: &str, _: &Value) -> photocraft_engine::Result<()> {
+    fn allow_all(_: &str, _: &Value) -> lienzo_engine::Result<()> {
         Ok(())
     }
     for background in [false, true] {
@@ -2535,8 +2530,8 @@ fn unchanged_and_released_gates_allow_the_action_tail() {
 /// Distinct configured policies permit manual confirmation but cannot be combined for automated dispatch.
 /// The identical-gate automated control proves the supported composed-policy path still completes and undoes once.
 fn configured_gates_require_one_composed_policy_for_automated_resume() {
-    fn deny_file_open(id: &str, _: &Value) -> photocraft_engine::Result<()> {
-        if id == "file.open" { Err(photocraft_engine::EngineError::Other("file open denied".into())) } else { Ok(()) }
+    fn deny_file_open(id: &str, _: &Value) -> lienzo_engine::Result<()> {
+        if id == "file.open" { Err(lienzo_engine::EngineError::Other("file open denied".into())) } else { Ok(()) }
     }
     assert!(!std::ptr::fn_addr_eq(deny_wide_blur as Gate, deny_file_open as Gate));
     for (automated, identical) in [(false, false), (true, false), (true, true)] {
@@ -2603,7 +2598,7 @@ fn paused_adjustments_bind_implicit_pixel_and_mask_receivers() {
             app.run("edit.fill", json!({"color":"#808080"})).unwrap();
             app.run("layer.layerMask.revealAll", json!({})).unwrap();
             app.run("edit.fill", json!({"color":"#808080","target":"mask"})).unwrap();
-            let b = photocraft_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
+            let b = lienzo_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
             // Native mask eligibility checks the active layer, so keep both receivers eligible.
             // The assertions below still require the explicitly named A mask alone to change.
             app.run("layer.layerMask.revealAll", json!({})).unwrap();
@@ -2645,7 +2640,7 @@ fn paused_adjustments_bind_implicit_pixel_and_mask_receivers() {
     {
         let mut app = gated_blur_fixture(true, false);
         let a = app.session.active().unwrap().active_layer.unwrap();
-        let b = photocraft_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
+        let b = lienzo_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
         app.session.select_layer(a).unwrap();
         app.session.actions.list[0].steps[0] = ("image.adjustments.brightnessContrast".into(), json!({"brightness":40,"target":{"channel":0}}));
         let dialog = pause_gated_blur(&mut app, None);
@@ -2683,7 +2678,7 @@ fn paused_adjustments_bind_implicit_pixel_and_mask_receivers() {
 fn a_document_channel_adjustment_survives_an_active_layer_change() {
     let mut app = gated_blur_fixture(true, false);
     let a = app.session.active().unwrap().active_layer.unwrap();
-    let b = photocraft_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
+    let b = lienzo_doc::LayerId(app.run("layer.new.layer", json!({"name":"B"})).unwrap()["layer"].as_u64().unwrap());
     app.run("channel.new", json!({"name":"Alpha","fill":"black"})).unwrap();
     app.run("edit.fill", json!({"color":"#808080","target":{"channel":0}})).unwrap();
     app.session.select_layer(a).unwrap();
@@ -2704,7 +2699,7 @@ fn an_implicit_paused_filter_refuses_a_public_api_receiver_change() {
         for explicit in [false, true] {
             let mut app = gated_blur_fixture(single, false);
             let a = app.session.active().unwrap().active_layer.unwrap();
-            let b = photocraft_doc::LayerId(app.run("layer.new.layer", json!({"name": "B"})).unwrap()["layer"].as_u64().unwrap());
+            let b = lienzo_doc::LayerId(app.run("layer.new.layer", json!({"name": "B"})).unwrap()["layer"].as_u64().unwrap());
             app.run("select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 16})).unwrap();
             app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
             app.run("select.deselect", json!({})).unwrap();
@@ -2737,7 +2732,7 @@ fn an_implicit_paused_filter_refuses_a_public_api_receiver_change() {
 fn an_implicit_filter_keeps_its_receiver_when_only_other_selected_layers_change() {
     let mut app = gated_blur_fixture(true, false);
     let a = app.session.active().unwrap().active_layer.unwrap();
-    let b = photocraft_doc::LayerId(app.run("layer.new.layer", json!({"name": "Other"})).unwrap()["layer"].as_u64().unwrap());
+    let b = lienzo_doc::LayerId(app.run("layer.new.layer", json!({"name": "Other"})).unwrap()["layer"].as_u64().unwrap());
     app.session.select_layer(a).unwrap();
     let dialog = pause_gated_blur(&mut app, None);
     app.session.execute("layer.select", json!({"layer": b.0, "mode": "add"})).unwrap();
@@ -2750,9 +2745,9 @@ fn an_implicit_filter_keeps_its_receiver_when_only_other_selected_layers_change(
     assert_eq!(after.layer(b).unwrap().surface().unwrap().content_bounds(), before.layer(b).unwrap().surface().unwrap().content_bounds());
 }
 
-fn deny_displace_file(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn deny_displace_file(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if id == "filter.distort.displace" && params.get("mapPath").is_some() {
-        Err(photocraft_engine::EngineError::Other("chosen displacement map denied".into()))
+        Err(lienzo_engine::EngineError::Other("chosen displacement map denied".into()))
     } else {
         Ok(())
     }
@@ -2783,7 +2778,7 @@ fn a_deferred_displace_map_is_authorized_before_reading_or_resuming_history() {
 
 #[test]
 fn a_step_the_gate_denies_opens_no_dialog() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let mut a = Action::new("Blur", vec![("filter.blur.gaussianBlur".into(), json!({"radius": 1}))]);
     a.dialogs.insert(0);
@@ -2796,8 +2791,8 @@ fn a_step_the_gate_denies_opens_no_dialog() {
     assert!(app.paused_playbacks.paused.is_empty());
 }
 
-fn deny_select_all(id: &str, _: &Value) -> photocraft_engine::Result<()> {
-    if id == "select.all" { Err(photocraft_engine::EngineError::Other("select.all denied".into())) } else { Ok(()) }
+fn deny_select_all(id: &str, _: &Value) -> lienzo_engine::Result<()> {
+    if id == "select.all" { Err(lienzo_engine::EngineError::Other("select.all denied".into())) } else { Ok(()) }
 }
 
 /// An action an automation client plays (`control::handle` installs the gate, then removes
@@ -2805,7 +2800,7 @@ fn deny_select_all(id: &str, _: &Value) -> photocraft_engine::Result<()> {
 /// OK, runs the remaining steps under the same gate.
 #[test]
 fn a_paused_playback_keeps_its_automation_gate_when_the_dialog_is_confirmed() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let mut a = Action::new("Seeded", vec![("filter.blur.gaussianBlur".into(), json!({"radius": 1})), ("select.all".into(), json!({}))]);
     a.dialogs.insert(0);
@@ -2824,7 +2819,7 @@ fn a_paused_playback_keeps_its_automation_gate_when_the_dialog_is_confirmed() {
 /// The dialog names only its pause: changing its fields can't resume another action.
 #[test]
 fn a_step_dialog_resumes_only_the_playback_that_paused_it() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let mut a = Action::new("Blur", vec![("filter.blur.gaussianBlur".into(), json!({"radius": 1}))]);
     a.dialogs.insert(0);
@@ -2841,7 +2836,7 @@ fn a_step_dialog_resumes_only_the_playback_that_paused_it() {
 #[test]
 fn button_mode_plays_the_clicked_action_and_hides_its_steps() {
     use egui_kittest::{Harness, kittest::Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     app.session.actions.list.push(Action::new("Print", vec![("layer.new.layer".into(), json!({}))]));
     app.session.actions.list[0].color = "blue".into();
@@ -2866,12 +2861,12 @@ fn button_mode_plays_the_clicked_action_and_hides_its_steps() {
 /// document (#7367).
 #[test]
 fn save_hook_closing_the_target_stops_an_imported_close_with_save() {
-    use photocraft_psd::atn::{self, AtnEvent, AtnItem};
-    use photocraft_psd::descriptor::{Descriptor, Id, Value as D};
+    use lienzo_psd::atn::{self, AtnEvent, AtnItem};
+    use lienzo_psd::descriptor::{Descriptor, Id, Value as D};
     use std::{cell::RefCell, rc::Rc};
     // A one-step .atn: Close (`Cls `) with Save: Yes.
     let seed = Action::new("Seed", vec![("layer.new.layer".into(), json!({}))]);
-    let (bytes, _) = photocraft_engine::atn_cmds::export("Set", &[&seed], &[], false).unwrap();
+    let (bytes, _) = lienzo_engine::atn_cmds::export("Set", &[&seed], &[], false).unwrap();
     let mut f = atn::parse(&bytes).unwrap();
     f.actions[0].items = vec![AtnItem {
         event: AtnEvent::Code(*b"Cls "),
@@ -2879,7 +2874,7 @@ fn save_hook_closing_the_target_stops_an_imported_close_with_save() {
         descriptor: Some(Descriptor::new("null").with("Svng", D::Enumerated { type_id: Id::new("YsN "), value: Id::new("Ys  ") })),
         ..Default::default()
     }];
-    let imported = photocraft_engine::atn_cmds::import(&atn::write(&f).unwrap()).unwrap();
+    let imported = lienzo_engine::atn_cmds::import(&atn::write(&f).unwrap()).unwrap();
     let close_with_save = imported.actions[0].clone();
     assert_eq!(close_with_save.steps, [("file.save".into(), json!({})), ("file.close".into(), json!({}))]);
     for hook in ["none", "activate", "close"] {
@@ -2893,7 +2888,7 @@ fn save_hook_closing_the_target_stops_an_imported_close_with_save() {
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
         // B is dirty with an unsaved KeepB layer; A is active and has its own file.
         for name in ["B", "A"] {
             app.run("file.new", json!({"name": name, "width": 2, "height": 2})).unwrap();
@@ -2933,10 +2928,10 @@ fn save_hook_closing_the_target_stops_an_imported_close_with_save() {
 /// An unsupported step in a set that stays loaded is counted in the multi-file summary, unlike
 /// one in a set a later file replaced (CodeRabbit on #10776).
 fn bulk_load_summary_counts_unsupported_steps_of_surviving_sets() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-    let mut a = photocraft_psd::atn::parse(&action_set_bytes("Set A", "A")).unwrap();
-    a.actions[0].items[0].event = photocraft_psd::atn::AtnEvent::Code(*b"Xxxx");
-    let files = vec![("a.atn".into(), photocraft_psd::atn::write(&a).unwrap()), ("b.atn".into(), action_set_bytes("Set B", "B"))];
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
+    let mut a = lienzo_psd::atn::parse(&action_set_bytes("Set A", "A")).unwrap();
+    a.actions[0].items[0].event = lienzo_psd::atn::AtnEvent::Code(*b"Xxxx");
+    let files = vec![("a.atn".into(), lienzo_psd::atn::write(&a).unwrap()), ("b.atn".into(), action_set_bytes("Set B", "B"))];
     let status = bulk_load_status(&mut app, files);
     assert!(status.contains("1 step has no Lienzo equivalent yet"), "{status}");
     assert!(!app.ui.status_error, "{status}");

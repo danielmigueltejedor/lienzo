@@ -21,13 +21,13 @@
 //! which a wide stroke shows as flat facets (#3646). Inside stroke edges and spread / choke keep the
 //! cheaper chamfer. Soft falloffs are two box blurs (a tent).
 
-use photocraft_color::blend::BlendMode;
-use photocraft_doc::Pattern;
-use photocraft_doc::{
+use lienzo_color::blend::BlendMode;
+use lienzo_doc::Pattern;
+use lienzo_doc::{
     Bevel, BevelStyle, BevelTechnique, Contour, Effect, FxPaint, GlobalLight, Glow, GlowSource, GlowTechnique, Gradient, GradientStyle, Layer, Shadow,
     StrokePosition,
 };
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 use crate::pattern::{PREPARED_PATTERN_BYTES, Placement, PreparedPatterns};
 use crate::{Buffer, psblend};
@@ -202,7 +202,7 @@ pub struct FxMaps {
 
 impl FxMaps {
     /// The frame of a gradient stroke `st` of this layer (see [`stroke_frame`]), if built.
-    pub fn stroke_frame(&self, st: &photocraft_doc::StrokeFx) -> Option<Rect> {
+    pub fn stroke_frame(&self, st: &lienzo_doc::StrokeFx) -> Option<Rect> {
         self.frames.iter().find(|f| f.0 == stroke_widths(st).1.to_bits()).map(|f| f.1)
     }
 }

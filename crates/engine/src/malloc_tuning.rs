@@ -7,14 +7,14 @@
 //! went back to ~20 MiB, and the peak was lower too. Setting the threshold explicitly turns the
 //! dynamic adjustment off (mallopt(3)), so large buffers are mapped and unmapped on their own and
 //! the heap top is trimmed as it is freed. Mapping fresh pages on every call is slow, so the large
-//! short-lived buffers come from `photocraft_raster::scratch` instead, which reuses them and
+//! short-lived buffers come from `lienzo_raster::scratch` instead, which reuses them and
 //! releases them when a document closes or the pool goes idle (#10479).
 //!
 //! glibc reads its tunables once, when the process starts, and changing the environment from Rust
 //! needs `unsafe` (and comes too late), so [`apply`] re-executes the binary with the variable set:
 //! the same process (PID), arguments, `argv[0]` and environment, on Linux with glibc only. A value
 //! the user or a package already set, for this or another malloc tunable, is left alone, so setting
-//! `MALLOC_TRIM_THRESHOLD_` to anything opts out. Programs PhotoCraft starts inherit the variable.
+//! `MALLOC_TRIM_THRESHOLD_` to anything opts out. Programs Lienzo starts inherit the variable.
 
 use std::ffi::OsString;
 

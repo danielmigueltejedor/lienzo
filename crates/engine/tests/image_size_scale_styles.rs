@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{BlendMode, Color};
-use photocraft_doc::{Effect, Effects, FxCommon, FxPaint, Layer, LayerContent, LayerId, StrokeFx, StrokePosition};
-use photocraft_engine::Session;
+use lienzo_color::{BlendMode, Color};
+use lienzo_doc::{Effect, Effects, FxCommon, FxPaint, Layer, LayerContent, LayerId, StrokeFx, StrokePosition};
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn styled_shape(depth: u32) -> (Session, LayerId) {

@@ -1,9 +1,9 @@
-//! `cargo bench -p photocraft-algo`
+//! `cargo bench -p lienzo-algo`
 use criterion::{Criterion, criterion_group, criterion_main};
-use photocraft_algo::{FilterParams, apply};
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::{FilterParams, apply};
+use lienzo_color::PixelFormat;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 fn textured(n: u32) -> Surface {
     let r = Rect::new(0, 0, n as i32, n as i32);

@@ -16,7 +16,7 @@ fn square_session(depth: u64, mode: &str) -> Session {
         for y in b.y0..b.y1 {
             for x in b.x0..b.x1 {
                 let v = if (40..52).contains(&x) && (24..36).contains(&y) { 0.05 } else { 0.5 };
-                data.extend(photocraft_raster::from_rgba(&fmt, [v, v, v, 1.0]));
+                data.extend(lienzo_raster::from_rgba(&fmt, [v, v, v, 1.0]));
             }
         }
         surf.write_region(b, &data);

@@ -349,11 +349,11 @@ fn cached_gradient_fill() -> Session {
         let (fmt, canvas) = (doc.pixel_format(), doc.bounds());
         let l = doc.layer_mut(active.unwrap()).unwrap();
         let LayerContent::Fill(f) = &l.content else { panic!("a fill layer") };
-        let buf = photocraft_compose::render_fill_content(l, f, canvas, &[]);
+        let buf = lienzo_compose::render_fill_content(l, f, canvas, &[]);
         let mut surface = Surface::new(fmt);
-        let vals: Vec<f32> = buf.px.iter().flat_map(|p| photocraft_raster::from_rgba(&fmt, *p)).collect();
+        let vals: Vec<f32> = buf.px.iter().flat_map(|p| lienzo_raster::from_rgba(&fmt, *p)).collect();
         surface.write_region(canvas, &vals);
-        l.fill_cache = Some(photocraft_doc::FillCache { fill: f.clone(), surface });
+        l.fill_cache = Some(lienzo_doc::FillCache { fill: f.clone(), surface });
         Ok(())
     })
     .unwrap();
@@ -366,7 +366,7 @@ fn off_from_fresh(s: &Session) -> f32 {
     let st = s.active().unwrap();
     let mut fresh: Document = (*st.doc).clone();
     fresh.layer_mut(st.active_layer.unwrap()).unwrap().fill_cache = None;
-    let (a, b) = (photocraft_compose::render(&st.doc, st.doc.bounds()).into_px(), photocraft_compose::render(&fresh, fresh.bounds()).into_px());
+    let (a, b) = (lienzo_compose::render(&st.doc, st.doc.bounds()).into_px(), lienzo_compose::render(&fresh, fresh.bounds()).into_px());
     a.iter().zip(&b).flat_map(|(p, q)| p.iter().zip(q).map(|(x, y)| (x - y).abs())).fold(0.0, f32::max)
 }
 
@@ -850,7 +850,7 @@ fn a_soft_shapes_frame_follows_its_path() {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     let id = s.execute("shape.create", json!({"kind": "rect", "rect": [20, 30, 60, 40], "fill": "#000000"})).unwrap()["layer"].as_u64().unwrap();
-    let id = photocraft_doc::LayerId(id);
+    let id = lienzo_doc::LayerId(id);
     let boxes = |s: &Session| {
         let st = s.active().unwrap();
         let l = st.doc.layer(id).unwrap();
@@ -862,7 +862,7 @@ fn a_soft_shapes_frame_follows_its_path() {
     {
         let st = s.active().unwrap();
         let LayerContent::Shape(sh) = &st.doc.layer(id).unwrap().content else { panic!("a shape") };
-        let painted = photocraft_compose::bounds::content_bounds(sh.cache.as_ref().unwrap());
+        let painted = lienzo_compose::bounds::content_bounds(sh.cache.as_ref().unwrap());
         assert_eq!(painted, st.doc.bounds(), "the soft fill renders over the whole canvas");
     }
     let soft = boxes(&s);
@@ -892,7 +892,7 @@ fn a_stroked_soft_shapes_frame_matches_the_hard_shapes() {
         let id = s.execute("shape.create", json!({"kind": "rect", "rect": [x, 50, 60, 40], "fill": "#000000", "stroke": stroke})).unwrap()["layer"]
             .as_u64()
             .unwrap();
-        let id = photocraft_doc::LayerId(id);
+        let id = lienzo_doc::LayerId(id);
         let boxes = |s: &Session| {
             let st = s.active().unwrap();
             let l = st.doc.layer(id).unwrap();

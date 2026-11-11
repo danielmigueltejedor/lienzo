@@ -4,7 +4,7 @@ use super::{Arc, Document, EngineError, Layer, LayerContent, LayerId, PixelForma
 /// Input and successfully opened document identities of one Override Open scratch session.
 pub(crate) struct BatchOpen {
     pub path: String,
-    pub sources: Vec<photocraft_doc::DocId>,
+    pub sources: Vec<lienzo_doc::DocId>,
     pub raw_ppi: f64,
     /// A recorded Open read a source that must not be replaced (Affinity, Krita, XCF, PDN).
     pub read_only: bool,
@@ -38,12 +38,12 @@ pub(crate) fn remember_batch_open(s: &mut Session) {
 }
 
 pub(crate) fn import(name: &str, bytes: &[u8]) -> Result<Document> {
-    import_with_options(name, bytes, &photocraft_io::ImportOptions::default())
+    import_with_options(name, bytes, &lienzo_io::ImportOptions::default())
 }
 
 /// [`import`] with the caller's import settings. Footage passes its PSD/layered-TIFF memory limit,
 /// so a frame import cannot bypass the admission the rest of the open path applies.
-pub(crate) fn import_with_options(name: &str, bytes: &[u8], opts: &photocraft_io::ImportOptions) -> Result<Document> {
+pub(crate) fn import_with_options(name: &str, bytes: &[u8], opts: &lienzo_io::ImportOptions) -> Result<Document> {
     import_result_with(name, bytes, opts).map(|r| r.document)
 }
 
@@ -67,22 +67,22 @@ pub(super) fn import_source_at_raw_ppi(raw_ppi: f64, name: &str, bytes: &[u8]) -
     Ok((doc, r.source_read_only))
 }
 
-fn import_result(name: &str, bytes: &[u8]) -> Result<photocraft_io::ImportResult> {
-    import_result_with(name, bytes, &photocraft_io::ImportOptions::default())
+fn import_result(name: &str, bytes: &[u8]) -> Result<lienzo_io::ImportResult> {
+    import_result_with(name, bytes, &lienzo_io::ImportOptions::default())
 }
 
 /// The one import path every caller shares: allocation checkpoint, native `.pcraft` and format
-/// dispatch through `photocraft_io::import_with_options`, typed memory refusals, and the
+/// dispatch through `lienzo_io::import_with_options`, typed memory refusals, and the
 /// preview-only refusal wherever the import came from.
-pub(super) fn import_result_with(name: &str, bytes: &[u8], opts: &photocraft_io::ImportOptions) -> Result<photocraft_io::ImportResult> {
+pub(super) fn import_result_with(name: &str, bytes: &[u8], opts: &lienzo_io::ImportOptions) -> Result<lienzo_io::ImportResult> {
     import_result_for_open(name, bytes, opts).map(|(r, _)| r)
 }
 
 /// [`import_result_with`], also telling whether a PSD/PSB had damaged data it recovered from, as
-/// File › Open's job learns it (`photocraft_io::import_for_open`), so an interactive caller can ask.
-pub(super) fn import_result_for_open(name: &str, bytes: &[u8], opts: &photocraft_io::ImportOptions) -> Result<(photocraft_io::ImportResult, bool)> {
+/// File › Open's job learns it (`lienzo_io::import_for_open`), so an interactive caller can ask.
+pub(super) fn import_result_for_open(name: &str, bytes: &[u8], opts: &lienzo_io::ImportOptions) -> Result<(lienzo_io::ImportResult, bool)> {
     crate::allocation::checkpoint("importing document")?;
-    let (r, damaged) = photocraft_io::import_for_open(name, bytes, opts).map_err(|e| crate::error::io_open_error(name, e))?;
+    let (r, damaged) = lienzo_io::import_for_open(name, bytes, opts).map_err(|e| crate::error::io_open_error(name, e))?;
     // Auxiliary imports return only a document and cannot surface the preview's fidelity warning.
     // Open has its own warning-preserving path; never silently place or process a thumbnail.
     if r.preview_only {
@@ -147,9 +147,9 @@ pub(crate) fn tag_exr_colorspace(s: &Session, name: &str, doc: &mut Document) {
     if !name.to_ascii_lowercase().ends_with(".exr") || !s.prefs.get().file_handling.exr_aces_cg {
         return;
     }
-    let linear = photocraft_cms::Builtin::LinearSrgb.profile().to_bytes();
+    let linear = lienzo_cms::Builtin::LinearSrgb.profile().to_bytes();
     if doc.icc_profile.as_ref().map(|v| v.as_slice()) == Some(linear.as_slice()) {
-        doc.icc_profile = Some(photocraft_cms::Builtin::AcesCg.profile().to_bytes());
+        doc.icc_profile = Some(lienzo_cms::Builtin::AcesCg.profile().to_bytes());
     }
 }
 
@@ -166,7 +166,7 @@ pub(crate) fn raw_open_resolution(s: &Session) -> f64 {
 }
 
 fn raw_resolution(ppi: f64, warnings: &[String], doc: &mut Document) {
-    if ppi.is_finite() && warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE)) {
+    if ppi.is_finite() && warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE)) {
         doc.resolution_dpi = ppi.clamp(1.0, 10_000.0) as f32;
     }
 }
@@ -200,7 +200,7 @@ pub fn open_bytes_as_with_options(
     let (r, raw_settings) = if let Some((imported, settings)) = raw {
         (imported, Some(settings))
     } else {
-        let r = photocraft_io::import_with_options(&decode_name, bytes, &opts).map_err(|e| crate::error::io_open_error(&decode_name, e))?;
+        let r = lienzo_io::import_with_options(&decode_name, bytes, &opts).map_err(|e| crate::error::io_open_error(&decode_name, e))?;
         (r, None)
     };
     if (s.batch_open.is_some() || s.batch_open_notices.is_some()) && r.preview_only {
@@ -287,7 +287,7 @@ pub(super) fn approve_memory(s: &mut Session, p: &Value) -> Result<Value> {
     // hard ceiling is never raised by an approval. While the scratch disk is spilling, tile
     // pixels may use its room too; this fast refusal grants the whole room (the pending prompt
     // does not keep the tile share), and the import re-checks the exact split before decoding.
-    let budget = photocraft_io::memory::resolve_budget_with_scratch(photocraft_io::memory::MemorySnapshot::current(), None, u64::MAX);
+    let budget = lienzo_io::memory::resolve_budget_with_scratch(lienzo_io::memory::MemorySnapshot::current(), None, u64::MAX);
     if preflight.required > budget.hard_limit {
         let free_memory = budget.refusal_free_memory(preflight.required);
         return Err(EngineError::PsdHardBudget { name: preflight.name, required: preflight.required, limit: budget.hard_limit, free_memory });
@@ -349,7 +349,7 @@ pub(crate) struct PlaceInput {
     pub(super) params: Value,
     pub(super) canvas: (f64, f64),
     pub(super) fmt: PixelFormat,
-    pub(super) opts: photocraft_io::ImportOptions,
+    pub(super) opts: lienzo_io::ImportOptions,
     /// Preferences ▸ General ▸ Resize Image During Place, unless the params say otherwise.
     pub(super) fit: bool,
     /// Preferences ▸ General ▸ Always Create Smart Objects When Placing, unless the params say
@@ -360,7 +360,7 @@ pub(crate) struct PlaceInput {
     pub(super) doc: Option<Arc<Document>>,
     /// The frame the image goes into: the active layer's, `"frame"` in the params, or none
     /// (`"frame": false`). Its image renders through a smart object.
-    pub(super) frame: Option<(LayerId, photocraft_doc::Frame)>,
+    pub(super) frame: Option<(LayerId, lienzo_doc::Frame)>,
 }
 
 impl PlaceInput {
@@ -413,7 +413,7 @@ impl PlaceInput {
             // an embedded place lands as a plain pixel layer.
             smart: linked.is_some() || p.get("smartObject").and_then(Value::as_bool).unwrap_or(prefs.general.always_create_smart_objects_when_placing),
             doc: match &file {
-                PlaceFile::Bytes(bytes) => (frame.is_some() || photocraft_io::is_svg_input(name, bytes)).then(|| Arc::clone(&d.doc)),
+                PlaceFile::Bytes(bytes) => (frame.is_some() || lienzo_io::is_svg_input(name, bytes)).then(|| Arc::clone(&d.doc)),
                 PlaceFile::Path(_) => Some(Arc::clone(&d.doc)),
             },
             frame,

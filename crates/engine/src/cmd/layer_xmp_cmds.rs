@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::{Map, Value, json};
 
 use crate::commands::CommandSpec;
@@ -33,7 +33,7 @@ fn check_packet(raw: &str) -> Result<()> {
     if raw.contains('\0') {
         return Err(bad("`rawData` can't contain NUL characters"));
     }
-    let xml = photocraft_io::xml::parse(raw, roxmltree::ParsingOptions::default()).map_err(|e| bad(format!("`rawData` isn't well-formed XML: {e}")))?;
+    let xml = lienzo_io::xml::parse(raw, roxmltree::ParsingOptions::default()).map_err(|e| bad(format!("`rawData` isn't well-formed XML: {e}")))?;
     let root = xml.root_element().tag_name();
     let xmp = matches!((root.namespace(), root.name()), (Some("adobe:ns:meta/"), "xmpmeta") | (Some("http://www.w3.org/1999/02/22-rdf-syntax-ns#"), "RDF"));
     if !xmp {
@@ -73,7 +73,7 @@ fn xmp_metadata(s: &mut Session, p: &Value) -> Result<Value> {
         })?;
         if let Some(st) = s.active_mut() {
             // Saved metadata only; no canvas pixels need recompositing.
-            st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+            st.last_damage = Some(lienzo_geom::Rect::EMPTY);
         }
     }
     Ok(json!({"layer": id.0, "rawData": new, "changed": changed}))

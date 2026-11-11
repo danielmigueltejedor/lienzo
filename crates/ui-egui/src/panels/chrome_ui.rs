@@ -2,12 +2,12 @@
 //! Home button at the start of the options bar.
 
 use egui::{RichText, Sense, Stroke, vec2};
-use photocraft_doc::{Document, LayerContent};
+use lienzo_doc::{Document, LayerContent};
 use serde::{Deserialize, Serialize};
 
 use crate::render_path::CpuReason;
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, icons, widgets};
+use crate::{LienzoApp, icons, widgets};
 
 /// Shell-only chrome state (serialised with the UI state, so `ui.inspect` reports it).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -93,7 +93,7 @@ pub fn status_info_text(doc: &Document, key: &str, tool: &str, profile: &str) ->
     status_info_text_with_units(doc, key, tool, profile, &Default::default())
 }
 
-fn status_info_text_with_units(doc: &Document, key: &str, tool: &str, profile: &str, units: &photocraft_engine::prefs::UnitsAndRulers) -> String {
+fn status_info_text_with_units(doc: &Document, key: &str, tool: &str, profile: &str, units: &lienzo_engine::prefs::UnitsAndRulers) -> String {
     let bits = doc.depth.bits();
     match key {
         "sizes" => {
@@ -112,7 +112,7 @@ fn status_info_text_with_units(doc: &Document, key: &str, tool: &str, profile: &
             let n = doc.layer_count();
             crate::i18n::trn(crate::i18n::current(), n as u64, "{n} Layer", "{n} Layers")
         }
-        _ if units.rulers == photocraft_engine::prefs::Unit::Pixels => crate::i18n::fmt(
+        _ if units.rulers == lienzo_engine::prefs::Unit::Pixels => crate::i18n::fmt(
             tl!("{w} px x {h} px ({ppi} ppi)"),
             &[("w", &doc.size.width.to_string()), ("h", &doc.size.height.to_string()), ("ppi", &widgets::fmt_num(doc.resolution_dpi as f64))],
         ),
@@ -132,10 +132,10 @@ fn profile_name(doc: &Document) -> String {
     let Some(bytes) = doc.icc_profile.as_ref() else {
         return crate::i18n::fmt(tl!("Untagged {mode}"), &[("mode", tl!(mode))]);
     };
-    let Ok(profile) = photocraft_engine::color_cmds::profile_from_bytes(bytes) else {
+    let Ok(profile) = lienzo_engine::color_cmds::profile_from_bytes(bytes) else {
         return crate::i18n::fmt(tl!("Invalid {mode} profile"), &[("mode", tl!(mode))]);
     };
-    if profile.color_space != photocraft_engine::color_cmds::mode_space(doc.mode) {
+    if profile.color_space != lienzo_engine::color_cmds::mode_space(doc.mode) {
         return crate::i18n::fmt(tl!("Invalid {mode} profile"), &[("mode", tl!(mode))]);
     }
     let name: String = profile.description.chars().filter(|c| !c.is_control()).take(128).collect();
@@ -147,7 +147,7 @@ fn profile_name(doc: &Document) -> String {
 }
 
 /// Status bar body (Pro): zoom %, the chosen info field and its ">" menu, then status messages.
-pub fn status_bar_pro(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn status_bar_pro(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let (Some(st), Some(i)) = (app.session.active(), app.session.active_index()) else {
         ui.label(RichText::new(tl!("No document")).color(t.text_dim));
@@ -195,7 +195,7 @@ pub fn status_bar_pro(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// What the status bar says about the active document's render path: its label, tooltip and
 /// the command a click runs, or None on the GPU.
-pub(crate) fn render_path_label(app: &PhotocraftApp) -> Option<(&'static str, String, &'static str)> {
+pub(crate) fn render_path_label(app: &LienzoApp) -> Option<(&'static str, String, &'static str)> {
     let doc = app.session.active().map(|st| st.doc.id.0)?;
     let reason = app.render_path.current(doc);
     // The measured fit (also on a switch to a document whose canvas is current) or the reason
@@ -225,7 +225,7 @@ pub(crate) fn render_path_label(app: &PhotocraftApp) -> Option<(&'static str, St
 /// The active document is drawn on the CPU (`render_path`): say so in the status bar, with the
 /// reason in the tooltip. "GPU Memory Full" opens Preferences › Performance; any other reason,
 /// "CPU Rendering", opens Help › System Info.
-pub fn render_path_status(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn render_path_status(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let Some((label, tip, command)) = render_path_label(app) else { return };
     let t = Tokens::get(ui.ctx());
     let resp = ui.add(egui::Label::new(RichText::new(label).color(t.warning).size(12.0)).sense(Sense::click())).on_hover_text(tip);
@@ -235,7 +235,7 @@ pub fn render_path_status(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// The latest status message after a separator, in the warning colour when it is an error.
-fn status_message(app: &PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
+fn status_message(app: &LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     if app.ui.status.is_empty() {
         return;
     }
@@ -247,7 +247,7 @@ fn status_message(app: &PhotocraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
 /// Home button at the very start of Photoshop 2026's options bar: toggles the Home (start)
 /// screen over the open documents, which stay open.
-pub fn home_button(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn home_button(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let n = app.session.documents().len();
     let auto = app.session.prefs().general.auto_show_home_screen;
     let on = app.ui.chrome.shows_home(n, auto);
@@ -304,7 +304,7 @@ mod tests {
     use serde_json::json;
 
     fn doc() -> Document {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 2400, "height": 1500, "resolution": 72, "background": "white"})).unwrap();
         (*s.active().unwrap().doc).clone()
     }
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn status_dimensions_follow_ruler_units_and_document_resolution() {
-        use photocraft_engine::prefs::{PointSize, Unit, UnitsAndRulers};
+        use lienzo_engine::prefs::{PointSize, Unit, UnitsAndRulers};
         let mut d = doc();
         d.resolution_dpi = 300.0;
         for (unit, expected) in [
@@ -351,8 +351,8 @@ mod tests {
         use egui_kittest::{Harness, kittest::Queryable};
         for theme in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
             let mut h = Harness::builder().with_size(vec2(1200.0, 700.0)).with_max_steps(64).build_eframe(move |cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                LienzoApp::setup_context(&cc.egui_ctx, theme);
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                 app.ui.theme = theme;
                 app
             });
@@ -383,8 +383,8 @@ mod tests {
     fn status_bar_shows_another_cpu_reason_before_gpu_memory_full() {
         use egui_kittest::{Harness, kittest::Queryable};
         let mut h = Harness::builder().with_size(vec2(1200.0, 700.0)).with_max_steps(64).build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::Pro);
-            PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+            LienzoApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::Pro);
+            LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
         });
         h.state_mut().run("file.new", json!({"width": 800, "height": 600})).unwrap();
         h.state_mut().sync_views();
@@ -406,8 +406,8 @@ mod tests {
     fn gpu_memory_full_clears_when_the_budget_is_raised() {
         use egui_kittest::{Harness, kittest::Queryable};
         let mut h = Harness::builder().with_size(vec2(1200.0, 700.0)).with_max_steps(64).build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::Pro);
-            PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+            LienzoApp::setup_context(&cc.egui_ctx, crate::theme::ThemeKind::Pro);
+            LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
         });
         h.state_mut().run("file.new", json!({"width": 800, "height": 600})).unwrap();
         h.state_mut().sync_views();
@@ -435,8 +435,8 @@ mod tests {
             for width in [800.0, 1200.0] {
                 let builder = Harness::builder().with_size(vec2(width, 600.0)).with_max_steps(64);
                 let mut h = builder.build_eframe(move |cc| {
-                    PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-                    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                    LienzoApp::setup_context(&cc.egui_ctx, theme);
+                    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                     app.run("prefs.set", json!({"path": "interface.theme", "value": theme.id()})).unwrap();
                     app.ui.theme = theme;
                     app
@@ -464,21 +464,21 @@ mod tests {
     #[test]
     fn status_profile_describes_rgb_gray_and_custom_profiles_without_mutating_the_document() {
         let mut rgb = doc();
-        rgb.icc_profile = Some(photocraft_engine::color_cmds::working_profile(rgb.mode).to_bytes());
+        rgb.icc_profile = Some(lienzo_engine::color_cmds::working_profile(rgb.mode).to_bytes());
         let before = rgb.icc_profile.clone();
         assert_eq!(profile_name(&rgb), "sRGB IEC61966-2.1");
         assert_eq!(status_info_text(&rgb, "profile", "", &profile_name(&rgb)), "sRGB IEC61966-2.1 (8bpc)");
         assert_eq!(rgb.icc_profile, before);
 
         let mut gray = doc();
-        gray.mode = photocraft_doc::ColorMode::Grayscale;
-        gray.icc_profile = Some(photocraft_engine::color_cmds::working_profile(gray.mode).to_bytes());
+        gray.mode = lienzo_doc::ColorMode::Grayscale;
+        gray.icc_profile = Some(lienzo_engine::color_cmds::working_profile(gray.mode).to_bytes());
         assert_eq!(profile_name(&gray), "Dot Gain 20%-compatible (gamma 1.732, Lienzo)");
 
-        let mut custom = (*photocraft_engine::color_cmds::working_profile(photocraft_doc::ColorMode::Cmyk)).clone();
+        let mut custom = (*lienzo_engine::color_cmds::working_profile(lienzo_doc::ColorMode::Cmyk)).clone();
         custom.description = "Lienzo Studio CMYK".into();
         let mut custom_doc = doc();
-        custom_doc.mode = photocraft_doc::ColorMode::Cmyk;
+        custom_doc.mode = lienzo_doc::ColorMode::Cmyk;
         custom_doc.icc_profile = Some(custom.with_encoded_bytes().to_bytes());
         assert_eq!(profile_name(&custom_doc), "Lienzo Studio CMYK");
     }
@@ -489,16 +489,16 @@ mod tests {
         malformed.icc_profile = Some(std::sync::Arc::new(vec![1, 2, 3]));
         assert_eq!(profile_name(&malformed), "Invalid RGB profile");
 
-        let mut unnamed_profile = (*photocraft_engine::color_cmds::working_profile(photocraft_doc::ColorMode::Cmyk)).clone();
+        let mut unnamed_profile = (*lienzo_engine::color_cmds::working_profile(lienzo_doc::ColorMode::Cmyk)).clone();
         unnamed_profile.description.clear();
         let mut unnamed = doc();
-        unnamed.mode = photocraft_doc::ColorMode::Cmyk;
+        unnamed.mode = lienzo_doc::ColorMode::Cmyk;
         unnamed.icc_profile = Some(unnamed_profile.with_encoded_bytes().to_bytes());
         assert_eq!(profile_name(&unnamed), "Unnamed CMYK profile");
 
         let mut mismatched = doc();
-        mismatched.mode = photocraft_doc::ColorMode::Grayscale;
-        mismatched.icc_profile = Some(photocraft_engine::color_cmds::working_profile(photocraft_doc::ColorMode::Rgb).to_bytes());
+        mismatched.mode = lienzo_doc::ColorMode::Grayscale;
+        mismatched.icc_profile = Some(lienzo_engine::color_cmds::working_profile(lienzo_doc::ColorMode::Rgb).to_bytes());
         assert_eq!(profile_name(&mismatched), "Invalid Gray profile");
     }
 
@@ -527,11 +527,11 @@ mod tests {
 
     #[test]
     fn closing_a_tab_does_not_return_to_home() {
-        use crate::PhotocraftApp;
-        use photocraft_engine::Session;
+        use crate::LienzoApp;
+        use lienzo_engine::Session;
         use serde_json::json;
 
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 8, "name": "Keep"})).unwrap();
         let n = app.session.documents().len();
         app.ui.chrome.home = Some(n);
@@ -574,7 +574,7 @@ mod tests {
     fn status_message_shows_with_no_document_open() {
         // #1567: File › Automate › Batch with no recorded action and no document answered nothing.
         use egui_kittest::{Harness, kittest::Queryable};
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.actions.list.clear();
         let e = crate::menus::invoke(&mut app, &egui::Context::default(), "file.automate.batch", json!({})).unwrap_err();
         app.ui.status = e.clone();

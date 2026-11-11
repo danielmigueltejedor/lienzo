@@ -1,7 +1,7 @@
 //! JPEG Options: the quality and format File › Save, Save As and Save a Copy ask for before writing
 //! a JPEG, as Photoshop's JPEG Options does. Quality is Photoshop's 0–12 scale (Low 0–4, Medium
 //! 5–7, High 8–9, Maximum 10–12), mapped to the encoder's 1–100 by
-//! `photocraft_engine::file_cmds::jpeg_quality`; Format Options are Baseline ("Standard"), Baseline
+//! `lienzo_engine::file_cmds::jpeg_quality`; Format Options are Baseline ("Standard"), Baseline
 //! Optimized and Progressive. Matte, Scans and the size preview aren't offered yet. Re-saving an
 //! opened JPEG starts at the file's own quality, as File › Save keeps it (#4032). Otherwise the
 //! dialog starts at the quality and format it was last answered with, also after a restart, as
@@ -18,10 +18,10 @@
 //! without the path for a plain `file.save`, which writes whichever file an action is played on
 //! ([`plain_save_step`]).
 
-use photocraft_codecs::JpegFormat;
+use lienzo_codecs::JpegFormat;
 use serde_json::Value;
 
-use crate::{ExportSettings, PhotocraftApp};
+use crate::{ExportSettings, LienzoApp};
 
 /// The highest quality on Photoshop's JPEG scale.
 pub const MAX_QUALITY: u8 = 12;
@@ -39,7 +39,7 @@ impl JpegChoice {
     /// `settings` writing this choice.
     pub fn apply(self, settings: ExportSettings) -> ExportSettings {
         ExportSettings {
-            jpeg_quality: self.quality.map(|q| photocraft_engine::file_cmds::jpeg_quality(f64::from(q))).or(settings.jpeg_quality),
+            jpeg_quality: self.quality.map(|q| lienzo_engine::file_cmds::jpeg_quality(f64::from(q))).or(settings.jpeg_quality),
             jpeg_format: self.format,
             ..settings
         }
@@ -58,7 +58,7 @@ impl JpegChoice {
 /// skip the prompt. Neither given: `None`. A quality that isn't a number from 0 to 12, or a
 /// format other than the three names, is an error.
 pub fn choice_param(params: &Value, cmd: &str) -> Result<Option<JpegChoice>, String> {
-    let format = photocraft_engine::file_cmds::jpeg_format_param(params, cmd).map_err(|e| e.to_string())?;
+    let format = lienzo_engine::file_cmds::jpeg_format_param(params, cmd).map_err(|e| e.to_string())?;
     let quality = match params.get("quality") {
         None | Some(Value::Null) => None,
         Some(v) => Some(
@@ -93,7 +93,7 @@ pub fn plain_save_step(choice: Option<JpegChoice>) -> Value {
 /// `quality` to 0–12 and ignores one that isn't a number, so the replay reads it the same way. A
 /// format other than the three names is still an error, as it is for the engine.
 pub fn recorded_choice(params: &Value, cmd: &str) -> Result<Option<JpegChoice>, String> {
-    let format = photocraft_engine::file_cmds::jpeg_format_param(params, cmd).map_err(|e| e.to_string())?;
+    let format = lienzo_engine::file_cmds::jpeg_format_param(params, cmd).map_err(|e| e.to_string())?;
     let quality = params.get("quality").and_then(Value::as_f64).filter(|q| q.is_finite()).map(|q| q.clamp(0.0, f64::from(MAX_QUALITY)).round() as u8);
     Ok((quality.is_some() || format.is_some()).then(|| JpegChoice { quality, format: format.unwrap_or_default() }))
 }
@@ -141,7 +141,7 @@ impl Start {
     /// Baseline; and the quality of its opened JPEG (`Document::file_encoding`, which File › Save
     /// keeps, #4032), else the quality last answered, else the Export preferences' JPEG quality
     /// (the one Quick Export uses).
-    pub fn for_active(app: &PhotocraftApp) -> Self {
+    pub fn for_active(app: &LienzoApp) -> Self {
         let remembered = remembered(app);
         let start = match app.session.active().and_then(|st| st.doc.file_encoding.jpeg_quality) {
             Some(q) => Start::own(q),
@@ -167,7 +167,7 @@ struct Remembered {
     format: Option<JpegFormat>,
 }
 
-fn remembered(app: &PhotocraftApp) -> Remembered {
+fn remembered(app: &LienzoApp) -> Remembered {
     let Some(Value::Object(saved)) = app.session.prefs().dialogs.get(REMEMBER_KEY) else { return Remembered::default() };
     Remembered {
         quality: saved.get("quality").and_then(Value::as_u64).and_then(|q| u8::try_from(q).ok()).filter(|&q| q <= MAX_QUALITY),
@@ -178,7 +178,7 @@ fn remembered(app: &PhotocraftApp) -> Remembered {
 /// Records an answered dialog for the next one. A quality left on the opened file's own is not
 /// an answer: the earlier one stays, so saving a series of opened JPEGs doesn't forget what a
 /// new document was last saved at.
-fn remember(app: &mut PhotocraftApp, choice: JpegChoice) {
+fn remember(app: &mut LienzoApp, choice: JpegChoice) {
     let before = remembered(app);
     let quality = choice.quality.or(before.quality);
     let mut saved = serde_json::Map::new();
@@ -194,7 +194,7 @@ fn remember(app: &mut PhotocraftApp, choice: JpegChoice) {
 /// A save waiting on the JPEG Options answer.
 pub struct Prompt {
     /// The document that requested the save, even if tabs change while this is open.
-    doc: photocraft_doc::DocId,
+    doc: lienzo_doc::DocId,
     /// Where the document goes.
     pub path: String,
     /// Quality, 0–12.
@@ -212,23 +212,23 @@ pub struct Prompt {
 
 /// `true` when `path` names a JPEG (`.jpg`, `.jpeg`, `.jpe`, …).
 pub fn is_jpeg_path(path: &str) -> bool {
-    photocraft_engine::file_cmds::extension(path).and_then(|e| photocraft_codecs::from_extension(&e)) == Some(photocraft_codecs::Format::Jpeg)
+    lienzo_engine::file_cmds::extension(path).and_then(|e| lienzo_codecs::from_extension(&e)) == Some(lienzo_codecs::Format::Jpeg)
 }
 
 /// Whether saving the active document to `path` asks for JPEG Options.
-pub fn wants_prompt(app: &PhotocraftApp, path: &str) -> bool {
+pub fn wants_prompt(app: &LienzoApp, path: &str) -> bool {
     is_jpeg_path(path) && app.session.active().is_some()
 }
 
 /// Parks the save of the active document to `path` behind the prompt, starting at
 /// [`Start::for_active`]. A prompt already waiting is never replaced.
-pub fn park(app: &mut PhotocraftApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
+pub fn park(app: &mut LienzoApp, path: String, copy: bool, record: &'static str) -> Result<(), String> {
     let start = Start::for_active(app);
     park_at(app, path, copy, record, start)
 }
 
 /// [`park`], starting at `start`.
-pub fn park_at(app: &mut PhotocraftApp, path: String, copy: bool, record: &'static str, start: Start) -> Result<(), String> {
+pub fn park_at(app: &mut LienzoApp, path: String, copy: bool, record: &'static str, start: Start) -> Result<(), String> {
     if app.save_options_open() {
         return Err(crate::SAVE_OPTIONS_OPEN.into());
     }
@@ -238,7 +238,7 @@ pub fn park_at(app: &mut PhotocraftApp, path: String, copy: bool, record: &'stat
     Ok(())
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = &mut app.jpeg_options else { return };
     let (mut ok, mut cancel) = (false, false);
     let (mut quality, mut format) = (p.quality, p.format);
@@ -289,7 +289,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// OK: writes the waiting save with the prompt's quality and format, and journals it.
-pub fn confirm(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn confirm(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(p) = app.jpeg_options.take() else { return };
     // Left where it started, an opened JPEG keeps its own quality exactly rather than the nearest
     // step on the 0–12 scale (95 would be written as 92). The recorded step then leaves the
@@ -369,7 +369,7 @@ mod tests {
         assert_eq!([0, 4, 5, 7, 8, 9, 10, 12].map(quality_label), ["Low", "Low", "Medium", "Medium", "High", "High", "Maximum", "Maximum"]);
         // The prompt's starting quality maps back to the encoder quality it came from, near enough.
         for q in 0..=MAX_QUALITY {
-            assert_eq!(quality_from_percent(u32::from(photocraft_engine::file_cmds::jpeg_quality(f64::from(q)))), q);
+            assert_eq!(quality_from_percent(u32::from(lienzo_engine::file_cmds::jpeg_quality(f64::from(q)))), q);
         }
         assert_eq!((quality_from_percent(0), quality_from_percent(85), quality_from_percent(1000)), (0, 10, 12));
     }
@@ -387,16 +387,16 @@ mod tests {
     /// in JPEG Options reaches the encoder there, not just the settings.
     #[test]
     fn the_answer_reaches_the_encoder() {
-        let doc = photocraft_doc::Document::with_background(
+        let doc = lienzo_doc::Document::with_background(
             "x",
-            photocraft_doc::Size::new(16, 16),
-            photocraft_doc::ColorMode::Rgb,
-            photocraft_doc::SampleType::U8,
-            photocraft_doc::Color::WHITE,
+            lienzo_doc::Size::new(16, 16),
+            lienzo_doc::ColorMode::Rgb,
+            lienzo_doc::SampleType::U8,
+            lienzo_doc::Color::WHITE,
         );
         let write = |format| {
             let settings = JpegChoice { quality: Some(10), format }.apply(ExportSettings::default());
-            photocraft_io::export(&doc, "a.jpg", &settings.io_options()).unwrap().bytes
+            lienzo_io::export(&doc, "a.jpg", &settings.io_options()).unwrap().bytes
         };
         // Start of frame: 0xFFC0 baseline, 0xFFC2 progressive. Scan data stuffs its 0xFF bytes, and
         // this small white image's tables and headers hold neither pair, so only the frame marker matches.

@@ -3,10 +3,10 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use photocraft_doc::{DocId, Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
+use lienzo_doc::{DocId, Document, LayerContent, LayerId};
+use lienzo_geom::Rect;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 const TAG: u64 = 1 << 60;
 
@@ -28,7 +28,7 @@ pub struct TypeFontPreview {
     areas: VecDeque<(u64, Rect)>,
 }
 
-pub(crate) fn follow_hover(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn follow_hover(app: &mut LienzoApp, ctx: &egui::Context) {
     let hover_id = egui::Id::unique("type-font-hover");
     let since_id = egui::Id::unique("type-font-hover-since");
     let family = ctx.data_mut(|d| {
@@ -45,7 +45,7 @@ pub(crate) fn follow_hover(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 now
             }
         });
-        let installed = photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.has_family(&family);
+        let installed = lienzo_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.has_family(&family);
         let rested = now - since;
         if installed || rested >= HOVER_FETCH_DELAY {
             set(app, family);
@@ -60,14 +60,14 @@ pub(crate) fn follow_hover(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let p = app.type_font_preview.as_ref()?.clone();
     let family = p.family.as_deref()?;
     let st = app.session.documents().get(idx)?;
     if st.doc.id != p.document || st.revision != p.revision {
         return None;
     }
-    if !photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.has_family(family) {
+    if !lienzo_text::shared().lock().unwrap_or_else(|e| e.into_inner()).fonts.has_family(family) {
         return None;
     }
     if let Some(shown) = &p.shown {
@@ -84,19 +84,19 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     {
         let l = doc.layer_mut(layer)?;
         if let LayerContent::Text(t) = &mut l.content {
-            let (start, end) = range.map_or((0, t.text.len()), |[a, b]| (photocraft_text::byte_index(&t.text, a), photocraft_text::byte_index(&t.text, b)));
-            photocraft_engine::type_cmds::style_range(t, start, end, &|style| {
+            let (start, end) = range.map_or((0, t.text.len()), |[a, b]| (lienzo_text::byte_index(&t.text, a), lienzo_text::byte_index(&t.text, b)));
+            lienzo_engine::type_cmds::style_range(t, start, end, &|style| {
                 style.font_family.clone_from(&family);
                 style.postscript_name = None;
             });
-            photocraft_engine::type_cmds::refresh(&original_doc, t);
+            lienzo_engine::type_cmds::refresh(&original_doc, t);
         } else {
             return None;
         }
     }
 
     let area = doc.layer(layer)?.surface().map_or(Rect::EMPTY, |surface| surface.tile_bounds());
-    let shown = Arc::new(photocraft_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
+    let shown = Arc::new(lienzo_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
     let key = p.key;
     if let Some(p) = app.type_font_preview.as_mut() {
         if p.areas.len() >= 128 {
@@ -108,7 +108,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     Some((shown, key))
 }
 
-pub(crate) fn set(app: &mut PhotocraftApp, family: String) {
+pub(crate) fn set(app: &mut LienzoApp, family: String) {
     // A caret's font formats subsequent typing, not the existing layer's pixels.
     if app.ui.text_edit.as_ref().is_some_and(|ed| ed.caret == ed.anchor) {
         clear(app);
@@ -127,7 +127,7 @@ pub(crate) fn set(app: &mut PhotocraftApp, family: String) {
         clear(app);
         return;
     }
-    photocraft_text::served::request(&family);
+    lienzo_text::served::request(&family);
     if app.type_font_preview.as_ref().is_some_and(|p| {
         p.family.as_deref() == Some(family.as_str()) && p.document == st.doc.id && p.revision == st.revision && p.layer == layer && p.range == range
     }) {
@@ -142,14 +142,14 @@ pub(crate) fn set(app: &mut PhotocraftApp, family: String) {
     app.type_font_preview = Some(TypeFontPreview { document: doc_id, revision, layer, range, family: Some(family), shown: None, key, original_area, areas });
 }
 
-pub(crate) fn clear(app: &mut PhotocraftApp) {
+pub(crate) fn clear(app: &mut LienzoApp) {
     if let Some(p) = app.type_font_preview.as_mut() {
         p.family = None;
         p.shown = None;
     }
 }
 
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
     if before == after {
         return None;
     }
@@ -172,7 +172,7 @@ mod tests {
 
     /// One frame at `time` (seconds) with the pointer on `family`'s row in the font menu (`None`:
     /// on no row), as the menu reports it each frame.
-    fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, family: Option<&str>, time: f64) {
+    fn frame(app: &mut LienzoApp, ctx: &egui::Context, family: Option<&str>, time: f64) {
         let mut out = ctx.run_ui(egui::RawInput { time: Some(time), ..Default::default() }, |ui| {
             if let Some(f) = family {
                 ui.ctx().data_mut(|d| d.insert_temp(egui::Id::unique("type-font-hover"), f.to_string()));
@@ -182,12 +182,12 @@ mod tests {
         out.textures_delta.clear();
     }
 
-    fn previewed(app: &PhotocraftApp) -> Option<&str> {
+    fn previewed(app: &LienzoApp) -> Option<&str> {
         app.type_font_preview.as_ref().and_then(|p| p.family.as_deref())
     }
 
-    fn app_with_type_layer() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
+    fn app_with_type_layer() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
         app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
         app.run("type.create", json!({"text": "Sample", "font": "Inter", "size": 18})).unwrap();
         app
@@ -197,8 +197,8 @@ mod tests {
     fn a_served_family_is_asked_for_only_once_the_pointer_rests_on_its_row() {
         // Families the host serves but hasn't sent (own names: the served catalog is process-wide).
         let (a, b) = ("Served Hover Rest A", "Served Hover Rest B");
-        let (fonts, _) = photocraft_text::served::parse_manifest(&format!("{a} | Regular | fonts/a/A.ttf\n{b} | Regular | fonts/b/B.ttf\n"));
-        photocraft_text::served::add_fonts(&fonts);
+        let (fonts, _) = lienzo_text::served::parse_manifest(&format!("{a} | Regular | fonts/a/A.ttf\n{b} | Regular | fonts/b/B.ttf\n"));
+        lienzo_text::served::add_fonts(&fonts);
         let mut app = app_with_type_layer();
         let ctx = egui::Context::default();
 

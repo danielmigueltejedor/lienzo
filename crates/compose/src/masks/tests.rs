@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_doc::LayerMask;
-use photocraft_doc::vector::{Knot, Path, Subpath, VectorMask};
+use lienzo_doc::LayerMask;
+use lienzo_doc::vector::{Knot, Path, Subpath, VectorMask};
 
 fn pending(c: &Mutex<Cache>, k: u64) -> Arc<OnceLock<Surface>> {
     match lookup(c, k) {
@@ -117,7 +117,7 @@ fn a_purge_during_a_shared_build_keeps_the_cache_empty() {
 fn parallel_feathered_pixel_mask_returns_the_same_tiles() {
     let canvas = Rect::new(0, 0, 600, 400);
     let mut layer = Layer::raster("cold shared mask", PixelFormat::RGBA8);
-    let mut mask = photocraft_doc::LayerMask::reveal_all();
+    let mut mask = lienzo_doc::LayerMask::reveal_all();
     mask.surface.fill_rect(canvas, &[0.5]);
     mask.feather = 8.0;
     layer.mask = Some(mask);
@@ -144,7 +144,7 @@ fn parallel_feathered_pixel_mask_returns_the_same_tiles() {
 #[test]
 fn feather_at_the_canvas_edge_continues_the_mask_past_it() {
     let mut layer = Layer::raster("edge", PixelFormat::RGBA8);
-    let mut mask = photocraft_doc::LayerMask::hide_all();
+    let mut mask = lienzo_doc::LayerMask::hide_all();
     mask.surface.fill_rect(Rect::new(40, 20, 120, 60), &[1.0]);
     mask.feather = 32.0;
     layer.mask = Some(mask);
@@ -154,7 +154,7 @@ fn feather_at_the_canvas_edge_continues_the_mask_past_it() {
     let worst = tight.iter().zip(&tall).map(|(a, b)| (a - b).abs()).fold(0.0_f32, f32::max);
     assert!(worst < 1e-4, "the canvas edge changed the feather by {worst}");
 
-    let mut half = photocraft_doc::LayerMask::hide_all();
+    let mut half = lienzo_doc::LayerMask::hide_all();
     half.surface.fill_rect(Rect::new(0, 0, 80, 80), &[1.0]);
     half.feather = 32.0;
     layer.mask = Some(half);
@@ -178,7 +178,7 @@ fn vector_mask_build_inside_a_small_rayon_pool_completes() {
     let handle = std::thread::spawn(move || {
         let canvas = Rect::new(0, 0, 512, 512);
         let mut layer = Layer::raster("rayon vector mask", PixelFormat::RGBA8);
-        let mut mask = VectorMask::new(photocraft_vector::shapes::ellipse(8.0, 8.0, 496.0, 496.0));
+        let mut mask = VectorMask::new(lienzo_vector::shapes::ellipse(8.0, 8.0, 496.0, 496.0));
         mask.feather = 8.0;
         layer.vector_mask = Some(mask);
         let pool = rayon::ThreadPoolBuilder::new().num_threads(2).build().unwrap();
@@ -202,7 +202,7 @@ fn charges_input_and_output_at_every_depth_including_off_canvas_tiles() {
     for sample in SampleType::ALL {
         let mut input = one_tile(sample);
         input.fill_rect(Rect::new(1024, 1024, 1025, 1025), &[0.0]);
-        let tile_pixels = (photocraft_geom::TILE_SIZE * photocraft_geom::TILE_SIZE) as usize;
+        let tile_pixels = (lienzo_geom::TILE_SIZE * lienzo_geom::TILE_SIZE) as usize;
         let expected = tile_pixels * (SampleType::F32.bytes() + 2 * sample.bytes()) + SampleType::F32.bytes() + sample.bytes();
         let bytes = entry_bytes(&result, Some(&input));
         assert_eq!(bytes, expected, "{sample:?}");
@@ -332,7 +332,7 @@ fn pixel_edits_refresh_cached_masks_at_every_depth() {
 fn cache_budget_holds_five_50mp_u8_input_u16_result_masks() {
     // Account for whole 256×256 tiles, as entry_bytes does, rather than just logical pixels.
     let (w, h) = (6336usize, 7920usize);
-    let tile = photocraft_geom::TILE_SIZE as usize;
+    let tile = lienzo_geom::TILE_SIZE as usize;
     let tile_count = w.div_ceil(tile) * h.div_ceil(tile);
     let tile_pixels = tile * tile;
     let one_entry = tile_count * tile_pixels * (SampleType::U8.bytes() + FORMAT.sample.bytes());
@@ -360,7 +360,7 @@ fn matches_the_cpu_mask_and_is_cached() {
     l.vector_mask = Some(vm);
     let canvas = Rect::new(0, 0, 40, 32);
     let s = combined_mask(&l, canvas).unwrap();
-    let want = photocraft_vector::vector_mask_values(l.vector_mask.as_ref().unwrap(), canvas);
+    let want = lienzo_vector::vector_mask_values(l.vector_mask.as_ref().unwrap(), canvas);
     let mut got = Vec::new();
     s.read_region_into(canvas, &mut got);
     for (a, b) in got.iter().zip(&want) {

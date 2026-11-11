@@ -2,7 +2,7 @@
 
 Measured 2026-10-17 on Windows 11, `i5-10300H` (4 cores / 8 threads, 16 GB), release build,
 `rustc 1.98.1`, with a probe that renders one paragraph layer through
-`photocraft_text::render::rasterize_warped` and times each stage of it.
+`lienzo_text::render::rasterize_warped` and times each stage of it.
 
 Document: 300 dpi, a 2400 × 1600 px paragraph box holding 4000 characters at 14 pt — the worst
 case a type edit has (a whole page of text at print resolution; 1851 laid-out glyphs, 2329 × 1610 px

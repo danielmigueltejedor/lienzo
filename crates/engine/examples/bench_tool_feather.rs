@@ -2,15 +2,15 @@
 //! (shape → dense full-canvas mask → `sel::feather` → `sel::combine(None, …, Replace)`)
 //! against the current `select.rect` / `select.lasso` commands, whose dense feather mask
 //! stays a (50 + 2·(⌈3·4⌉+1))² = 76² = 5776-pixel window around the 50×50 shape.
-//! `cargo run --release -p photocraft-engine --example bench_tool_feather [reps]`
+//! `cargo run --release -p lienzo-engine --example bench_tool_feather [reps]`
 use std::time::{Duration, Instant};
 
-use photocraft_algo::selection as sel;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer, Size};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::selection as sel;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer, Size};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 type Res<T> = Result<T, Box<dyn std::error::Error>>;

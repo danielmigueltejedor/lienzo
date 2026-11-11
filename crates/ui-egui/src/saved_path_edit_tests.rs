@@ -4,19 +4,19 @@
 //! not be selected or changed.
 
 use egui::Modifiers;
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
+use lienzo_doc::vector::Path;
+use lienzo_geom::Point;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::direct_select::PathRef;
 use crate::state::Tool;
 
 const NAME: &str = "Path 1";
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -28,12 +28,12 @@ fn square(x: f64, y: f64, w: f64) -> serde_json::Value {
 }
 
 /// A saved path, a square from (40, 40) to (120, 120), selected in the Paths panel.
-fn with_saved_path(app: &mut PhotocraftApp) {
+fn with_saved_path(app: &mut LienzoApp) {
     app.run("path.set", json!({"name": NAME, "path": square(40.0, 40.0, 80.0)})).unwrap();
     app.ui.selected_path = Some(NAME.into());
 }
 
-fn saved(app: &PhotocraftApp) -> Path {
+fn saved(app: &LienzoApp) -> Path {
     app.session.active().unwrap().doc.paths.iter().find(|p| p.name == NAME).unwrap().path.clone()
 }
 
@@ -41,11 +41,11 @@ fn anchors(p: &Path) -> Vec<Point> {
     p.subpaths.iter().flat_map(|s| s.knots.iter().map(|k| k.anchor)).collect()
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     let mid = [(from[0] + to[0]) / 2.0, (from[1] + to[1]) / 2.0];
     tool_event(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, mods);
@@ -150,9 +150,9 @@ fn a_saved_path_read_from_a_psd_is_editable() {
     let mut src = app(Tool::DirectSelection);
     with_saved_path(&mut src);
     let doc = src.session.active().unwrap().doc.clone();
-    let bytes = photocraft_io::export(&doc, "psd", &Default::default()).unwrap().bytes;
+    let bytes = lienzo_io::export(&doc, "psd", &Default::default()).unwrap().bytes;
     let mut app = app(Tool::DirectSelection);
-    photocraft_engine::file_cmds::open_bytes_as(&mut app.session, "paths.psd", &bytes, None, None).unwrap();
+    lienzo_engine::file_cmds::open_bytes_as(&mut app.session, "paths.psd", &bytes, None, None).unwrap();
     app.sync_views();
     assert!(app.session.active().unwrap().doc.paths.iter().any(|p| p.name == NAME), "the PSD keeps its saved path");
     app.ui.selected_path = Some(NAME.into());
@@ -174,7 +174,7 @@ fn arrows_leave_a_saved_path_the_paths_panel_no_longer_selects() {
     drag(&mut app, [30.0, 30.0], [50.0, 50.0], Modifiers::NONE);
     assert_eq!((app.ui.direct_selection.target, app.ui.direct_selection.anchors.clone()), (Some(PathRef::Saved(0)), vec![[0, 0]]));
     // One → press through the canvas arrow keys, as egui delivers it.
-    let arrow = |app: &mut PhotocraftApp| {
+    let arrow = |app: &mut LienzoApp| {
         let ctx = egui::Context::default();
         ctx.input_mut(|i| {
             i.events.push(egui::Event::Key { key: egui::Key::ArrowRight, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE })

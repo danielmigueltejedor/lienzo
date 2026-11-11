@@ -142,9 +142,9 @@ pub(super) fn preset_manager(s: &mut Session, p: &Value) -> Result<Value> {
 pub struct PresetFile {
     pub format: String,
     pub version: u32,
-    pub brushes: Vec<photocraft_paint::BrushPreset>,
+    pub brushes: Vec<lienzo_paint::BrushPreset>,
     pub custom_shapes: Vec<CustomShape>,
     pub tool_presets: Vec<crate::presets::tools::ToolPreset>,
 }
 
-pub const PRESET_FORMAT: &str = "photocraft-presets";
+pub const PRESET_FORMAT: &str = "lienzo-presets";

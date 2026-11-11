@@ -4,7 +4,7 @@ Updated 2026-10-27: Photoshop's Fill/Stroke popover (paint types, Recently Used 
 folders, full Color Picker). 2026-10-15: retain stroke paint and options when width reaches zero
 (#6191).
 
-PhotoCraft's Shape tool options bar has a Stroke Options button beside the existing width
+Lienzo's Shape tool options bar has a Stroke Options button beside the existing width
 and colour controls. It sets defaults for new Rectangle, Ellipse, Triangle, Polygon, Line
 and Custom Shape layers. Pen in Shape mode uses the same style defaults; open Pen shapes retain
 their existing foreground colour and minimum 1 px width. To edit an existing shape,
@@ -127,14 +127,14 @@ not offered yet.
   describes the tool options and Properties entry points, and its
   [cap/join reference](https://helpx.adobe.com/ca/illustrator/desktop/paint-and-fill/apply-and-edit-strokes/change-the-caps-or-joins-of-a-line.html)
   defines endpoint and corner behavior and the 1–500 miter range. Dash units reuse
-  PhotoCraft's existing documented `ShapeStroke`/`vstk` convention.
+  Lienzo's existing documented `ShapeStroke`/`vstk` convention.
 
-## Editable arrows and older PhotoCraft versions
+## Editable arrows and older Lienzo versions
 
 Native `.pcraft` documents store arrow geometry in the regular shape path and
 the editable arrow parameters separately in the optional `arrow_live` field.
 
-PhotoCraft versions that do not support editable arrows can open these documents
+Lienzo versions that do not support editable arrows can open these documents
 and display the saved arrow geometry as a regular vector shape. They cannot edit
 the arrowhead parameters.
 

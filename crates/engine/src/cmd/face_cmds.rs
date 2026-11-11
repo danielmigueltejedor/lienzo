@@ -1,9 +1,9 @@
 //! Face detection (#3603): the faces in the document, with their box and five landmarks, from
-//! [`photocraft_algo::faces`]. Select › Color Range's Detect Faces and Face-Aware Liquify read
+//! [`lienzo_algo::faces`]. Select › Color Range's Detect Faces and Face-Aware Liquify read
 //! faces through [`faces_in`]; `image.detectFaces` reports them to scripts and agents.
 
-use photocraft_algo::faces::{self, Face};
-use photocraft_doc::{Document, LayerId};
+use lienzo_algo::faces::{self, Face};
+use lienzo_doc::{Document, LayerId};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -13,7 +13,7 @@ use crate::{EngineError, Result, Session};
 /// reliable face).
 pub const MIN_SCORE: f32 = 0.5;
 
-/// Why there are no faces in the browser build (see [`photocraft_algo::faces`]).
+/// Why there are no faces in the browser build (see [`lienzo_algo::faces`]).
 const UNAVAILABLE: &str = "face detection isn't available in the browser version of Lienzo; use the desktop app";
 
 /// The faces in `px` (`w × h` straight RGBA), as [`faces::detect`] finds them.
@@ -36,7 +36,7 @@ pub fn faces_in(doc: &Document, active: Option<LayerId>, all_layers: bool, min_s
             surf.read_rgba_into(area, &mut px);
             px
         }
-        None => photocraft_compose::render(doc, area).into_px(),
+        None => lienzo_compose::render(doc, area).into_px(),
     };
     let found = detect(&px, w, h, min_score)?;
     let (x0, y0) = (area.x0 as f32, area.y0 as f32);

@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 fn session(depth: u32) -> Session {
     let mut s = Session::new();
@@ -15,7 +15,7 @@ fn add_square(s: &mut Session, r: Rect, rgba: [f32; 4]) -> LayerId {
     s.edit("sq", |doc, active| {
         let fmt = doc.pixel_format();
         let mut l = Layer::raster(doc.next_layer_name("Layer"), fmt);
-        l.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&fmt, rgba));
+        l.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&fmt, rgba));
         let id = doc.insert_above(None, l);
         *active = Some(id);
         Ok(id)
@@ -56,7 +56,7 @@ fn from_layers_and_group_then_compose_clips() {
         assert_eq!(doc(&s).artboard_of(red), Some(gid));
         // Grow the board; the white background shows around the square, nothing outside it.
         s.execute("layer.artboard.set", json!({"width": 40, "height": 40})).unwrap();
-        let px = |s: &Session, x, y| photocraft_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
+        let px = |s: &Session, x, y| lienzo_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
         assert!(px(&s, 40, 40)[0] > 0.99 && px(&s, 40, 40)[1] > 0.99, "{depth}");
         assert!(px(&s, 15, 15)[1] < 0.01);
         // Moving the board moves its contents.
@@ -167,7 +167,7 @@ fn export_to_files_and_pdf() {
     add_square(&mut s, Rect::new(0, 0, 10, 10), [1.0, 0.0, 0.0, 1.0]);
     s.execute("layer.new.artboardFromLayers", json!({"name": "Red Board"})).unwrap();
     s.execute("layer.new.artboard", json!({"rect": [20, 0, 30, 15], "name": "Empty/One", "background": "transparent"})).unwrap();
-    let dir = std::env::temp_dir().join(format!("photocraft-artboards-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-artboards-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let d = dir.to_string_lossy().into_owned();
@@ -176,13 +176,13 @@ fn export_to_files_and_pdf() {
     assert_eq!(files.len(), 2);
     assert!(files[0].ends_with("site_0000_Empty_One.png"), "{files:?}");
     assert!(files[1].ends_with("site_0001_Red Board.png"), "{files:?}");
-    let img = photocraft_io::import("x.png", &std::fs::read(&files[1]).unwrap()).unwrap().document;
+    let img = lienzo_io::import("x.png", &std::fs::read(&files[1]).unwrap()).unwrap().document;
     assert_eq!((img.size.width, img.size.height), (10, 10));
-    let img2 = photocraft_io::import("x.png", &std::fs::read(&files[0]).unwrap()).unwrap().document;
+    let img2 = lienzo_io::import("x.png", &std::fs::read(&files[0]).unwrap()).unwrap().document;
     assert_eq!((img2.size.width, img2.size.height), (30, 15));
     // Layered PSD keeps the board, moved to the origin.
     let r = s.execute("file.export.artboardsToFiles", json!({"dir": d, "prefix": "", "format": "psd", "artboards": [doc(&s).artboards()[0].0.0]})).unwrap();
-    let psd = photocraft_io::import("x.psd", &std::fs::read(r["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+    let psd = lienzo_io::import("x.psd", &std::fs::read(r["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
     assert_eq!(psd.artboards()[0].2.rect, Rect::new(0, 0, 10, 10));
     let pdf = join(&d, "boards.pdf");
     let r = s.execute("file.export.artboardsToPdf", json!({"path": pdf})).unwrap();
@@ -342,7 +342,7 @@ fn artboards_at_ordinary_coordinates_still_place_and_edit() {
 fn export_rejects_a_board_too_far_from_the_origin() {
     let mut s = session(8);
     s.execute("layer.new.artboard", json!({"x": i32::MIN, "width": 50, "height": 50, "name": "Far"})).unwrap();
-    let dir = std::env::temp_dir().join(format!("photocraft-artboards-931-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-artboards-931-{}", std::process::id()));
     let d = dir.to_string_lossy().into_owned();
     // Moving the board to the origin needs dx = 2^31, one past i32::MAX: an error, not a panic.
     let err = s.execute("file.export.artboardsToFiles", json!({"dir": d})).unwrap_err().to_string();
@@ -363,7 +363,7 @@ fn export_rejects_a_board_too_far_from_the_origin() {
 /// layers and guides, so they land on the same pixels in the exported file.
 #[test]
 fn artboard_export_moves_paths_notes_slices_and_marks_with_the_board() {
-    use photocraft_doc::{CountGroup, NamedPath, Note, Path, Slice, Subpath};
+    use lienzo_doc::{CountGroup, NamedPath, Note, Path, Slice, Subpath};
     let mut s = session(8);
     s.execute("layer.new.artboard", json!({"x": 200, "y": 100, "width": 50, "height": 50})).unwrap();
     s.edit("marks", |d, _| {
@@ -396,7 +396,7 @@ fn board_with_square(s: &mut Session) -> LayerId {
 }
 
 fn red_at(s: &Session, x: i32, y: i32) -> bool {
-    let px = photocraft_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
+    let px = lienzo_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
     px[0] > 0.99 && px[1] < 0.01 && px[3] > 0.99
 }
 
@@ -618,15 +618,15 @@ fn moving_an_artboard_past_the_canvas_keeps_its_shapes_whole() {
 }
 
 /// A type layer as a PSD import leaves it: Photoshop's rendering as the cache (deliberately not
-/// what PhotoCraft would draw, a solid block, so a re-render shows) and Photoshop's `TySh`.
+/// what Lienzo would draw, a solid block, so a re-render shows) and Photoshop's `TySh`.
 fn add_imported_type(s: &mut Session, block: Rect) -> LayerId {
     s.edit("type", |doc, active| {
-        let mut t = photocraft_doc::TextLayer { text: "Hello!".into(), font_family: "No Such Font".into(), size_pt: 26.0, ..Default::default() };
-        t.transform = photocraft_geom::Affine::translate(f64::from(block.x0), f64::from(block.y1));
-        t.psd_raw = Some(std::sync::Arc::new(photocraft_text::psd::build_tysh(&t, 72.0, None)));
+        let mut t = lienzo_doc::TextLayer { text: "Hello!".into(), font_family: "No Such Font".into(), size_pt: 26.0, ..Default::default() };
+        t.transform = lienzo_geom::Affine::translate(f64::from(block.x0), f64::from(block.y1));
+        t.psd_raw = Some(std::sync::Arc::new(lienzo_text::psd::build_tysh(&t, 72.0, None)));
         let fmt = doc.pixel_format();
-        let mut cache = photocraft_raster::Surface::new(fmt);
-        cache.fill_rect(block, &photocraft_raster::from_rgba(&fmt, [0.4, 0.2, 0.6, 1.0]));
+        let mut cache = lienzo_raster::Surface::new(fmt);
+        cache.fill_rect(block, &lienzo_raster::from_rgba(&fmt, [0.4, 0.2, 0.6, 1.0]));
         t.cache = Some(cache);
         let id = doc.insert_above(None, Layer::new("Hello!", LayerContent::Text(t)));
         *active = Some(id);
@@ -635,7 +635,7 @@ fn add_imported_type(s: &mut Session, block: Rect) -> LayerId {
     .unwrap()
 }
 
-fn type_layer(doc: &Document, id: LayerId) -> photocraft_doc::TextLayer {
+fn type_layer(doc: &Document, id: LayerId) -> lienzo_doc::TextLayer {
     match &doc.layer(id).unwrap().content {
         LayerContent::Text(t) => t.clone(),
         other => panic!("not a type layer: {}", other.kind_name()),
@@ -661,9 +661,9 @@ fn artboard_export_keeps_imported_type_as_rendered() {
         // The same pixels, moved to the board's origin: not re-rendered.
         let c = t.cache.as_ref().unwrap();
         assert_eq!(c.content_bounds(), Rect::new(10, 10, 40, 20), "depth {depth}");
-        let px = photocraft_raster::to_rgba(&c.format(), &c.pixel(15, 15));
+        let px = lienzo_raster::to_rgba(&c.format(), &c.pixel(15, 15));
         assert!((px[0] - 0.4).abs() < 0.01 && (px[2] - 0.6).abs() < 0.01, "depth {depth}: {px:?}");
-        let tysh = photocraft_text::psd::parse_tysh(t.psd_raw.as_deref().unwrap()).unwrap();
+        let tysh = lienzo_text::psd::parse_tysh(t.psd_raw.as_deref().unwrap()).unwrap();
         assert_eq!((tysh.transform.m[4], tysh.transform.m[5]), (10.0, 20.0), "the PSD position moves with it");
     }
 }
@@ -1055,7 +1055,7 @@ fn clipped(s: &Session, id: LayerId) -> bool {
 }
 
 fn green_at(s: &Session, x: i32, y: i32) -> bool {
-    let px = photocraft_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
+    let px = lienzo_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1)).px[0];
     px[0] < 0.01 && px[1] > 0.99 && px[3] > 0.99
 }
 

@@ -6,7 +6,7 @@ use super::*;
 fn tmp(name: &str) -> String {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let d = std::env::temp_dir().join(format!("photocraft-open-as-so-{}-{name}-{id}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-open-as-so-{}-{name}-{id}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d.to_string_lossy().into_owned()
@@ -15,8 +15,8 @@ fn tmp(name: &str) -> String {
 /// A small PNG with a gradient, so the pixels differ from place to place.
 fn write_png(dir: &str, name: &str, w: u32, h: u32) -> String {
     let px: Vec<u8> = (0..h).flat_map(|y| (0..w).flat_map(move |x| [(x * 255 / w) as u8, (y * 255 / h) as u8, ((x + y) % 256) as u8])).collect();
-    let img = photocraft_codecs::Image::from_u8(w, h, photocraft_codecs::ChannelLayout::Rgb, px).unwrap();
-    let bytes = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(w, h, lienzo_codecs::ChannelLayout::Rgb, px).unwrap();
+    let bytes = lienzo_codecs::encode(&img, lienzo_codecs::Format::Png, &Default::default()).unwrap();
     let path = join(dir, name);
     std::fs::write(&path, bytes).unwrap();
     path
@@ -35,7 +35,7 @@ fn write_psd16(dir: &str, name: &str, w: u32, h: u32) -> String {
 }
 
 fn imported(path: &str) -> Document {
-    photocraft_io::import(&file_name(path), &std::fs::read(path).unwrap()).unwrap().document
+    lienzo_io::import(&file_name(path), &std::fs::read(path).unwrap()).unwrap().document
 }
 
 fn active(s: &Session) -> &Document {
@@ -91,8 +91,8 @@ fn the_smart_object_shows_the_file() {
     let path = write_png(&dir, "grad.png", 32, 16);
     let mut s = Session::new();
     s.execute("file.openAsSmartObject", json!({"path": path})).unwrap();
-    let want = photocraft_compose::render(&imported(&path), Rect::new(0, 0, 32, 16)).px.clone();
-    let got = photocraft_compose::render(active(&s), Rect::new(0, 0, 32, 16)).px.clone();
+    let want = lienzo_compose::render(&imported(&path), Rect::new(0, 0, 32, 16)).px.clone();
+    let got = lienzo_compose::render(active(&s), Rect::new(0, 0, 32, 16)).px.clone();
     assert_eq!(got, want);
 }
 
@@ -112,7 +112,7 @@ fn a_16_bit_psd_keeps_size_resolution_mode_depth_and_profile() {
     assert_eq!((d.size.width, d.size.height), (40, 30));
     assert_eq!(d.resolution_dpi, 300.0);
     assert_eq!((d.mode, d.depth), (file.mode, file.depth));
-    assert_eq!(d.depth, photocraft_doc::SampleType::U16);
+    assert_eq!(d.depth, lienzo_doc::SampleType::U16);
     assert_eq!(d.icc_profile, file.icc_profile);
     let (layer, original, _) = embedded(&s);
     assert_eq!((layer.as_str(), original.as_str()), ("c.layered", "c.layered.psd"));

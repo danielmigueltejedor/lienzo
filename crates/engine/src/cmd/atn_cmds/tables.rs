@@ -1,7 +1,7 @@
 use super::descriptors::{Target, class, code, get_ref, target};
 use super::{D, Descriptor, ReferenceItem};
 
-/// Photoshop's `BlnM` enumeration ↔ PhotoCraft's blend mode labels.
+/// Photoshop's `BlnM` enumeration ↔ Lienzo's blend mode labels.
 const BLEND_MODES: &[(&str, &str)] = &[
     ("Nrml", "Normal"),
     ("normal", "Normal"),
@@ -59,7 +59,7 @@ pub(super) fn blend_ps(label: &str) -> Option<&'static str> {
     crate::commands::blend_from_str(label).and_then(|m| BLEND_MODES.iter().find(|(_, v)| crate::commands::blend_from_str(v) == Some(m))).map(|(k, _)| *k)
 }
 
-/// Photoshop ↔ PhotoCraft value tables; Photoshop codes compare without their space padding.
+/// Photoshop ↔ Lienzo value tables; Photoshop codes compare without their space padding.
 pub(super) fn lookup<'a>(table: &'a [(&'a str, &'a str)], key: &str) -> Option<&'a str> {
     table.iter().find(|(k, _)| k.trim_end() == key.trim_end()).map(|(_, v)| *v)
 }
@@ -84,7 +84,7 @@ pub(super) const CHANNELS: &[(&str, &str)] = &[
     ("B", "b"),
 ];
 
-/// The channel key of a `Chnl` enumeration. `Lmnc` is what PhotoCraft wrote for Lightness before
+/// The channel key of a `Chnl` enumeration. `Lmnc` is what Lienzo wrote for Lightness before
 /// #9384; reading it keeps those actions loading.
 pub(super) fn channel_of(code: &str) -> Option<&'static str> {
     lookup(CHANNELS, code).or_else(|| (code.trim_end() == "Lmnc").then_some("lightness"))
@@ -148,7 +148,7 @@ pub(super) const PROFILES: &[(&str, &str)] =
 
 /// Smart Blur quality. Photoshop's codes come first, so they are what an export writes (measured in
 /// Photoshop: `Hgh `/`Mdm `/`Low ` play back as its fallback, low quality). The old codes after
-/// them still read, for actions PhotoCraft wrote before.
+/// them still read, for actions Lienzo wrote before.
 pub(super) const SMART_BLUR_QUALITY: &[(&str, &str)] =
     &[("SBQL", "low"), ("SBQM", "medium"), ("SBQH", "high"), ("Hgh ", "high"), ("Mdm ", "medium"), ("Low ", "low")];
 
@@ -172,7 +172,7 @@ pub(super) const MODES: &[(&str, &str)] = &[("RGBM", "rgb"), ("Grys", "grayscale
 pub(super) const MENU_ITEMS: &[(&str, &str)] =
     &[("FtOn", "view.fitOnScreen"), ("ActP", "view.actualPixels"), ("ZmIn", "view.zoomIn"), ("ZmOt", "view.zoomOut")];
 
-/// Save As format classes (`As`) and the extensions PhotoCraft saves them under. The first
+/// Save As format classes (`As`) and the extensions Lienzo saves them under. The first
 /// extension of a class is the one exported, and the first class of an extension is the one
 /// written back. `WebPFormat` is Photoshop's built-in WebP (checked against Photoshop 2026); the
 /// Google classes come from the older WebPShop plug-in and are only read.

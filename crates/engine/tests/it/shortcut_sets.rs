@@ -1,7 +1,7 @@
 //! Edit › Keyboard Shortcuts › Set through `edit.keyboardShortcuts`: save, switch, delete,
 //! export to `.kys` and back, Summarize, and bad params as errors.
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::{Value, json};
 
 fn ks(s: &mut Session, p: Value) -> Value {

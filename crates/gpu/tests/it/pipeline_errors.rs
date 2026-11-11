@@ -4,10 +4,10 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::Document;
-use photocraft_geom::Size;
-use photocraft_gpu::{Compositor, render_to_vec};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::Document;
+use lienzo_geom::Size;
+use lienzo_gpu::{Compositor, render_to_vec};
 
 use crate::GPU_LOCK;
 
@@ -58,7 +58,7 @@ fn a_compositor_with_failed_pipelines_draws_without_panicking() {
 /// Stress test, ignored by default (it builds many compositors). Run it on WARP with FXC, e.g.
 /// `WGPU_BACKEND=dx12 WGPU_DX12_COMPILER=fxc WGPU_ADAPTER_NAME="basic render"
 /// PC_BUILD_ROUNDS=10 PC_BUILDS_PER_DEVICE=50
-/// cargo test -p photocraft-gpu --test it parallel_compositor_builds -- --ignored`.
+/// cargo test -p lienzo-gpu --test it parallel_compositor_builds -- --ignored`.
 /// Windows' full page heap makes the race abort more reliably.
 #[test]
 #[ignore = "stress test: builds many compositors"]

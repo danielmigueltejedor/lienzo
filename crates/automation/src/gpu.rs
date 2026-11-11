@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use photocraft_doc::{DocId, Document, Rect};
-use photocraft_gpu::context::{NativeContext, NativeContextOptions};
-use photocraft_gpu::{Compositor, readback};
-use photocraft_io::{BandRenderer, IoError, RenderBand, RenderError};
+use lienzo_doc::{DocId, Document, Rect};
+use lienzo_gpu::context::{NativeContext, NativeContextOptions};
+use lienzo_gpu::{Compositor, readback};
+use lienzo_io::{BandRenderer, IoError, RenderBand, RenderError};
 
 use crate::AutomationError;
 
@@ -151,7 +151,7 @@ impl BandRenderer for GpuRenderer {
         doc: &Document,
         rect: Rect,
         band_rows: i32,
-        ctl: &photocraft_raster::Interrupt<'_>,
+        ctl: &lienzo_raster::Interrupt<'_>,
         sink: &mut dyn FnMut(RenderBand) -> Result<(), IoError>,
     ) -> Result<(), RenderError> {
         let max_staging = self.max_staging_bytes;

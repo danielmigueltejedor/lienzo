@@ -1,13 +1,13 @@
-use super::{PhotocraftApp, Sense, Tokens, icons, theme, vec2, widgets};
+use super::{LienzoApp, Sense, Tokens, icons, theme, vec2, widgets};
 
 // ----------------------------------------------------------------------------- title bar
 
 /// The app's top bar: brand mark, menus, the document title and the workspace controls. With
-/// [`PhotocraftApp::custom_titlebar`] (Windows and Linux) it is also the window's title bar, as in
+/// [`LienzoApp::custom_titlebar`] (Windows and Linux) it is also the window's title bar, as in
 /// Photoshop on Windows: the caption buttons take its ends (`titlebar`). With the system
 /// title bar (Windows and Linux, `system_title_bar`) the OS draws its own icon and title, so the
 /// in-app bar shows menus and workspace controls only: no brand mark, no centred title.
-pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let custom = app.custom_titlebar;
     let system = system_title_bar(app);
@@ -128,9 +128,9 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                         app.ui.palette_open = !app.ui.palette_open;
                     }
                     let (theme_icon, appearance_label) = match app.session.prefs().interface.appearance_mode {
-                        photocraft_engine::prefs::AppearanceMode::Auto => ("monitor", tl!("Auto")),
-                        photocraft_engine::prefs::AppearanceMode::Dark => ("moon", tl!("Dark")),
-                        photocraft_engine::prefs::AppearanceMode::Light => ("sun", tl!("Light")),
+                        lienzo_engine::prefs::AppearanceMode::Auto => ("monitor", tl!("Auto")),
+                        lienzo_engine::prefs::AppearanceMode::Dark => ("moon", tl!("Dark")),
+                        lienzo_engine::prefs::AppearanceMode::Light => ("sun", tl!("Light")),
                     };
                     let appearance_tip = format!("{}: {}", tl!("Appearance Mode"), appearance_label);
                     if icons_shown >= 2 {
@@ -172,7 +172,7 @@ pub fn title_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// Nodalia's main menu: a 28 pt hamburger with the app's own entries, each with its icon and
 /// shortcut. The work menus (File, Edit, Image…) stay in the menu bar beside it.
-fn main_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn main_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let button = icons::button_with_icon_size_tip(ui, "ndl-menu", 28.0, 18.0, false, "Main Menu", false);
     let entries: [(&str, &str, &str); 4] = [
@@ -209,7 +209,7 @@ fn main_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 /// but keeps the in-app brand mark and centred title, so it never counts as system mode here; nor
 /// does the web build (the browser tab has no document title), nor an embedder or the snapshot
 /// example that never turned the preference on.
-pub fn system_title_bar(app: &PhotocraftApp) -> bool {
+pub fn system_title_bar(app: &LienzoApp) -> bool {
     !app.custom_titlebar && app.session.prefs().interface.system_title_bar && !cfg!(any(target_os = "macos", target_arch = "wasm32"))
 }
 
@@ -217,7 +217,7 @@ pub fn system_title_bar(app: &PhotocraftApp) -> bool {
 /// marks unsaved changes, like the `•` in the app-drawn title), or just the app name with no
 /// document open. With Preferences › Interface › Show File Name In Title off, the file name
 /// drops out and only the app name (and the `*`) remains (#5037).
-pub fn window_title(app: &PhotocraftApp) -> String {
+pub fn window_title(app: &LienzoApp) -> String {
     if !app.session.prefs().interface.show_file_name_in_title {
         return format!("{}Lienzo", if app.session.active().is_some_and(|d| d.is_dirty()) { "*" } else { "" });
     }
@@ -226,7 +226,7 @@ pub fn window_title(app: &PhotocraftApp) -> String {
 
 /// Keep the OS window title (and the taskbar / Alt-Tab entry) on the active file. Sends
 /// `ViewportCommand::Title` only when the title changed since the last frame.
-pub fn sync_window_title(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn sync_window_title(app: &mut LienzoApp, ctx: &egui::Context) {
     let want = window_title(app);
     if app.last_window_title != want {
         app.last_window_title = want.clone();
@@ -235,7 +235,7 @@ pub fn sync_window_title(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// The in-app title line. It reads left to right as a whole, so a right-to-left document name keeps
-/// "— PhotoCraft" after it, at the right; egui orders the name's own words.
+/// "— Lienzo" after it, at the right; egui orders the name's own words.
 pub(crate) fn title_job(title: &str, font: egui::FontId, color: egui::Color32) -> egui::text::LayoutJob {
     let mut job = egui::text::LayoutJob::simple_singleline(title.to_owned(), font, color);
     job.direction = egui::epaint::text::TextDirection::LeftToRight;

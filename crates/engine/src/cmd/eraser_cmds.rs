@@ -8,13 +8,13 @@
 //! the lock on. Both respect the selection, work in the layer's own colour model and depth, and are
 //! one undo step per click / stroke.
 
-use photocraft_algo::selection as sel;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId};
-use photocraft_geom::Rect;
-use photocraft_paint::Stroke;
-use photocraft_paint::bg_erase::{BgEraseSettings, apply_background_eraser, background_eraser_effect, background_eraser_stroke};
-use photocraft_paint::replace::{Limits, Sampling};
+use lienzo_algo::selection as sel;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId};
+use lienzo_geom::Rect;
+use lienzo_paint::Stroke;
+use lienzo_paint::bg_erase::{BgEraseSettings, apply_background_eraser, background_eraser_effect, background_eraser_stroke};
+use lienzo_paint::replace::{Limits, Sampling};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -127,8 +127,8 @@ fn magic_eraser(s: &mut Session, p: &Value) -> Result<Value> {
         let surf = l.surface_mut().ok_or_else(|| bad(CMD, "not a pixel layer"))?;
         let fmt = surf.format();
         // Locked transparency: paint the background colour instead (Photoshop).
-        let lock_color = lock.then(|| photocraft_raster::from_rgba(&fmt, [bg[0], bg[1], bg[2], 1.0]));
-        Ok(photocraft_algo::erase::magic_erase(surf, &region, opacity, selection.as_ref(), lock_color.as_deref()))
+        let lock_color = lock.then(|| lienzo_raster::from_rgba(&fmt, [bg[0], bg[1], bg[2], 1.0]));
+        Ok(lienzo_algo::erase::magic_erase(surf, &region, opacity, selection.as_ref(), lock_color.as_deref()))
     })?;
     Ok(damage(s, dmg, true))
 }
@@ -180,7 +180,7 @@ fn background_eraser(s: &mut Session, p: &Value) -> Result<Value> {
         let surf = l.surface_mut().ok_or_else(|| bad(CMD, "not a pixel layer"))?;
         if let Some(colors) = colors {
             let effect = selected_background_effect(surf, &bs, colors, bg);
-            Ok(photocraft_paint::retouch::apply_dab_stroke(surf, &background_eraser_stroke(&stroke), selection.as_ref(), false, 0, effect))
+            Ok(lienzo_paint::retouch::apply_dab_stroke(surf, &background_eraser_stroke(&stroke), selection.as_ref(), false, 0, effect))
         } else {
             Ok(apply_background_eraser(surf, &stroke, &bs, selection.as_ref()))
         }
@@ -189,22 +189,22 @@ fn background_eraser(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn selected_background_effect(
-    pre: &photocraft_raster::Surface,
+    pre: &lienzo_raster::Surface,
     bs: &BgEraseSettings,
     colors: crate::color_channels::ColorChannels,
     bg: [f32; 4],
 ) -> crate::retouch_cmds::DabEffect {
     let fmt = pre.format();
     let alpha = fmt.mode.color_channels();
-    let background = photocraft_raster::from_rgba(&fmt, [bg[0], bg[1], bg[2], 1.0]);
+    let background = lienzo_raster::from_rgba(&fmt, [bg[0], bg[1], bg[2], 1.0]);
     // Opaque Backgrounds have no alpha sample. The matching algorithm uses a temporary opaque
     // alpha to calculate erased coverage; the real layer keeps its original format and identity.
-    let opaque = pre.convert(photocraft_color::PixelFormat::new(fmt.mode, fmt.sample, true));
+    let opaque = pre.convert(lienzo_color::PixelFormat::new(fmt.mode, fmt.sample, true));
     let Some(mut effect) = background_eraser_effect(&opaque, bs) else {
         return Box::new(|_, _| {});
     };
     Box::new(move |region, footprint| {
-        use photocraft_paint::retouch::Region;
+        use lienzo_paint::retouch::Region;
         let count = region.ch.max(1);
         let before = region.data.clone();
         let mut work = Region::new(region.rect, alpha + 1);
@@ -258,7 +258,7 @@ pub fn live_background_eraser(s: &Session, p: &Value) -> Result<crate::retouch_c
     let mut live = crate::retouch_cmds::LiveDab::with_effect_on(doc, CMD, &json!({}), stroke, Some(id), 0, |pre| match background_eraser_effect(pre, &bs) {
         Some(effect) => Box::new(effect),
         // No alpha: the commit erases nothing either.
-        None => Box::new(|_: &mut photocraft_paint::retouch::Region, _: &photocraft_paint::retouch::Footprint| {}),
+        None => Box::new(|_: &mut lienzo_paint::retouch::Region, _: &lienzo_paint::retouch::Footprint| {}),
     })?
     .unlocked();
     live.push(&points)?;

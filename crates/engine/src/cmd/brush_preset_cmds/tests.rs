@@ -41,7 +41,7 @@ fn move_within_and_between_groups() {
     // A built-in moved to another group becomes the user's.
     let b = s.tools.presets.iter().find(|x| x.builtin).unwrap().name.clone();
     s.execute("brush.presets.move", json!({"name": b, "group": "Beta", "index": 0})).unwrap();
-    let moved = photocraft_paint::presets::find(&s.tools.presets, &b).unwrap();
+    let moved = lienzo_paint::presets::find(&s.tools.presets, &b).unwrap();
     assert!(!moved.builtin && moved.group == "Beta");
     assert_eq!(names(&s, "Beta")[0], b);
 }
@@ -72,13 +72,13 @@ fn groups_move_rename_and_delete() {
 fn rename_checks_names() {
     let mut s = with_groups();
     s.execute("brush.presets.rename", json!({"name": "a1", "newName": "Alpha One"})).unwrap();
-    assert!(photocraft_paint::presets::find(&s.tools.presets, "Alpha One").is_some());
+    assert!(lienzo_paint::presets::find(&s.tools.presets, "Alpha One").is_some());
     assert!(s.execute("brush.presets.rename", json!({"name": "A2", "newName": "alpha one"})).is_err());
     // Case-only renames of itself are fine.
     s.execute("brush.presets.rename", json!({"name": "Alpha One", "newName": "ALPHA ONE"})).unwrap();
     let b = s.tools.presets.iter().find(|x| x.builtin).unwrap().name.clone();
     s.execute("brush.presets.rename", json!({"name": b, "newName": "My Round"})).unwrap();
-    assert!(!photocraft_paint::presets::find(&s.tools.presets, "My Round").unwrap().builtin);
+    assert!(!lienzo_paint::presets::find(&s.tools.presets, "My Round").unwrap().builtin);
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn with_folders() -> Session {
 }
 
 fn folder_of(s: &Session, n: &str) -> Vec<String> {
-    photocraft_paint::presets::find(&s.tools.presets, n).unwrap().folder.clone()
+    lienzo_paint::presets::find(&s.tools.presets, n).unwrap().folder.clone()
 }
 
 #[test]
@@ -185,8 +185,8 @@ fn folders_move_rename_and_delete() {
     // Delete a nested folder: only the presets in it (and below) go.
     let r = s.execute("brush.presets.deleteGroup", json!({"group": "Kit", "folder": ["Inks"]})).unwrap();
     assert_eq!(r["deleted"], 3);
-    assert!(photocraft_paint::presets::find(&s.tools.presets, "S0").is_some());
-    assert!(photocraft_paint::presets::find(&s.tools.presets, "D1").is_some());
+    assert!(lienzo_paint::presets::find(&s.tools.presets, "S0").is_some());
+    assert!(lienzo_paint::presets::find(&s.tools.presets, "D1").is_some());
 }
 
 #[test]
@@ -253,7 +253,7 @@ fn folders_move_into_folders_and_groups() {
     let r = s.execute("brush.presets.moveGroup", json!({"group": "Other", "folder": ["Ink", "Fine"], "into": {}})).unwrap();
     assert_eq!(r["group"], "Fine");
     assert_eq!(folder_of(&s, "D1"), ["Dry"]);
-    assert_eq!(photocraft_paint::presets::find(&s.tools.presets, "F1").unwrap().group, "Fine");
+    assert_eq!(lienzo_paint::presets::find(&s.tools.presets, "F1").unwrap().group, "Fine");
     // A whole group into another group's folder.
     s.execute("brush.presets.moveGroup", json!({"group": "Fine", "into": {"group": "Set"}})).unwrap();
     assert!(names(&s, "Fine").is_empty());

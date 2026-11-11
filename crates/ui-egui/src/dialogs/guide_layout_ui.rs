@@ -1,24 +1,24 @@
 //! Photoshop-style guide layout dialog. Its preview is a pure guide overlay, never an edit.
 
 use egui::{Color32, Stroke};
-use photocraft_doc::{Document, Guides};
-use photocraft_engine::prefs::Unit;
+use lienzo_doc::{Document, Guides};
+use lienzo_engine::prefs::Unit;
 use serde_json::{Map, Value, json};
 
-use crate::{PhotocraftApp, theme::Tokens, widgets};
+use crate::{LienzoApp, theme::Tokens, widgets};
 
 const COMMAND: &str = "view.newGuideLayout";
 const MARK: &str = "__guideLayout";
 
 /// A `"#rrggbb"` colour as drawn.
 fn rgb(hex: &str) -> Option<Color32> {
-    photocraft_engine::prefs::parse_hex(hex).map(|[r, g, b]| Color32::from_rgb(r, g, b))
+    lienzo_engine::prefs::parse_hex(hex).map(|[r, g, b]| Color32::from_rgb(r, g, b))
 }
 
 /// The Color list: New Guide's colours (`GUIDE_COLORS`) by their `"#rrggbb"`, then `current` as
 /// Custom when it's none of them.
 fn color_options(current: &str) -> Vec<(String, &'static str)> {
-    let mut colors: Vec<(String, &'static str)> = photocraft_engine::edit_cmds::GUIDE_COLORS
+    let mut colors: Vec<(String, &'static str)> = lienzo_engine::edit_cmds::GUIDE_COLORS
         .iter()
         .map(|(name, [r, g, b])| (format!("#{r:02x}{g:02x}{b:02x}"), crate::new_guide_ui::color_label(name)))
         .collect();
@@ -32,7 +32,7 @@ pub fn owns(f: &Map<String, Value>) -> bool {
     f.contains_key(MARK)
 }
 
-fn ruler_unit(app: &PhotocraftApp) -> Unit {
+fn ruler_unit(app: &LienzoApp) -> Unit {
     app.session.prefs().units_and_rulers.rulers
 }
 
@@ -45,14 +45,14 @@ fn with_unit(value: &str, unit: Unit) -> String {
 const FIELD_DECIMALS: usize = 3;
 
 /// Document pixels in the active document's ruler unit: "0.706 cm", "0.278 in", "20 px".
-pub(crate) fn in_ruler_unit(app: &PhotocraftApp, px: f64, along_x: bool) -> String {
+pub(crate) fn in_ruler_unit(app: &LienzoApp, px: f64, along_x: bool) -> String {
     let units = &app.session.prefs().units_and_rulers;
     let (dpi, extent) = app.session.active().map_or((72.0, 1.0), |st| {
         let d = &st.doc;
         (f64::from(d.resolution_dpi.max(1.0)), f64::from(if along_x { d.size.width } else { d.size.height }))
     });
     let v = units.rulers.from_px(px, dpi, extent, units.point_size.per_inch());
-    with_unit(&photocraft_engine::prefs::fmt_decimals(v, FIELD_DECIMALS), units.rulers)
+    with_unit(&lienzo_engine::prefs::fmt_decimals(v, FIELD_DECIMALS), units.rulers)
 }
 
 /// The unit a field's text names, or `fallback` when it names none.
@@ -62,7 +62,7 @@ fn text_unit(text: &str, fallback: Unit) -> Unit {
 
 /// The text a field settles on when it loses focus. A bare number takes `unit`, the unit the
 /// field showed when it got focus (after "2 mm", a typed "5" becomes "5 mm").
-fn normalize_field_text(text: &str, app: &PhotocraftApp, along_x: bool, optional: bool, unit: Unit) -> Option<String> {
+fn normalize_field_text(text: &str, app: &LienzoApp, along_x: bool, optional: bool, unit: Unit) -> Option<String> {
     let t = text.trim();
     if t.is_empty() {
         if optional {
@@ -75,10 +75,10 @@ fn normalize_field_text(text: &str, app: &PhotocraftApp, along_x: bool, optional
         Some((v, typed)) => (v, typed.unwrap_or(unit)),
         None => (widgets::parse_num(t)?, unit),
     };
-    Some(with_unit(&photocraft_engine::prefs::fmt_decimals(v, FIELD_DECIMALS), unit))
+    Some(with_unit(&lienzo_engine::prefs::fmt_decimals(v, FIELD_DECIMALS), unit))
 }
 
-fn parse_length_str(text: &str, app: &PhotocraftApp, along_x: bool) -> Option<f64> {
+fn parse_length_str(text: &str, app: &LienzoApp, along_x: bool) -> Option<f64> {
     let t = text.trim();
     if t.is_empty() {
         return None;
@@ -111,7 +111,7 @@ fn percent_of(text: &str, ruler: Unit) -> Option<f64> {
     }
 }
 
-fn format_stored_length(app: &PhotocraftApp, val: &Value, along_x: bool, optional: bool) -> Value {
+fn format_stored_length(app: &LienzoApp, val: &Value, along_x: bool, optional: bool) -> Value {
     match val {
         Value::Number(n) => {
             let px = n.as_f64().unwrap_or(0.0);
@@ -122,7 +122,7 @@ fn format_stored_length(app: &PhotocraftApp, val: &Value, along_x: bool, optiona
             if t.is_empty() {
                 if optional { Value::Null } else { json!(in_ruler_unit(app, 0.0, along_x)) }
             } else if let Some(pct) = percent_of(t, ruler_unit(app)) {
-                if optional && pct <= 0.0 { Value::Null } else { json!(with_unit(&photocraft_engine::prefs::fmt_decimals(pct, FIELD_DECIMALS), Unit::Percent)) }
+                if optional && pct <= 0.0 { Value::Null } else { json!(with_unit(&lienzo_engine::prefs::fmt_decimals(pct, FIELD_DECIMALS), Unit::Percent)) }
             } else if let Some(px) = parse_length_str(t, app, along_x) {
                 if optional && px <= 0.0 { Value::Null } else { json!(in_ruler_unit(app, px, along_x)) }
             } else {
@@ -140,7 +140,7 @@ fn format_stored_length(app: &PhotocraftApp, val: &Value, along_x: bool, optiona
 }
 
 /// Alt+Cancel (Reset): factory New Guide Layout values, not the last-used remembered layout.
-pub fn reset(app: &PhotocraftApp, f: &mut Map<String, Value>) {
+pub fn reset(app: &LienzoApp, f: &mut Map<String, Value>) {
     if !owns(f) {
         return;
     }
@@ -175,7 +175,7 @@ fn positive(f: &Map<String, Value>, key: &str) -> bool {
     f.get(key).and_then(Value::as_f64).is_some_and(|n| n > 0.0)
 }
 
-pub fn open(app: &mut PhotocraftApp) -> u64 {
+pub fn open(app: &mut LienzoApp) -> u64 {
     let mut f = app.ui.view.guide_layout.as_object().cloned().unwrap_or_default();
     f.insert(MARK.into(), json!(true));
     f.insert("__command".into(), json!(COMMAND));
@@ -184,7 +184,7 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
     f.insert("__preview".into(), json!(true));
     f.insert("color".into(), json!(app.session.prefs().guides_grid_and_slices.guide_color));
     f.entry("target").or_insert_with(|| json!("document"));
-    if f.get("target").and_then(Value::as_str) == Some("selectedArtboards") && photocraft_engine::guide_layout::selected_artboards(&app.session).is_empty() {
+    if f.get("target").and_then(Value::as_str) == Some("selectedArtboards") && lienzo_engine::guide_layout::selected_artboards(&app.session).is_empty() {
         f.insert("target".into(), json!("document"));
     }
     f.entry("__preset").or_insert_with(|| json!("custom"));
@@ -223,7 +223,7 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
     app.ui.open_dialog(crate::state::DialogKind::Command, f)
 }
 
-fn parse_length_value(val: Option<&Value>, app: Option<&PhotocraftApp>, along_x: bool, optional: bool) -> Value {
+fn parse_length_value(val: Option<&Value>, app: Option<&LienzoApp>, along_x: bool, optional: bool) -> Value {
     match val {
         Some(Value::Number(n)) => {
             if let Some(num) = n.as_f64() {
@@ -276,7 +276,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
     params_with(None, f)
 }
 
-pub fn params_with(app: Option<&PhotocraftApp>, f: &Map<String, Value>) -> Value {
+pub fn params_with(app: Option<&LienzoApp>, f: &Map<String, Value>) -> Value {
     let mut p: Map<String, Value> = ["columns", "rows", "width", "height", "gutter", "rowGutter", "margin", "centerColumns", "clearExisting", "target"]
         .into_iter()
         .filter_map(|k| f.get(k).cloned().map(|v| (k.to_string(), v)))
@@ -320,11 +320,11 @@ pub fn params_with(app: Option<&PhotocraftApp>, f: &Map<String, Value>) -> Value
     Value::Object(p)
 }
 
-fn source(app: &PhotocraftApp) -> Value {
+fn source(app: &LienzoApp) -> Value {
     app.session.active().map(|st| json!([st.doc.id, st.revision, st.active_layer, st.selected_layers])).unwrap_or(Value::Null)
 }
 
-fn calculate(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Guides, String> {
+fn calculate(app: &LienzoApp, f: &Map<String, Value>) -> Result<Guides, String> {
     let st = app.session.active().ok_or("no document")?;
     if f.get("__document") != Some(&json!(st.doc.id)) {
         return Err("the guide layout belongs to another document".into());
@@ -337,16 +337,16 @@ fn calculate(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<Guides, Stri
     {
         return Ok(guides);
     }
-    photocraft_engine::guide_layout::calculate(&app.session, &params).map(|l| l.guides).map_err(|e| e.to_string())
+    lienzo_engine::guide_layout::calculate(&app.session, &params).map(|l| l.guides).map_err(|e| e.to_string())
 }
 
-pub fn validate(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<(), String> {
+pub fn validate(app: &LienzoApp, f: &Map<String, Value>) -> Result<(), String> {
     let color = f.get("color").and_then(Value::as_str).unwrap_or("#4affff");
     rgb(color).ok_or("invalid guide color")?;
     calculate(app, f).map(|_| ())
 }
 
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     validate(app, f)?;
     let color = f.get("color").and_then(Value::as_str).unwrap_or("#4affff");
     // Colour is the existing global guide display preference, not document data.
@@ -382,7 +382,7 @@ pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value,
 }
 
 /// Full replacement guide set for the dialog's own document. Cancel/removal drops it immediately.
-pub fn preview(app: &PhotocraftApp, doc: &Document) -> Option<(Guides, Color32)> {
+pub fn preview(app: &LienzoApp, doc: &Document) -> Option<(Guides, Color32)> {
     let dialog = app.ui.dialogs.iter().rev().find(|d| owns(&d.fields))?;
     let f = &dialog.fields;
     if !on(f, "__preview", true) || f.get("__document") != Some(&json!(doc.id)) {
@@ -421,7 +421,7 @@ fn should_select_all(response: &egui::Response, ui: &egui::Ui) -> bool {
             || (!response.clicked() && !response.dragged() && !ui.input(|i| i.pointer.any_click() || i.pointer.any_down())))
 }
 
-fn length_field(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, key: &str, label: egui::Id, optional: bool, along_x: bool) {
+fn length_field(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, key: &str, label: egui::Id, optional: bool, along_x: bool) {
     let mut value = f.get(key).cloned().unwrap_or(Value::Null);
     let response = unit_edit(app, ui, key, &mut value, optional, along_x, 68.0).labelled_by(label);
     if f.get(key).unwrap_or(&Value::Null) != &value {
@@ -433,7 +433,7 @@ fn length_field(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Valu
 }
 
 /// A length field that takes any unit. Its text is stored as typed and settles on lost focus.
-fn unit_edit(app: &PhotocraftApp, ui: &mut egui::Ui, id_salt: &str, value: &mut Value, optional: bool, along_x: bool, width: f32) -> egui::Response {
+fn unit_edit(app: &LienzoApp, ui: &mut egui::Ui, id_salt: &str, value: &mut Value, optional: bool, along_x: bool, width: f32) -> egui::Response {
     let mut text = match value {
         Value::String(s) => s.clone(),
         Value::Number(n) => {
@@ -477,7 +477,7 @@ fn group<R>(ui: &mut egui::Ui, content: impl FnOnce(&mut egui::Ui) -> R) -> R {
     egui::Frame::new().stroke(Stroke::new(1.0, t.field_border)).inner_margin(8).show(ui, |ui| ui.vertical(content).inner).inner
 }
 
-fn axis(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, rows: bool) {
+fn axis(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, rows: bool) {
     let (toggle, count, size, gap, title, size_label) = if rows {
         ("__rowsEnabled", "rows", "height", "rowGutter", tl!("Rows"), tl!("Height"))
     } else {
@@ -505,7 +505,7 @@ fn axis(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, rows
     });
 }
 
-fn main_fields(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+fn main_fields(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let before: Map<String, Value> = f.iter().filter(|(key, _)| !key.starts_with("__preview")).map(|(k, v)| (k.clone(), v.clone())).collect();
     egui::Grid::new("guide-header").spacing([8.0, 6.0]).show(ui, |ui| {
         ui.label(tl!("Preset:"));
@@ -557,7 +557,7 @@ fn main_fields(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value
         ui.label(tl!("Target:"));
         let mut target = f.get("target").and_then(Value::as_str).unwrap_or("document").to_string();
         let mut options = vec![("document".to_string(), "Document")];
-        if !photocraft_engine::guide_layout::selected_artboards(&app.session).is_empty() {
+        if !lienzo_engine::guide_layout::selected_artboards(&app.session).is_empty() {
             options.push(("selectedArtboards".into(), "Selected Artboards"));
         }
         if widgets::dropdown(ui, "guide-target", tl!("Target"), &mut target, &options, 222.0) {
@@ -627,7 +627,7 @@ fn main_fields(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value
 }
 
 /// Own the action rail as well as the body, so OK/Cancel/Preview follow Photoshop's arrangement.
-pub fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, interactive: bool) -> Option<bool> {
+pub fn body(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, interactive: bool) -> Option<bool> {
     let before = (params_with(Some(app), f), on(f, "__preview", true), f.get("color").cloned());
     let mut outcome = None;
     ui.horizontal_top(|ui| {

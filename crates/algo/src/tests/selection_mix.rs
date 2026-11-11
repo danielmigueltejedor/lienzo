@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{PixelFormat, SampleType};
+use lienzo_color::{PixelFormat, SampleType};
 
 fn selection(coverage: f32) -> Surface {
     Surface::with_default(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false), &[coverage])

@@ -7,8 +7,8 @@ use super::{Color32, Document, LayerContent, LayerId, ViewXform, pos2};
 pub(super) fn preview_image(
     doc: &Document,
     id: LayerId,
-    lifted: Option<&photocraft_raster::Surface>,
-    b: photocraft_geom::Rect,
+    lifted: Option<&lienzo_raster::Surface>,
+    b: lienzo_geom::Rect,
     max_side: usize,
     bare: bool,
 ) -> (egui::ColorImage, [f32; 2]) {
@@ -17,7 +17,7 @@ pub(super) fn preview_image(
     let mask = layer.and_then(|l| preview_mask(l, b));
     // Groups and type/fill layers preview from a flattened render of just that layer.
     let rendered;
-    let surf: Option<&photocraft_raster::Surface> = match (lifted, layer.and_then(|l| l.surface())) {
+    let surf: Option<&lienzo_raster::Surface> = match (lifted, layer.and_then(|l| l.surface())) {
         (Some(s), _) => Some(s),
         (None, Some(s)) if layer.is_some_and(|l| matches!(l.content, LayerContent::Raster(_))) => Some(s),
         _ => {
@@ -36,8 +36,8 @@ pub(super) fn preview_image(
                 l.opacity = 1.0;
                 l.fill_opacity = 1.0;
             }
-            let buf = photocraft_compose::render(&solo, b);
-            let mut s = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+            let buf = lienzo_compose::render(&solo, b);
+            let mut s = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
             let flat: Vec<f32> = buf.px.iter().flat_map(|p| *p).collect();
             s.write_region(b, &flat);
             rendered = s;
@@ -53,14 +53,14 @@ pub(super) fn preview_image(
 /// The layer's masks as the moving texels carry them: the enabled masks when all of them are linked
 /// (the vector mask and feathering folded in as the compositor applies them), else the linked
 /// pixel mask alone. `None` when no enabled mask moves with the pixels.
-fn preview_mask(l: &photocraft_doc::Layer, b: photocraft_geom::Rect) -> Option<crate::transform_tex::PreviewMask> {
+fn preview_mask(l: &lienzo_doc::Layer, b: lienzo_geom::Rect) -> Option<crate::transform_tex::PreviewMask> {
     use crate::transform_tex::PreviewMask;
     let pixel = l.mask.as_ref().filter(|m| m.enabled);
     let vector = l.vector_mask.as_ref().filter(|v| v.enabled);
     let linked_pixel = pixel.filter(|m| m.linked);
     if pixel.is_none_or(|m| m.linked)
         && vector.is_none_or(|v| v.linked)
-        && let Some(surface) = photocraft_compose::masks::combined_mask(l, b)
+        && let Some(surface) = lienzo_compose::masks::combined_mask(l, b)
     {
         return Some(PreviewMask { surface, density: 1.0 });
     }
@@ -79,7 +79,7 @@ pub(super) struct Above {
     /// The covering layers (whole layers or groups, at any depth).
     pub(super) ids: Vec<LayerId>,
     /// Their composite and the canvas area it covers; `None` when nothing visible covers the layer.
-    pub(super) shown: Option<(crate::transform_tex::PreviewTextures, photocraft_geom::Rect)>,
+    pub(super) shown: Option<(crate::transform_tex::PreviewTextures, lienzo_geom::Rect)>,
 }
 
 /// What covers a layer ([`covering`]) and the document to composite it from: the cheap half of
@@ -87,7 +87,7 @@ pub(super) struct Above {
 pub(super) struct AbovePlan {
     pub(super) ids: Vec<LayerId>,
     up: Document,
-    rect: photocraft_geom::Rect,
+    rect: lienzo_geom::Rect,
 }
 
 impl AbovePlan {
@@ -107,7 +107,7 @@ impl AbovePlan {
             .layers
             .iter()
             .filter(|l| l.visible)
-            .fold(photocraft_geom::Rect::EMPTY, |r, l| r.union(&photocraft_compose::composite_bounds(l, canvas).unwrap_or(canvas)))
+            .fold(lienzo_geom::Rect::EMPTY, |r, l| r.union(&lienzo_compose::composite_bounds(l, canvas).unwrap_or(canvas)))
             .intersect(&canvas);
         Self { ids, up, rect }
     }
@@ -123,12 +123,12 @@ impl AbovePlan {
     }
 
     /// Leave the covering layers out of `layers` (the document under the box).
-    pub(super) fn hide_in(&self, layers: &mut [photocraft_doc::Layer]) {
+    pub(super) fn hide_in(&self, layers: &mut [lienzo_doc::Layer]) {
         hide_ids(&self.ids, layers);
     }
 }
 
-fn hide_ids(ids: &[LayerId], layers: &mut [photocraft_doc::Layer]) {
+fn hide_ids(ids: &[LayerId], layers: &mut [lienzo_doc::Layer]) {
     for l in layers.iter_mut() {
         if ids.contains(&l.id) {
             l.visible = false;
@@ -159,12 +159,12 @@ impl Above {
     }
 
     /// Leave the covering layers out of `layers` (the document under the box).
-    pub(super) fn hide_in(&self, layers: &mut [photocraft_doc::Layer]) {
+    pub(super) fn hide_in(&self, layers: &mut [lienzo_doc::Layer]) {
         hide_ids(&self.ids, layers);
     }
 
     /// Draw the composite over the moving pixels.
-    pub(super) fn draw(&self, painter: &egui::Painter, xf: &ViewXform, display: Option<&photocraft_engine::display_color::CanvasDisplay>) {
+    pub(super) fn draw(&self, painter: &egui::Painter, xf: &ViewXform, display: Option<&lienzo_engine::display_color::CanvasDisplay>) {
         let Some((texture, r)) = &self.shown else { return };
         let (tex, uv) = texture.pick_display(painter.ctx(), xf.zoom * painter.ctx().pixels_per_point(), 1.0, false, display);
         let mut mesh = egui::Mesh::with_texture(tex);
@@ -180,12 +180,12 @@ impl Above {
 
 /// `rect` of `doc`'s composite as premultiplied texels: full resolution when it fits in
 /// `max_side`, composited in bands (no full-size float copy), else area-averaged down to fit.
-pub(super) fn composite_image(doc: &Document, rect: photocraft_geom::Rect, max_side: usize) -> (egui::ColorImage, [f32; 2]) {
+pub(super) fn composite_image(doc: &Document, rect: lienzo_geom::Rect, max_side: usize) -> (egui::ColorImage, [f32; 2]) {
     let (w, h) = (rect.width() as usize, rect.height() as usize);
     let to_color = |p: &[u8; 4]| Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3]);
     if w.max(h) <= max_side.max(1) {
         let mut px = Vec::with_capacity(w * h);
-        let _ = photocraft_compose::render_bands(doc, rect, 0, |band| {
+        let _ = lienzo_compose::render_bands(doc, rect, 0, |band| {
             px.extend(band.to_rgba8().pixels.as_chunks::<4>().0.iter().map(to_color));
             Ok::<(), ()>(())
         });
@@ -194,7 +194,7 @@ pub(super) fn composite_image(doc: &Document, rect: photocraft_geom::Rect, max_s
     }
     let k = w.max(h).div_ceil(max_side.max(1));
     let (tw, th) = (w.div_ceil(k).max(1), h.div_ceil(k).max(1));
-    let buf = photocraft_compose::render_reduced_rect(doc, rect, tw as u32, th as u32);
+    let buf = lienzo_compose::render_reduced_rect(doc, rect, tw as u32, th as u32);
     let px: Vec<Color32> = buf.to_rgba8().pixels.as_chunks::<4>().0.iter().map(to_color).collect();
     let [bw, bh] = [buf.rect.width() as usize, buf.rect.height() as usize];
     if px.len() != bw * bh || bw == 0 || bh == 0 {
@@ -207,8 +207,8 @@ pub(super) fn composite_image(doc: &Document, rect: photocraft_geom::Rect, max_s
 /// the moving pixels on its own: a Normal layer that isn't an adjustment, or a Normal or Pass
 /// Through group of such layers (hidden layers count, they draw nothing). Adjustment layers and
 /// the other blend modes depend on what is under them.
-fn plain(l: &photocraft_doc::Layer) -> bool {
-    use photocraft_color::BlendMode;
+fn plain(l: &lienzo_doc::Layer) -> bool {
+    use lienzo_color::BlendMode;
     !l.visible
         || match &l.content {
             LayerContent::Adjustment(_) => false,
@@ -224,7 +224,7 @@ fn plain(l: &photocraft_doc::Layer) -> bool {
 /// layer (#9387). An adjustment layer over covering layers goes to `applied`: it stays under the
 /// box and is composited with them as well, so they keep its adjustment. A clipping group goes as
 /// a whole, and the layers clipped to `id` (or to the group holding it) stay with it.
-pub(super) fn covering(layers: &[photocraft_doc::Layer], id: LayerId, out: &mut Vec<LayerId>, applied: &mut Vec<LayerId>) {
+pub(super) fn covering(layers: &[lienzo_doc::Layer], id: LayerId, out: &mut Vec<LayerId>, applied: &mut Vec<LayerId>) {
     // Adjustments met since the last covering layer: they count once one lies under them.
     let mut pending: Vec<LayerId> = Vec::new();
     let mut end = layers.len();
@@ -240,7 +240,7 @@ pub(super) fn covering(layers: &[photocraft_doc::Layer], id: LayerId, out: &mut 
             if let [g] = unit
                 && g.id != id
                 && let LayerContent::Group(group) = &g.content
-                && matches!(g.blend, photocraft_color::BlendMode::Normal | photocraft_color::BlendMode::PassThrough)
+                && matches!(g.blend, lienzo_color::BlendMode::Normal | lienzo_color::BlendMode::PassThrough)
             {
                 let before = out.len();
                 covering(&group.children, id, out, applied);
@@ -266,7 +266,7 @@ pub(super) fn covering(layers: &[photocraft_doc::Layer], id: LayerId, out: &mut 
 }
 
 /// Hide everything in `layers` but the `keep` layers and the groups holding them.
-pub(super) fn show_only(layers: &mut [photocraft_doc::Layer], keep: &[LayerId]) {
+pub(super) fn show_only(layers: &mut [lienzo_doc::Layer], keep: &[LayerId]) {
     for l in layers.iter_mut() {
         if keep.contains(&l.id) {
             continue;
@@ -276,7 +276,7 @@ pub(super) fn show_only(layers: &mut [photocraft_doc::Layer], keep: &[LayerId]) 
                 // This ancestor only clips the covering children. Its background is already
                 // on the base canvas; drawing it again would cover the moving layer in white.
                 if let Some(board) = &mut g.artboard {
-                    board.background = photocraft_doc::ArtboardBackground::Transparent;
+                    board.background = lienzo_doc::ArtboardBackground::Transparent;
                 }
                 show_only(&mut g.children, keep);
             }
@@ -289,7 +289,7 @@ pub(super) fn show_only(layers: &mut [photocraft_doc::Layer], keep: &[LayerId]) 
 /// is detached from its clipping base because the base is hidden in this isolated render (#5239).
 /// Hide every layer but `id` and the groups holding it, and unclip those, so a render shows that
 /// layer alone (the Free Transform preview, Liquify's one-layer backdrop).
-pub(crate) fn solo_layer(layers: &mut [photocraft_doc::Layer], id: LayerId) {
+pub(crate) fn solo_layer(layers: &mut [lienzo_doc::Layer], id: LayerId) {
     for l in layers {
         if l.id == id {
             l.clipped = false;
@@ -300,7 +300,7 @@ pub(crate) fn solo_layer(layers: &mut [photocraft_doc::Layer], id: LayerId) {
                 l.clipped = false;
                 // Isolate the child, not the artboard's paper. Keep the board for clipping.
                 if let Some(board) = &mut g.artboard {
-                    board.background = photocraft_doc::ArtboardBackground::Transparent;
+                    board.background = lienzo_doc::ArtboardBackground::Transparent;
                 }
                 solo_layer(&mut g.children, id);
             }
@@ -309,6 +309,6 @@ pub(crate) fn solo_layer(layers: &mut [photocraft_doc::Layer], id: LayerId) {
     }
 }
 
-fn contains(l: &photocraft_doc::Layer, id: LayerId) -> bool {
+fn contains(l: &lienzo_doc::Layer, id: LayerId) -> bool {
     l.id == id || matches!(&l.content, LayerContent::Group(g) if g.children.iter().any(|c| contains(c, id)))
 }

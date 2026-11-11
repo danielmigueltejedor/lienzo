@@ -22,7 +22,7 @@
 
 use super::type_cmds::{commits_as_selection, name_selection_commit, new_text_layer};
 use super::*;
-use photocraft_doc::text::{Orientation, TextShape};
+use lienzo_doc::text::{Orientation, TextShape};
 
 /// The typing session's coalesce key, as `ui-egui`'s `session_key` gives one.
 const SESSION: &str = "type-session-12041";

@@ -1,8 +1,8 @@
 use super::*;
 use crate::canvas::tool_event;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]) {
     let m = egui::Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
@@ -13,7 +13,7 @@ fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
 /// drawn rect; with the elliptical button the frame's corners are hidden.
 #[test]
 fn frame_tool_draws_rectangular_and_elliptical_frames() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -27,7 +27,7 @@ fn frame_tool_draws_rectangular_and_elliptical_frames() {
     ctx.end_pass().textures_delta.clear();
     assert_eq!(app.ui.tool, Tool::Frame);
 
-    let frame = |app: &PhotocraftApp| {
+    let frame = |app: &LienzoApp| {
         let st = app.session.active().unwrap();
         let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
         assert!(matches!(l.content, LayerContent::Group(_)) && l.name.starts_with("Frame"), "the new frame is selected");
@@ -49,15 +49,15 @@ fn frame_tool_draws_rectangular_and_elliptical_frames() {
     assert_eq!(frame(&app).0, id);
 }
 
-struct TestMask(photocraft_doc::Path);
+struct TestMask(lienzo_doc::Path);
 impl TestMask {
     fn value(&self, x: i32, y: i32) -> f32 {
-        photocraft_vector::path_coverage(&self.0, Rect::new(x, y, x + 1, y + 1))[0]
+        lienzo_vector::path_coverage(&self.0, Rect::new(x, y, x + 1, y + 1))[0]
     }
 }
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width":400,"height":300})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -146,7 +146,7 @@ fn frame_content_and_both_selection_follow_clicks_and_double_clicks() {
     double_click(&mut app, [70., 75.]);
     let f = selected(&app).unwrap().frame.clone();
     let ctx = egui::Context::default();
-    crate::PhotocraftApp::setup_context(&ctx, Default::default());
+    crate::LienzoApp::setup_context(&ctx, Default::default());
     ctx.begin_pass(Default::default());
     app.frame_tool_ctx = Some(ctx.clone());
     drag(&mut app, [70., 75.], [85., 85.]);
@@ -161,7 +161,7 @@ fn frame_content_and_both_selection_follow_clicks_and_double_clicks() {
 fn modifiers_shape_selection_and_invalid_control_params_are_consistent() {
     let mut app = app();
     let ctx = egui::Context::default();
-    let call = |app: &mut PhotocraftApp, p: Value| {
+    let call = |app: &mut LienzoApp, p: Value| {
         let (req, _) = crate::control::ControlRequest::new("ui.set", p);
         let crate::control::Outcome::Done(v) = crate::control::handle(app, &ctx, &req) else { panic!("immediate state update") };
         v
@@ -196,8 +196,8 @@ fn modifiers_shape_selection_and_invalid_control_params_are_consistent() {
 
 #[test]
 fn frame_creation_handles_render_at_native_scales() {
-    let Some(out) = std::env::var_os("PHOTOCRAFT_FRAME_SNAPSHOTS") else { return };
-    let _guard = photocraft_testkit::gpu_lock();
+    let Some(out) = std::env::var_os("LIENZO_FRAME_SNAPSHOTS") else { return };
+    let _guard = lienzo_testkit::gpu_lock();
     let out = std::path::PathBuf::from(out);
     std::fs::create_dir_all(&out).unwrap();
     for theme in crate::theme::ThemeKind::ALL {
@@ -228,7 +228,7 @@ fn frame_creation_handles_render_at_native_scales() {
                 app.run("layer.new.frame",json!({"x":210,"y":70,"width":120,"height":160,"shape":"ellipse","layer":source.0,"stroke":{"color":"#50a0ef","width":4,"align":"outside"}})).unwrap();
                 select(&mut app, empty, Target::Frame);
                 let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(width, height)).with_pixels_per_point(scale).wgpu().build_eframe(move |cc| {
-                    PhotocraftApp::setup_context(&cc.egui_ctx, theme);
+                    LienzoApp::setup_context(&cc.egui_ctx, theme);
                     if let Some(rs) = cc.wgpu_render_state.as_ref() {
                         app.set_wgpu(rs.clone());
                     }
@@ -262,7 +262,7 @@ fn free_transform_on_the_frame_thumbnail_previews_and_commits_only_the_clip() {
     let frame = selected(&app).unwrap().id;
     let original = app.session.active().unwrap().doc.layer(source).unwrap().clone();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     ctx.begin_pass(Default::default());
     crate::transform_tool::begin(&mut app, &ctx).unwrap();
     assert!(frame_transform(app.ui.transform.as_ref().unwrap()));
@@ -300,7 +300,7 @@ fn real_canvas_clicks_select_both_then_double_click_selects_the_image() {
     drag(&mut app, [20., 30.], [120., 110.]);
     let frame = selected(&app).unwrap().id;
     let mut h = egui_kittest::Harness::builder().with_step_dt(1.0 / 60.0).with_size(egui::vec2(1000., 700.)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -309,7 +309,7 @@ fn real_canvas_clicks_select_both_then_double_click_selects_the_image() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     let p = ViewXform::active(h.state()).unwrap().to_screen(65., 65.);
     for press in [true, false] {
@@ -432,7 +432,7 @@ fn drawing_a_frame_with_another_frames_image_selected_leaves_that_image_in_place
     // Starts outside the first frame but overlaps the image's own bounds.
     drag(&mut app, [150., 150.], [250., 250.]);
     let doc = &app.session.active().unwrap().doc;
-    assert_eq!(photocraft_engine::frame_cmds::frame_of(doc, source), Some(first), "the image stays in its frame");
+    assert_eq!(lienzo_engine::frame_cmds::frame_of(doc, source), Some(first), "the image stays in its frame");
     let second = selected(&app).unwrap();
     assert_ne!(second.id, first);
     assert!(second.children().unwrap().is_empty(), "the new frame is empty");
@@ -456,7 +456,7 @@ fn cancelling_a_frame_content_drag_clears_its_auto_commit() {
     drag(&mut app, [20., 30.], [120., 110.]);
     double_click(&mut app, [65., 65.]);
     let ctx = egui::Context::default();
-    crate::PhotocraftApp::setup_context(&ctx, Default::default());
+    crate::LienzoApp::setup_context(&ctx, Default::default());
     ctx.begin_pass(Default::default());
     app.frame_tool_ctx = Some(ctx.clone());
     tool_event(&mut app, ToolEvent::Down { x: 70., y: 75., pressure: 1.0 }, egui::Modifiers::NONE);
@@ -472,7 +472,7 @@ fn cancelling_a_frame_content_drag_clears_its_auto_commit() {
 #[test]
 fn double_clicking_frame_content_opens_only_smart_objects() {
     use egui::{Event, PointerButton, vec2};
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 400, "height": 300})).unwrap();
     let photo = s.execute("layer.new.layer", json!({"name": "Photo"})).unwrap()["layer"].as_u64().unwrap();
     s.execute("edit.fill", json!({"contents": "black"})).unwrap();
@@ -485,14 +485,14 @@ fn double_clicking_frame_content_opens_only_smart_objects() {
     })
     .unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (r, _) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
     crate::control::handle(h.state_mut(), &ctx, &r);
     h.run_steps(8);
-    let double_click_content = |h: &mut egui_kittest::Harness<PhotocraftApp>, layer: u64| {
+    let double_click_content = |h: &mut egui_kittest::Harness<LienzoApp>, layer: u64| {
         // Past egui's double-click window, so the last pair's clicks don't run on into these.
         h.run_steps(30);
         let row = crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == layer).unwrap();
@@ -551,13 +551,13 @@ fn overhanging_content_handles_start_transform_and_cancel() {
     drag(&mut app, [20., 30.], [120., 110.]);
     double_click(&mut app, [65., 65.]);
     let ctx = egui::Context::default();
-    crate::PhotocraftApp::setup_context(&ctx, Default::default());
+    crate::LienzoApp::setup_context(&ctx, Default::default());
     ctx.begin_pass(Default::default());
     app.frame_tool_ctx = Some(ctx.clone());
     let st = app.session.active().unwrap();
     let frame = selected(&app).unwrap();
     let child = frame.children().unwrap().first().unwrap();
-    let b = photocraft_engine::transform_cmds::transform_frame(&st.doc, child);
+    let b = lienzo_engine::transform_cmds::transform_frame(&st.doc, child);
     assert!(b.x0 < 20, "image must overhang the frame: {b:?}");
     let entries = st.history.entries();
     for (x, y) in [(f64::from(b.x0), f64::from(b.y0)), (f64::from(b.x0), f64::from(b.y0 + b.y1) / 2.)] {

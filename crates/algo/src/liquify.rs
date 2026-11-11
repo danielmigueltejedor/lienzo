@@ -20,8 +20,8 @@
 //! bilinear source on a downsampled RGBA copy, re-rendered only where a dab changed things.
 
 use crate::par;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde::{Deserialize, Serialize};
 
 /// The Liquify tools (Photoshop's left tool strip, minus Hand/Zoom/Face).

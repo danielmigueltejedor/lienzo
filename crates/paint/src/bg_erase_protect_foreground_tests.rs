@@ -1,9 +1,9 @@
 //! Protect Foreground Color (#11903): the protection fades with the distance from the foreground
 //! colour, so the sampled colour is still erased while colours at and beyond the foreground are kept.
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba};
 
 use crate::bg_erase::{BgEraseSettings, apply_background_eraser};
 use crate::replace::{Limits, Sampling};

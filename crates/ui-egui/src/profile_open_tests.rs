@@ -3,19 +3,19 @@
 //! Mismatch prompt at a time, naming its file, before that file opens; OK opens it and asks about
 //! the next; Cancel opens neither it nor the files still to come.
 
-use crate::{PhotocraftApp, Services};
+use crate::{LienzoApp, Services};
 use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::{
     Harness,
     kittest::{NodeT, Queryable},
 };
-use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
-use photocraft_engine::Session;
+use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
+use lienzo_engine::Session;
 use serde_json::Value;
 
 /// The embedded-profile choice uses the current built-in profile's displayed name.
 fn use_embedded() -> String {
-    format!("Use the embedded profile ({})", photocraft_cms::Builtin::AdobeRgbCompat.description())
+    format!("Use the embedded profile ({})", lienzo_cms::Builtin::AdobeRgbCompat.description())
 }
 const CONVERT: &str = "Convert to the working space (sRGB IEC61966-2.1)";
 const DISCARD: &str = "Discard the embedded profile (don't color manage)";
@@ -23,18 +23,18 @@ const DISCARD: &str = "Discard the embedded profile (don't color manage)";
 /// A PNG tagged with Adobe RGB, which doesn't match the sRGB working space.
 fn adobe_png() -> Vec<u8> {
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::rgba(0.2, 0.6, 0.9, 1.0));
-    d.icc_profile = Some(photocraft_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
-    photocraft_io::export(&d, "t.png", &Default::default()).unwrap().bytes
+    d.icc_profile = Some(lienzo_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
+    lienzo_io::export(&d, "t.png", &Default::default()).unwrap().bytes
 }
 
-fn harness(background: bool) -> Harness<'static, PhotocraftApp> {
+fn harness(background: bool) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1400.0, 900.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(
             Session::new(),
             Services {
                 import: Some(Box::new(|name, bytes, opts| {
-                    photocraft_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+                    lienzo_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
                 })),
                 ..Default::default()
             },
@@ -47,7 +47,7 @@ fn harness(background: bool) -> Harness<'static, PhotocraftApp> {
 }
 
 /// Open a.png, b.png and c.png together and let every read finish.
-fn open_three(h: &mut Harness<'static, PhotocraftApp>) {
+fn open_three(h: &mut Harness<'static, LienzoApp>) {
     let png = adobe_png();
     for name in ["a.png", "b.png", "c.png"] {
         h.state_mut().open_file(&format!("/pics/{name}"), &png).unwrap();
@@ -56,7 +56,7 @@ fn open_three(h: &mut Harness<'static, PhotocraftApp>) {
 }
 
 /// Run frames until no open is still reading.
-fn settle(h: &mut Harness<'static, PhotocraftApp>) {
+fn settle(h: &mut Harness<'static, LienzoApp>) {
     for _ in 0..200 {
         h.run_steps(2);
         if h.state().jobs.opens.is_empty() && h.state().session.jobs().is_empty() {
@@ -67,19 +67,19 @@ fn settle(h: &mut Harness<'static, PhotocraftApp>) {
     h.run_steps(6);
 }
 
-fn docs(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn docs(h: &Harness<'static, LienzoApp>) -> Vec<String> {
     h.state().session.documents().iter().map(|d| d.doc.name.clone()).collect()
 }
 
 /// The one prompt up: its message.
-fn prompt(h: &Harness<'static, PhotocraftApp>) -> String {
+fn prompt(h: &Harness<'static, LienzoApp>) -> String {
     let d = &h.state().ui.dialogs;
     assert_eq!(d.len(), 1, "one prompt at a time");
     d[0].fields.get("message").and_then(Value::as_str).unwrap_or_default().to_string()
 }
 
 /// A real click (pointer events, hit-tested like a mouse).
-fn click(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn click(h: &mut Harness<'static, LienzoApp>, label: &str) {
     let at: Pos2 = h.query_all_by_label(label).find(|n| !n.accesskit_node().is_disabled()).map(|n| n.rect().center()).unwrap();
     h.event(egui::Event::PointerMoved(at));
     h.run_steps(1);
@@ -90,18 +90,18 @@ fn click(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
     settle(h);
 }
 
-fn answer(h: &mut Harness<'static, PhotocraftApp>, choice: &str) {
+fn answer(h: &mut Harness<'static, LienzoApp>, choice: &str) {
     click(h, choice);
     click(h, "OK");
 }
 
-fn profile(h: &Harness<'static, PhotocraftApp>, name: &str) -> Option<String> {
+fn profile(h: &Harness<'static, LienzoApp>, name: &str) -> Option<String> {
     let st = h.state().session.documents().iter().find(|d| d.doc.name == name).unwrap();
-    st.doc.icc_profile.as_ref().map(|b| photocraft_engine::color_cmds::profile_from_bytes(b).unwrap().description.clone())
+    st.doc.icc_profile.as_ref().map(|b| lienzo_engine::color_cmds::profile_from_bytes(b).unwrap().description.clone())
 }
 
 /// The file the prompt on screen asks about.
-fn asked(h: &Harness<'static, PhotocraftApp>) -> &'static str {
+fn asked(h: &Harness<'static, LienzoApp>) -> &'static str {
     let msg = prompt(h);
     ["a.png", "b.png", "c.png", "d.png"]
         .into_iter()
@@ -148,11 +148,11 @@ fn the_prompt_is_translated_and_still_names_its_file() {
     for code in ["en", "de", "fr", "ja"] {
         let services = Services {
             import: Some(Box::new(|name, bytes, opts| {
-                photocraft_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+                lienzo_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(Session::new(), services);
+        let mut app = LienzoApp::new(Session::new(), services);
         app.run("edit.colorSettings", serde_json::json!({"askOnMismatch": true, "policyRgb": "preserve"})).unwrap();
         let lang = crate::i18n::Lang::from_code(code).unwrap();
         crate::i18n::with_language(lang, || app.open_file("/pics/shot {mode}.png", &png)).unwrap();
@@ -180,10 +180,10 @@ fn a_held_file_still_reports_its_missing_fonts() {
     s.execute("file.new", serde_json::json!({"width": 40, "height": 20})).unwrap();
     s.execute("type.create", serde_json::json!({"text": "Hi", "x": 2, "y": 12, "size": 10, "font": MISSING})).unwrap();
     let mut doc = (*s.active().unwrap().doc).clone();
-    doc.icc_profile = Some(photocraft_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
+    doc.icc_profile = Some(lienzo_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes());
     let services =
-        Services { import: Some(Box::new(move |_: &str, _: &[u8], _: &photocraft_io::ImportOptions| Ok((doc.clone(), Vec::new())))), ..Default::default() };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+        Services { import: Some(Box::new(move |_: &str, _: &[u8], _: &lienzo_io::ImportOptions| Ok((doc.clone(), Vec::new())))), ..Default::default() };
+    let mut app = LienzoApp::new(Session::new(), services);
     app.run("edit.colorSettings", serde_json::json!({"askOnMismatch": true, "policyRgb": "preserve"})).unwrap();
     assert_eq!(app.open_bytes("poster.psd", b"x").unwrap(), vec![warning.clone()]);
     assert!(app.session.documents().is_empty() && app.ui.notices.is_empty(), "held: nothing shown yet");
@@ -258,7 +258,7 @@ fn remember_answers_the_waiting_files_and_stops_asking() {
             assert_eq!(profile(&h, name).as_deref(), Some("sRGB IEC61966-2.1"), "background {background}: {name} converted");
         }
         let settings = &h.state().session.color.settings;
-        assert_eq!(settings.policy(photocraft_doc::ColorMode::Rgb), photocraft_engine::color_cmds::Policy::Convert);
+        assert_eq!(settings.policy(lienzo_doc::ColorMode::Rgb), lienzo_engine::color_cmds::Policy::Convert);
         assert!(!settings.ask_on_mismatch, "background {background}");
         h.state_mut().open_file("/pics/d.png", &adobe_png()).unwrap();
         settle(&mut h);

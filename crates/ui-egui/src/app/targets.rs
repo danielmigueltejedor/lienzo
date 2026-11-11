@@ -1,26 +1,26 @@
-use super::{PhotocraftApp, Value, mask_thumbs_ui};
+use super::{LienzoApp, Value, mask_thumbs_ui};
 
 /// The active layer is an adjustment layer. It has no pixels, so painting and filling it edit its
 /// mask even when its icon thumbnail, not the mask, is the Layers panel's target, as in
 /// Photoshop (#4298).
-pub(crate) fn adjustment_layer_active(st: &photocraft_engine::DocState) -> bool {
-    st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, photocraft_doc::LayerContent::Adjustment(_)))
+pub(crate) fn adjustment_layer_active(st: &lienzo_engine::DocState) -> bool {
+    st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, lienzo_doc::LayerContent::Adjustment(_)))
 }
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// `params` aimed at the active layer's mask (`"target":"mask"`) when the Layers panel targets
     /// it and command `id` edits the target (adjustments, filters, fills) without naming one:
     /// ⌘I then inverts the mask, as in Photoshop (#780). A targeted alpha channel or Quick Mask
     /// mode wins, as the engine routes those itself.
     pub fn with_mask_target(&self, id: &str, params: Value) -> Value {
-        if !photocraft_engine::channel_cmds::follows_target(id) || params.get("target").is_some() {
+        if !lienzo_engine::channel_cmds::follows_target(id) || params.get("target").is_some() {
             return params;
         }
         // A filter mask is painted, filled and filtered in place; it doesn't float or move, and
         // Edit › Transform, Apply Image and the dialog filters act on the smart object.
-        let target = if self.filter_mask_targeted() && photocraft_engine::channel_cmds::follows_filter_mask(id) {
+        let target = if self.filter_mask_targeted() && lienzo_engine::channel_cmds::follows_filter_mask(id) {
             "filterMask"
-        } else if self.vector_mask_targeted() && photocraft_engine::channel_cmds::follows_vector_mask_target(id) {
+        } else if self.vector_mask_targeted() && lienzo_engine::channel_cmds::follows_vector_mask_target(id) {
             // The Layers panel targets a vector mask: the Rotate/Flip presets turn its path
             // alone, whether it is linked or not (#12283).
             "vectorMask"
@@ -43,11 +43,11 @@ impl PhotocraftApp {
     pub fn filter_mask_targeted(&self) -> bool {
         let Some(st) = self.session.active() else { return false };
         let Some(id) = st.active_layer.filter(|id| self.ui.filter_mask_target == Some(id.0)) else { return false };
-        let composite = (st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::Composite
-            || (matches!(st.channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Color(_))
-                && photocraft_engine::mask_view_cmds::current(st).is_some_and(|v| v.filter)))
+        let composite = (st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::Composite
+            || (matches!(st.channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Color(_))
+                && lienzo_engine::mask_view_cmds::current(st).is_some_and(|v| v.filter)))
             && st.doc.quick_mask.is_none();
-        composite && st.doc.layer(id).is_some_and(|l| matches!(&l.content, photocraft_doc::LayerContent::Smart(sm) if !sm.smart_filters.is_empty()))
+        composite && st.doc.layer(id).is_some_and(|l| matches!(&l.content, lienzo_doc::LayerContent::Smart(sm) if !sm.smart_filters.is_empty()))
     }
 
     /// The active layer's vector mask is the Layers panel's target, and no alpha channel or Quick
@@ -57,7 +57,7 @@ impl PhotocraftApp {
             return false;
         }
         let Some(st) = self.session.active() else { return false };
-        let alpha = matches!(st.channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Alpha(i) if i < st.doc.channels.len());
+        let alpha = matches!(st.channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Alpha(i) if i < st.doc.channels.len());
         !alpha && st.doc.quick_mask.is_none()
     }
 
@@ -66,15 +66,13 @@ impl PhotocraftApp {
     /// is the picture. An alpha channel or Quick Mask wins, as the engine routes those itself.
     pub fn layer_mask_targeted(&self) -> bool {
         let Some(st) = self.session.active() else { return false };
-        if photocraft_engine::mask_view_cmds::current(st).is_some_and(|v| v.filter) {
+        if lienzo_engine::mask_view_cmds::current(st).is_some_and(|v| v.filter) {
             return false;
         }
-        let layer_mask = st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::LayerMask;
-        let composite = (st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::Composite || layer_mask) && st.doc.quick_mask.is_none();
+        let layer_mask = st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::LayerMask;
+        let composite = (st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::Composite || layer_mask) && st.doc.quick_mask.is_none();
         let has_mask = st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| l.mask.is_some());
-        if matches!(st.channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Color(_))
-            && photocraft_engine::mask_view_cmds::current(st).is_some()
-        {
+        if matches!(st.channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Color(_)) && lienzo_engine::mask_view_cmds::current(st).is_some() {
             return true;
         }
         if !composite || !has_mask {
@@ -83,7 +81,7 @@ impl PhotocraftApp {
         if self.ui.mask_target || layer_mask || adjustment_layer_active(st) {
             return true;
         }
-        let colors_off = st.channel_view.visible_colors(photocraft_engine::channel_cmds::color_count(&st.doc)) == 0;
+        let colors_off = st.channel_view.visible_colors(lienzo_engine::channel_cmds::color_count(&st.doc)) == 0;
         let alpha_on = (0..st.doc.channels.len()).any(|i| st.channel_view.alpha_shown(i));
         colors_off && !alpha_on
     }
@@ -92,9 +90,9 @@ impl PhotocraftApp {
     /// on its thumbnail): while it shows, [`Self::sync_mask_targets`] keeps the filter mask
     /// targeted, so strokes would keep landing there.
     pub(crate) fn end_filter_mask_view(&mut self) {
-        let Some(v) = self.session.active().and_then(photocraft_engine::mask_view_cmds::current).filter(|v| v.filter) else { return };
+        let Some(v) = self.session.active().and_then(lienzo_engine::mask_view_cmds::current).filter(|v| v.filter) else { return };
         let off = serde_json::json!({"layer": v.layer.0, "mode": "off", "mask": "filter"});
-        if let Err(err) = self.session.execute(photocraft_engine::mask_view_cmds::ID, off) {
+        if let Err(err) = self.session.execute(lienzo_engine::mask_view_cmds::ID, off) {
             log::warn!("could not end the filter mask view: {err}");
         }
     }
@@ -112,9 +110,9 @@ impl PhotocraftApp {
                 }
                 if matches!(
                     st.channel_view.target,
-                    photocraft_engine::channel_cmds::ChannelTarget::LayerMask | photocraft_engine::channel_cmds::ChannelTarget::VectorMask
+                    lienzo_engine::channel_cmds::ChannelTarget::LayerMask | lienzo_engine::channel_cmds::ChannelTarget::VectorMask
                 ) {
-                    st.channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::Composite;
+                    st.channel_view.target = lienzo_engine::channel_cmds::ChannelTarget::Composite;
                 }
             }
             self.ui.mask_target = false;
@@ -128,11 +126,11 @@ impl PhotocraftApp {
     /// Channels panel off colour rows left selected and onto the mask, as in Photoshop, so tools,
     /// menu commands and the engine all edit the mask. A view change only: no command, no step.
     pub(crate) fn target_mask_over_colour_rows(&mut self) {
-        use photocraft_engine::channel_cmds::ChannelTarget;
+        use lienzo_engine::channel_cmds::ChannelTarget;
         let Some(st) = self.session.active_mut() else { return };
         let raster_with_mask =
-            st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| l.mask.is_some() && matches!(l.content, photocraft_doc::LayerContent::Raster(_)));
-        if matches!(st.channel_view.target, ChannelTarget::Color(_)) && photocraft_engine::mask_view_cmds::current(st).is_none() && raster_with_mask {
+            st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| l.mask.is_some() && matches!(l.content, lienzo_doc::LayerContent::Raster(_)));
+        if matches!(st.channel_view.target, ChannelTarget::Color(_)) && lienzo_engine::mask_view_cmds::current(st).is_none() && raster_with_mask {
             let v = &mut st.channel_view;
             v.target = ChannelTarget::LayerMask;
             v.selected_colors.clear();
@@ -145,9 +143,9 @@ impl PhotocraftApp {
     /// pixels brings back that target's foreground/background pair, as in Photoshop (#2166).
     pub(crate) fn sync_mask_targets(&mut self) {
         if let Some(st) = self.session.active_mut() {
-            use photocraft_engine::channel_cmds::ChannelTarget;
+            use lienzo_engine::channel_cmds::ChannelTarget;
             let channel = st.channel_view.target;
-            match photocraft_engine::mask_view_cmds::current(st) {
+            match lienzo_engine::mask_view_cmds::current(st) {
                 Some(v) if v.filter => {
                     self.ui.filter_mask_target = Some(v.layer.0);
                     self.ui.mask_target = false;
@@ -177,8 +175,8 @@ impl PhotocraftApp {
             if self.ui.mask_target && st.active_layer.and_then(|id| st.doc.layer(id)).is_none_or(|l| l.mask.is_none()) {
                 self.ui.mask_target = false;
             }
-            if !self.ui.mask_target && st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::LayerMask {
-                st.channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::Composite;
+            if !self.ui.mask_target && st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::LayerMask {
+                st.channel_view.target = lienzo_engine::channel_cmds::ChannelTarget::Composite;
             }
             if !self.ui.mask_target || self.ui.properties_layer != st.active_layer.map(|l| l.0) {
                 self.ui.properties_layer = None;

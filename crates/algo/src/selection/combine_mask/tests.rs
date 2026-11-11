@@ -1,6 +1,6 @@
 use super::*;
 use crate::selection::{Region, combine_region, mask_from_surface, surface_from_masks};
-use photocraft_color::{ColorMode, SampleType};
+use lienzo_color::{ColorMode, SampleType};
 
 const MODES: [SelectionMode; 4] = [SelectionMode::Replace, SelectionMode::Add, SelectionMode::Subtract, SelectionMode::Intersect];
 

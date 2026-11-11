@@ -14,7 +14,7 @@ fn fill_gray(s: &mut Session, v: f32) {
         let b = doc.bounds();
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
         let fmt = surf.format();
-        let px = photocraft_raster::from_rgba(&fmt, [v, v, v, 1.0]);
+        let px = lienzo_raster::from_rgba(&fmt, [v, v, v, 1.0]);
         let data: Vec<f32> = (0..b.width() * b.height()).flat_map(|_| px.iter().copied()).collect();
         surf.write_region(b, &data);
         Ok(())

@@ -5,9 +5,9 @@
 //! The selection itself lives in [`DocState::selected_layers`] (UI state, like the active layer):
 //! changing it never adds a history step. Every structural change below is one history step.
 
-use photocraft_color::PixelFormat;
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, VideoData};
-use photocraft_geom::Rect;
+use lienzo_color::PixelFormat;
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, VideoData};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, int_i32};

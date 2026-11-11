@@ -3,17 +3,17 @@
 //! cover that, or a canvas that redraws only the damage keeps the old gradient around the earlier
 //! strokes: one gradient per stroke instead of one over the whole layer.
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 /// What a canvas that redraws only each edit's damage shows: the cold render before the edit,
 /// with the edit's damage (grown by the effects' reach, as the canvas grows it) rendered again.
-fn redraw_damage(shown: &mut photocraft_compose::Buffer, s: &Session) {
+fn redraw_damage(shown: &mut lienzo_compose::Buffer, s: &Session) {
     let st = s.active().unwrap();
-    let reach = st.doc.layers.iter().filter(|l| photocraft_compose::effects::has_effects(l)).map(photocraft_compose::effects::margin).max().unwrap_or(0);
+    let reach = st.doc.layers.iter().filter(|l| lienzo_compose::effects::has_effects(l)).map(lienzo_compose::effects::margin).max().unwrap_or(0);
     let damage = st.last_damage.expect("a stroke reports bounded damage").inflate(reach).intersect(&st.doc.bounds());
     let (w, h) = (st.doc.size.width, st.doc.size.height);
-    let patch = photocraft_compose::render_reduced_damage(&st.doc, w, h, damage);
+    let patch = lienzo_compose::render_reduced_damage(&st.doc, w, h, damage);
     for y in patch.rect.y0..patch.rect.y1 {
         for x in patch.rect.x0..patch.rect.x1 {
             let i = (y * w as i32 + x) as usize;
@@ -37,11 +37,11 @@ fn strokes_redraw_like_a_cold_render(mut s: Session, strokes: &[serde_json::Valu
     s.execute("paint.stroke", json!({"points": [[20, 20], [40, 30]], "size": 12, "hardness": 1.0, "color": GREY})).unwrap();
     for (i, p) in strokes.iter().enumerate() {
         let st = s.active().unwrap();
-        let mut shown = photocraft_compose::render(&st.doc, st.doc.bounds());
+        let mut shown = lienzo_compose::render(&st.doc, st.doc.bounds());
         s.execute("paint.stroke", p.clone()).unwrap();
         redraw_damage(&mut shown, &s);
         let st = s.active().unwrap();
-        let cold = photocraft_compose::render(&st.doc, st.doc.bounds());
+        let cold = lienzo_compose::render(&st.doc, st.doc.bounds());
         let worst = shown.px.iter().zip(&cold.px).map(|(a, b)| (0..4).map(|c| (a[c] - b[c]).abs()).fold(0.0f32, f32::max)).fold(0.0f32, f32::max);
         assert!(worst < 1e-6, "after stroke {i} the redrawn canvas differs from a cold render by {worst}");
     }
@@ -71,14 +71,14 @@ fn a_stroke_inside_the_layer_keeps_its_own_damage() {
     // by the effects' margin, as any change to the layer's pixels is).
     let r = s.execute("paint.stroke", json!({"points": [[60, 40], [70, 40]], "size": 6, "hardness": 1.0, "color": GREY})).unwrap();
     let d = &r["damage"];
-    let reported = photocraft_geom::Rect::new(
+    let reported = lienzo_geom::Rect::new(
         d[0].as_i64().unwrap() as i32,
         d[1].as_i64().unwrap() as i32,
         (d[0].as_i64().unwrap() + d[2].as_i64().unwrap()) as i32,
         (d[1].as_i64().unwrap() + d[3].as_i64().unwrap()) as i32,
     );
     let st = s.active().unwrap();
-    let margin = photocraft_compose::effects::margin(st.doc.layer(st.active_layer.unwrap()).unwrap());
+    let margin = lienzo_compose::effects::margin(st.doc.layer(st.active_layer.unwrap()).unwrap());
     assert_eq!(st.last_damage, Some(reported.inflate(margin)));
 }
 

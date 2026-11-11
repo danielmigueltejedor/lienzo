@@ -7,16 +7,16 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::eraser_range_alert_tests::{alerts, bar, ok, type_into};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::eraser_ui::TOLERANCE_RANGE_ALERT;
 use crate::state::Tool;
 
-fn strength(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn strength(h: &Harness<'static, LienzoApp>) -> f32 {
     h.state().ui.tool_options.strength
 }
 
 /// Drags the Strength caption by `dx` in six steps while the field holds the keyboard, then leaves it.
-fn scrub_strength(h: &mut Harness<'static, PhotocraftApp>, dx: f32) {
+fn scrub_strength(h: &mut Harness<'static, LienzoApp>, dx: f32) {
     let field = h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some("Strength:")).expect("the Strength field");
     let rect = field.rect();
     field.click();

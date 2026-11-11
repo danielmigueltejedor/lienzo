@@ -1,17 +1,17 @@
 //! Placement markers for the active layer's type path.
-use crate::{PhotocraftApp, canvas::ViewXform, state::Tool};
+use crate::{LienzoApp, canvas::ViewXform, state::Tool};
 use std::{
     collections::VecDeque,
     sync::{Arc, Weak},
 };
 
 use egui::{Pos2, Stroke, Vec2};
-use photocraft_doc::{Document, LayerContent, TextLayer, text::TextShape};
-use photocraft_geom::{Point, Rect};
-use photocraft_text::warp::PathGeometry;
+use lienzo_doc::{Document, LayerContent, TextLayer, text::TextShape};
+use lienzo_geom::{Point, Rect};
+use lienzo_text::warp::PathGeometry;
 
 /// Returns the active text layer when a path selection tool is active and targeted at the type path.
-pub(crate) fn active_text(app: &PhotocraftApp) -> Option<&TextLayer> {
+pub(crate) fn active_text(app: &LienzoApp) -> Option<&TextLayer> {
     if !matches!(app.ui.tool, Tool::PathSelection | Tool::DirectSelection)
         || app.ui.transform.is_some()
         || app.ui.vector_mask_target
@@ -20,7 +20,7 @@ pub(crate) fn active_text(app: &PhotocraftApp) -> Option<&TextLayer> {
         return None;
     }
     let st = app.session.active()?;
-    if st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::VectorMask {
+    if st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::VectorMask {
         return None;
     }
     let id = st.active_layer?;
@@ -35,8 +35,8 @@ pub(crate) fn active_text(app: &PhotocraftApp) -> Option<&TextLayer> {
 }
 
 /// Returns the normalized paragraph alignment weight (0.0 for left, 0.5 for center, 1.0 for right).
-fn alignment_factor(align: photocraft_doc::text::TextAlign) -> f64 {
-    use photocraft_doc::text::TextAlign;
+fn alignment_factor(align: lienzo_doc::text::TextAlign) -> f64 {
+    use lienzo_doc::text::TextAlign;
     match align {
         TextAlign::Center | TextAlign::JustifyCenter => 0.5,
         TextAlign::Right | TextAlign::JustifyRight => 1.0,
@@ -99,8 +99,8 @@ fn effective_range(text: &TextLayer, geometry: &PathGeometry) -> Option<[f64; 2]
 #[derive(Clone, Debug)]
 pub struct CachedGeometry {
     pub(crate) doc: Weak<Document>,
-    pub(crate) layer: photocraft_doc::LayerId,
-    pub(crate) path: photocraft_doc::vector::Subpath,
+    pub(crate) layer: lienzo_doc::LayerId,
+    pub(crate) path: lienzo_doc::vector::Subpath,
     pub(crate) flip: bool,
     pub(crate) geometry: Arc<PathGeometry>,
     pub(crate) reversed: Arc<PathGeometry>,
@@ -126,7 +126,7 @@ impl PartialEq for GeometryCache {
 impl Eq for GeometryCache {}
 
 /// Retrieves or creates cached path geometry, reusing active drag geometry or single-entry cache across frames.
-pub(crate) fn active_path_geometry(app: &PhotocraftApp, text: &TextLayer) -> Option<Arc<PathGeometry>> {
+pub(crate) fn active_path_geometry(app: &LienzoApp, text: &TextLayer) -> Option<Arc<PathGeometry>> {
     let TextShape::Path { path, flip, .. } = &text.shape else { return None };
     if let Some(drag) = app.ui.type_path_drag.as_ref().filter(|d| d.valid(app)) {
         if *flip == drag.original_flip {
@@ -248,7 +248,7 @@ impl Grab {
 
 /// What a press at screen point `p` would grab, for the hover cursor (the active gesture's grab
 /// while dragging).
-pub(crate) fn cursor(app: &mut PhotocraftApp, xf: &ViewXform, p: Pos2) -> Option<Grab> {
+pub(crate) fn cursor(app: &mut LienzoApp, xf: &ViewXform, p: Pos2) -> Option<Grab> {
     if let Some(drag) = app.ui.type_path_drag.as_ref().filter(|drag| drag.valid(app)) {
         return Some(Grab::of(drag.endpoint));
     }
@@ -298,7 +298,7 @@ pub(crate) fn draw_cursor(ctx: &egui::Context, p: Pos2, grab: Grab) {
 }
 
 /// Checks whether text glyphs exceed the current path range, caching by document snapshot, revision, and placement.
-fn overflows(app: &PhotocraftApp, ctx: &egui::Context, text: &TextLayer) -> bool {
+fn overflows(app: &LienzoApp, ctx: &egui::Context, text: &TextLayer) -> bool {
     let Some(st) = app.session.active() else { return false };
     let TextShape::Path { start, end, flip, .. } = &text.shape else { return false };
     let key = (st.revision, start.to_bits(), end.map(f32::to_bits), *flip);
@@ -310,15 +310,15 @@ fn overflows(app: &PhotocraftApp, ctx: &egui::Context, text: &TextLayer) -> bool
     {
         return value;
     }
-    let mut engine = photocraft_text::shared().lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut engine = lienzo_text::shared().lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     let layout = engine.layout(text, st.doc.resolution_dpi);
-    let value = photocraft_text::render::path_overflows(&layout, &text.shape);
+    let value = lienzo_text::render::path_overflows(&layout, &text.shape);
     ctx.data_mut(|data| data.insert_temp(id, (key, source, value)));
     value
 }
 
 /// Renders placement start/end markers and overflow indicators for the active type path.
-pub(crate) fn draw(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub(crate) fn draw(app: &LienzoApp, painter: &egui::Painter, xf: &ViewXform) {
     let Some(text) = active_text(app) else { return };
     let mut preview = text.clone();
     if let Some(drag) = app.ui.type_path_drag.as_ref().filter(|d| d.valid(app) && (d.proposed != d.original || d.flipped)) {
@@ -359,21 +359,21 @@ struct Preview {
 }
 
 pub(crate) struct Damage {
-    document: photocraft_doc::DocId,
+    document: lienzo_doc::DocId,
     revision: u64,
     original_area: Rect,
     areas: VecDeque<(u64, Rect)>,
 }
 
 /// Calculates canvas invalidation damage bounding the union of preview text regions across display revisions.
-pub(crate) fn damage(app: &PhotocraftApp, doc: photocraft_doc::DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: lienzo_doc::DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
     let p = app.type_path_damage.as_ref().filter(|p| p.document == doc && p.revision == revision)?;
     let area = |key| if key == 0 { Some(p.original_area) } else { p.areas.iter().find(|(k, _)| *k == key).map(|(_, r)| *r) };
     Some(area(before)?.union(&area(after)?))
 }
 
 /// Returns a transient document snapshot with live placement preview modifications and tracks damage bounding boxes.
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let drag = app.ui.type_path_drag.as_ref()?;
     if !drag.valid(app) {
         return None;
@@ -401,9 +401,9 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     *start = range[0] as f32;
     *end = Some(range[1] as f32);
     *side = flip;
-    photocraft_engine::type_cmds::refresh(&source, text);
+    lienzo_engine::type_cmds::refresh(&source, text);
     let area = text.cache.as_ref().map_or(Rect::EMPTY, |s| s.tile_bounds());
-    let shown = Arc::new(photocraft_engine::mode_cmds::display_document(&shown).unwrap_or(shown));
+    let shown = Arc::new(lienzo_engine::mode_cmds::display_document(&shown).unwrap_or(shown));
     const BASE: u64 = 1 << 50;
     let key = BASE | (app.ui.alloc_id() & (BASE - 1));
     let mut damage = app.type_path_damage.take().filter(|p| p.document == source.id && p.revision == st.revision).unwrap_or_else(|| Damage {
@@ -426,12 +426,12 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
 #[derive(Clone, Debug)]
 pub struct Drag {
     pub(crate) viewport: Option<egui::ViewportId>,
-    document: photocraft_doc::DocId,
+    document: lienzo_doc::DocId,
     source: Weak<Document>,
-    layer: photocraft_doc::LayerId,
+    layer: lienzo_doc::LayerId,
     revision: u64,
     tool: Tool,
-    inverse: photocraft_doc::Affine,
+    inverse: lienzo_doc::Affine,
     pub(crate) geometry: Arc<PathGeometry>,
     pub(crate) reversed_geometry: Arc<PathGeometry>,
     closed: bool,
@@ -447,7 +447,7 @@ pub struct Drag {
     original_flip: bool,
     flipped: bool,
     initial_side: f64,
-    transform: photocraft_doc::Affine,
+    transform: lienzo_doc::Affine,
     xf: ViewXform,
     preview: Option<Preview>,
 }
@@ -482,7 +482,7 @@ impl PartialEq for Drag {
 
 impl Drag {
     /// Checks whether the drag gesture remains bound to the active document revision, layer, and tool.
-    fn valid(&self, app: &PhotocraftApp) -> bool {
+    fn valid(&self, app: &LienzoApp) -> bool {
         active_text(app).is_some()
             && app.ui.tool == self.tool
             && app.session.active().is_some_and(|st| {
@@ -566,14 +566,14 @@ fn moved_open_range([start, end]: [f64; 2], delta: f64, alignment: f64, length: 
 }
 
 /// Discard a capture when its original document or tool is no longer active.
-pub(crate) fn cancel_stale(app: &mut PhotocraftApp) {
+pub(crate) fn cancel_stale(app: &mut LienzoApp) {
     if app.ui.type_path_drag.as_ref().is_some_and(|drag| !drag.valid(app)) {
         cancel(app);
     }
 }
 
 /// Cancels active path placement capture when the owning viewport loses focus or the primary button was released externally.
-pub(crate) fn cancel_missing_release(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub(crate) fn cancel_missing_release(app: &mut LienzoApp, ctx: &egui::Context) {
     let Some(drag) = &app.ui.type_path_drag else { return };
     if let Some(owner) = drag.viewport
         && ctx.viewport_id() != owner
@@ -586,29 +586,24 @@ pub(crate) fn cancel_missing_release(app: &mut PhotocraftApp, ctx: &egui::Contex
 }
 
 /// Cancels any active type path placement drag gesture and discards live preview state.
-pub(crate) fn cancel(app: &mut PhotocraftApp) -> bool {
+pub(crate) fn cancel(app: &mut LienzoApp) -> bool {
     app.ui.type_path_drag.take().is_some()
 }
 
 /// Helper entry point for pointer events without explicit view context in tests.
 #[cfg(test)]
-pub(crate) fn pointer(app: &mut PhotocraftApp, event: crate::canvas::ToolEvent) -> bool {
+pub(crate) fn pointer(app: &mut LienzoApp, event: crate::canvas::ToolEvent) -> bool {
     pointer_with_context(app, event, None, None)
 }
 
 /// Helper entry point for pointer events with an explicit view transform in tests.
 #[cfg(test)]
-pub(crate) fn pointer_with_view(app: &mut PhotocraftApp, event: crate::canvas::ToolEvent, view: Option<&ViewXform>) -> bool {
+pub(crate) fn pointer_with_view(app: &mut LienzoApp, event: crate::canvas::ToolEvent, view: Option<&ViewXform>) -> bool {
     pointer_with_context(app, event, view, None)
 }
 
 /// Handles canvas pointer events for type path marker and body drag gestures, managing capture and preview updates.
-pub(crate) fn pointer_with_context(
-    app: &mut PhotocraftApp,
-    event: crate::canvas::ToolEvent,
-    view: Option<&ViewXform>,
-    viewport: Option<egui::ViewportId>,
-) -> bool {
+pub(crate) fn pointer_with_context(app: &mut LienzoApp, event: crate::canvas::ToolEvent, view: Option<&ViewXform>, viewport: Option<egui::ViewportId>) -> bool {
     use crate::canvas::ToolEvent;
     if matches!(event, ToolEvent::Down { .. })
         && let Some(drag) = &app.ui.type_path_drag
@@ -722,8 +717,8 @@ mod tests {
     use serde_json::json;
 
     /// Sets up a test harness with a document, path, and attached type layer for placement tests.
-    fn app(tool: Tool) -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app(tool: Tool) -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.sync_views();
         app.ui.tool = tool;
@@ -799,51 +794,51 @@ mod tests {
         assert!(active_text(&app).is_some());
         let source = app.session.active().unwrap().doc.work_path.clone();
         app.ui.selected_path = Some("work".into());
-        app.session.active_mut().unwrap().channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::VectorMask;
+        app.session.active_mut().unwrap().channel_view.target = lienzo_engine::channel_cmds::ChannelTarget::VectorMask;
         assert!(active_text(&app).is_none());
         app.run("type.attachToPath", json!({"start":20})).unwrap();
-        assert_eq!(app.session.active().unwrap().channel_view.target, photocraft_engine::channel_cmds::ChannelTarget::Composite);
+        assert_eq!(app.session.active().unwrap().channel_view.target, lienzo_engine::channel_cmds::ChannelTarget::Composite);
         assert_eq!(app.ui.selected_path.as_deref(), Some("layer"));
         assert!(active_text(&app).is_some());
         assert_eq!(app.session.active().unwrap().doc.work_path, source);
     }
 
     /// Returns the text shape of the active text layer in test assertions.
-    fn shape(app: &PhotocraftApp) -> TextShape {
+    fn shape(app: &LienzoApp) -> TextShape {
         active_text(app).unwrap().shape.clone()
     }
 
     /// Returns the (start, end, flip) placement parameters of the active path text layer.
-    fn placement(app: &PhotocraftApp) -> (f32, Option<f32>, bool) {
+    fn placement(app: &LienzoApp) -> (f32, Option<f32>, bool) {
         let TextShape::Path { start, end, flip, .. } = shape(app) else { panic!("expected path") };
         (start, end, flip)
     }
 
     /// Returns the count of committed history entries in the active session.
-    fn steps(app: &PhotocraftApp) -> usize {
+    fn steps(app: &LienzoApp) -> usize {
         app.session.active().unwrap().history.entries().len()
     }
 
     /// Dispatches a pointer down event at document coordinates.
-    fn down(app: &mut PhotocraftApp, x: f64, y: f64) {
+    fn down(app: &mut LienzoApp, x: f64, y: f64) {
         assert!(pointer(app, ToolEvent::Down { x, y, pressure: 1.0 }));
     }
     /// Dispatches a pointer move event to document coordinates.
-    fn move_to(app: &mut PhotocraftApp, x: f64, y: f64) {
+    fn move_to(app: &mut LienzoApp, x: f64, y: f64) {
         assert!(pointer(app, ToolEvent::Move { x, y, pressure: 1.0 }));
     }
     /// Dispatches a pointer up event at document coordinates.
-    fn up(app: &mut PhotocraftApp, x: f64, y: f64) {
+    fn up(app: &mut LienzoApp, x: f64, y: f64) {
         assert!(pointer(app, ToolEvent::Up { x, y }));
     }
 
     /// Verifies converting legacy single-point anchor alignment to explicit ranges preserves exact glyph rasterization coordinates.
     #[test]
     fn legacy_alignment_conversion_preserves_glyph_positions() {
-        use photocraft_doc::text::{ParagraphStyle, TextAlign};
-        use photocraft_doc::vector::Subpath;
-        use photocraft_text::warp::Warp;
-        let mut engine = photocraft_text::TextEngine::new();
+        use lienzo_doc::text::{ParagraphStyle, TextAlign};
+        use lienzo_doc::vector::Subpath;
+        use lienzo_text::warp::Warp;
+        let mut engine = lienzo_text::TextEngine::new();
         for closed in [false, true] {
             for flip in [false, true] {
                 for align in [TextAlign::Left, TextAlign::Center, TextAlign::Right] {
@@ -854,7 +849,7 @@ mod tests {
                     };
                     let mut text = TextLayer {
                         text: "ABC".into(),
-                        paragraphs: vec![photocraft_doc::text::ParagraphRun { len: 3, style: ParagraphStyle { align, ..Default::default() } }],
+                        paragraphs: vec![lienzo_doc::text::ParagraphRun { len: 3, style: ParagraphStyle { align, ..Default::default() } }],
                         ..Default::default()
                     };
                     text.shape = TextShape::Path { path: path.clone(), start: 200.0, end: None, flip };
@@ -914,7 +909,7 @@ mod tests {
                 app.session
                     .edit("skew text", |doc, _| {
                         let LayerContent::Text(text) = &mut doc.layer_mut(id).unwrap().content else { panic!("text") };
-                        text.transform = photocraft_doc::Affine { m: [1.8, 0.3, 0.6, 0.9, 12.0, -7.0] };
+                        text.transform = lienzo_doc::Affine { m: [1.8, 0.3, 0.6, 0.9, 12.0, -7.0] };
                         Ok(())
                     })
                     .unwrap();
@@ -962,7 +957,7 @@ mod tests {
         app.session
             .edit("shear text", |doc, _| {
                 let LayerContent::Text(text) = &mut doc.layer_mut(id).unwrap().content else { panic!("text") };
-                text.transform = photocraft_doc::Affine { m: [1.0, 0.0, 10.0, 1.0, 0.0, 0.0] };
+                text.transform = lienzo_doc::Affine { m: [1.0, 0.0, 10.0, 1.0, 0.0, 0.0] };
                 Ok(())
             })
             .unwrap();
@@ -1079,13 +1074,13 @@ mod tests {
     }
 
     /// Locates an interior document point on the glyph baseline of the active path text.
-    fn body_point(app: &mut PhotocraftApp) -> Point {
+    fn body_point(app: &mut LienzoApp) -> Point {
         let id = app.session.active().unwrap().active_layer.unwrap();
         let (layout, _, _) = crate::type_tool::layout(app, id).unwrap();
         let cluster = layout.clusters.last().unwrap();
         let line = &layout.lines[cluster.line];
         let text = active_text(app).unwrap();
-        let warp = photocraft_text::warp::Warp::on_path(&text.shape).unwrap();
+        let warp = lienzo_text::warp::Warp::on_path(&text.shape).unwrap();
         let (x, y) = warp.apply(f64::from(cluster.x + cluster.advance / 2.0), f64::from(line.baseline - line.ascent * 0.4));
         text.transform.apply(Point::new(x, y))
     }
@@ -1148,7 +1143,7 @@ mod tests {
             .edit("full lap", |doc, _| {
                 let LayerContent::Text(text) = &mut doc.layer_mut(id).unwrap().content else { panic!("expected text") };
                 text.shape = TextShape::Path {
-                    path: photocraft_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]),
+                    path: lienzo_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]),
                     start: 20.0,
                     end: Some(660.0),
                     flip: false,
@@ -1175,7 +1170,7 @@ mod tests {
     /// text.
     #[test]
     fn default_full_lap_markers_can_be_pulled_apart() {
-        let square = photocraft_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]);
+        let square = lienzo_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]);
         // Ahead of the point: the beginning moves forward. Behind it: the end moves back.
         for (offset, grab, drag, expected) in [(4.0, Grab::Start, 30.0, [130.0, 740.0]), (-4.0, Grab::End, -30.0, [100.0, 710.0])] {
             let mut app = app(Tool::PathSelection);
@@ -1347,7 +1342,7 @@ mod tests {
         let layer = Arc::make_mut(&mut st.doc).layer_mut(id).unwrap();
         let LayerContent::Text(text) = &mut layer.content else { panic!("expected text") };
         text.shape = TextShape::Path {
-            path: photocraft_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]),
+            path: lienzo_doc::vector::Subpath::polygon(&[(20.0, 20.0), (180.0, 20.0), (180.0, 180.0), (20.0, 180.0)]),
             start: 20.0,
             end: Some(700.0),
             flip: false,
@@ -1368,7 +1363,7 @@ mod tests {
     /// Proves dragging across self-intersecting path crossings stays locked to the current branch based on previous arc length.
     #[test]
     fn pointer_crossing_gesture_stays_on_branch() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.sync_views();
         app.ui.tool = Tool::PathSelection;
@@ -1399,7 +1394,7 @@ mod tests {
     /// Verifies that hiding an ancestor layer group excludes child path text from marker rendering and pointer captures.
     #[test]
     fn hidden_ancestor_excludes_markers_and_capture() {
-        use photocraft_doc::LayerId;
+        use lienzo_doc::LayerId;
         let mut app = app(Tool::PathSelection);
         let text_id = app.session.active().unwrap().active_layer.unwrap();
         let group_id = LayerId(app.run("layer.groupLayers", json!({})).unwrap()["layer"].as_u64().unwrap());
@@ -1503,7 +1498,7 @@ mod tests {
     /// Proves non-integer path lengths whose `f32` conversion rounds upward keep placement markers visible without clamping errors.
     #[test]
     fn type_path_placement_noninteger_line_rounding_upward_keeps_markers_visible() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.sync_views();
         app.ui.tool = Tool::PathSelection;
@@ -1515,7 +1510,7 @@ mod tests {
         app.ui.views[0].zoom = 1.0;
 
         let xf = ViewXform::active(&app).unwrap();
-        let geom = PathGeometry::new(&photocraft_doc::vector::Subpath::polyline(&[(20.0, 20.0), (27.0, 27.0)]), false).unwrap();
+        let geom = PathGeometry::new(&lienzo_doc::vector::Subpath::polyline(&[(20.0, 20.0), (27.0, 27.0)]), false).unwrap();
         let length_f32 = geom.length() as f32;
         assert!(f64::from(length_f32) > geom.length(), "scale 7 * sqrt2 must round up in f32");
 
@@ -1699,7 +1694,7 @@ mod tests {
 
     #[test]
     fn pointer_perturbed_crossing_stays_on_branch_and_releases() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
         app.sync_views();
         app.ui.tool = Tool::PathSelection;
@@ -1733,7 +1728,7 @@ mod tests {
         let mut app = app(Tool::PathSelection);
         let id = app.session.active().unwrap().active_layer.unwrap();
         // Shorten path from length 160 (20 to 180) to length 60 (20 to 80).
-        let shortened = photocraft_doc::vector::Subpath::polyline(&[(20.0, 100.0), (80.0, 100.0)]);
+        let shortened = lienzo_doc::vector::Subpath::polyline(&[(20.0, 100.0), (80.0, 100.0)]);
         app.session
             .edit("shorten path", |doc, _| {
                 let LayerContent::Text(text) = &mut doc.layer_mut(id).unwrap().content else { panic!("expected text") };
@@ -1797,7 +1792,7 @@ mod tests {
         let mut app = app(Tool::PathSelection);
         let id = app.session.active().unwrap().active_layer.unwrap();
         // Shorten path to length 40 (20 to 60) and place stale start at 50.0 and end at 80.0.
-        let shortened = photocraft_doc::vector::Subpath::polyline(&[(20.0, 100.0), (60.0, 100.0)]);
+        let shortened = lienzo_doc::vector::Subpath::polyline(&[(20.0, 100.0), (60.0, 100.0)]);
         app.session
             .edit("shorten path beyond start", |doc, _| {
                 let LayerContent::Text(text) = &mut doc.layer_mut(id).unwrap().content else { panic!("expected text") };
@@ -1858,7 +1853,7 @@ mod tests {
     /// Verifies malformed, non-finite, and inverted ranges continue to be rejected by effective_range.
     #[test]
     fn effective_range_safeguards_reject_malformed_and_inverted_ranges() {
-        use photocraft_doc::vector::Subpath;
+        use lienzo_doc::vector::Subpath;
         let path = Subpath::polyline(&[(0.0, 0.0), (100.0, 0.0)]);
         let geometry = PathGeometry::new(&path, false).unwrap();
         let make_text = |start: f32, end: Option<f32>| TextLayer {

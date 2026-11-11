@@ -1,4 +1,4 @@
-use super::{DRect, Document, PhotocraftApp, Pos2, Rect, Vec2, View, pos2, vec2};
+use super::{DRect, Document, LienzoApp, Pos2, Rect, Vec2, View, pos2, vec2};
 
 /// Document ↔ screen mapping for a canvas rect and a view.
 #[derive(Clone, Copy, Debug)]
@@ -19,7 +19,7 @@ pub struct ViewXform {
 
 impl ViewXform {
     /// The main canvas's mapping for the active document as last laid out (inside the rulers).
-    pub fn active(app: &PhotocraftApp) -> Option<Self> {
+    pub fn active(app: &LienzoApp) -> Option<Self> {
         let v = app.ui.views.get(app.session.active_index()?)?;
         let (zoom, center) =
             if v.zoom_animating && app.session.prefs().general.animated_zoom { v.display_camera.unwrap_or((v.zoom, v.center)) } else { (v.zoom, v.center) };
@@ -36,7 +36,7 @@ impl ViewXform {
         )
     }
 
-    pub(crate) fn pixel_aligned_for(self, app: &PhotocraftApp, ppp: f32) -> Self {
+    pub(crate) fn pixel_aligned_for(self, app: &LienzoApp, ppp: f32) -> Self {
         // Default Crop counter-moves the frame and camera with fractional pointer deltas.
         // Preserve that continuous mapping so its fixed frame does not wobble during a drag.
         if crate::crop_mode::moves_image(app) { self } else { self.pixel_aligned(ppp) }
@@ -150,7 +150,7 @@ impl ViewXform {
 /// outside it: the rulers are not part of the canvas, so drops on the ruler strip are not
 /// canvas drops. Preset-panel drops and drag-and-drop placement share this so both land exactly
 /// where the canvas draws.
-pub fn doc_point_at(app: &PhotocraftApp, pos: Pos2) -> Option<[f64; 2]> {
+pub fn doc_point_at(app: &LienzoApp, pos: Pos2) -> Option<[f64; 2]> {
     let xf = ViewXform::active(app)?;
     xf.rect.contains(pos).then(|| xf.to_doc(pos))
 }

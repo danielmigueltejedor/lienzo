@@ -11,7 +11,7 @@
 //! kinds are *not measured* there: they keep today's behaviour, so the tests below only pin that
 //! the new check does not reach them.
 
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 
 use super::*;
 

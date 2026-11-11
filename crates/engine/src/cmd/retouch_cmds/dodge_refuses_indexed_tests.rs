@@ -2,8 +2,8 @@
 //! application's messages, toning nothing and adding no history; the live stroke is refused the
 //! same way. RGB, Grayscale, CMYK and Lab at every depth, Multichannel and Duotone keep dodging.
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Size};
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Size};
 use serde_json::json;
 
 use super::*;

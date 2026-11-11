@@ -140,14 +140,14 @@ fn color_list_is_new_guides() {
     assert_eq!((custom.len(), custom[9].0.as_str(), custom[9].1), (10, "#123456", "Custom"));
 }
 
-fn harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> egui_kittest::Harness<'static, LienzoApp> {
     let mut initialized = false;
     egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_ui_state(
         move |ui, app| {
             if initialized {
                 crate::dialogs::show(app, ui.ctx());
             } else {
-                PhotocraftApp::setup_context(ui.ctx(), Default::default());
+                LienzoApp::setup_context(ui.ctx(), Default::default());
                 initialized = true;
             }
         },
@@ -155,10 +155,10 @@ fn harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> 
     )
 }
 
-fn app() -> PhotocraftApp {
-    let mut session = photocraft_engine::Session::new();
+fn app() -> LienzoApp {
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width":1200,"height":800})).unwrap();
-    PhotocraftApp::new(session, crate::Services::default())
+    LienzoApp::new(session, crate::Services::default())
 }
 
 #[test]
@@ -179,10 +179,10 @@ fn alt_reset_restores_factory_layout() {
     assert!(app.ui.dialogs.iter().any(|d| d.id == id));
 }
 
-fn draw(app: &mut PhotocraftApp, id: u64) {
+fn draw(app: &mut LienzoApp, id: u64) {
     let mut f = app.ui.dialog_mut(id).unwrap().fields.clone();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    LienzoApp::setup_context(&ctx, Default::default());
     ctx.run_ui(egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0))), ..Default::default() }, |ui| {
         body(app, ui, &mut f, false);
     })
@@ -346,7 +346,7 @@ fn units_can_be_typed_and_convert_on_reopen() {
 
     crate::dialogs::confirm(&mut app, id).unwrap();
 
-    app.session.prefs.edit(|p| p.units_and_rulers.rulers = photocraft_engine::prefs::Unit::Inches);
+    app.session.prefs.edit(|p| p.units_and_rulers.rulers = lienzo_engine::prefs::Unit::Inches);
 
     let reopened = open(&mut app);
     let rf = &app.ui.dialog_mut(reopened).unwrap().fields;
@@ -357,7 +357,7 @@ fn units_can_be_typed_and_convert_on_reopen() {
 
 #[test]
 fn normalization_appends_the_field_unit_and_ensures_space() {
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     let mut app = app();
     let px = Unit::Pixels;
     assert_eq!(normalize_field_text("10", &app, true, false, px), Some("10 px".into()));
@@ -376,7 +376,7 @@ fn normalization_appends_the_field_unit_and_ensures_space() {
 /// not rounded to whole pixels, and 20 px at 72 ppi opens as "0.706 cm".
 #[test]
 fn fields_keep_three_decimals_in_every_unit() {
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     let mut app = app();
     assert_eq!(normalize_field_text("13.5 px", &app, true, false, Unit::Pixels), Some("13.5 px".into()));
     assert_eq!(normalize_field_text("5.123456", &app, true, false, Unit::Millimeters), Some("5.123 mm".into()));
@@ -434,7 +434,7 @@ fn tabbing_through_untouched_fields_keeps_the_preset() {
     assert_eq!(f["width"], Value::Null);
 }
 
-fn gutter_dialog(gutter: &str) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn gutter_dialog(gutter: &str) -> egui_kittest::Harness<'static, LienzoApp> {
     let mut app = app();
     let id = open(&mut app);
     let f = &mut app.ui.dialog_mut(id).unwrap().fields;
@@ -448,7 +448,7 @@ fn gutter_dialog(gutter: &str) -> egui_kittest::Harness<'static, PhotocraftApp> 
 }
 
 /// Tab from the dialog's start to Spacing (gutter): Number, Width, then Spacing.
-fn tab_to_gutter(h: &mut egui_kittest::Harness<'static, PhotocraftApp>) {
+fn tab_to_gutter(h: &mut egui_kittest::Harness<'static, LienzoApp>) {
     for _ in 0..3 {
         h.key_press(egui::Key::Tab);
         h.run_steps(2);
@@ -477,7 +477,7 @@ fn enter_after_a_bare_number_applies_the_unit_the_field_showed() {
 /// ruler unit change does not reinterpret it.
 #[test]
 fn remembered_lengths_keep_their_size_when_the_ruler_unit_changes() {
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     let mut app = app();
     let id = open(&mut app);
     let f = &mut app.ui.dialog_mut(id).unwrap().fields;

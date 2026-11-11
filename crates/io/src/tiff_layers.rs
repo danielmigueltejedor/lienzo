@@ -1,5 +1,5 @@
 //! Layered TIFF: Photoshop layer data carried in the TIFF tags 37724 (`ImageSourceData`) and
-//! 34377 (image resources), see [`photocraft_psd::tiff`].
+//! 34377 (image resources), see [`lienzo_psd::tiff`].
 //!
 //! Import rebuilds a PSD model from the TIFF's pixels plus those two tags and hands it to the
 //! PSD importer, so everything the PSD path understands (groups, masks, effects, type, shapes,
@@ -10,14 +10,14 @@
 
 use std::sync::Arc;
 
-use photocraft_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType as CSample};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document};
-use photocraft_geom::Rect;
-use photocraft_psd::resources::ids;
-use photocraft_psd::tiff::{ByteOrder, ImageSourceData, resources_from_bytes, resources_to_bytes};
-use photocraft_psd::{ColorMode as PsdMode, Compression, Header, ImageData, ImageResource, ResolutionInfo};
-use photocraft_raster::Surface;
+use lienzo_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType as CSample};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{AlphaChannel, Document};
+use lienzo_geom::Rect;
+use lienzo_psd::resources::ids;
+use lienzo_psd::tiff::{ByteOrder, ImageSourceData, resources_from_bytes, resources_to_bytes};
+use lienzo_psd::{ColorMode as PsdMode, Compression, Header, ImageData, ImageResource, ResolutionInfo};
+use lienzo_raster::Surface;
 
 use crate::flat::{csample, encode_image, image_to_document, layout_for, single_layer, try_buffer};
 use crate::psd_export::PsdExportOptions;
@@ -34,7 +34,7 @@ pub fn would_write_layers(doc: &Document) -> bool {
 
 /// Documents a layered TIFF can hold: the TIFF composite must be in the document's model so
 /// that the layer channels inside the tag match it (Lab TIFFs are not decoded or encoded by
-/// `photocraft-codecs`), and there must be layers to keep (a Multichannel document has none:
+/// `lienzo-codecs`), and there must be layers to keep (a Multichannel document has none:
 /// its channels are the image).
 fn layered_mode(doc: &Document) -> bool {
     matches!(doc.pixel_format().mode, ColorMode::Grayscale | ColorMode::Rgb | ColorMode::Cmyk) && doc.mode != ColorMode::Multichannel && !doc.layers.is_empty()
@@ -72,7 +72,7 @@ pub(crate) struct LayeredPlan {
 
 struct LayeredModel {
     /// The PSD model with an empty merged image: the TIFF's pixels replace it after decoding.
-    file: photocraft_psd::PsdFile,
+    file: lienzo_psd::PsdFile,
 }
 
 impl LayeredPlan {
@@ -202,7 +202,7 @@ pub(crate) fn layered_import_bytes(est: u64, w: u32, h: u32, channels: usize, sa
 /// admission before any pixel is decoded, so nothing here resolves a second budget or charges
 /// the enclosing attempt again: a top-level TIFF is charged once, and a nested independent one
 /// spends only what its parent still has. `ctl` stops the PSD conversion between layers.
-pub(crate) fn import_layered(name: &str, img: &Image, plan: LayeredPlan, ctl: &photocraft_raster::Interrupt) -> Result<ImportResult, IoError> {
+pub(crate) fn import_layered(name: &str, img: &Image, plan: LayeredPlan, ctl: &lienzo_raster::Interrupt) -> Result<ImportResult, IoError> {
     let LayeredPlan { model, flatten_warning, mut warnings, required: _, tiles: _ } = plan;
     let Some(model) = model else {
         let mut r = image_to_document(name, img)?;
@@ -246,7 +246,7 @@ pub(crate) fn import_layered(name: &str, img: &Image, plan: LayeredPlan, ctl: &p
     file.header.channels = u16::try_from(img.layout().channels().saturating_add(added)).map_err(|_| IoError::Unsupported("too many channels".into()))?;
     file.image_data = ImageData::new(Compression::Raw, data);
     // Spot planes are read in Photoshop's polarity (0 = solid ink), as from a PSD. The importer's
-    // rule for PSDs from earlier PhotoCraft versions never applies: those versions stored no
+    // rule for PSDs from earlier Lienzo versions never applies: those versions stored no
     // extra samples in a TIFF, and a TIFF with them carries 1053.
     let (mut doc, psd_warnings, _, fatal_error) = psd_to_document_owned(file, ctl, None).ok_or(IoError::Cancelled)?;
     if let Some(error) = fatal_error {
@@ -333,7 +333,7 @@ const TIFF_COMPOSITE_DONE: f32 = 0.72;
 /// Saves `doc` as a layered TIFF. Documents whose colour mode a TIFF cannot hold in our
 /// codec (Lab) are saved flat, with a warning. Reports progress through `ctl` (see
 /// [`crate::export_with`]).
-pub(crate) fn export_layered(doc: &Document, opts: &ExportOptions, ctl: &photocraft_raster::Interrupt) -> Result<ExportResult, IoError> {
+pub(crate) fn export_layered(doc: &Document, opts: &ExportOptions, ctl: &lienzo_raster::Interrupt) -> Result<ExportResult, IoError> {
     if !layered_mode(doc) {
         let mut r = crate::flat::export_flat_with(doc, Format::Tiff, opts, ctl)?;
         if !doc.layers.is_empty() {
@@ -389,7 +389,7 @@ pub(crate) fn export_layered(doc: &Document, opts: &ExportOptions, ctl: &photocr
     // The layers move out of the model rather than being copied, and are freed once written
     // (#6607); the model keeps its header, resources and composite for the image below.
     let (layers, w) = match tiff_image_source(doc, &mut file, save_transparency && has_alpha).into_bytes(order) {
-        Err(photocraft_psd::PsdError::LimitExceeded(_)) if !force_psb => {
+        Err(lienzo_psd::PsdError::LimitExceeded(_)) if !force_psb => {
             let psb_opts = PsdExportOptions { force_psb: true, ..psd_opts };
             let (psb, w) = crate::with_span(ctl, 0.0, TIFF_MODEL_DONE, |ctl| crate::psd_export::document_to_psd_interruptible(doc, &psb_opts, ctl));
             ctl.check().map_err(|_| IoError::Cancelled)?;
@@ -489,7 +489,7 @@ pub(crate) fn export_layered(doc: &Document, opts: &ExportOptions, ctl: &photocr
 /// Photoshop writes it. The layers, global mask and global blocks move out of `file` (the
 /// export's own model), which keeps its header, resources and merged image. `ifd_alpha`: the
 /// composite in the IFD keeps its transparency as the first extra sample (Save Transparency).
-fn tiff_image_source(doc: &Document, file: &mut photocraft_psd::PsdFile, ifd_alpha: bool) -> ImageSourceData {
+fn tiff_image_source(doc: &Document, file: &mut lienzo_psd::PsdFile, ifd_alpha: bool) -> ImageSourceData {
     // Photoshop pairs alpha-name resources with samples past the colour channels and ignores
     // the ExtraSamples kind. Layer transparency stays in each layer's channel −1.
     let spot_extras = file.header.channels as usize > {
@@ -520,9 +520,9 @@ fn tiff_image_source(doc: &Document, file: &mut photocraft_psd::PsdFile, ifd_alp
     if let Some(info) = &mut isd.layer_info {
         for layer in &mut info.layers {
             // Photoshop sets flag bit 3 on every record it writes, group dividers included (299 of
-            // the 305 dividers in the corpus's Photoshop files). PhotoCraft's PSDs set it on
+            // the 305 dividers in the corpus's Photoshop files). Lienzo's PSDs set it on
             // layers only, unchanged here.
-            layer.flags.0 |= photocraft_psd::layer::LayerFlags::BIT4_USEFUL;
+            layer.flags.0 |= lienzo_psd::layer::LayerFlags::BIT4_USEFUL;
             photoshop_layer_blocks(&mut layer.blocks);
         }
     }
@@ -532,17 +532,17 @@ fn tiff_image_source(doc: &Document, file: &mut photocraft_psd::PsdFile, ifd_alp
     if let Some(mask) = &mut isd.global_layer_mask
         && mask.data.len() < 14
     {
-        *mask = photocraft_psd::GlobalLayerMask::photoshop_default();
+        *mask = lienzo_psd::GlobalLayerMask::photoshop_default();
     }
     if !isd.global_blocks.iter().any(|b| matches!(&b.key, b"Patt" | b"Pat2" | b"Pat3")) {
-        isd.global_blocks.insert(0, photocraft_psd::TaggedBlock::new(*b"Patt", Vec::new()));
+        isd.global_blocks.insert(0, lienzo_psd::TaggedBlock::new(*b"Patt", Vec::new()));
     }
     if !isd.global_blocks.iter().any(|b| &b.key == b"FMsk") {
-        isd.global_blocks.push(photocraft_psd::TaggedBlock::new(*b"FMsk", FILTER_MASK_DEFAULT.to_vec()));
+        isd.global_blocks.push(lienzo_psd::TaggedBlock::new(*b"FMsk", FILTER_MASK_DEFAULT.to_vec()));
     }
     // Photoshop writes the marker first, ahead of `Patt`.
     if ifd_alpha && spot_extras && !isd.global_blocks.iter().any(|b| b.is_merged_transparency_marker()) {
-        isd.global_blocks.insert(0, photocraft_psd::TaggedBlock::new(*b"MTrn", Vec::new()));
+        isd.global_blocks.insert(0, lienzo_psd::TaggedBlock::new(*b"MTrn", Vec::new()));
     }
     isd
 }
@@ -628,32 +628,32 @@ fn drop_first_display_record(data: &[u8]) -> Vec<u8> {
 }
 
 /// Filter-mask block (`FMsk`) Photoshop writes next to a layered TIFF: the same red 50%
-/// overlay as [`photocraft_psd::GlobalLayerMask::photoshop_default`], without the kind byte.
+/// overlay as [`lienzo_psd::GlobalLayerMask::photoshop_default`], without the kind byte.
 const FILTER_MASK_DEFAULT: &[u8] = &[0, 0, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 50];
 
 /// Blocks Photoshop writes on every layer of a layered TIFF, when the layer does not
 /// already carry them. Defaults match a plain pixel layer (clipped-as-group on, nothing
 /// locked, no label).
-fn photoshop_layer_blocks(blocks: &mut Vec<photocraft_psd::TaggedBlock>) {
+fn photoshop_layer_blocks(blocks: &mut Vec<lienzo_psd::TaggedBlock>) {
     let has = |k: &[u8; 4]| blocks.iter().any(|b| &b.key == k);
     let mut add = Vec::new();
     if !has(b"lnsr") {
-        add.push(photocraft_psd::TaggedBlock::name_source(*b"layr"));
+        add.push(lienzo_psd::TaggedBlock::name_source(*b"layr"));
     }
     if !has(b"clbl") {
-        add.push(photocraft_psd::TaggedBlock::blend_clipped_as_group(true));
+        add.push(lienzo_psd::TaggedBlock::blend_clipped_as_group(true));
     }
     if !has(b"infx") {
-        add.push(photocraft_psd::TaggedBlock::blend_interior_elements(false));
+        add.push(lienzo_psd::TaggedBlock::blend_interior_elements(false));
     }
     if !has(b"knko") {
-        add.push(photocraft_psd::TaggedBlock::knockout(0));
+        add.push(lienzo_psd::TaggedBlock::knockout(0));
     }
     if !has(b"lspf") {
-        add.push(photocraft_psd::TaggedBlock::protection(0));
+        add.push(lienzo_psd::TaggedBlock::protection(0));
     }
     if !has(b"lclr") {
-        add.push(photocraft_psd::TaggedBlock::sheet_color(0));
+        add.push(lienzo_psd::TaggedBlock::sheet_color(0));
     }
     let at = blocks
         .iter()
@@ -667,12 +667,12 @@ fn photoshop_layer_blocks(blocks: &mut Vec<photocraft_psd::TaggedBlock>) {
 }
 
 /// Removes the blocks a document kept verbatim from a little-endian TIFF because their layout
-/// is unknown ([`photocraft_psd::TaggedBlock::is_foreign_order`]) before `file` is written as a
+/// is unknown ([`lienzo_psd::TaggedBlock::is_foreign_order`]) before `file` is written as a
 /// PSD: their bytes are in the wrong order for a PSD and cannot be converted. Returns a warning
-/// per block dropped. A save back to TIFF keeps them (see [`photocraft_psd::tiff`]).
-pub fn strip_foreign_order_blocks(file: &mut photocraft_psd::PsdFile) -> Vec<String> {
+/// per block dropped. A save back to TIFF keeps them (see [`lienzo_psd::tiff`]).
+pub fn strip_foreign_order_blocks(file: &mut lienzo_psd::PsdFile) -> Vec<String> {
     let mut warnings = Vec::new();
-    let mut strip = |blocks: &mut Vec<photocraft_psd::TaggedBlock>, owner: &str| {
+    let mut strip = |blocks: &mut Vec<lienzo_psd::TaggedBlock>, owner: &str| {
         blocks.retain(|b| {
             let keep = !b.is_foreign_order();
             if !keep {
@@ -815,7 +815,7 @@ fn matte_and_drop_alpha(img: &mut Image) -> bool {
     let white_byte: u8 = if cmyk { 0 } else { 255 };
     let white_u16: u16 = if cmyk { 0 } else { u16::MAX };
     let white_f: f32 = if cmyk { 0.0 } else { 1.0 };
-    // Lab's white is L* 100 with a* and b* 0, which PhotoCraft holds mid-range (`(0 + 128) / 255`).
+    // Lab's white is L* 100 with a* and b* 0, which Lienzo holds mid-range (`(0 + 128) / 255`).
     let lab = img.layout().is_lab();
     // Out of memory keeps the transparency (the caller warns) rather than aborting the app.
     let mut out = Vec::new();
@@ -1165,18 +1165,18 @@ fn mask_from_plane(data: &[u8], w: u32, h: u32, n: usize, from: CSample, depth: 
 
 #[cfg(test)]
 mod tests {
-    use photocraft_doc::{Color, Document, Fill, FillCache, Layer, LayerContent};
-    use photocraft_raster::Surface;
+    use lienzo_doc::{Color, Document, Fill, FillCache, Layer, LayerContent};
+    use lienzo_raster::Surface;
 
     use crate::{ExportOptions, ImportOptions, IoError, export};
 
     /// The in-place guard follows actual writable planes, including Quick Mask and early exits.
     #[test]
     fn flat_alpha_guard_uses_the_prepared_image_and_written_planes() {
-        use photocraft_codecs::{ChannelLayout, Image};
-        use photocraft_color::{ColorMode, PixelFormat, SampleType};
-        use photocraft_doc::AlphaChannel;
-        let mut doc = Document::new("guard", photocraft_geom::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
+        use lienzo_codecs::{ChannelLayout, Image};
+        use lienzo_color::{ColorMode, PixelFormat, SampleType};
+        use lienzo_doc::AlphaChannel;
+        let mut doc = Document::new("guard", lienzo_geom::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
         let image = || Image::from_u8(2, 2, ChannelLayout::Rgba, vec![0; 16]).unwrap();
         let mut no_planes = image();
         super::stamp_flat_channels(&doc, &mut no_planes, false, true).unwrap();
@@ -1203,7 +1203,7 @@ mod tests {
     /// PSD-style layer data: Photoshop does not read the PSB-style header in a TIFF and opens only
     /// the composite, as one locked Background.
     fn many_cheap_fills() -> Document {
-        let mut doc = Document::new("many fills", photocraft_geom::Size::new(2048, 2048), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+        let mut doc = Document::new("many fills", lienzo_geom::Size::new(2048, 2048), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
         for i in 0..140 {
             let fill = Fill::Solid(Color::rgb(0.5, 0.25, 0.75));
             let mut l = Layer::new(format!("Fill {i}"), LayerContent::Fill(fill.clone()));
@@ -1217,12 +1217,12 @@ mod tests {
     /// A small two-layer RGB document exported as a TIFF with Photoshop layer data: the real
     /// file the admission tests below import. No fixture is decoded at a size near a threshold.
     fn layered_tiff(w: u32, h: u32) -> Vec<u8> {
-        let mut doc = Document::new("charge.tif", photocraft_geom::Size::new(w, h), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+        let mut doc = Document::new("charge.tif", lienzo_geom::Size::new(w, h), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
         let fmt = doc.pixel_format();
         let bytes = (w as usize * h as usize * fmt.bytes_per_pixel()).max(1);
         for name in ["bottom", "top"] {
             let mut s = Surface::new(fmt);
-            s.write_interleaved(photocraft_geom::Rect::new(0, 0, w as i32, h as i32), &vec![96u8; bytes]);
+            s.write_interleaved(lienzo_geom::Rect::new(0, 0, w as i32, h as i32), &vec![96u8; bytes]);
             doc.layers.push(Layer::new(name, LayerContent::Raster(s)));
         }
         export(&doc, "charge.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).expect("export layered TIFF").bytes
@@ -1231,8 +1231,8 @@ mod tests {
     /// The bytes of the layered TIFF's decoded composite: the size of both the planar copy the
     /// importer builds and the interleaved image it keeps beside it.
     fn composite_bytes(bytes: &[u8]) -> u64 {
-        let img = photocraft_codecs::decode_with(bytes, &photocraft_codecs::DecodeOptions { keep_orientation: true, ..Default::default() })
-            .expect("decode the composite");
+        let img =
+            lienzo_codecs::decode_with(bytes, &lienzo_codecs::DecodeOptions { keep_orientation: true, ..Default::default() }).expect("decode the composite");
         let (w, h) = img.dimensions();
         let sample = u64::try_from(img.sample_type().bytes()).unwrap_or(1);
         u64::from(w).saturating_mul(u64::from(h)).saturating_mul(sample).saturating_mul(img.layout().channels() as u64)
@@ -1243,9 +1243,9 @@ mod tests {
         let doc = many_cheap_fills();
 
         let r = export(&doc, "x.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).unwrap();
-        let (_, layers) = photocraft_codecs::tiff_photoshop_tags(&r.bytes);
+        let (_, layers) = lienzo_codecs::tiff_photoshop_tags(&r.bytes);
         let layers = layers.unwrap();
-        assert!(layers.starts_with(photocraft_psd::tiff::SIGNATURE), "{:?}", String::from_utf8_lossy(&layers[..36.min(layers.len())]));
+        assert!(layers.starts_with(lienzo_psd::tiff::SIGNATURE), "{:?}", String::from_utf8_lossy(&layers[..36.min(layers.len())]));
         assert!(!r.warnings.iter().any(|w| w.contains("PSB")), "{:?}", r.warnings);
         let back = crate::import("x.tif", &r.bytes).unwrap().document;
         assert_eq!(back.layers.len(), doc.layers.len());
@@ -1259,8 +1259,8 @@ mod tests {
     fn forcing_psb_still_writes_psb_style_layer_data() {
         let doc = many_cheap_fills();
         let r = export(&doc, "x.tif", &ExportOptions { tiff_layers: true, force_psb: true, ..Default::default() }).unwrap();
-        let (_, layers) = photocraft_codecs::tiff_photoshop_tags(&r.bytes);
-        assert!(layers.unwrap().starts_with(photocraft_psd::tiff::SIGNATURE_PSB));
+        let (_, layers) = lienzo_codecs::tiff_photoshop_tags(&r.bytes);
+        assert!(layers.unwrap().starts_with(lienzo_psd::tiff::SIGNATURE_PSB));
     }
 
     /// The adaptive budget, not only the caller's pixel limit, decides a layered TIFF: a known
@@ -1333,7 +1333,7 @@ mod tests {
         let bytes = layered_tiff(8, 6);
         let composite = composite_bytes(&bytes);
         assert!(composite > 0);
-        let ctl = photocraft_raster::Interrupt::NONE;
+        let ctl = lienzo_raster::Interrupt::NONE;
 
         let _guard = crate::psd_gate::acquire_decode_admission(&ctl).expect("parent admission");
         let start = 1u64 << 40;
@@ -1372,7 +1372,7 @@ mod tests {
 
         let bytes = layered_tiff(8, 6);
         let snapshot = crate::memory::MemorySnapshot { available_ram: Some(32 << 30), swap_free: None, commit_headroom: None };
-        let _guard = crate::psd_gate::acquire_decode_admission(&photocraft_raster::Interrupt::NONE).expect("active decode");
+        let _guard = crate::psd_gate::acquire_decode_admission(&lienzo_raster::Interrupt::NONE).expect("active decode");
 
         let cancel = Arc::new(AtomicBool::new(false));
         let prechecked = Arc::new(AtomicBool::new(false));
@@ -1388,7 +1388,7 @@ mod tests {
                 });
                 let cancelled = move || cancel.load(Ordering::SeqCst);
                 let progress = |_: f32| {};
-                let ctl = photocraft_raster::Interrupt::new(&cancelled, &progress);
+                let ctl = lienzo_raster::Interrupt::new(&cancelled, &progress);
                 let result = crate::memory::with_mock_memory_provider(provider, || {
                     crate::import_with_options_and_interrupt("cancel.tif", &bytes, &ImportOptions::default(), &ctl)
                 });
@@ -1420,7 +1420,7 @@ mod tests {
     /// the tags it copies, and a half-float conversion's extra buffers.
     #[test]
     fn layered_estimate_counts_decode_conversion_extras_and_scratch() {
-        use photocraft_codecs::SampleType as S;
+        use lienzo_codecs::SampleType as S;
         // 100 × 50 px, RGB, 8-bit, no extras: the decoded image plus the planar copy.
         let pixels = 100u64 * 50;
         assert_eq!(super::layered_import_bytes(0, 100, 50, 3, S::U8, 0, 0, 0), 2 * pixels * 3);
@@ -1443,14 +1443,14 @@ mod tests {
         use std::cell::Cell;
         use std::rc::Rc;
 
-        use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
+        use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
 
         if cfg!(any(target_arch = "wasm32", target_pointer_width = "32")) {
             return;
         }
         let mut img = Image::from_raw(4, 3, ChannelLayout::Rgb, SampleType::U8, vec![40; 4 * 3 * 3]).unwrap();
         img.meta.photoshop_layers = Some(b"not Photoshop image source data".to_vec());
-        let bytes = photocraft_codecs::encode(&img, Format::Tiff, &EncodeOptions::default()).unwrap();
+        let bytes = lienzo_codecs::encode(&img, Format::Tiff, &EncodeOptions::default()).unwrap();
 
         let decoded = Rc::new(Cell::new(0u32));
         let hook = |decoded: &Rc<Cell<u32>>| -> Rc<dyn Fn()> {
@@ -1551,7 +1551,7 @@ mod tests {
         let bytes = layered_tiff(8, 6);
 
         // Hold the gate so the import stops between its pre-gate check and the post-gate one.
-        let _guard = crate::psd_gate::acquire_decode_admission(&photocraft_raster::Interrupt::NONE).expect("active decode");
+        let _guard = crate::psd_gate::acquire_decode_admission(&lienzo_raster::Interrupt::NONE).expect("active decode");
         let available = Arc::new(AtomicU64::new(32 * gb));
         let prechecked = Arc::new(AtomicBool::new(false));
         let decoded = Arc::new(AtomicBool::new(false));

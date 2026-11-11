@@ -1,9 +1,9 @@
 //! Bounded, cancellable viewport pages. Reduction is globally aligned, so independently
 //! rendered pages have exactly the same pixel footprints at their shared edges.
 use crate::{Buffer, render, render_bands};
-use photocraft_doc::Document;
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_doc::Document;
+use lienzo_geom::Rect;
+use lienzo_raster::{Interrupt, Surface};
 
 /// A quick, explicitly provisional reduction. Only the requested source rows are read; the
 /// exact composite below replaces it after visible pages have first become available.
@@ -48,7 +48,7 @@ pub fn preview_page(doc: &Document, source: Rect, factor: u32, interrupt: Interr
         }
         Ok(out)
     }
-    fn layer(l: &mut photocraft_doc::Layer, r: Rect, k: i32, i: Interrupt<'_>, depth: usize, last: (i32, i32)) -> Result<(), String> {
+    fn layer(l: &mut lienzo_doc::Layer, r: Rect, k: i32, i: Interrupt<'_>, depth: usize, last: (i32, i32)) -> Result<(), String> {
         if depth > 256 {
             return Err("viewport layer nesting limit exceeded".into());
         }
@@ -58,7 +58,7 @@ pub fn preview_page(doc: &Document, source: Rect, factor: u32, interrupt: Interr
         if let Some(c) = &mut l.fill_cache {
             c.surface = shrink(&c.surface, r, k, last, i)?;
         }
-        use photocraft_doc::LayerContent;
+        use lienzo_doc::LayerContent;
         match &mut l.content {
             LayerContent::Raster(s) => *s = shrink(s, r, k, last, i)?,
             LayerContent::Group(g) => {
@@ -95,7 +95,7 @@ pub fn preview_page(doc: &Document, source: Rect, factor: u32, interrupt: Interr
         Ok(())
     }
     let mut p = doc.clone();
-    p.size = photocraft_doc::Size::new(doc.size.width.div_ceil(factor), doc.size.height.div_ceil(factor));
+    p.size = lienzo_doc::Size::new(doc.size.width.div_ceil(factor), doc.size.height.div_ceil(factor));
     for l in &mut p.layers {
         layer(l, rect, k, interrupt, 0, last)?;
     }
@@ -182,16 +182,16 @@ fn average_page(doc: &Document, source: Rect, k: i32, out: Rect, interrupt: Inte
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{Color, ColorMode, SampleType};
-    use photocraft_doc::Size;
+    use lienzo_color::{Color, ColorMode, SampleType};
+    use lienzo_doc::Size;
     #[test]
     fn high_zoom_is_original_resolution_at_every_depth() {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
             let r = Rect::new(65001, 22003, 65513, 22515);
             let mut d = Document::new("large", Size::new(86400, 43200), ColorMode::Rgb, depth);
-            let mut s = photocraft_raster::Surface::new(d.pixel_format());
+            let mut s = lienzo_raster::Surface::new(d.pixel_format());
             s.fill_rect(r, &[1.0; 4]);
-            d.layers.push(photocraft_doc::Layer::new("region", photocraft_doc::LayerContent::Raster(s)));
+            d.layers.push(lienzo_doc::Layer::new("region", lienzo_doc::LayerContent::Raster(s)));
             let p = render_page(&d, r, 1, Interrupt::NONE).unwrap();
             assert_eq!(p.rect, r);
             assert_eq!(p.px, render(&d, r).px);
@@ -218,9 +218,9 @@ mod tests {
     #[test]
     fn preview_edge_cells_sample_inside_the_document() {
         let mut d = Document::new("edge", Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
-        let mut s = photocraft_raster::Surface::new(d.pixel_format());
+        let mut s = lienzo_raster::Surface::new(d.pixel_format());
         s.fill_rect(d.bounds(), &[1.0, 0.0, 0.0, 1.0]);
-        d.layers.push(photocraft_doc::Layer::new("red", photocraft_doc::LayerContent::Raster(s)));
+        d.layers.push(lienzo_doc::Layer::new("red", lienzo_doc::LayerContent::Raster(s)));
         for source in [d.bounds(), Rect::new(4, 4, 10, 10)] {
             let p = preview_page(&d, source, 4, Interrupt::NONE).unwrap();
             assert_eq!(p.rect, Rect::new(source.x0 / 4, source.y0 / 4, 3, 3));
@@ -237,9 +237,9 @@ mod tests {
         // (board x0..x1, cells expected on it); cell c samples x = 4c + 2.
         for (x0, x1, on) in [(2, 3, 0..1), (0, 3, 0..1), (3, 16, 1..4), (1, 7, 0..2), (4, 14, 1..3), (-6, 6, 0..1), (-6, 7, 0..2)] {
             let mut d = Document::new("boards", Size::new(16, 4), ColorMode::Rgb, SampleType::U8);
-            let board = photocraft_doc::Artboard::new(Rect::new(x0, 0, x1, 4));
-            let group = photocraft_doc::Group { children: vec![], expanded: true, artboard: Some(board), frame_stroke: None };
-            d.layers.push(photocraft_doc::Layer::new("board", photocraft_doc::LayerContent::Group(group)));
+            let board = lienzo_doc::Artboard::new(Rect::new(x0, 0, x1, 4));
+            let group = lienzo_doc::Group { children: vec![], expanded: true, artboard: Some(board), frame_stroke: None };
+            d.layers.push(lienzo_doc::Layer::new("board", lienzo_doc::LayerContent::Group(group)));
             let p = preview_page(&d, d.bounds(), k, Interrupt::NONE).unwrap();
             assert_eq!(p.rect, Rect::new(0, 0, 4, 1));
             for (c, px) in p.px.iter().enumerate() {
@@ -251,7 +251,7 @@ mod tests {
     /// tiles, so the reduced path takes both its one-colour and per-pixel branches.
     fn busy(depth: SampleType) -> Document {
         let mut d = Document::with_background("busy", Size::new(1100, 700), ColorMode::Rgb, depth, Color::WHITE);
-        let mut s = photocraft_raster::Surface::new(d.pixel_format());
+        let mut s = lienzo_raster::Surface::new(d.pixel_format());
         let mut seed = 0x2545_f491_u32;
         let mut next = || {
             seed ^= seed << 13;
@@ -265,12 +265,12 @@ mod tests {
                 s.fill_rect(Rect::from_xywh(x, y, 3, 3), &px);
             }
         }
-        d.layers.push(photocraft_doc::Layer::new("noise", photocraft_doc::LayerContent::Raster(s)));
-        let mut s = photocraft_raster::Surface::new(d.pixel_format());
+        d.layers.push(lienzo_doc::Layer::new("noise", lienzo_doc::LayerContent::Raster(s)));
+        let mut s = lienzo_raster::Surface::new(d.pixel_format());
         s.fill_rect(Rect::new(400, 0, 1100, 650), &[0.2, 0.5, 0.9, 1.0]);
-        let mut top = photocraft_doc::Layer::new("tint", photocraft_doc::LayerContent::Raster(s));
+        let mut top = lienzo_doc::Layer::new("tint", lienzo_doc::LayerContent::Raster(s));
         top.opacity = 0.6;
-        top.blend = photocraft_color::blend::BlendMode::Multiply;
+        top.blend = lienzo_color::blend::BlendMode::Multiply;
         d.layers.push(top);
         d
     }

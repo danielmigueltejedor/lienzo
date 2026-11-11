@@ -44,7 +44,7 @@ pub struct TransformSession {
     pub interpolation: String,
     /// Warp mode (Edit › Transform › Warp): the warp being edited over `rect`, in document px.
     #[serde(default)]
-    pub warp: Option<photocraft_geom::warp::Warp>,
+    pub warp: Option<lienzo_geom::warp::Warp>,
     /// Select › Transform Selection: the box transforms the selection outline, not pixels.
     #[serde(default)]
     pub selection: bool,
@@ -116,7 +116,7 @@ pub enum MadeLayer {
 pub struct BoxResize {
     pub handle: u8,
     pub shape: [f32; 4],
-    pub aff: photocraft_geom::Affine,
+    pub aff: lienzo_geom::Affine,
 }
 
 /// A font choice for subsequent typing, invalidated by navigation or a document edit.
@@ -127,7 +127,7 @@ pub struct TypeInsertionStyle {
     pub session: String,
     pub revision: u64,
     pub caret: usize,
-    pub style: photocraft_doc::text::CharStyle,
+    pub style: lienzo_doc::text::CharStyle,
 }
 
 /// In-progress inline type editing (Type tool). Offsets are character indices.
@@ -163,7 +163,7 @@ pub struct TextEdit {
 pub struct TypeTransform {
     pub document: u64,
     pub revision: u64,
-    pub original: photocraft_geom::Affine,
+    pub original: lienzo_geom::Affine,
     pub frame: TransformSession,
     pub(crate) gesture: crate::transform_tool::Gesture,
 }

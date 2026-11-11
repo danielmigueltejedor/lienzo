@@ -5,25 +5,25 @@
 use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
-fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
+fn harness(tool: Tool) -> Harness<'static, LienzoApp> {
     harness_with_step_dt(tool, 0.25)
 }
 
-fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_step_dt(step_dt).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -33,7 +33,7 @@ fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, Photocraft
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     // 100 %: one document pixel per point, so drags land on whole pixels.
     let v = &mut h.state_mut().ui.views[0];
@@ -44,7 +44,7 @@ fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, Photocraft
     h
 }
 
-fn view_xform(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
+fn view_xform(h: &Harness<'static, LienzoApp>) -> ViewXform {
     let app = h.state();
     let v = &app.ui.views[0];
     ViewXform {
@@ -57,28 +57,28 @@ fn view_xform(h: &Harness<'static, PhotocraftApp>) -> ViewXform {
     }
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     view_xform(h).to_screen(x, y)
 }
 
-fn mods(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers) {
+fn mods(h: &mut Harness<'static, LienzoApp>, m: Modifiers) {
     h.event(egui::Event::ModifiersChanged(m));
     h.run_steps(1);
 }
 
-fn button(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, down: bool, m: Modifiers) {
+fn button(h: &mut Harness<'static, LienzoApp>, p: Pos2, down: bool, m: Modifiers) {
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: down, modifiers: m });
     h.run_steps(1);
 }
 
 /// Move the pointer to document point `(x, y)` in a few steps.
-fn move_to(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32) {
+fn move_to(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(2);
 }
 
-fn press_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) {
+fn press_at(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, m: Modifiers) {
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -87,18 +87,18 @@ fn press_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifier
     move_to(h, x + 8.0, y + 6.0);
 }
 
-fn release_at(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) {
+fn release_at(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, m: Modifiers) {
     move_to(h, x, y);
     button(h, screen(h, x, y), false, m);
     h.run_steps(2);
 }
 
-fn selection(h: &Harness<'static, PhotocraftApp>) -> Rect {
+fn selection(h: &Harness<'static, LienzoApp>) -> Rect {
     h.state().session.active().unwrap().doc.selection.as_ref().map_or(Rect::EMPTY, |s| s.content_bounds())
 }
 
 /// The two-row readout shows `W: {w} px` and `H: {ht} px` (Photoshop's format).
-fn readout(h: &Harness<'static, PhotocraftApp>, w: i32, ht: i32) -> bool {
+fn readout(h: &Harness<'static, LienzoApp>, w: i32, ht: i32) -> bool {
     let labels = h.query_by_label("W:").is_some() && h.query_by_label("H:").is_some();
     let count = |v: i32| h.query_all_by_label(&format!("{v} px")).count();
     let values = if w == ht { count(w) == 2 } else { count(w) == 1 && count(ht) == 1 };
@@ -162,7 +162,7 @@ fn object_selection_keeps_the_mode_from_the_mouse_press() {
                 let st = h.state().session.active().unwrap();
                 let doc = st.doc.clone();
                 let target = st.active_layer;
-                let region = photocraft_engine::smartselect_cmds::find_object(&doc, target, false, 220.0, 150.0).expect("the red disc is detectable");
+                let region = lienzo_engine::smartselect_cmds::find_object(&doc, target, false, 220.0, 150.0).expect("the red disc is detectable");
                 h.state_mut().session.object_finder.insert(&doc, target, std::sync::Arc::new(region));
                 if at_press.alt {
                     h.state_mut().run("select.all", json!({})).unwrap();
@@ -456,7 +456,7 @@ fn the_live_outline_matches_the_committed_selection_in_a_rotated_view() {
 
 /// The closed outlines the last frame drew as a solid white line under black dashes: the Type
 /// tools' drag box (four corners, the first repeated).
-fn white_box_outlines(h: &Harness<'static, PhotocraftApp>) -> Vec<Vec<Pos2>> {
+fn white_box_outlines(h: &Harness<'static, LienzoApp>) -> Vec<Vec<Pos2>> {
     h.output()
         .shapes
         .iter()
@@ -476,7 +476,7 @@ fn white_box_outlines(h: &Harness<'static, PhotocraftApp>) -> Vec<Vec<Pos2>> {
 /// The slanted edges the last frame drew as marching ants (#7530): each is a white base segment
 /// under black dashes (`ants::shapes`); upright edges go into a pixel mesh instead. The Move tool's
 /// layer marquee in a rotated view.
-fn white_ant_edges(h: &Harness<'static, PhotocraftApp>) -> Vec<[Pos2; 2]> {
+fn white_ant_edges(h: &Harness<'static, LienzoApp>) -> Vec<[Pos2; 2]> {
     h.output()
         .shapes
         .iter()
@@ -520,8 +520,8 @@ fn the_type_drag_box_matches_the_committed_text_box_in_a_rotated_view() {
         let committed = {
             let st = h.state().session.active().unwrap();
             let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
-            let photocraft_doc::LayerContent::Text(t) = &layer.content else { panic!("{rotation}°: a type layer") };
-            let photocraft_doc::text::TextShape::Box { x, y, width, height } = t.shape else { panic!("{rotation}°: paragraph text") };
+            let lienzo_doc::LayerContent::Text(t) = &layer.content else { panic!("{rotation}°: a type layer") };
+            let lienzo_doc::text::TextShape::Box { x, y, width, height } = t.shape else { panic!("{rotation}°: paragraph text") };
             let (tx, ty) = (t.transform.m[4], t.transform.m[5]);
             [tx + f64::from(x), ty + f64::from(y), tx + f64::from(x + width), ty + f64::from(y + height)]
         };
@@ -564,7 +564,7 @@ fn the_move_layer_marquee_follows_the_document_axes_in_a_rotated_view() {
 }
 
 /// 800 %, snapping off, the view centred on (30, 30): the pointer lands between pixel edges.
-fn zoomed(tool: Tool) -> Harness<'static, PhotocraftApp> {
+fn zoomed(tool: Tool) -> Harness<'static, LienzoApp> {
     let mut h = harness(tool);
     h.state_mut().ui.extras.snap = false;
     let v = &mut h.state_mut().ui.views[0];
@@ -575,7 +575,7 @@ fn zoomed(tool: Tool) -> Harness<'static, PhotocraftApp> {
 }
 
 /// Press at `from` and move to `to` in six ordinary pointer moves, the button still held.
-fn drag_to(h: &mut Harness<'static, PhotocraftApp>, from: [f32; 2], to: [f32; 2]) {
+fn drag_to(h: &mut Harness<'static, LienzoApp>, from: [f32; 2], to: [f32; 2]) {
     move_to(h, from[0], from[1]);
     button(h, screen(h, from[0], from[1]), true, Modifiers::NONE);
     for i in 1..=6 {
@@ -690,17 +690,17 @@ fn shift_alt_before_the_drag_intersects_the_selection() {
     assert!(sel.sample_channel(260, 260, 0) < 0.01, "a point only in the dragged rectangle is dropped (not replace)");
 }
 
-/// `cargo test --release -p photocraft-ui-egui marquee_drag_bench -- --ignored --nocapture`
+/// `cargo test --release -p lienzo-ui-egui marquee_drag_bench -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn marquee_drag_bench() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 6000, "height": 4000})).unwrap();
     app.run("filter.render.clouds", json!({})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::RectMarquee;
     let mut h = Harness::builder().with_size(vec2(1600.0, 1000.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -708,7 +708,7 @@ fn marquee_drag_bench() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(6);
     press_at(&mut h, 1000.0, 1000.0, Modifiers::NONE);
     mods(&mut h, Modifiers::SHIFT | Modifiers::ALT);
@@ -725,8 +725,8 @@ fn marquee_drag_bench() {
 }
 
 /// An 80×60 transparent document, red over (10..30)², that square selected, Rectangular Marquee.
-fn painted() -> (PhotocraftApp, photocraft_doc::LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn painted() -> (LienzoApp, lienzo_doc::LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 60, "background": "transparent"})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -742,7 +742,7 @@ fn painted() -> (PhotocraftApp, photocraft_doc::LayerId) {
     (app, layer)
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], m: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], m: Modifiers) {
     use crate::canvas::{ToolEvent, tool_event};
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, m);
@@ -754,7 +754,7 @@ fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], m: Modifiers) {
 #[test]
 fn drag_inside_the_selection_moves_the_outline() {
     let (mut app, layer) = painted();
-    let sel = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
+    let sel = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
     drag(&mut app, [20.0, 20.0], [30.0, 25.0], Modifiers::NONE);
     assert_eq!(sel(&app), Some(Rect::new(20, 15, 40, 35)));
     assert_eq!(app.session.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().rgba(12, 12)[3], 1.0, "pixels stay put");
@@ -770,8 +770,8 @@ fn drag_inside_the_selection_moves_the_outline() {
 fn shift_constrains_a_selection_drag_to_an_axis() {
     use crate::canvas::{ToolEvent, tool_event};
     let (mut app, _layer) = painted();
-    let sel = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
-    let drag_shift = |app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]| {
+    let sel = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
+    let drag_shift = |app: &mut LienzoApp, from: [f64; 2], to: [f64; 2]| {
         tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, Modifiers::NONE);
         tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, Modifiers::SHIFT);
         tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, Modifiers::SHIFT);
@@ -793,7 +793,7 @@ fn shift_constrains_a_selection_drag_to_an_axis() {
 fn shift_constrains_a_floating_selection_drag() {
     use crate::canvas::{ToolEvent, tool_event};
     let (mut app, _layer) = painted();
-    let offset = |app: &PhotocraftApp| photocraft_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
+    let offset = |app: &LienzoApp| lienzo_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
     let cmd_shift = Modifiers::COMMAND | Modifiers::SHIFT;
     tool_event(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, Modifiers::COMMAND);
     tool_event(&mut app, ToolEvent::Move { x: 34.0, y: 22.0, pressure: 1.0 }, cmd_shift);
@@ -808,9 +808,9 @@ fn shift_constrains_a_floating_selection_drag() {
 fn cmd_drag_floats_the_selected_pixels() {
     use crate::canvas::{ToolEvent, tool_event};
     let (mut app, layer) = painted();
-    let alpha = |d: &photocraft_doc::Document, x, y| d.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
-    let doc = |app: &PhotocraftApp| app.session.active().unwrap().doc.clone();
-    let offset = |app: &PhotocraftApp| photocraft_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
+    let alpha = |d: &lienzo_doc::Document, x, y| d.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
+    let doc = |app: &LienzoApp| app.session.active().unwrap().doc.clone();
+    let offset = |app: &LienzoApp| lienzo_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset);
     let steps = app.session.active().unwrap().history.past_len();
     tool_event(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, Modifiers::COMMAND);
     tool_event(&mut app, ToolEvent::Move { x: 35.0, y: 20.0, pressure: 1.0 }, Modifiers::COMMAND);
@@ -842,9 +842,9 @@ fn cmd_drag_floats_the_selected_pixels() {
 #[test]
 fn a_marquee_drag_after_moving_pixels_moves_only_the_outline() {
     let (mut app, layer) = painted();
-    let alpha = |app: &PhotocraftApp, x, y| app.session.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
-    let sel = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
-    let floating = |app: &PhotocraftApp| photocraft_engine::float_cmds::floating(app.session.active().unwrap()).is_some();
+    let alpha = |app: &LienzoApp, x, y| app.session.active().unwrap().doc.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
+    let sel = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().map(|s| s.content_bounds());
+    let floating = |app: &LienzoApp| lienzo_engine::float_cmds::floating(app.session.active().unwrap()).is_some();
     let steps = app.session.active().unwrap().history.past_len();
     app.ui.tool = Tool::Move;
     drag(&mut app, [20.0, 20.0], [35.0, 20.0], Modifiers::NONE);
@@ -973,7 +973,7 @@ fn arrow_keys_without_a_selection_do_nothing() {
 #[test]
 fn cmd_alt_drag_floats_a_copy() {
     let (mut app, layer) = painted();
-    let alpha = |d: &photocraft_doc::Document, x, y| d.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
+    let alpha = |d: &lienzo_doc::Document, x, y| d.layer(layer).unwrap().surface().unwrap().rgba(x, y)[3];
     let cmd_alt = Modifiers { alt: true, ..Modifiers::COMMAND };
     drag(&mut app, [20.0, 20.0], [45.0, 20.0], cmd_alt);
     app.run("select.drop", json!({})).unwrap();
@@ -1004,7 +1004,7 @@ fn alt_with_nothing_selected_draws_a_new_selection() {
     assert!(after.is_none_or(|r| r.is_empty() || r != before), "⌥ subtracted: {before:?} -> {after:?}");
 }
 
-fn error_dialogs(app: &PhotocraftApp) -> Vec<String> {
+fn error_dialogs(app: &LienzoApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == crate::state::DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(String::from)).collect()
 }
 
@@ -1013,7 +1013,7 @@ fn error_dialogs(app: &PhotocraftApp) -> Vec<String> {
 /// selection, a position-locked layer; a plain click says nothing, and the drag never starts.
 #[test]
 fn move_on_the_background_without_a_selection_shows_photoshops_lock_message() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 60})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Move;
@@ -1064,7 +1064,7 @@ fn move_on_the_background_without_a_selection_shows_photoshops_lock_message() {
 /// selection as with the Move tool.
 #[test]
 fn selected_pixels_move_off_the_background_but_not_off_a_fully_locked_layer() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 60})).unwrap();
     app.sync_views();
     app.ui.extras.snap = false;
@@ -1073,7 +1073,7 @@ fn selected_pixels_move_off_the_background_but_not_off_a_fully_locked_layer() {
     app.run("select.rect", json!({"x": 10, "y": 10, "width": 20, "height": 20})).unwrap();
     drag(&mut app, [20.0, 20.0], [50.0, 20.0], Modifiers::COMMAND);
     assert!(error_dialogs(&app).is_empty());
-    assert_eq!(photocraft_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset), Some((30, 0)));
+    assert_eq!(lienzo_engine::float_cmds::floating(app.session.active().unwrap()).map(|f| f.offset), Some((30, 0)));
     let (mut app, layer) = painted();
     app.session
         .edit("lock", |doc, _| {
@@ -1086,7 +1086,7 @@ fn selected_pixels_move_off_the_background_but_not_off_a_fully_locked_layer() {
         app.ui.tool = tool;
         drag(&mut app, [20.0, 20.0], [40.0, 20.0], m);
         assert_eq!(error_dialogs(&app), [crate::move_lock::MESSAGE], "{tool:?}");
-        assert!(photocraft_engine::float_cmds::floating(app.session.active().unwrap()).is_none(), "{tool:?}");
+        assert!(lienzo_engine::float_cmds::floating(app.session.active().unwrap()).is_none(), "{tool:?}");
         app.ui.dialogs.clear();
     }
 }
@@ -1132,7 +1132,7 @@ fn selection_cursor_follows_the_modifiers_and_the_floating_piece() {
 }
 
 /// A click with `tool` at document point `(x, y)`, as the canvas sends it.
-fn click_with(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64, m: Modifiers) {
+fn click_with(app: &mut LienzoApp, tool: Tool, x: f64, y: f64, m: Modifiers) {
     use crate::canvas::{ToolEvent, tool_event};
     app.ui.tool = tool;
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
@@ -1143,18 +1143,18 @@ fn click_with(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64, m: Modifiers)
 /// whole canvas; ⇧ adds, ⌥ subtracts, as with the other marquees.
 #[test]
 fn single_row_and_column_marquee_select_one_pixel_lines() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.ui.extras.snap = false;
-    let bounds = |app: &PhotocraftApp| app.session.active().unwrap().doc.selection.as_ref().map_or(Rect::EMPTY, |s| s.content_bounds());
-    let at = |app: &PhotocraftApp, x: i32, y: i32| app.session.active().unwrap().doc.selection.as_ref().map_or(0.0, |s| s.sample_channel(x, y, 0));
+    let bounds = |app: &LienzoApp| app.session.active().unwrap().doc.selection.as_ref().map_or(Rect::EMPTY, |s| s.content_bounds());
+    let at = |app: &LienzoApp, x: i32, y: i32| app.session.active().unwrap().doc.selection.as_ref().map_or(0.0, |s| s.sample_channel(x, y, 0));
 
     click_with(&mut app, Tool::SingleRowMarquee, 120.3, 37.6, Modifiers::NONE);
     assert_eq!(bounds(&app), Rect::new(0, 37, 200, 38));
     click_with(&mut app, Tool::SingleRowMarquee, 15.0, 60.2, Modifiers::SHIFT);
     assert_eq!(bounds(&app), Rect::new(0, 37, 200, 61));
     assert!(at(&app, 5, 37) > 0.99 && at(&app, 199, 60) > 0.99 && at(&app, 100, 50) < 0.01, "two rows, nothing between");
-    let step = |app: &PhotocraftApp| app.session.active().unwrap().history.undo_label().map(str::to_string);
+    let step = |app: &LienzoApp| app.session.active().unwrap().history.undo_label().map(str::to_string);
     assert_eq!(step(&app).as_deref(), Some("Single Row Marquee"), "History names the step after the tool (#3031)");
 
     click_with(&mut app, Tool::SingleColumnMarquee, 42.9, 80.0, Modifiers::NONE);
@@ -1170,7 +1170,7 @@ fn single_row_and_column_marquee_select_one_pixel_lines() {
 /// Rectangular and Elliptical Marquee, as in Photoshop; automation picks them by name.
 #[test]
 fn m_cycles_only_the_rectangular_and_elliptical_marquee() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.ui.tool = Tool::SingleRowMarquee;
     let mut seen = Vec::new();
@@ -1194,7 +1194,7 @@ fn m_cycles_only_the_rectangular_and_elliptical_marquee() {
 
 #[test]
 fn size_readout_follows_the_ruler_unit() {
-    use photocraft_engine::prefs::{Unit, UnitsAndRulers};
+    use lienzo_engine::prefs::{Unit, UnitsAndRulers};
     let mut ur = UnitsAndRulers::default();
     // 1644 × 2659 px at 72 dpi: 58 cm wide
     let r = [0.0, 0.0, 1644.0, 2659.0];

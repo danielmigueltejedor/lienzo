@@ -5,20 +5,20 @@ use std::collections::BTreeSet;
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::{BlendRange, Document, Group, Knockout, Layer, LayerContent, LayerMask, VectorMask};
+use lienzo_doc::{BlendRange, Document, Group, Knockout, Layer, LayerContent, LayerMask, VectorMask};
 use serde_json::json;
 
 use super::attribute::Attribute;
 use super::{Filter, FilterBy};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::UiState;
 
 const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 /// One layer per measured case. Every pixel layer has pixels except "empty"; the adjustment, fill
 /// and shape layers come from their commands, so they carry the masks those give them.
-fn session() -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn session() -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     let pixel_layers = [
         "pixels",
@@ -66,7 +66,7 @@ fn session() -> photocraft_engine::Session {
     rename_active(&mut s, "shape");
 
     let doc = std::sync::Arc::make_mut(&mut s.active_mut().unwrap().doc);
-    let full = photocraft_geom::Rect::new(0, 0, 64, 48);
+    let full = lienzo_geom::Rect::new(0, 0, 64, 48);
     for name in pixel_layers.into_iter().filter(|n| *n != "empty") {
         let l = layer(doc, name);
         let LayerContent::Raster(surface) = &mut l.content else { panic!("{name} is a pixel layer") };
@@ -89,14 +89,14 @@ fn session() -> photocraft_engine::Session {
     layer(doc, "adv vector mask").advanced.vector_mask_hides_effects = true;
     layer(doc, "adv blend if").blend_if.ranges = vec![[BlendRange { black: [40, 40], white: [255, 255] }, BlendRange::FULL]];
     // A visible group holding a pixel layer, and an empty group.
-    let mut inside = Layer::new("inside", LayerContent::Raster(photocraft_raster::Surface::new(photocraft_doc::PixelFormat::RGBA8)));
+    let mut inside = Layer::new("inside", LayerContent::Raster(lienzo_raster::Surface::new(lienzo_doc::PixelFormat::RGBA8)));
     if let LayerContent::Raster(surface) = &mut inside.content {
         surface.fill_rect(full, &RED);
     }
     doc.layers.push(Layer::new("group", LayerContent::Group(Group { children: vec![inside], expanded: true, artboard: None, frame_stroke: None })));
     doc.layers.push(Layer::new("empty group", LayerContent::Group(Group { children: Vec::new(), expanded: true, artboard: None, frame_stroke: None })));
     // A hidden group whose child is visible: Visible goes by the layer's own flag.
-    let mut child = Layer::new("in hidden group", LayerContent::Raster(photocraft_raster::Surface::new(photocraft_doc::PixelFormat::RGBA8)));
+    let mut child = Layer::new("in hidden group", LayerContent::Raster(lienzo_raster::Surface::new(lienzo_doc::PixelFormat::RGBA8)));
     if let LayerContent::Raster(surface) = &mut child.content {
         surface.fill_rect(full, &RED);
     }
@@ -111,7 +111,7 @@ fn layer<'a>(doc: &'a mut Document, name: &str) -> &'a mut Layer {
     doc.layer_mut(id).unwrap()
 }
 
-fn rename_active(s: &mut photocraft_engine::Session, name: &str) {
+fn rename_active(s: &mut lienzo_engine::Session, name: &str) {
     let d = s.active_mut().unwrap();
     let id = d.active_layer.unwrap();
     std::sync::Arc::make_mut(&mut d.doc).layer_mut(id).unwrap().name = name.into();
@@ -166,11 +166,11 @@ fn each_attribute_lists_the_measured_layers() {
 fn a_layer_erased_completely_is_empty() {
     // The Eraser only clears alpha, so the erased pixels keep their colour bytes.
     for depth in [8, 16, 32] {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 40, "height": 30, "depth": depth, "background": "transparent"})).unwrap();
         s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
         let name = s.active().unwrap().doc.walk().into_iter().map(|(_, _, l)| l.name.clone()).next().unwrap();
-        let erase = |s: &mut photocraft_engine::Session, x: i32| {
+        let erase = |s: &mut lienzo_engine::Session, x: i32| {
             s.execute("paint.stroke", json!({"points": [[x, -10], [x, 40]], "size": 30, "erase": true, "brush": {"hardness": 1.0}})).unwrap();
         };
         erase(&mut s, 10);
@@ -187,10 +187,10 @@ fn a_layer_erased_completely_is_empty() {
 #[test]
 fn a_layer_with_an_opaque_default_pixel_is_not_empty() {
     // No stored tiles, but the default pixel covers the whole canvas.
-    let mut doc = Document::new("Opaque default", photocraft_geom::Size::new(40, 30), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
-    let opaque = photocraft_raster::Surface::with_default(photocraft_doc::PixelFormat::RGBA8, &RED);
+    let mut doc = Document::new("Opaque default", lienzo_geom::Size::new(40, 30), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
+    let opaque = lienzo_raster::Surface::with_default(lienzo_doc::PixelFormat::RGBA8, &RED);
     doc.layers.push(Layer::new("opaque", LayerContent::Raster(opaque)));
-    doc.layers.push(Layer::new("clear", LayerContent::Raster(photocraft_raster::Surface::new(photocraft_doc::PixelFormat::RGBA8))));
+    doc.layers.push(Layer::new("clear", LayerContent::Raster(lienzo_raster::Surface::new(lienzo_doc::PixelFormat::RGBA8))));
     assert_eq!(listed(&doc, Attribute::Empty), names(&["clear"]));
     assert_eq!(listed(&doc, Attribute::NotEmpty), names(&["opaque"]));
 }
@@ -198,16 +198,16 @@ fn a_layer_with_an_opaque_default_pixel_is_not_empty() {
 #[test]
 fn an_opaque_default_layer_erased_on_the_whole_canvas_is_empty() {
     // 300 px wide: the second column of tiles reaches past the canvas, where the default stays.
-    let mut doc = Document::new("Opaque erased", photocraft_geom::Size::new(300, 30), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
+    let mut doc = Document::new("Opaque erased", lienzo_geom::Size::new(300, 30), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
     let clear = [1.0, 0.0, 0.0, 0.0];
-    for (name, erased) in [("erased", photocraft_geom::Rect::new(0, 0, 300, 30)), ("half erased", photocraft_geom::Rect::new(0, 0, 200, 30))] {
-        let mut s = photocraft_raster::Surface::with_default(photocraft_doc::PixelFormat::RGBA8, &RED);
+    for (name, erased) in [("erased", lienzo_geom::Rect::new(0, 0, 300, 30)), ("half erased", lienzo_geom::Rect::new(0, 0, 200, 30))] {
+        let mut s = lienzo_raster::Surface::with_default(lienzo_doc::PixelFormat::RGBA8, &RED);
         s.fill_rect(erased, &clear);
         doc.layers.push(Layer::new(name, LayerContent::Raster(s)));
     }
-    let mut dot = photocraft_raster::Surface::with_default(photocraft_doc::PixelFormat::RGBA8, &RED);
-    dot.fill_rect(photocraft_geom::Rect::new(0, 0, 300, 30), &clear);
-    dot.fill_rect(photocraft_geom::Rect::new(299, 29, 300, 30), &RED);
+    let mut dot = lienzo_raster::Surface::with_default(lienzo_doc::PixelFormat::RGBA8, &RED);
+    dot.fill_rect(lienzo_geom::Rect::new(0, 0, 300, 30), &clear);
+    dot.fill_rect(lienzo_geom::Rect::new(299, 29, 300, 30), &RED);
     doc.layers.push(Layer::new("one pixel", LayerContent::Raster(dot)));
     // The half erased layer has no tile over x 256..300, so the default shows there.
     assert_eq!(listed(&doc, Attribute::Empty), names(&["erased"]));
@@ -216,10 +216,10 @@ fn an_opaque_default_layer_erased_on_the_whole_canvas_is_empty() {
 
 #[test]
 fn the_empty_layers_are_found_once_per_document() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 40, "height": 30, "background": "transparent"})).unwrap();
     s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.ui.layer_filter_by = FilterBy::Attribute;
     app.ui.layer_filter_attribute = Attribute::Empty;
     let first = Filter::of_app(&app).empty.expect("found for Empty");
@@ -292,7 +292,7 @@ fn saved_settings_without_the_attribute_still_load() {
 }
 
 /// The names of the rows the Layers panel drew.
-fn drawn(h: &Harness<'_, PhotocraftApp>) -> BTreeSet<String> {
+fn drawn(h: &Harness<'_, LienzoApp>) -> BTreeSet<String> {
     let doc = &h.state().session.active().unwrap().doc;
     let rows = crate::layer_row_ui::recorded(&h.ctx);
     rows.iter().filter_map(|r| doc.walk().into_iter().find(|(_, _, l)| l.id.0 == r.layer).map(|(_, _, l)| l.name.clone())).collect()
@@ -302,8 +302,8 @@ fn drawn(h: &Harness<'_, PhotocraftApp>) -> BTreeSet<String> {
 fn the_panel_filters_by_the_attribute_picked_in_the_dropdown() {
     let session = session();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(session, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(session, crate::Services::default())
     });
     h.run_steps(8);
     h.get_by_value("Kind").click();

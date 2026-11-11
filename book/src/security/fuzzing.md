@@ -1,6 +1,6 @@
 # Fuzzing and regression testing
 
-PhotoCraft already has `cargo-fuzz` workspaces next to its primary untrusted-format crates:
+Lienzo already has `cargo-fuzz` workspaces next to its primary untrusted-format crates:
 
 | Crate | Targets |
 |---|---|

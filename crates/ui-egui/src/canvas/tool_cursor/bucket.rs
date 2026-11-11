@@ -18,7 +18,7 @@ pub(super) fn show(painter: &Painter, at: Pos2) -> Result<CursorIcon, String> {
     let ctx = painter.ctx();
     let native = native(ctx);
     let scale = if native { native_scale(ctx) } else { ctx.pixels_per_point() };
-    let id = egui::Id::unique("photocraft-bucket-cursor");
+    let id = egui::Id::unique("lienzo-bucket-cursor");
     let mut cached = ctx.data(|d| d.get_temp::<Cached>(id)).filter(|cached| cached.scale == scale).unwrap_or_else(|| Cached {
         scale,
         // Keep diagnostics in the log once per cached failure; the error also reaches UI text.

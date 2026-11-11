@@ -83,7 +83,7 @@ fn cas_pixels(
     (nw, nh): (usize, usize),
     amount: f32,
 ) -> Result<Vec<f32>> {
-    use photocraft_algo::seam::{carve_with, resize_bilinear, skin_mask};
+    use lienzo_algo::seam::{carve_with, resize_bilinear, skin_mask};
     let n = fmt.channels();
     if skin_tones {
         let rgba: Vec<f32> = img.chunks_exact(n).flat_map(|px| to_rgba(&fmt, px)).collect();

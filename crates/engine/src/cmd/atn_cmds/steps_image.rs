@@ -281,7 +281,7 @@ pub(super) const RIPPLE_SIZE: &[(&str, &str)] = &[("Sml", "small"), ("Mdm", "med
 
 /// Camera Raw Filter's scalar sliders. Every one is an integer in recorded steps except `Ex12`
 /// and `ShpR` (doubles); the layout is from 62 recorded steps in 14 sets (#6745) and matches the
-/// verified PSD Smart Filter mapping (`photocraft-io`'s `camera_raw_map.rs`).
+/// verified PSD Smart Filter mapping (`lienzo-io`'s `camera_raw_map.rs`).
 const CAMERA_RAW: &[F] = &[
     F("Temp", "temperature", Kind::Long),
     F("Tint", "tint", Kind::Long),
@@ -321,7 +321,7 @@ const CAMERA_RAW: &[F] = &[
 ];
 
 /// The range a Camera Raw Filter descriptor key's value can take, as `filter.cameraRaw` and the
-/// PSD Smart Filter mapping (`photocraft-io`'s `camera_raw_map.rs`) accept it.
+/// PSD Smart Filter mapping (`lienzo-io`'s `camera_raw_map.rs`) accept it.
 fn camera_raw_range(key: &str) -> std::ops::RangeInclusive<f64> {
     match key {
         "Ex12" => -5.0..=5.0,
@@ -439,7 +439,7 @@ pub(super) fn camera_raw_from(d: &Descriptor) -> Mapped {
         // Odd lengths, and curves `filter.cameraRaw` refuses (one point, out of range, inputs not
         // increasing), stay Photoshop steps rather than failing on playback.
         let points: Vec<[f32; 2]> = flat.as_chunks::<2>().0.iter().map(|[a, b]| [*a as f32, *b as f32]).collect();
-        if flat.len() % 2 != 0 || photocraft_algo::camera_raw::validate_curve(&points).is_err() {
+        if flat.len() % 2 != 0 || lienzo_algo::camera_raw::validate_curve(&points).is_err() {
             return Mapped::Unsupported { harmless: false };
         }
         let identity = flat == [0.0, 0.0, 255.0, 255.0];
@@ -447,15 +447,15 @@ pub(super) fn camera_raw_from(d: &Descriptor) -> Mapped {
             m.insert(param.into(), Value::Array(flat.as_chunks::<2>().0.iter().map(|[a, b]| json!([a, b])).collect()));
         }
     }
-    m.insert(CAMERA_RAW_DESCRIPTOR.into(), json!(photocraft_paint::tile::b64_encode(&d.to_bytes())));
+    m.insert(CAMERA_RAW_DESCRIPTOR.into(), json!(lienzo_paint::tile::b64_encode(&d.to_bytes())));
     step(crate::lens_cmds::RAW, Value::Object(m))
 }
 
 /// An imported Camera Raw Filter step back as its recorded descriptor, unchanged. Only while the
-/// params are still what that descriptor imports as: an edited step, or one PhotoCraft recorded,
+/// params are still what that descriptor imports as: an edited step, or one Lienzo recorded,
 /// has no verified Photoshop form and Save Actions refuses it.
 pub(super) fn camera_raw_to(_: &str, p: &Value) -> Option<Descriptor> {
-    let d = Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(jstr(p, CAMERA_RAW_DESCRIPTOR)?)?).ok()?;
+    let d = Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(jstr(p, CAMERA_RAW_DESCRIPTOR)?)?).ok()?;
     let Mapped::Steps(steps) = camera_raw_from(&d) else { return None };
     let [(_, imported)] = steps.as_slice() else { return None };
     let (mut a, mut b) = (imported.clone(), p.clone());
@@ -483,7 +483,7 @@ pub(super) fn refine_edge_to(_: &str, p: &Value) -> Option<Descriptor> {
 }
 
 /// Select and Mask (`refineSelectionEdge`). Smart Radius, decontamination and the output follow
-/// Photoshop's; the edge itself is PhotoCraft's own matting, so results differ in detail.
+/// Photoshop's; the edge itself is Lienzo's own matting, so results differ in detail.
 pub(super) const REFINE_EDGE: &[F] = &[
     F("refineEdgeBorderRadius", "radius", Kind::Px),
     F("refineEdgeAutoRadius", "smartRadius", Kind::Bool),
@@ -830,7 +830,7 @@ fn in_unit(unit: [u8; 4]) -> impl Fn(&D) -> Option<f64> {
 const SMART_SHARPEN_LIMITS: &[(&str, f64, f64)] = &[("amount", 1.0, 500.0), ("radius", 0.1, 64.0), ("reduceNoise", 0.0, 100.0)];
 
 /// Smart Sharpen (`smartSharpen`) in the one form the command plays, the same form PSD smart
-/// filters map (`photocraft-io`'s `smart_map`): the newer filter (`useLegacy` false) removing a
+/// filters map (`lienzo-io`'s `smart_map`): the newer filter (`useLegacy` false) removing a
 /// Gaussian blur (`blur` `GsnB`), both recorded. The legacy filter (Photoshop's default, which
 /// removes Lens Blur), Lens Blur, Motion Blur, a preset other than Custom or any other key, or an
 /// amount, radius or noise reduction in another unit, keeps it as a Photoshop step. A missing

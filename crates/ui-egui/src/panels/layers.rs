@@ -5,7 +5,7 @@ use super::layer_drag::{
 use super::layer_row::{RowSel, layer_row};
 use super::options_bar::{LAYER_PCT_W, body_text_width, pct_action, scrub_pct_label};
 use super::{
-    BlendMode, Layer, LayerId, MaskKind, PhotocraftApp, Rect, Sense, Tokens, Value, empty, icons, json, label, pos2, starts_blend_group, theme, vec2, widgets,
+    BlendMode, Layer, LayerId, LienzoApp, MaskKind, Rect, Sense, Tokens, Value, empty, icons, json, label, pos2, starts_blend_group, theme, vec2, widgets,
 };
 
 // ----------------------------------------------------------------------------- layers
@@ -106,7 +106,7 @@ fn inactive_blend_rows(ui: &mut egui::Ui, pro: bool) {
     ui.add_space(2.0);
 }
 
-pub(super) fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn layers(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // A new active layer opens its parent groups and is scrolled into view (#152).
     let reveal = crate::layer_reveal::track(app, ui.ctx());
     let Some(st) = app.session.active() else {
@@ -284,7 +284,7 @@ pub(super) fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             let mut drawn: Vec<(LayerId, Rect)> = Vec::new();
             for &(depth, l) in &rows {
                 // Select › Isolate Layers.
-                if !photocraft_engine::select_extra_cmds::isolation_shows(&doc, &isolated, l.id) {
+                if !lienzo_engine::select_extra_cmds::isolation_shows(&doc, &isolated, l.id) {
                     continue;
                 }
                 if !filter.shows(l) {
@@ -471,7 +471,7 @@ pub(super) fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         // Opens on the press like Photoshop's: drag onto an item and release to choose it (#2071).
         crate::press_menu::show(&adj, |ui, menu| {
             ui.set_min_width(190.0);
-            for c in photocraft_engine::command_specs().iter().filter(|c| c.id.starts_with("layer.newAdjustmentLayer.")) {
+            for c in lienzo_engine::command_specs().iter().filter(|c| c.id.starts_with("layer.newAdjustmentLayer.")) {
                 if menu.item(ui, tl!(c.label).trim_end_matches('…')) {
                     actions.push((c.id.into(), json!({})));
                 }
@@ -563,7 +563,7 @@ pub(super) fn layers(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
             app.ui.dock.collapsed.retain(|g| *g != crate::dock::Group::Properties);
             continue;
         }
-        if p.is_null() || id == "layer.newFillLayer.solidColor" || id == photocraft_engine::pattern_fill_cmds::CREATE {
+        if p.is_null() || id == "layer.newFillLayer.solidColor" || id == lienzo_engine::pattern_fill_cmds::CREATE {
             // Context-menu items and the Layers footer's Solid Color… and Pattern… actions behave
             // like their menu-bar twins: a new Solid Color fill opens its picker, a new Pattern
             // fill the Pattern Fill dialog.
@@ -618,6 +618,6 @@ pub(crate) fn fx_button(ui: &mut egui::Ui, size: f32, tip: &str) -> egui::Respon
     resp.on_hover_text(tip)
 }
 
-pub(super) fn channels(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn channels(app: &mut LienzoApp, ui: &mut egui::Ui) {
     crate::channels_panel::show(app, ui);
 }

@@ -3818,7 +3818,7 @@ layerLabel	No Color	நிறம் இல்லை
 	Mezzotint	மெசோடின்ட்
 	Mosaic	மொசைக்
 	Motion Blur	இயக்க மங்கல்
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Wayland-இல் சொந்த கோப்பு இழுத்துவிடுதல் இன்னும் ஆதரிக்கப்படவில்லை. கோப்பு › திற என்பதைப் பயன்படுத்தவும், அல்லது `WAYLAND_DISPLAY= photocraft` உடன் போட்டோகிராப்டை XWayland-இல் இயக்கவும்.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Wayland-இல் சொந்த கோப்பு இழுத்துவிடுதல் இன்னும் ஆதரிக்கப்படவில்லை. கோப்பு › திற என்பதைப் பயன்படுத்தவும், அல்லது `WAYLAND_DISPLAY= lienzo` உடன் போட்டோகிராப்டை XWayland-இல் இயக்கவும்.
 	Neon Glow	நியான் பிரகாசம்
 	New Guide Layout	புதிய அளவுகோட்டு வரி அமைப்பு
 	New Video Layer from File	கோப்பிலிருந்து புதிய வீடியோ அடுக்கு

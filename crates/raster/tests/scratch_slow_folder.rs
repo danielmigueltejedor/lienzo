@@ -10,9 +10,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex};
 use std::time::{Duration, Instant};
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::{Surface, spill};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::{Rect, TILE_SIZE};
+use lienzo_raster::{Surface, spill};
 
 const TILE_BYTES: usize = (TILE_SIZE * TILE_SIZE) as usize * 4;
 
@@ -102,7 +102,7 @@ fn surface(seed: u32, n: i32) -> Surface {
 
 #[test]
 fn a_folder_that_stops_answering_never_freezes_the_app() {
-    let root = std::env::temp_dir().join(format!("photocraft-scratch-slow-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("lienzo-scratch-slow-{}", std::process::id()));
     let good = root.join("good");
     let good2 = root.join("good2");
     let hung1 = root.join("hung1");

@@ -1,10 +1,10 @@
 //! Patterns: tiles used by Pattern Overlay, pattern fill layers, pattern strokes, Edit › Fill
-//! and brush textures. Pure data; rendering lives in `photocraft-compose`, the PSD mapping
-//! (`Patt`/`Pat2`/`Pat3` global blocks) in `photocraft-io`.
+//! and brush textures. Pure data; rendering lives in `lienzo-compose`, the PSD mapping
+//! (`Patt`/`Pat2`/`Pat3` global blocks) in `lienzo-io`.
 
-use photocraft_color::SampleType;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::SampleType;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 /// Largest pattern edge a file may declare (the PSD reader's limit; Define Pattern stops at 8000).
 pub const MAX_EDGE: u32 = 30_000;
@@ -13,7 +13,7 @@ pub const MAX_EDGE: u32 = 30_000;
 /// patterns paint nothing.
 pub const MAX_PAINT_PIXELS: u64 = 1 << 26;
 
-/// Most bytes of working copy the CPU compositor holds for one pattern (`photocraft-compose`
+/// Most bytes of working copy the CPU compositor holds for one pattern (`lienzo-compose`
 /// checks the two agree at build time). See [`Pattern::working_bytes`]. A browser tab has far less
 /// memory than a desktop process, and a failed allocation there aborts the tab, so the web build
 /// holds half as much: an 8-bit pattern paints up to 33,554,432 px (about 5792²) there.
@@ -172,7 +172,7 @@ pub fn find<'a>(patterns: &'a [Pattern], id: &str, name: &str) -> Option<&'a Pat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
+    use lienzo_color::PixelFormat;
 
     #[test]
     fn ids_are_deterministic_and_lookup_falls_back_to_names() {
@@ -219,7 +219,7 @@ mod tests {
     fn working_bytes_keep_a_pattern_exact_in_less_memory() {
         let sparse =
             |format: PixelFormat, width: u32, height: u32| Pattern { id: String::new(), name: String::new(), width, height, surface: Surface::new(format) };
-        let float = PixelFormat::new(photocraft_color::ColorMode::Rgb, SampleType::F32, true);
+        let float = PixelFormat::new(lienzo_color::ColorMode::Rgb, SampleType::F32, true);
         // What fits is expanded as before.
         assert_eq!(sparse(PixelFormat::RGBA8, 10, 10).working_bytes(), 1600);
         assert_eq!(sparse(float, 4096, 4096).working_bytes(), MAX_WORKING_BYTES);
@@ -238,7 +238,7 @@ mod tests {
     fn a_pattern_that_paints_nothing_says_why() {
         let sparse =
             |format: PixelFormat, width: u32, height: u32| Pattern { id: String::new(), name: String::new(), width, height, surface: Surface::new(format) };
-        let float = PixelFormat::new(photocraft_color::ColorMode::Rgb, SampleType::F32, true);
+        let float = PixelFormat::new(lienzo_color::ColorMode::Rgb, SampleType::F32, true);
         assert_eq!(sparse(PixelFormat::RGBA8, 8000, 8000).paint_problem(), None);
         assert_eq!(sparse(PixelFormat::RGBA8, 0, 4).paint_problem().as_deref(), Some("it is empty"));
         let reason = sparse(float, 5000, 5000).paint_problem().expect("float 5000 x 5000 paints nothing");

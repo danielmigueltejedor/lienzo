@@ -3,7 +3,7 @@
 use crate::common;
 use FidelityWarning as W;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 fn warns(img: &Image, f: Format) -> Vec<FidelityWarning> {
     fidelity_warnings(img, f)

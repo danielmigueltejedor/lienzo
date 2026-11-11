@@ -1,9 +1,9 @@
 use super::open::{Coverage, Target};
-use super::{CameraRaw, CameraRawDialog, LayerId, MAX_SAMPLERS, PROXY_SIDE, PhotocraftApp, Rect, RgbHistogram, Value, json};
+use super::{CameraRaw, CameraRawDialog, LayerId, LienzoApp, MAX_SAMPLERS, PROXY_SIDE, Rect, RgbHistogram, Value, json};
 
 /// Camera Raw Defaults › Sharpen For: output sharpening, folded into the Camera Raw step `rest`
 /// as the workflow's Sharpen For is. Returns what it applied.
-pub(super) fn output_sharpening(d: &photocraft_engine::prefs::RawDefaults, rest: &mut CameraRaw) -> Vec<&'static str> {
+pub(super) fn output_sharpening(d: &lienzo_engine::prefs::RawDefaults, rest: &mut CameraRaw) -> Vec<&'static str> {
     match d.sharpen_for.preset() {
         Some((amount, radius)) if rest.sharpen_amount == 0.0 => {
             rest.sharpen_amount = amount;
@@ -16,10 +16,10 @@ pub(super) fn output_sharpening(d: &photocraft_engine::prefs::RawDefaults, rest:
 
 /// The Camera Raw Defaults [`apply_raw_conversions`] applies. Resolution is not among them: the
 /// open itself sets it (`file_cmds::raw_defaults`), and a re-develop keeps it.
-pub(super) fn raw_conversions(d: &photocraft_engine::prefs::RawDefaults) -> Vec<&'static str> {
-    use photocraft_engine::prefs::{RawColorSpace, RawDepth};
+pub(super) fn raw_conversions(d: &lienzo_engine::prefs::RawDefaults) -> Vec<&'static str> {
+    use lienzo_engine::prefs::{RawColorSpace, RawDepth};
     let mut out = Vec::new();
-    // Raws develop into ProPhoto-compatible RGB (`photocraft_io::raw`); the other spaces are a
+    // Raws develop into ProPhoto-compatible RGB (`lienzo_io::raw`); the other spaces are a
     // conversion.
     if d.color_space != RawColorSpace::ProPhoto {
         out.push("colorSpace");
@@ -35,7 +35,7 @@ pub(super) fn raw_conversions(d: &photocraft_engine::prefs::RawDefaults) -> Vec<
 
 /// Camera Raw Defaults (Preferences) after the Camera Raw step: the colour space and bit depth
 /// the developed document opens in, and Open as Smart Object.
-pub(super) fn apply_raw_conversions(app: &mut PhotocraftApp, index: usize, d: &photocraft_engine::prefs::RawDefaults) -> Result<(), String> {
+pub(super) fn apply_raw_conversions(app: &mut LienzoApp, index: usize, d: &lienzo_engine::prefs::RawDefaults) -> Result<(), String> {
     app.session.set_active(index);
     for step in raw_conversions(d) {
         let (id, params) = match step {
@@ -51,7 +51,7 @@ pub(super) fn apply_raw_conversions(app: &mut PhotocraftApp, index: usize, d: &p
 /// What the preview develops, and its size: the engine filter domain, including pixels outside the
 /// canvas, since spatial Camera Raw stages (vignette, grain, local contrast) must agree with the
 /// committed result.
-pub(super) fn preview_area(canvas: Rect, surf: &photocraft_raster::Surface) -> Result<(Rect, usize, usize), String> {
+pub(super) fn preview_area(canvas: Rect, surf: &lienzo_raster::Surface) -> Result<(Rect, usize, usize), String> {
     let area = canvas.union(&surf.content_bounds());
     let width = area.x1.checked_sub(area.x0).filter(|n| (1..=1_048_576).contains(n));
     let height = area.y1.checked_sub(area.y0).filter(|n| (1..=1_048_576).contains(n));
@@ -67,7 +67,7 @@ pub(super) fn preview_area(canvas: Rect, surf: &photocraft_raster::Surface) -> R
 
 /// `area` of `surf` (`w`×`h`) box-averaged down to at most [`PROXY_SIDE`] pixels on its long side:
 /// the proxy, its size, and the side of the blocks averaged.
-pub(super) fn box_proxy(surf: &photocraft_raster::Surface, area: Rect, w: usize, h: usize) -> (Vec<[f32; 4]>, usize, usize, usize) {
+pub(super) fn box_proxy(surf: &lienzo_raster::Surface, area: Rect, w: usize, h: usize) -> (Vec<[f32; 4]>, usize, usize, usize) {
     let k = w.max(h).div_ceil(PROXY_SIDE).max(1);
     let (pw, ph) = (w.div_ceil(k), h.div_ceil(k));
     let mut proxy = vec![[0.0f32; 4]; pw * ph];
@@ -94,10 +94,10 @@ pub(super) fn box_proxy(surf: &photocraft_raster::Surface, area: Rect, w: usize,
 }
 
 pub(super) fn open_pixels(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ctx: &egui::Context,
     layer: LayerId,
-    surf: photocraft_raster::Surface,
+    surf: lienzo_raster::Surface,
     params: CameraRaw,
     coverage: Coverage,
     target: Target,
@@ -107,7 +107,7 @@ pub(super) fn open_pixels(
     let name = st.doc.layer(layer).map(|l| l.name.clone()).unwrap_or_default();
     let mut params = params;
     if params.encoding_gamma == 0.0 {
-        params.encoding_gamma = photocraft_engine::lens_cmds::encoding_gamma(&st.doc);
+        params.encoding_gamma = lienzo_engine::lens_cmds::encoding_gamma(&st.doc);
     }
     let (area, w, h) = preview_area(canvas, &surf)?;
     let (proxy, pw, ph, k) = box_proxy(&surf, area, w, h);
@@ -123,10 +123,10 @@ pub(super) fn open_pixels(
         Coverage::Mask(mask) => Some(sample(&|x, y| mask.value(x, y))),
         Coverage::None => None,
     };
-    let source = photocraft_engine::color_cmds::composite_profile(&st.doc);
+    let source = lienzo_engine::color_cmds::composite_profile(&st.doc);
     let display = app.session.color.canvas_display(&st.doc).map_err(|e| e.to_string())?;
-    let lab_transform = photocraft_cms::cached(&source, photocraft_cms::Builtin::LabD50.profile(), Default::default()).map_err(|e| e.to_string())?;
-    let scope_transform = photocraft_cms::cached(&source, photocraft_cms::Builtin::Srgb.profile(), Default::default()).map_err(|e| e.to_string())?;
+    let lab_transform = lienzo_cms::cached(&source, lienzo_cms::Builtin::LabD50.profile(), Default::default()).map_err(|e| e.to_string())?;
+    let scope_transform = lienzo_cms::cached(&source, lienzo_cms::Builtin::Srgb.profile(), Default::default()).map_err(|e| e.to_string())?;
     if let Some(saved) = app.session.prefs().dialogs.get("filter.cameraRaw.scope")
         && saved.get("samplers").and_then(Value::as_array).is_none_or(|a| a.len() <= MAX_SAMPLERS)
         && let Ok(view) = serde_json::from_value(saved.clone())
@@ -140,7 +140,7 @@ pub(super) fn open_pixels(
     if selection.is_none() {
         app.ui.camera_raw_scope.selected_region = false;
     }
-    let float = surf.format().sample == photocraft_color::SampleType::F32;
+    let float = surf.format().sample == lienzo_color::SampleType::F32;
     // Builds the GPU pass the first time any Camera Raw dialog opens.
     let gpu = crate::camera_raw_gpu::for_app(app);
     let mut d = CameraRawDialog {

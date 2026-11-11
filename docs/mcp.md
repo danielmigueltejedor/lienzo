@@ -6,11 +6,11 @@ From the repository root, with the [source-build prerequisites](development.md#p
 installed, install the CLI independently of the build directory:
 
 ```sh
-cargo install --path apps/photocraft-cli --locked
+cargo install --path apps/lienzo-cli --locked
 # POSIX shells, for Cargo's default install location:
 export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
-photocraft-cli --help
-photocraft-cli mcp --help
+lienzo-cli --help
+lienzo-cli mcp --help
 ```
 
 Cargo installs a binary, not a symlink into `target/`, so it survives `cargo clean`.
@@ -24,22 +24,22 @@ the client after changing its environment.
 Register the installed command explicitly (replace `/work/project` with an existing folder):
 
 ```sh
-claude mcp add photocraft -- photocraft-cli mcp --automation-read-root /work/project --automation-write-root /work/project
+claude mcp add lienzo -- lienzo-cli mcp --automation-read-root /work/project --automation-write-root /work/project
 ```
 
 Other MCP clients can use this bare-name configuration:
 
 ```json
-{"mcpServers":{"photocraft":{"command":"photocraft-cli","args":["mcp","--automation-read-root","/work/project","--automation-write-root","/work/project"]}}}
+{"mcpServers":{"lienzo":{"command":"lienzo-cli","args":["mcp","--automation-read-root","/work/project","--automation-write-root","/work/project"]}}}
 ```
 
-Linux `.deb` and `.rpm` packages already install `/usr/bin/photocraft-cli`; those users
+Linux `.deb` and `.rpm` packages already install `/usr/bin/lienzo-cli`; those users
 can skip the source install. Other release locations are listed in the
 [installed-release guide](../book/src/automation/mcp.md#from-an-installed-release).
 Installing the CLI does not start or register an MCP server automatically.
 
 If a client reports `ENOENT` or "Executable not found in $PATH", verify the install with
-`command -v photocraft-cli` (PowerShell: `Get-Command photocraft-cli`) in the client's
+`command -v lienzo-cli` (PowerShell: `Get-Command lienzo-cli`) in the client's
 environment. If that environment cannot be changed, set JSON `command` to the absolute
 installed binary path, not a literal `~` or `$HOME` expression. Avoid symlinks into
 `target/release`: cleaning the build directory breaks them. A source build alone does
@@ -47,17 +47,17 @@ not put the CLI on `PATH`.
 
 ## Start a session
 
-PhotoCraft follows the same conventions as FilmCraft #28. Start a headless session:
+Lienzo follows the same conventions as FilmCraft #28. Start a headless session:
 
 ```sh
-photocraft-cli mcp \
+lienzo-cli mcp \
   --automation-read-root /work/project \
   --automation-read-root /library/reference \
   --automation-write-root /work/project
 ```
 
 Repeat `--automation-read-root` to grant ordered read directories in headless `mcp`, `serve`,
-or desktop `photocraft --control`. Both `--flag <dir>` and `--flag=<dir>` work and can be mixed;
+or desktop `lienzo --control`. Both `--flag <dir>` and `--flag=<dir>` work and can be mixed;
 duplicate read roots are allowed. Relative file requests search the roots in launch order.
 Headless reads select the first existing regular file; only a missing file tries the next root.
 Directory, permission, path-escape and decoding errors stop headless requests instead of falling back.
@@ -86,17 +86,17 @@ directory-bundle access; desktop directory `.pcraft` reads remain scoped to the 
 
 Bridge mode uses `--bridge` and `--control-token-file` as described in
 [development.md](development.md). Configure all roots on the desktop process; passing root flags
-to `photocraft-cli mcp --bridge` is a usage error because the bridge cannot grant them.
+to `lienzo-cli mcp --bridge` is a usage error because the bridge cannot grant them.
 UI tools require a running desktop app. The desktop environment variable
-`PHOTOCRAFT_AUTOMATION_READ_ROOT` supplies one fallback directory only when no explicit read-root
+`LIENZO_AUTOMATION_READ_ROOT` supplies one fallback directory only when no explicit read-root
 flags are present; explicit flags replace it, preserving CLI order. Similarly, one explicit
-write-root flag overrides `PHOTOCRAFT_AUTOMATION_WRITE_ROOT`. These variables do not grant
+write-root flag overrides `LIENZO_AUTOMATION_WRITE_ROOT`. These variables do not grant
 headless CLI file access.
 
 A client has the full rights of the roots it is given: it can read any file below the read
 root, and `doc_save`, `doc_export` and the export tools can create files anywhere below the
 write root. `doc_save` and `doc_export` replace an existing file only when its extension is an
-image or document format PhotoCraft writes (PNG, JPEG, TIFF, PSD, PSB, .pcraft, OpenRaster,
+image or document format Lienzo writes (PNG, JPEG, TIFF, PSD, PSB, .pcraft, OpenRaster,
 PDF, …) or its bytes are an image; anything else (`src/main.rs`, `.env`) is refused and left
 untouched. The multi-file exports (layers, data sets) never replace a file. An agent reads
 text from documents (layer names, metadata) that may try to steer it, so prefer a dedicated
@@ -104,15 +104,15 @@ output folder as the write root over a whole project.
 
 Use absolute root paths in MCP client configurations, since a relative root is resolved from
 the client's launch directory. In bridge mode, configure roots on the **desktop app**; root
-flags on `photocraft-cli mcp --bridge` are rejected. Explicit `--control-token` and
-`--control-token-file` flags require `--bridge` (or `PHOTOCRAFT_CONTROL_PORT`) and are mutually
-exclusive. Bridge credentials can also come from `PHOTOCRAFT_CONTROL_TOKEN` or `PHOTOCRAFT_CONTROL_TOKEN_FILE`.
+flags on `lienzo-cli mcp --bridge` are rejected. Explicit `--control-token` and
+`--control-token-file` flags require `--bridge` (or `LIENZO_CONTROL_PORT`) and are mutually
+exclusive. Bridge credentials can also come from `LIENZO_CONTROL_TOKEN` or `LIENZO_CONTROL_TOKEN_FILE`.
 
 MCP and `serve` launch options (all but `--help`/`-h`) take one non-empty value each and cannot
 be repeated. Missing values, stray positional arguments and options for the wrong mode are
 usage errors (exit 2), reported on stderr before the server starts; stdout stays available for
 protocol messages. For `serve`, explicit credential flags require `--port` (or
-`PHOTOCRAFT_CONTROL_PORT`); stdio needs no control token.
+`LIENZO_CONTROL_PORT`); stdio needs no control token.
 
 ## Tools and resources
 
@@ -167,7 +167,7 @@ No filesystem root is needed for the in-memory commands. External linked sources
 a file read remain refused. See the [control policy](control-protocol.md#engine-commands)
 for the shared restrictions.
 
-`photocraft://document` and `photocraft://commands` return live JSON matching `doc_inspect`
+`lienzo://document` and `lienzo://commands` return live JSON matching `doc_inspect`
 and `command_list`. Resource reads are uncached; tool/resource catalogs are private and cached
 for ten minutes. List/read responses include the MCP 2026-07-28 result/cache fields.
 

@@ -1,4 +1,4 @@
-use super::{Outcome, PhotocraftApp, Value, json};
+use super::{LienzoApp, Outcome, Value, json};
 
 /// The fields `ui.set` reads. Anything else is rejected before a field is applied, and every
 /// field's value is validated before the first one is applied, so a typo, an unknown field, a
@@ -215,7 +215,7 @@ pub(super) fn input_modifiers(p: &Value, flags: &[&str]) -> std::result::Result<
 
 /// Screen position of document point (x, y) on the main canvas, where a `ui.pointer` right-click
 /// opens its menu (the mouse's opens at the pointer); the canvas centre when it can't be mapped.
-pub(super) fn screen_point(app: &PhotocraftApp, x: f64, y: f64) -> [f32; 2] {
+pub(super) fn screen_point(app: &LienzoApp, x: f64, y: f64) -> [f32; 2] {
     let p = crate::canvas::ViewXform::active(app)
         .map(|xf| xf.to_screen(x as f32, y as f32))
         .filter(|p| p.is_finite())

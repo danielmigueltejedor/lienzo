@@ -1,11 +1,11 @@
 //! Full filter timing, including tile reads, filtering, writeback and pruning.
-//! RAYON_NUM_THREADS=16 cargo run --release -p photocraft-algo --example bench_algorithms -- extrude 6000 4000 u8 3 output.bin
+//! RAYON_NUM_THREADS=16 cargo run --release -p lienzo-algo --example bench_algorithms -- extrude 6000 4000 u8 3 output.bin
 //! Optional final argument after output.bin: rgb (default), gray, cmyk or lab.
 //! Run the same example at the base commit and the PR commit, then compare output.bin with cmp.
-use photocraft_algo::{FilterParams, apply_in};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::{FilterParams, apply_in};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use std::io::Write;
 use std::time::Instant;
 
@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => return Err("depth must be u8, u16 or f32".into()),
     };
     let extrude = |size, depth| FilterParams::Extrude {
-        kind: photocraft_algo::ExtrudeType::Blocks,
+        kind: lienzo_algo::ExtrudeType::Blocks,
         size,
         depth,
         level_based: false,
@@ -41,12 +41,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "extrude" => extrude(30.0, 30.0),
         "extrude-dense" => extrude(8.0, 128.0),
         "extrude-small" => extrude(8.0, 64.0),
-        "wind" => FilterParams::Wind { method: photocraft_algo::WindMethod::Wind, from_right: false, seed: 17 },
-        "blast" => FilterParams::Wind { method: photocraft_algo::WindMethod::Blast, from_right: false, seed: 17 },
-        "blast-right" => FilterParams::Wind { method: photocraft_algo::WindMethod::Blast, from_right: true, seed: 17 },
-        "spin" => FilterParams::SpinBlur {
-            pins: vec![photocraft_algo::SpinPin { radius_x: 1.0, radius_y: 1.0, blur_angle: 30.0, angle: 17.0, ..Default::default() }],
-        },
+        "wind" => FilterParams::Wind { method: lienzo_algo::WindMethod::Wind, from_right: false, seed: 17 },
+        "blast" => FilterParams::Wind { method: lienzo_algo::WindMethod::Blast, from_right: false, seed: 17 },
+        "blast-right" => FilterParams::Wind { method: lienzo_algo::WindMethod::Blast, from_right: true, seed: 17 },
+        "spin" => {
+            FilterParams::SpinBlur { pins: vec![lienzo_algo::SpinPin { radius_x: 1.0, radius_y: 1.0, blur_angle: 30.0, angle: 17.0, ..Default::default() }] }
+        }
         "spin-default" => FilterParams::SpinBlur { pins: vec![Default::default()] },
         "lens" | "lens-ca" | "trap" | "trap-wide" | "trap-default" => FilterParams::Invert,
         _ => return Err("unknown case".into()),
@@ -80,10 +80,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         source.write_region(r, &pixels);
     }
     let run_filter = |area: Rect| match case {
-        "lens" | "lens-ca" => photocraft_algo::lens::correct(
+        "lens" | "lens-ca" => lienzo_algo::lens::correct(
             &source,
             area,
-            &photocraft_algo::lens::LensCorrection {
+            &lienzo_algo::lens::LensCorrection {
                 distortion: 12.0,
                 angle: 2.5,
                 vignette_amount: 20.0,
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         "trap" | "trap-wide" | "trap-default" => {
             let mut data = source.read_region(area);
-            photocraft_algo::trap::trap(
+            lienzo_algo::trap::trap(
                 &mut data,
                 area.width() as usize,
                 area.height() as usize,

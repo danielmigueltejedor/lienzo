@@ -1,8 +1,8 @@
 use super::*;
 
 /// A filter dialog over a 256×256 layer, with the preview the canvas computed for it on screen.
-fn filter_dialog_with_preview(background: bool) -> (PhotocraftApp, u64) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn filter_dialog_with_preview(background: bool) -> (LienzoApp, u64) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.background_jobs = background;
     app.run("file.new", serde_json::json!({"width": 256, "height": 256, "background": "#3366cc"})).unwrap();
     let id = open_command_dialog(&mut app, "filter.blur.gaussianBlur", "Gaussian Blur");
@@ -69,7 +69,7 @@ fn the_title_bar_close_box_cancels_like_cancel() {
         // The fonts are set up after the harness's first frame: the dialog appears after it.
         let dialogs = std::mem::take(&mut app.ui.dialogs);
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.state_mut().ui.dialogs = dialogs;
         h.run_steps(4);
         assert!(h.state().filter_preview.is_some(), "the preview is on screen");
@@ -111,7 +111,7 @@ fn the_close_box_and_the_title_drag_keep_apart() {
     let frame = rects(&h.ctx)[0];
     assert!((x.center().y - title.center().y).abs() < 2.0 && x.left() > title.right(), "the × is on the title row: {x:?}, {title:?}");
     assert!(frame.right() - x.right() < 16.0, "at its right end: {x:?} in {frame:?}");
-    let drag = |h: &mut egui_kittest::Harness<'static, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2| {
+    let drag = |h: &mut egui_kittest::Harness<'static, LienzoApp>, from: egui::Pos2, to: egui::Pos2| {
         h.hover_at(from);
         h.drag_at(from);
         h.run_steps(2);
@@ -162,9 +162,9 @@ fn color_picker_has_inset_content_and_actions_at_the_right_edge() {
     use egui_kittest::{Harness, kittest::Queryable};
 
     for size in [egui::vec2(760.0, 480.0), egui::vec2(960.0, 640.0)] {
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let mut h = Harness::builder().with_size(size).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         crate::color_picker_ui::open(h.state_mut(), "foreground");
         h.run_steps(4);
         let frame = rects(&h.ctx)[0];
@@ -192,9 +192,9 @@ fn layer_style_title_gutters_can_start_drags() {
     use egui_kittest::{Harness, kittest::Queryable};
 
     for point in 0..5 {
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.state_mut().ui.open_dialog(DialogKind::LayerStyle, serde_json::Map::new());
         h.run_steps(3);
         let before = h.get_by_label("Layer Style").rect();
@@ -226,11 +226,11 @@ fn layer_style_title_gutters_can_start_drags() {
 fn layer_style_buttons_stay_on_a_short_window() {
     use egui_kittest::{Harness, kittest::Queryable};
 
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", serde_json::json!({})).unwrap();
     let mut h = Harness::builder().with_size(egui::vec2(1435.0, 858.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     crate::layer_style::open(h.state_mut(), Some("bevelEmboss")).unwrap();
     h.run_steps(4);
     for label in ["OK", "Cancel"] {
@@ -243,9 +243,9 @@ fn layer_style_buttons_stay_on_a_short_window() {
 fn dragging_the_title_bar_moves_the_dialog() {
     use egui_kittest::{Harness, kittest::Queryable};
 
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut harness = Harness::builder().with_size(egui::vec2(1400.0, 1100.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
     harness.state_mut().ui.open_dialog(DialogKind::LayerStyle, serde_json::Map::new());
     harness.run_steps(3);
     let before = harness.get_by_label("Layer Style").rect();
@@ -268,14 +268,14 @@ fn dragging_the_title_bar_moves_the_dialog() {
 }
 
 /// Layer Style open on Bevel & Emboss (its tallest page) for a pixel layer.
-fn layer_style_on_bevel(size: egui::Vec2) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn layer_style_on_bevel(size: egui::Vec2) -> egui_kittest::Harness<'static, LienzoApp> {
     use egui_kittest::kittest::Queryable;
 
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(size).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     crate::layer_style::open(h.state_mut(), Some("bevelEmboss")).expect("Layer Style opens");
     h.run_steps(4);
     assert!(h.query_by_label("Gloss Contour").is_some(), "the Bevel & Emboss page is showing");
@@ -285,11 +285,11 @@ fn layer_style_on_bevel(size: egui::Vec2) -> egui_kittest::Harness<'static, Phot
 /// #4872: an alert (Error, About) closes with ↩ as with OK, but not on the ↩ that raised it.
 #[test]
 fn enter_closes_an_alert_but_not_the_enter_that_opened_it() {
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 600.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
-    let alert = |h: &mut egui_kittest::Harness<'static, PhotocraftApp>| {
+    let alert = |h: &mut egui_kittest::Harness<'static, LienzoApp>| {
         h.state_mut().ui.open_dialog(DialogKind::Error, json!({"message": crate::move_lock::MESSAGE}).as_object().cloned().unwrap_or_default())
     };
     // Raised in the frame its own ↩ arrives: that ↩ leaves it open.
@@ -314,7 +314,7 @@ fn layer_style_bin_deletes_the_selected_effect() {
     use egui_kittest::kittest::Queryable;
 
     let mut h = layer_style_on_bevel(egui::vec2(1400.0, 900.0));
-    let effects = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().ui.dialogs[0].fields["effects"].as_array().map_or(0, Vec::len);
+    let effects = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().ui.dialogs[0].fields["effects"].as_array().map_or(0, Vec::len);
     assert_eq!(effects(&h), 1);
     h.get_by_label("Delete effect").click();
     h.run_steps(3);
@@ -325,10 +325,10 @@ fn layer_style_bin_deletes_the_selected_effect() {
 /// The right-hand column's OK applies the style and Cancel drops it; Enter is OK.
 #[test]
 fn layer_style_ok_cancel_and_enter() {
-    let bevels = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let bevels = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         let st = h.state().session.active().unwrap();
         let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
-        layer.effects.items.iter().filter(|e| matches!(e, photocraft_doc::Effect::BevelEmboss { .. })).count()
+        layer.effects.items.iter().filter(|e| matches!(e, lienzo_doc::Effect::BevelEmboss { .. })).count()
     };
     for (how, applied) in [("OK", 1), ("Cancel", 0), ("Enter", 1)] {
         use egui_kittest::kittest::Queryable;
@@ -395,15 +395,15 @@ fn layer_style_keeps_one_size_on_every_page() {
     assert!(h.ctx.read_response(grip).is_none(), "no resize grip");
 }
 
-fn frame(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> egui::Rect {
+fn frame(h: &egui_kittest::Harness<'_, LienzoApp>) -> egui::Rect {
     rects(&h.ctx).first().copied().expect("the dialog is drawn")
 }
 
-fn dialog_harness(size: egui::Vec2, command: &str) -> egui_kittest::Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn dialog_harness(size: egui::Vec2, command: &str) -> egui_kittest::Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(size).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     crate::filter_dialog::open(h.state_mut(), command).unwrap();
     h.run_steps(4);
     h
@@ -415,9 +415,9 @@ fn dialog_harness(size: egui::Vec2, command: &str) -> egui_kittest::Harness<'sta
 fn motion_blur_angle_dial_sets_the_angle_by_click_and_drag() {
     use egui_kittest::kittest::Queryable;
     let mut h = dialog_harness(egui::vec2(1280.0, 800.0), "filter.blur.motionBlur");
-    let angle = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.last().and_then(|d| d.fields["angle"].as_f64());
-    let centre = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.get_by_role_and_label(egui::accesskit::Role::Slider, "Angle").rect().center();
-    let press = |h: &mut egui_kittest::Harness<'static, PhotocraftApp>, pos: egui::Pos2, pressed: bool| {
+    let angle = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.last().and_then(|d| d.fields["angle"].as_f64());
+    let centre = |h: &egui_kittest::Harness<'static, LienzoApp>| h.get_by_role_and_label(egui::accesskit::Role::Slider, "Angle").rect().center();
+    let press = |h: &mut egui_kittest::Harness<'static, LienzoApp>, pos: egui::Pos2, pressed: bool| {
         h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Default::default() });
     };
     assert_eq!(angle(&h), Some(0.0));
@@ -510,7 +510,7 @@ fn a_value_dialog_opens_on_its_first_number_selected_and_remembers_it() {
     use egui_kittest::kittest::Queryable;
     const BLUR: &str = "filter.blur.gaussianBlur";
     let mut h = dialog_harness(egui::vec2(1280.0, 800.0), BLUR);
-    let radius = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.last().and_then(|d| d.fields["radius"].as_f64());
+    let radius = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.last().and_then(|d| d.fields["radius"].as_f64());
     assert_eq!(radius(&h), Some(1.0), "the default the first time");
     assert!(h.get_by_role(egui::accesskit::Role::SpinButton).is_focused(), "the Radius field has focus");
     h.event(egui::Event::Text("5".into()));
@@ -540,10 +540,10 @@ fn a_value_dialog_opens_on_its_first_number_selected_and_remembers_it() {
 #[test]
 fn fit_image_is_as_narrow_as_its_content() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let ctx = h.ctx.clone();
     let d = crate::menus::invoke(h.state_mut(), &ctx, "file.automate.fitImage", json!({})).unwrap()["dialog"].as_u64().unwrap();
     h.run_steps(4);
@@ -561,10 +561,10 @@ fn german_color_picker_fits_its_actions_and_translates_the_title() {
     use egui_kittest::{Harness, kittest::Queryable};
     let lang = crate::i18n::Lang::from_pref("de");
     let text = |key| crate::i18n::with_language(lang, || crate::i18n::t(key).to_owned());
-    let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let mut h =
         Harness::builder().with_size(egui::vec2(760.0, 480.0)).build_ui_state(move |ui, app| crate::i18n::with_language(lang, || show(app, ui.ctx())), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     crate::color_picker_ui::open(h.state_mut(), "foreground");
     h.run_steps(4);
     let title = h.get_by_label("Farbwähler (Vordergrundfarbe)").rect();
@@ -583,10 +583,10 @@ fn file_info_multiline_fields_keep_enter_and_cancel_discards_edits() {
     use egui_kittest::kittest::Queryable;
 
     crate::i18n::with_language(crate::i18n::Lang::EN, || {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 700.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         let ctx = h.ctx.clone();
         crate::menus::invoke(h.state_mut(), &ctx, "file.fileInfo", json!({})).unwrap();
         h.run_steps(4);
@@ -628,7 +628,7 @@ fn file_info_multiline_fields_keep_enter_and_cancel_discards_edits() {
 
 #[test]
 fn file_info_keeps_multiline_metadata_on_confirm_and_reopen() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let ctx = egui::Context::default();
     let id = crate::menus::invoke(&mut app, &ctx, "file.fileInfo", json!({})).unwrap()["dialog"].as_u64().unwrap();

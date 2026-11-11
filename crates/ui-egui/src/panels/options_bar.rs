@@ -2,8 +2,8 @@ use super::brush_controls::{
     brush_preset_chip, mixer_combination_dropdown, mixer_load_swatch, paint_mode_dropdown, smoothing_field, smoothing_options, tool_mode_dropdown,
 };
 use super::properties::{select_and_mask_button, selection_mode_buttons};
-use super::{BlendMode, Color32, PhotocraftApp, RichText, Sense, Tokens, Tool, Value, icons, json, starts_blend_group, vec2, widgets};
-use photocraft_paint::BrushSettings;
+use super::{BlendMode, Color32, LienzoApp, RichText, Sense, Tokens, Tool, Value, icons, json, starts_blend_group, vec2, widgets};
+use lienzo_paint::BrushSettings;
 
 /// The "Fill options" modal's open flag (temporary UI data, per context).
 fn fill_help_id() -> egui::Id {
@@ -73,7 +73,7 @@ pub(super) fn options_bar_height(pro: bool, narrow: bool) -> f32 {
     }
 }
 
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     crate::vector_ui::track_arrow_default_selection(app, ui.ctx());
     crate::eraser_ui::alert_for_a_field_gone(app, ui.ctx());
     let t = Tokens::get(ui.ctx());
@@ -182,7 +182,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// The per-tool options of the bar: the brush, mixer, marquee, pencil and view controls.
 /// Brush family options share the same per-tool settings model.
-fn brush_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: Tokens, b: &mut BrushSettings) {
+fn brush_specific_options(app: &mut LienzoApp, ui: &mut egui::Ui, t: Tokens, b: &mut BrushSettings) {
     match app.ui.tool {
         Tool::Brush | Tool::Eraser if t.pro => {
             // A Block-mode Eraser has a fixed size, opacity and flow (Photoshop, #2770).
@@ -255,7 +255,7 @@ fn brush_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: Tokens,
             widgets::vline(ui, 22.0);
             if !t.pro {
                 opt_label(ui, tl!("Size"));
-                widgets::value_field(ui, &mut b.size, 1.0..=photocraft_engine::paint::MAX_BRUSH_SIZE, "px", 76.0);
+                widgets::value_field(ui, &mut b.size, 1.0..=lienzo_engine::paint::MAX_BRUSH_SIZE, "px", 76.0);
                 widgets::vline(ui, 22.0);
             }
             opt_label(ui, tl!("Mode"));
@@ -297,7 +297,7 @@ fn brush_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: Tokens,
             let block = crate::eraser_ui::block_mode(app, app.ui.tool);
             ui.add_enabled_ui(!block, |ui| {
                 opt_label(ui, tl!("Size"));
-                widgets::value_field(ui, &mut b.size, 1.0..=photocraft_engine::paint::MAX_BRUSH_SIZE, "px", 76.0);
+                widgets::value_field(ui, &mut b.size, 1.0..=lienzo_engine::paint::MAX_BRUSH_SIZE, "px", 76.0);
             });
             widgets::vline(ui, 22.0);
             // The Brush's own tooltips here too (#11813); the Eraser keeps its texts.
@@ -366,7 +366,7 @@ fn brush_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: Tokens,
 }
 
 /// Marquee tools: selection mode, feather, anti-alias, style and fixed size.
-fn marquee_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn marquee_options(app: &mut LienzoApp, ui: &mut egui::Ui) {
     ui.spacing_mut().item_spacing.x = 2.0;
     for (i, (icon, tip)) in [
         ("square", tl!("New selection").to_string()),
@@ -400,7 +400,7 @@ fn marquee_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let fixed = sized && o.marquee_style != "normal";
     let fixed_size = o.marquee_style == "fixedSize";
     // Fixed Size shows its pixels in the unit picked by right-clicking Width or Height (#7910).
-    let units = widgets::FieldUnits { unit: photocraft_engine::prefs::Unit::parse(&o.marquee_unit).unwrap_or_default(), ..units };
+    let units = widgets::FieldUnits { unit: lienzo_engine::prefs::Unit::parse(&o.marquee_unit).unwrap_or_default(), ..units };
     ui.add_enabled_ui(fixed, |ui| {
         let mut picked = None;
         opt_label(ui, tl!("Width"));
@@ -427,7 +427,7 @@ fn marquee_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// Lasso family: selection mode, feather, anti-alias, magnetic settings and the drawing hints.
-fn lasso_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn lasso_options(app: &mut LienzoApp, ui: &mut egui::Ui) {
     selection_mode_buttons(&mut app.ui.selection_mode, ui);
     widgets::vline(ui, 22.0);
     opt_label(ui, tl!("Feather"));
@@ -467,7 +467,7 @@ fn lasso_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// Selection and paint tools expose their controls as a family of options rows.
-fn selection_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) {
+fn selection_specific_options(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool) {
     match app.ui.tool {
         Tool::RectMarquee | Tool::EllipseMarquee | Tool::SingleRowMarquee | Tool::SingleColumnMarquee => {
             marquee_options(app, ui);
@@ -688,7 +688,7 @@ fn crop_fill_help(ui: &mut egui::Ui) {
 
 /// Reset (always, disabled while the frame is untouched), then Cancel and Commit only while the
 /// crop is live, beside each other rather than at the far right of the bar (#10888).
-fn crop_commit_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn crop_commit_controls(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let changed = crate::crop_ui::modified(app);
     if ui
         .add_enabled_ui(changed, |ui| icons::button(ui, "undo-2", 26.0, false, tl!("Reset the crop box, image rotation, and aspect ratio settings")))
@@ -732,7 +732,7 @@ fn is_selection_options_tool(tool: Tool) -> bool {
     )
 }
 
-fn tool_specific_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, t: Tokens, tool: Tool, b: &mut BrushSettings) {
+fn tool_specific_options(app: &mut LienzoApp, ui: &mut egui::Ui, t: Tokens, tool: Tool, b: &mut BrushSettings) {
     if matches!(app.ui.tool, Tool::Brush | Tool::Eraser | Tool::Pencil | Tool::MixerBrush) {
         brush_specific_options(app, ui, t, b);
         return;
@@ -918,13 +918,13 @@ pub(crate) const FIXED_SIZE_MAX_PX: f64 = 300_000.0;
 
 /// The resolution Fixed Size's units convert at (the active document's, 72 ppi without one) and
 /// the document's size in pixels, which a percentage is of. The unit is the caller's.
-fn fixed_size_units(app: &PhotocraftApp) -> (widgets::FieldUnits, [f64; 2]) {
+fn fixed_size_units(app: &LienzoApp) -> (widgets::FieldUnits, [f64; 2]) {
     let ppi = app.session.prefs().units_and_rulers.point_size.per_inch();
     let (dpi, size) = app
         .session
         .active()
         .map_or((72.0, [1.0, 1.0]), |d| (f64::from(d.doc.resolution_dpi.max(1.0)), [f64::from(d.doc.size.width), f64::from(d.doc.size.height)]));
-    (widgets::FieldUnits { unit: photocraft_engine::prefs::Unit::Pixels, dpi, ppi }, size)
+    (widgets::FieldUnits { unit: lienzo_engine::prefs::Unit::Pixels, dpi, ppi }, size)
 }
 
 /// One of Fixed Size's Width and Height (#7910): `px` shown in `units.unit` (a typed unit converts),

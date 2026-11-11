@@ -1,11 +1,11 @@
 //! PDF export: structure, pixel oracle, colour modes and refusal paths.
 
 use super::*;
+use lienzo_color::{PixelFormat, SampleType};
+use lienzo_doc::{Artboard, Group, Layer, LayerContent, Size};
+use lienzo_geom::Rect;
+use lienzo_raster::{Interrupt, Surface};
 use lopdf::{Object, StringFormat};
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_doc::{Artboard, Group, Layer, LayerContent, Size};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
 
 fn solid(fmt: PixelFormat, x0: i32, y0: i32, x1: i32, y1: i32, px: &[f32]) -> Surface {
     let mut s = Surface::new(fmt);
@@ -95,11 +95,11 @@ fn layers_composite_over_white_before_the_page() {
 
 #[test]
 fn topmost_solid_shape_is_exported_as_a_vector_path() {
-    use photocraft_doc::{Fill, Path, ShapeLayer, Subpath};
+    use lienzo_doc::{Fill, Path, ShapeLayer, Subpath};
     let mut d = doc(ColorMode::Rgb);
     let shape = ShapeLayer {
         path: Path::new(vec![Subpath::polygon(&[(0.0, 0.0), (2.0, 0.0), (2.0, 1.0)])]),
-        fill: Some(Fill::Solid(photocraft_color::Color::rgb(1.0, 0.0, 0.0))),
+        fill: Some(Fill::Solid(lienzo_color::Color::rgb(1.0, 0.0, 0.0))),
         ..Default::default()
     };
     d.layers.push(Layer::new("Shape", LayerContent::Shape(shape)));
@@ -115,19 +115,19 @@ fn topmost_solid_shape_is_exported_as_a_vector_path() {
 
 #[test]
 fn topmost_text_layer_is_exported_with_selectable_text_and_vector_outlines() {
-    use photocraft_doc::TextLayer;
+    use lienzo_doc::TextLayer;
     let mut d = doc(ColorMode::Rgb);
     let text = TextLayer {
         text: "Vector PDF".into(),
         size_pt: 24.0,
-        color: photocraft_color::Color::rgb(0.0, 0.0, 1.0),
-        transform: photocraft_geom::Affine::translate(1.0, 1.5),
+        color: lienzo_color::Color::rgb(0.0, 0.0, 1.0),
+        transform: lienzo_geom::Affine::translate(1.0, 1.5),
         ..Default::default()
     };
-    let layout = photocraft_text::TextEngine::new().layout(&text, 72.0);
+    let layout = lienzo_text::TextEngine::new().layout(&text, 72.0);
     let cluster = layout.clusters.iter().filter(|cluster| !cluster.range.is_empty()).min_by_key(|cluster| cluster.range.start).expect("a shaped cluster");
     let baseline = layout.lines.get(cluster.line).expect("a line").baseline;
-    let origin = text.transform.apply(photocraft_geom::Point::new(f64::from(cluster.x), f64::from(baseline)));
+    let origin = text.transform.apply(lienzo_geom::Point::new(f64::from(cluster.x), f64::from(baseline)));
     d.layers.push(Layer::new("Text", LayerContent::Text(text)));
     let out = export(&d, &Interrupt::NONE).unwrap();
     check_structure(&out.bytes);
@@ -150,15 +150,15 @@ fn topmost_text_layer_is_exported_with_selectable_text_and_vector_outlines() {
 
 #[test]
 fn topmost_shape_and_text_layers_are_both_exported_as_vectors() {
-    use photocraft_doc::{Fill, Path, ShapeLayer, Subpath, TextLayer};
+    use lienzo_doc::{Fill, Path, ShapeLayer, Subpath, TextLayer};
     let mut d = doc(ColorMode::Rgb);
     let shape = ShapeLayer {
         path: Path::new(vec![Subpath::polygon(&[(0.0, 0.0), (2.0, 0.0), (2.0, 1.0)])]),
-        fill: Some(Fill::Solid(photocraft_color::Color::rgb(1.0, 0.0, 0.0))),
+        fill: Some(Fill::Solid(lienzo_color::Color::rgb(1.0, 0.0, 0.0))),
         ..Default::default()
     };
     d.layers.push(Layer::new("Shape", LayerContent::Shape(shape)));
-    let text = TextLayer { text: "Hi".into(), size_pt: 12.0, color: photocraft_color::Color::rgb(0.0, 1.0, 0.0), ..Default::default() };
+    let text = TextLayer { text: "Hi".into(), size_pt: 12.0, color: lienzo_color::Color::rgb(0.0, 1.0, 0.0), ..Default::default() };
     d.layers.push(Layer::new("Text", LayerContent::Text(text)));
     let out = export(&d, &Interrupt::NONE).unwrap();
     check_structure(&out.bytes);
@@ -220,10 +220,10 @@ fn unicode_text_over_a_photo_extracts_through_a_pdf_reader() {
     let text = "café Ω 😀";
     d.layers.push(Layer::new(
         "Text",
-        LayerContent::Text(photocraft_doc::TextLayer {
+        LayerContent::Text(lienzo_doc::TextLayer {
             text: text.into(),
             size_pt: 12.0,
-            transform: photocraft_geom::Affine::translate(2.0, 20.0),
+            transform: lienzo_geom::Affine::translate(2.0, 20.0),
             ..Default::default()
         }),
     ));
@@ -245,24 +245,24 @@ fn text_with_compositing_or_a_profile_stays_in_the_raster_backdrop() {
         d.size = Size { width: 32, height: 32 };
         let mut layer = Layer::new(
             "Text",
-            LayerContent::Text(photocraft_doc::TextLayer {
+            LayerContent::Text(lienzo_doc::TextLayer {
                 text: "A".into(),
                 size_pt: 16.0,
-                transform: photocraft_geom::Affine::translate(2.0, 20.0),
+                transform: lienzo_geom::Affine::translate(2.0, 20.0),
                 ..Default::default()
             }),
         );
         // The compositor consumes the text cache maintained by the engine/UI.
         if let LayerContent::Text(text) = &mut layer.content {
-            photocraft_text::TextEngine::new().render_layer(text, d.resolution_dpi, d.pixel_format());
+            lienzo_text::TextEngine::new().render_layer(text, d.resolution_dpi, d.pixel_format());
         }
         match case {
             0 => layer.opacity = 0.5,
             1 => layer.fill_opacity = 0.5,
-            2 => layer.blend = photocraft_color::BlendMode::Multiply,
+            2 => layer.blend = lienzo_color::BlendMode::Multiply,
             3 => {
                 layer.effects.enabled = true;
-                layer.effects.items.push(photocraft_doc::effects::Effect::default_drop_shadow());
+                layer.effects.items.push(lienzo_doc::effects::Effect::default_drop_shadow());
             }
             _ => d.icc_profile = Some(std::sync::Arc::new(vec![1, 2, 3, 4])),
         }
@@ -286,7 +286,7 @@ fn many_distinct_chars() -> String {
 
 #[test]
 fn text_outside_the_vector_prefix_does_not_consume_the_selection_font() {
-    use photocraft_doc::TextLayer;
+    use lienzo_doc::TextLayer;
     let many = many_distinct_chars();
     for case in 0..2 {
         let mut d = doc(ColorMode::Rgb);
@@ -303,7 +303,7 @@ fn text_outside_the_vector_prefix_does_not_consume_the_selection_font() {
         }
         d.layers.push(Layer::new(
             "Top text",
-            LayerContent::Text(TextLayer { text: "Hi".into(), size_pt: 12.0, color: photocraft_color::Color::rgb(0.0, 1.0, 0.0), ..Default::default() }),
+            LayerContent::Text(TextLayer { text: "Hi".into(), size_pt: 12.0, color: lienzo_color::Color::rgb(0.0, 1.0, 0.0), ..Default::default() }),
         ));
         let pdf = export(&d, &Interrupt::NONE).unwrap().bytes;
         let parsed = lopdf::Document::load_mem(&pdf).unwrap();
@@ -316,7 +316,7 @@ fn text_outside_the_vector_prefix_does_not_consume_the_selection_font() {
 
 #[test]
 fn a_text_layer_refused_at_emission_keeps_the_upper_vectors_and_stays_raster() {
-    use photocraft_doc::{TextLayer, text::TextShape};
+    use lienzo_doc::{TextLayer, text::TextShape};
     let mut d = doc(ColorMode::Rgb);
     d.size = Size { width: 128, height: 48 };
     let fmt = d.pixel_format();
@@ -330,15 +330,15 @@ fn a_text_layer_refused_at_emission_keeps_the_upper_vectors_and_stays_raster() {
             text: "The quick brown fox jumps over the lazy dog again and again".into(),
             font_family: "Inter".into(),
             size_pt: 12.0,
-            color: photocraft_color::Color::rgb(1.0, 0.0, 0.0),
+            color: lienzo_color::Color::rgb(1.0, 0.0, 0.0),
             shape: TextShape::Box { x: 0.0, y: 0.0, width: 100.0, height: 30.0 },
-            transform: photocraft_geom::Affine::translate(2.0, 10.0),
+            transform: lienzo_geom::Affine::translate(2.0, 10.0),
             ..Default::default()
         }),
     );
     // The compositor consumes the text cache maintained by the engine/UI.
     if let LayerContent::Text(text) = &mut lower.content {
-        photocraft_text::TextEngine::new().render_layer(text, d.resolution_dpi, fmt);
+        lienzo_text::TextEngine::new().render_layer(text, d.resolution_dpi, fmt);
     }
     // Pin the fixture to the intended path: accepted by `prepare`, refused by `ops`.
     let LayerContent::Text(lower_text) = &lower.content else { panic!("the fixture is a text layer") };
@@ -352,7 +352,7 @@ fn a_text_layer_refused_at_emission_keeps_the_upper_vectors_and_stays_raster() {
             text: "Hi".into(),
             font_family: "Inter".into(),
             size_pt: 12.0,
-            color: photocraft_color::Color::rgb(0.0, 1.0, 0.0),
+            color: lienzo_color::Color::rgb(0.0, 1.0, 0.0),
             ..Default::default()
         }),
     ));
@@ -375,7 +375,7 @@ fn a_text_layer_refused_at_emission_keeps_the_upper_vectors_and_stays_raster() {
 
 #[test]
 fn multiline_text_keeps_its_paragraph_breaks_in_the_selection() {
-    use photocraft_doc::TextLayer;
+    use lienzo_doc::TextLayer;
     let mut d = doc(ColorMode::Rgb);
     d.layers.push(Layer::new("Text", LayerContent::Text(TextLayer { text: "A\nB".into(), size_pt: 12.0, ..Default::default() })));
     let pdf = export(&d, &Interrupt::NONE).unwrap().bytes;
@@ -387,7 +387,7 @@ fn multiline_text_keeps_its_paragraph_breaks_in_the_selection() {
 
 #[test]
 fn leading_newline_stays_in_the_first_selection_span() {
-    use photocraft_doc::TextLayer;
+    use lienzo_doc::TextLayer;
     let mut d = doc(ColorMode::Rgb);
     d.layers.push(Layer::new("Text", LayerContent::Text(TextLayer { text: "\nA".into(), size_pt: 12.0, ..Default::default() })));
     let pdf = export(&d, &Interrupt::NONE).unwrap().bytes;
@@ -398,7 +398,7 @@ fn leading_newline_stays_in_the_first_selection_span() {
 #[test]
 /// Each artboard becomes one labelled page, in document order.
 fn artboards_export_as_one_page_each() {
-    use photocraft_doc::{Artboard, Group};
+    use lienzo_doc::{Artboard, Group};
     let fmt = PixelFormat::new(ColorMode::Rgb, SampleType::F32, true);
     let mut d = Document::new("pages.pdf", Size { width: 40, height: 30 }, ColorMode::Rgb, SampleType::F32);
     d.resolution_dpi = 72.0;

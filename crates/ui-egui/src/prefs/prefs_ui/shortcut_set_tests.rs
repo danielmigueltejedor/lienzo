@@ -9,17 +9,17 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::file_dialog::FileDialogAnswer;
 
 type Written = Rc<RefCell<Vec<(String, Vec<u8>)>>>;
 
 /// The dialog, with the save picker answering `answers` and writes recorded.
-fn dialog(answers: Vec<&str>) -> (Harness<'static, PhotocraftApp>, u64, Written) {
+fn dialog(answers: Vec<&str>) -> (Harness<'static, LienzoApp>, u64, Written) {
     let written: Written = Rc::default();
     let log = written.clone();
     let mut h = Harness::builder().with_size(egui::vec2(1100.0, 760.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let mut services = crate::Services::default();
         let (picker, _) = crate::file_dialog::fake(answers.iter().map(|a| Some(FileDialogAnswer::SaveTo((*a).into()))).collect());
         services.file_dialog = Some(picker);
@@ -27,7 +27,7 @@ fn dialog(answers: Vec<&str>) -> (Harness<'static, PhotocraftApp>, u64, Written)
             log.borrow_mut().push((path.to_string(), bytes.to_vec()));
             Ok(())
         }));
-        PhotocraftApp::new(photocraft_engine::Session::new(), services)
+        LienzoApp::new(lienzo_engine::Session::new(), services)
     });
     let ctx = h.ctx.clone();
     let id = crate::menus::invoke(h.state_mut(), &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();
@@ -35,16 +35,16 @@ fn dialog(answers: Vec<&str>) -> (Harness<'static, PhotocraftApp>, u64, Written)
     (h, id, written)
 }
 
-fn field(h: &Harness<'_, PhotocraftApp>, id: u64, name: &str) -> Value {
+fn field(h: &Harness<'_, LienzoApp>, id: u64, name: &str) -> Value {
     h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.get(name).cloned().unwrap_or(Value::Null)
 }
 
-fn set_field(h: &mut Harness<'_, PhotocraftApp>, id: u64, name: &str, v: Value) {
+fn set_field(h: &mut Harness<'_, LienzoApp>, id: u64, name: &str, v: Value) {
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert(name.into(), v);
     h.run_steps(2);
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, label: &str) {
+fn click(h: &mut Harness<'_, LienzoApp>, label: &str) {
     // The first match: the set row's buttons come before the dialog's own (its Cancel).
     h.get_all_by_role_and_label(egui::accesskit::Role::Button, label).next().expect("the button").click();
     h.run_steps(3);
@@ -119,7 +119,7 @@ fn export_and_summarize_write_the_dialogs_bindings() {
     assert!(kys.contains("pc-id=\"tools.select.pencil\">F6</tool>"), "tools as <tool> rows: {kys}");
     assert!(kys.contains("KeyboardCustomization/Lienzo Defaults="), "{kys}");
     // The file reads back with the same bindings.
-    let set = photocraft_engine::kys::parse(&kys).unwrap();
+    let set = lienzo_engine::kys::parse(&kys).unwrap();
     assert!(set.commands.iter().any(|c| c.id.as_deref() == Some("edit.copy") && c.shortcuts == ["F9"]));
     let html = String::from_utf8(written[1].1.clone()).unwrap();
     assert!(html.contains("<td>Copy</td><td>F9</td>") && html.contains("<h2>Edit</h2>"), "{html}");
@@ -128,7 +128,7 @@ fn export_and_summarize_write_the_dialogs_bindings() {
 }
 
 /// The Set dropdown's shown label: the set in use, with "(modified)" after an edit.
-fn shown_set(h: &Harness<'_, PhotocraftApp>) -> String {
+fn shown_set(h: &Harness<'_, LienzoApp>) -> String {
     let at = h.query_all_by_label("Set:").next().expect("the Set label").rect().center();
     let combo = h
         .query_all_by_role(egui::accesskit::Role::ComboBox)
@@ -139,7 +139,7 @@ fn shown_set(h: &Harness<'_, PhotocraftApp>) -> String {
 }
 
 /// Pick `label` in the Set dropdown, as the user does: open it, click the option.
-fn pick_set(h: &mut Harness<'_, PhotocraftApp>, label: &str) {
+fn pick_set(h: &mut Harness<'_, LienzoApp>, label: &str) {
     // The dialog settles where it opens first.
     h.run_steps(6);
     let at = h.query_all_by_label("Set:").next().expect("the Set label").rect().center();
@@ -176,7 +176,7 @@ fn the_set_dropdown_keeps_action_function_keys_like_use_set() {
     // B, from a settings file written before sets left action keys out: it holds an old key for
     // the action, and gives F2 to a command.
     h.state_mut().session.edit_prefs(|p| {
-        let b = photocraft_engine::shortcut_sets::ShortcutSet {
+        let b = lienzo_engine::shortcut_sets::ShortcutSet {
             shortcuts: [("actions.play:Sepia".to_string(), "F5".to_string()), ("layer.renameLayer".to_string(), "F2".to_string())].into(),
             alternate_shortcuts: Default::default(),
         };
@@ -198,7 +198,7 @@ fn the_set_dropdown_keeps_action_function_keys_like_use_set() {
     // What wins is what `useSet` gives: the action keeps F2, B's old action key is dropped and
     // its own F2 binding stays.
     let mut engine = h.state().session.prefs().clone();
-    photocraft_engine::shortcut_sets::load(&mut engine, &json!({"useSet": "B"})).unwrap();
+    lienzo_engine::shortcut_sets::load(&mut engine, &json!({"useSet": "B"})).unwrap();
     assert_eq!(field(&h, id, "overrides"), json!(engine.shortcuts));
     assert_eq!(field(&h, id, "overrides"), json!({"actions.play:Sepia": "F2", "layer.renameLayer": "F2"}));
     assert_eq!(shown_set(&h), "B", "B's old action key doesn't count either");

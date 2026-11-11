@@ -1563,7 +1563,7 @@ row = "r99"
 
     #[test]
     fn unknown_bench_is_rejected_before_updating_the_baseline() {
-        let root = std::env::temp_dir().join(format!("photocraft-perf-unknown-bench-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("lienzo-perf-unknown-bench-{}", std::process::id()));
         std::fs::create_dir(&root).unwrap();
         std::fs::create_dir(root.join("perf")).unwrap();
         std::fs::write(root.join(BUDGETS), "[[bench]]\nname = \"known\"\npackage = \"unused\"\nrequires = \"missing.rs\"\n").unwrap();

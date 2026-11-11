@@ -150,7 +150,7 @@ fn hue_sat_from(d: &Descriptor) -> Option<Value> {
     for e in get_list(d, "Adjs").unwrap_or(&[]) {
         let D::Descriptor(e) = e else { return None };
         let mut m = Map::new();
-        // Photoshop's hue key is `H   ` (stringID "hue", #8302); PhotoCraft wrote `Hue ` before,
+        // Photoshop's hue key is `H   ` (stringID "hue", #8302); Lienzo wrote `Hue ` before,
         // so its own older files still read.
         let hue = get_num(e, HUE_KEY).or_else(|| get_num(e, "Hue "));
         for (param, v) in [("hue", hue), ("saturation", get_num(e, "Strt")), ("lightness", get_num(e, "Lght"))] {
@@ -191,10 +191,10 @@ fn hue_entry(p: &Value, range: Option<(usize, &Value)>) -> Option<Descriptor> {
 }
 
 // Exporters leave out a param the step doesn't set only where Photoshop plays the missing key
-// as PhotoCraft's default (checked against Photoshop: Fill opacity and mode, Crop delete,
+// as Lienzo's default (checked against Photoshop: Fill opacity and mode, Crop delete,
 // Selective Color method, Channel Mixer monochrome, Paint Bucket contiguous; Gradient Map
 // reverse and dither, which Photoshop itself leaves out when off). Elsewhere they
-// write PhotoCraft's default, as Photoshop plays a missing key differently (Color Balance
+// write Lienzo's default, as Photoshop plays a missing key differently (Color Balance
 // preserve luminosity off, Canvas Size anchored top left, Apply Image Normal) or refuses the
 // step (Paint Bucket without a tolerance).
 fn hue_sat_to(p: &Value) -> Option<Descriptor> {
@@ -282,7 +282,7 @@ fn channel_mixer_to(p: &Value) -> Option<Descriptor> {
 }
 
 /// Photoshop's `Clrs` colour-range enumeration. Yellows is `Ylws` (`Yllw` is the yellow ink
-/// key); earlier PhotoCraft builds wrote `Yllw`, which import still reads (#6745).
+/// key); earlier Lienzo builds wrote `Yllw`, which import still reads (#6745).
 const SELECTIVE_RANGES: &[(&str, &str)] = &[
     ("Rds", "reds"),
     ("Ylws", "yellows"),
@@ -313,7 +313,7 @@ pub(super) fn selective_from(d: &Descriptor) -> Option<Value> {
 fn selective_to(p: &Value) -> Option<Descriptor> {
     // Match command execution: scalar components override only the selected range, `relative`
     // takes precedence over `method`, and invalid values must not become a different edit.
-    let photocraft_doc::Adjustment::SelectiveColor { relative, adjustments } = crate::adjust_cmds::selective_from_params(p, None).ok()? else {
+    let lienzo_doc::Adjustment::SelectiveColor { relative, adjustments } = crate::adjust_cmds::selective_from_params(p, None).ok()? else {
         return None;
     };
     let mut list = Vec::new();
@@ -452,15 +452,15 @@ const ADJUSTMENTS: &[Adjustment] = &[
     Adjustment { class: "GdMp", suffix: "gradientMap", from: gradient_map_from, to: gradient_map_to },
 ];
 
-/// Adjustment classes PhotoCraft once exported, with the class Photoshop uses. Measured in
+/// Adjustment classes Lienzo once exported, with the class Photoshop uses. Measured in
 /// Photoshop (#8481): a Make whose Black & White type is `BlnW` fails ("the command Make is not
 /// currently available"), `BanW` runs. Import keeps accepting them so actions saved before still
 /// load; export never writes them.
-/// `Vbrn` is a code PhotoCraft invented for Vibrance: Photoshop records the class by its string id
+/// `Vbrn` is a code Lienzo invented for Vibrance: Photoshop records the class by its string id
 /// `vibrance` (#8534), and refuses the `Vbrn` code (#8383).
 const LEGACY_CLASSES: &[(&str, &str)] = &[("BlnW", "BanW"), ("Vbrn", "vibrance")];
 
-/// The adjustment with Photoshop class `c`, or the one an old PhotoCraft class stands for.
+/// The adjustment with Photoshop class `c`, or the one an old Lienzo class stands for.
 pub(super) fn adjustment_by_class(c: &str) -> Option<&'static Adjustment> {
     let c = c.trim_end();
     let c = LEGACY_CLASSES.iter().find(|(old, _)| *old == c).map_or(c, |(_, class)| class);

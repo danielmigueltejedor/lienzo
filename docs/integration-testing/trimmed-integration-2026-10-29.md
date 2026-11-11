@@ -1,4 +1,4 @@
-# PhotoCraft trimmed integration, 2026-10-29
+# Lienzo trimmed integration, 2026-10-29
 
 Removed all 21 requested PR contributions from the existing 108-PR integration, leaving 87 retained PRs. Reversals preserve the original branch history. Overlapping integration fixes are reconciled so unrelated retained work remains.
 
@@ -16,7 +16,7 @@ Removed all 21 requested PR contributions from the existing 108-PR integration, 
 - [#8347](https://github.com/storytold/photocraft/pull/8347): Type: Roman Hanging Punctuation (trailing marks hang, don't steer the alignment)
 - [#9282](https://github.com/storytold/photocraft/pull/9282): feat(ui): Preset menus for Levels, Exposure, Black & White and Channel Mixer
 - [#7742](https://github.com/storytold/photocraft/pull/7742): Actions: a fractional setting an integer field cannot hold is refused, not rounded
-- [#5090](https://github.com/storytold/photocraft/pull/5090): Actions: add editable PhotoCraft Essentials starter presets
+- [#5090](https://github.com/storytold/photocraft/pull/5090): Actions: add editable Lienzo Essentials starter presets
 - [#3455](https://github.com/storytold/photocraft/pull/3455): Undo and redo action definition edits from the Actions panel
 - [#1991](https://github.com/storytold/photocraft/pull/1991): feat(actions): import and export reusable Actions JSON files
 - [#4305](https://github.com/storytold/photocraft/pull/4305): Filter > Other > Frequency Separation (#1714)

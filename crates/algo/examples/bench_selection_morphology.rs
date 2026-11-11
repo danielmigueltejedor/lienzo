@@ -1,6 +1,6 @@
 //! Compare the former full-canvas formulas with cropped morphology on 36 MP.
 //! Run in release on CI; includes output allocation and checks exact equality.
-use photocraft_algo::selection::{border, contract, edt, expand};
+use lienzo_algo::selection::{border, contract, edt, expand};
 use std::{hint::black_box, time::Instant};
 
 type Op = fn(&[f32], usize, usize, f32) -> Vec<f32>;

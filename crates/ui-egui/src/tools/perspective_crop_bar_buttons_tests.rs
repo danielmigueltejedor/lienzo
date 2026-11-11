@@ -12,16 +12,16 @@ const COMMIT: &str = "Commit current crop operation";
 const CANCEL: &str = "Cancel current crop operation";
 
 /// A 200 × 150 document with the Perspective Crop tool chosen and no session.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.ui.tool = Tool::PerspectiveCrop;
     app
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: LienzoApp) -> Harness<'static, LienzoApp> {
     let mut h = Harness::builder().with_size(vec2(1400.0, 80.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -29,12 +29,12 @@ fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
-fn shows(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn shows(h: &Harness<'static, LienzoApp>, label: &str) -> bool {
     h.query_by_label_contains(label).is_some()
 }
 

@@ -1,12 +1,12 @@
 //! Recorded CAF settings use the native operation; unsupported descriptors stay whole.
-use photocraft_engine::{
+use lienzo_engine::{
     Session,
     actions_cmds::Action,
     atn_cmds::{export, import},
 };
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
-use photocraft_raster::Surface;
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 const CMD: &str = "edit.contentAwareFill";
@@ -106,7 +106,7 @@ fn caf_source_order_and_flags_survive_without_reviving_stale_settings() {
     assert!(exported(damaged).is_none());
     let invalid = descriptor().with("extra", D::Boolean(true));
     let mut damaged = a.steps[0].1.clone();
-    damaged["_atnCafDescriptor"] = json!(photocraft_paint::tile::b64_encode(&invalid.to_bytes()));
+    damaged["_atnCafDescriptor"] = json!(lienzo_paint::tile::b64_encode(&invalid.to_bytes()));
     assert!(exported(damaged).is_none(), "valid base64 cannot hide an unrepresented source field");
 }
 

@@ -5,23 +5,23 @@
 use egui::{Event, Key, Modifiers};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::opacity_keys::press;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn tolerance(app: &PhotocraftApp) -> f32 {
+fn tolerance(app: &LienzoApp) -> f32 {
     app.ui.tool_options.bg_tolerance
 }
 
-fn layer(app: &PhotocraftApp) -> (f32, f32) {
+fn layer(app: &LienzoApp) -> (f32, f32) {
     let st = app.session.active().unwrap();
     let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
     (l.opacity, l.fill_opacity)
@@ -111,11 +111,11 @@ fn other_tools_digits_are_unchanged() {
 fn number_keys_set_the_tolerance_in_the_app() {
     use egui_kittest::Harness;
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app(Tool::BackgroundEraser)
     });
     h.run_steps(4);
-    let key = |h: &mut Harness<'_, PhotocraftApp>, k: Key| {
+    let key = |h: &mut Harness<'_, LienzoApp>, k: Key| {
         h.event(Event::Key { key: k, physical_key: Some(k), pressed: true, repeat: false, modifiers: Modifiers::NONE });
         h.event(Event::Key { key: k, physical_key: Some(k), pressed: false, repeat: false, modifiers: Modifiers::NONE });
         h.run_steps(2);

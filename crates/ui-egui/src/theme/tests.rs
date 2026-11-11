@@ -366,7 +366,7 @@ fn breeze_themes_parse_and_meet_text_contrast() {
 #[test]
 fn nodalia_is_the_shipping_default_with_lienzo_islands() {
     // Unit tests run on the Pro look (`ThemeKind::default` under cfg(test)); the app ships Nodalia.
-    assert_eq!(photocraft_engine::prefs::Preferences::default().interface.dark_theme, photocraft_engine::prefs::DarkTheme::Nodalia);
+    assert_eq!(lienzo_engine::prefs::Preferences::default().interface.dark_theme, lienzo_engine::prefs::DarkTheme::Nodalia);
     for (kind, mode) in [(ThemeKind::Nodalia, nodalia_theme::Mode::Dark), (ThemeKind::NodaliaLight, nodalia_theme::Mode::Light)] {
         let t = Tokens::for_kind(kind);
         assert!(t.islands(), "{kind:?}");
@@ -381,15 +381,15 @@ fn nodalia_is_the_shipping_default_with_lienzo_islands() {
 #[test]
 fn nodalia_title_bar_has_the_main_menu_instead_of_the_mark() {
     crate::app::NODALIA_IN_TESTS.with(|n| n.set(true));
-    let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     crate::app::NODALIA_IN_TESTS.with(|n| n.set(false));
     app.custom_titlebar = true;
     let ctx = egui::Context::default();
-    crate::PhotocraftApp::setup_context(&ctx, ThemeKind::Nodalia);
+    crate::LienzoApp::setup_context(&ctx, ThemeKind::Nodalia);
     for _ in 0..2 {
         ctx.run_ui(egui::RawInput::default(), |ui| crate::panels::title_bar(&mut app, ui)).textures_delta.clear();
     }
     assert!(Tokens::get(&ctx).islands());
-    assert_eq!(app.session.prefs().interface.window_controls, photocraft_engine::prefs::WindowControls::Nodalia);
+    assert_eq!(app.session.prefs().interface.window_controls, lienzo_engine::prefs::WindowControls::Nodalia);
     assert!(crate::brand::mark_rect(&ctx).is_none(), "no brand mark: the hamburger leads the bar");
 }

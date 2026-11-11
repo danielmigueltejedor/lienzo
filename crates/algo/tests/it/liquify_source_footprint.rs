@@ -1,8 +1,8 @@
 //! Liquify source reads must depend on the mapping, not the output tile phase.
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, apply_liquify};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, apply_liquify};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 /// Keeps the document size fixed while moving its edges relative to global tiles.
 fn bounds(shift: i32) -> Rect {

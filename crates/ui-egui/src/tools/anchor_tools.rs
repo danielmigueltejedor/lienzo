@@ -15,11 +15,11 @@
 //! Each click is one command and one history step; a click on nothing it can edit does nothing.
 
 use egui::{Color32, Modifiers, Pos2, Stroke};
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
-use photocraft_vector::edit::{self, Hit};
+use lienzo_doc::vector::Path;
+use lienzo_geom::Point;
+use lienzo_vector::edit::{self, Hit};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::direct_select::{DirectSelection, PathRef};
 use crate::state::Tool;
@@ -37,7 +37,7 @@ pub fn effective(tool: Tool, mods: Modifiers) -> Option<Tool> {
 /// What a click at `p` would edit with `tool`: the frontmost path under the pointer and the
 /// segment (Add) or anchor (Delete) hit on it. An anchor hit with Add, or a segment with Delete,
 /// edits nothing.
-fn target(app: &PhotocraftApp, tool: Tool, p: [f64; 2]) -> Option<(PathRef, Path, Hit)> {
+fn target(app: &LienzoApp, tool: Tool, p: [f64; 2]) -> Option<(PathRef, Path, Hit)> {
     let (r, path, hit) = crate::direct_select::hit_target(app, p, false)?;
     match (tool, hit) {
         (Tool::AddAnchorPoint, Hit::Segment(..)) | (Tool::DeleteAnchorPoint, Hit::Anchor(_)) => Some((r, path, hit)),
@@ -52,7 +52,7 @@ fn target(app: &PhotocraftApp, tool: Tool, p: [f64; 2]) -> Option<(PathRef, Path
 /// ⇧, ⌥ or ⌘ is held, an anchor's handles are being pulled out, or the click hits nothing it edits.
 /// The end points of an open subpath are left to the Pen, as in Photoshop: on the path being
 /// drawn, the first closes it and the last breaks its handle.
-pub fn pen_auto(app: &PhotocraftApp, tool: Tool, mods: Modifiers, p: [f64; 2]) -> Option<(Tool, PathRef, Path, Hit)> {
+pub fn pen_auto(app: &LienzoApp, tool: Tool, mods: Modifiers, p: [f64; 2]) -> Option<(Tool, PathRef, Path, Hit)> {
     if tool != Tool::Pen || !app.ui.tool_options.pen_auto_add_delete || mods.shift || mods.alt || mods.command {
         return None;
     }
@@ -83,7 +83,7 @@ pub fn pen_auto(app: &PhotocraftApp, tool: Tool, mods: Modifiers, p: [f64; 2]) -
 
 /// Canvas pointer events for the anchor tools, and a Pen press that Auto Add/Delete takes; false
 /// when they aren't theirs.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     if let ToolEvent::Down { x, y, .. } = ev
         && let Some((_, r, path, hit)) = pen_auto(app, app.ui.tool, mods, [x, y])
     {
@@ -102,7 +102,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
     true
 }
 
-fn click(app: &mut PhotocraftApp, tool: Tool, p: [f64; 2]) {
+fn click(app: &mut LienzoApp, tool: Tool, p: [f64; 2]) {
     let Some((r, path, hit)) = target(app, tool, p) else { return };
     if r == PathRef::Pen {
         edit_pen(app, path, hit);
@@ -113,7 +113,7 @@ fn click(app: &mut PhotocraftApp, tool: Tool, p: [f64; 2]) {
 
 /// Add or delete an anchor of the Pen path being drawn (`path`, from `pen_path`). It isn't in the
 /// document yet, so it takes the edit directly; drawing carries on from its last anchor.
-fn edit_pen(app: &mut PhotocraftApp, mut path: Path, hit: Hit) {
+fn edit_pen(app: &mut LienzoApp, mut path: Path, hit: Hit) {
     let edited = match hit {
         Hit::Segment(k, t) => edit::add_anchor(&mut path, k, t).is_ok(),
         Hit::Anchor(k) => edit::delete_anchor(&mut path, k).is_ok(),
@@ -126,7 +126,7 @@ fn edit_pen(app: &mut PhotocraftApp, mut path: Path, hit: Hit) {
 }
 
 /// Add an anchor where `hit` is on a segment of `r`, or delete the anchor it is on: one command.
-fn apply(app: &mut PhotocraftApp, r: PathRef, hit: Hit) {
+fn apply(app: &mut LienzoApp, r: PathRef, hit: Hit) {
     let (id, mut params) = match hit {
         Hit::Segment([s, k], t) => ("path.addAnchor", serde_json::json!({"subpath": s, "knot": k, "t": t})),
         Hit::Anchor([s, k]) => ("path.deleteAnchor", serde_json::json!({"subpath": s, "knot": k})),
@@ -149,7 +149,7 @@ fn apply(app: &mut PhotocraftApp, r: PathRef, hit: Hit) {
 
 /// The hover feedback over the Direct Selection overlay: Add highlights the segment under the
 /// pointer and shows the anchor a click would add; Delete highlights the anchor it would remove.
-pub fn draw_hover(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, mods: Modifiers) {
+pub fn draw_hover(app: &LienzoApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, mods: Modifiers) {
     let (Some(tool), Some(p)) = (effective(app.ui.tool, mods), app.hover_doc) else { return };
     if mods.command {
         return;
@@ -159,7 +159,7 @@ pub fn draw_hover(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn(
 }
 
 /// The same feedback for the Pen when Auto Add/Delete would act on a click.
-pub fn draw_pen_hover(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, mods: Modifiers) {
+pub fn draw_pen_hover(app: &LienzoApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, mods: Modifiers) {
     let Some(p) = app.hover_doc else { return };
     if let Some((_, _, path, hit)) = pen_auto(app, app.ui.tool, mods, p) {
         draw_hit(painter, to_scr, accent, &path, hit);

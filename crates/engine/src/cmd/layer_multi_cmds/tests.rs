@@ -1,4 +1,4 @@
-use photocraft_color::SampleType;
+use lienzo_color::SampleType;
 
 use super::damage::{align_bounds, shape_pixel_bounds};
 use super::*;
@@ -200,7 +200,7 @@ fn new_empty_layers_and_groups_damage_nothing() {
     for depth in [8, 16, 32] {
         let mut s = session(depth);
         let a = rect_layer(&mut s, Rect::new(10, 10, 20, 20));
-        let composite = |s: &Session| photocraft_compose::render(doc(s), doc(s).bounds());
+        let composite = |s: &Session| lienzo_compose::render(doc(s), doc(s).bounds());
         let shown = composite(&s);
         s.execute("layer.new.layer", json!({})).unwrap();
         assert_eq!(damage(&s), Some(Rect::EMPTY), "{depth}-bit new layer");
@@ -242,14 +242,14 @@ fn new_layers_that_change_clipping_recomposite_everything() {
     // New Layer between a clipping base and its clipped layer joins their clip group (#2203),
     // so it draws nothing; an empty layer there that stayed unclipped would become their base.
     s.execute("layer.select", json!({"layer": base.0})).unwrap();
-    let shown = photocraft_compose::render(doc(&s), doc(&s).bounds());
+    let shown = lienzo_compose::render(doc(&s), doc(&s).bounds());
     let before = doc(&s).clone();
     s.execute("layer.new.layer", json!({})).unwrap();
     assert_eq!(damage(&s), Some(Rect::EMPTY));
-    assert_eq!(photocraft_compose::render(doc(&s), doc(&s).bounds()), shown);
+    assert_eq!(lienzo_compose::render(doc(&s), doc(&s).bounds()), shown);
     let mut split = before.clone();
     split.insert_above(Some(base), Layer::raster("split", split.pixel_format()));
-    assert_ne!(photocraft_compose::render(&split, split.bounds()), shown);
+    assert_ne!(lienzo_compose::render(&split, split.bounds()), shown);
     assert_eq!(step_damage(&before, &split), None);
     assert_eq!(step_damage(&split, &before), None);
     s.execute("edit.undo", json!({})).unwrap();
@@ -271,13 +271,13 @@ fn new_layers_that_change_clipping_recomposite_everything() {
     assert_eq!(step_damage(&based, &before), None);
     // An adjustment reaches every pixel below it: here the Background, the canvas.
     let mut adjusted = before.clone();
-    adjusted.insert_above(None, Layer::new("inv", LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    adjusted.insert_above(None, Layer::new("inv", LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     assert_eq!(step_damage(&before, &adjusted), Some(before.bounds()));
     assert_eq!(step_damage(&adjusted, &before), Some(before.bounds()));
     // Empty layers draw nothing, in any blend mode.
     let mut styled = before.clone();
     let mut l = Layer::raster("styled", styled.pixel_format());
-    l.blend = photocraft_doc::BlendMode::Multiply;
+    l.blend = lienzo_doc::BlendMode::Multiply;
     styled.insert_above(None, l);
     assert_eq!(step_damage(&before, &styled), Some(Rect::EMPTY));
     let mut plain = before.clone();
@@ -291,15 +291,15 @@ fn new_layers_that_change_clipping_recomposite_everything() {
 /// the same canvas as a full recomposite.
 #[test]
 fn toggling_a_clipped_adjustment_damages_only_its_base() {
-    let all = |s: &Session| photocraft_compose::render(doc(s), doc(s).bounds());
+    let all = |s: &Session| lienzo_compose::render(doc(s), doc(s).bounds());
     // Recomposite only the reported damage over the previous canvas, as the view does.
-    let patched = |s: &Session, prev: &photocraft_compose::Buffer| {
+    let patched = |s: &Session, prev: &lienzo_compose::Buffer| {
         let r = damage(s).expect("bounded damage");
         let mut out = prev.clone();
         if r.is_empty() {
             return out;
         }
-        let part = photocraft_compose::render(doc(s), r);
+        let part = lienzo_compose::render(doc(s), r);
         let w = out.rect.width() as usize;
         for y in r.y0..r.y1 {
             for x in r.x0..r.x1 {
@@ -356,20 +356,15 @@ fn toggling_a_clipped_adjustment_damages_only_its_base() {
 /// whole group, on undo, redo and when the adjustment is deleted too.
 #[test]
 fn clipped_adjustment_in_pass_through_clip_base_damages_its_group() {
-    use photocraft_doc::{Adjustment, BlendMode};
+    use lienzo_doc::{Adjustment, BlendMode};
     let solid = |name: &str, r: Rect, blend: BlendMode| {
         let mut l = Layer::raster(name, PixelFormat::RGBA8);
         l.surface_mut().unwrap().fill_rect(r, &[0.5, 0.5, 0.5, 1.0]);
         l.blend = blend;
         l
     };
-    let mut before = Document::with_background(
-        "t",
-        photocraft_geom::Size::new(10, 8),
-        photocraft_doc::ColorMode::Rgb,
-        photocraft_doc::SampleType::U8,
-        photocraft_color::Color::WHITE,
-    );
+    let mut before =
+        Document::with_background("t", lienzo_geom::Size::new(10, 8), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8, lienzo_color::Color::WHITE);
     before.layers.push(solid("bg", before.bounds(), BlendMode::Normal));
     let mut a = Layer::new("A", LayerContent::Adjustment(Adjustment::Invert));
     a.clipped = true;
@@ -400,20 +395,15 @@ fn clipped_adjustment_in_pass_through_clip_base_damages_its_group() {
 /// pixels outside the layers beneath only up to float rounding, so it damages the group too.
 #[test]
 fn unclipped_adjustment_in_pass_through_clip_base_damages_its_group() {
-    use photocraft_doc::{Adjustment, BlendMode};
+    use lienzo_doc::{Adjustment, BlendMode};
     let solid = |name: &str, r: Rect, blend: BlendMode| {
         let mut l = Layer::raster(name, PixelFormat::RGBA8);
         l.surface_mut().unwrap().fill_rect(r, &[0.5, 0.3, 0.7, 0.6]);
         l.blend = blend;
         l
     };
-    let mut before = Document::with_background(
-        "t",
-        photocraft_geom::Size::new(10, 8),
-        photocraft_doc::ColorMode::Rgb,
-        photocraft_doc::SampleType::U8,
-        photocraft_color::Color::WHITE,
-    );
+    let mut before =
+        Document::with_background("t", lienzo_geom::Size::new(10, 8), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8, lienzo_color::Color::WHITE);
     before.layers.clear();
     before.layers.push(solid("bg", Rect::new(0, 0, 2, 2), BlendMode::Normal));
     let a = Layer::new("A", LayerContent::Adjustment(Adjustment::Invert));
@@ -443,7 +433,7 @@ fn unclipped_adjustment_in_pass_through_clip_base_damages_its_group() {
 /// base of the layers above still recomposites everything.
 #[test]
 fn duplicate_shares_tiles_and_damages_only_the_copy() {
-    let render = |s: &Session| photocraft_compose::render(doc(s), doc(s).bounds());
+    let render = |s: &Session| lienzo_compose::render(doc(s), doc(s).bounds());
     let tiles =
         |s: &Session, id: LayerId| doc(s).layer(id).unwrap().surface().unwrap().tiles().map(|(c, t)| (*c, std::sync::Arc::as_ptr(t))).collect::<Vec<_>>();
     for depth in [8, 16, 32] {
@@ -476,7 +466,7 @@ fn duplicate_shares_tiles_and_damages_only_the_copy() {
 
 /// The composite of `after` equals `before`'s outside `damage`.
 fn unchanged_outside(before: &Document, after: &Document, damage: Rect) -> bool {
-    let (x, y) = (photocraft_compose::render(before, before.bounds()), photocraft_compose::render(after, after.bounds()));
+    let (x, y) = (lienzo_compose::render(before, before.bounds()), lienzo_compose::render(after, after.bounds()));
     let w = before.bounds().width() as i32;
     x.px.iter().zip(&y.px).enumerate().all(|(i, (p, q))| p == q || damage.contains(i as i32 % w, i as i32 / w))
 }
@@ -764,7 +754,7 @@ fn align_bounds_follow_the_documents_alpha_precision() {
         let id = LayerId(s.execute("shape.create", json!({"kind": "rect", "rect": [60, 60, 60, 60], "fill": "#000000"})).unwrap()["layer"].as_u64().unwrap());
         s.edit("faint stroke", |doc, _| {
             if let Some(LayerContent::Shape(sh)) = doc.layer_mut(id).map(|l| &mut l.content) {
-                sh.stroke = Some(photocraft_doc::ShapeStroke { width: 20.0, opacity: 0.001, ..Default::default() });
+                sh.stroke = Some(lienzo_doc::ShapeStroke { width: 20.0, opacity: 0.001, ..Default::default() });
             }
             Ok(())
         })
@@ -938,13 +928,13 @@ fn merging_group_children_preserves_their_composite() {
         select_all(&mut s, &[lower, upper]);
         let group = LayerId(s.execute("layer.groupLayers", json!({"name": "Merge test group"})).unwrap()["layer"].as_u64().unwrap());
         let doc_before = doc(&s);
-        let expected = photocraft_compose::render(doc_before, doc_before.bounds());
+        let expected = lienzo_compose::render(doc_before, doc_before.bounds());
         let children = doc_before.layer(group).unwrap().children().unwrap().iter().map(|layer| layer.id).collect::<Vec<_>>();
 
         select_all(&mut s, &children);
         s.execute("layer.mergeLayers", json!({})).unwrap();
         let doc_after = doc(&s);
-        let actual = photocraft_compose::render(doc_after, doc_after.bounds());
+        let actual = lienzo_compose::render(doc_after, doc_after.bounds());
         assert_eq!(actual, expected, "depth {depth}: group merge changed rendered pixels");
         assert_eq!(doc_after.layer(group).unwrap().children().unwrap().len(), 1);
     }
@@ -958,10 +948,10 @@ fn merging_keeps_layer_effects_outside_the_pixels() {
         let lower = rect_layer(&mut s, Rect::new(10, 10, 30, 30));
         let upper = rect_layer(&mut s, Rect::new(40, 20, 60, 40));
         s.execute("layer.layerStyle.dropShadow", json!({"layer": upper.0, "blend": "normal", "distance": 12, "size": 4})).unwrap();
-        let before = photocraft_compose::render(doc(&s), doc(&s).bounds());
+        let before = lienzo_compose::render(doc(&s), doc(&s).bounds());
         select_all(&mut s, &[lower, upper]);
         s.execute("layer.mergeLayers", json!({})).unwrap();
-        let after = photocraft_compose::render(doc(&s), doc(&s).bounds());
+        let after = lienzo_compose::render(doc(&s), doc(&s).bounds());
         let worst = before.px.iter().zip(&after.px).map(|(a, b)| a.iter().zip(b).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max)).fold(0.0f32, f32::max);
         assert!(worst <= 1.5 / 255.0, "depth {depth}: merge layers dropped the shadow (off by {worst})");
     }
@@ -977,11 +967,11 @@ fn merging_a_group_down_preserves_the_composite() {
         select_all(&mut s, &[child_a, child_b]);
         let group = LayerId(s.execute("layer.groupLayers", json!({"name": "Merge down group"})).unwrap()["layer"].as_u64().unwrap());
         let doc_before = doc(&s);
-        let expected = photocraft_compose::render(doc_before, doc_before.bounds());
+        let expected = lienzo_compose::render(doc_before, doc_before.bounds());
 
         s.execute("layer.mergeDown", json!({"layer": group.0})).unwrap();
         let doc_after = doc(&s);
-        let actual = photocraft_compose::render(doc_after, doc_after.bounds());
+        let actual = lienzo_compose::render(doc_after, doc_after.bounds());
         assert_eq!(actual, expected, "depth {depth}: group merge down changed rendered pixels");
         assert!(doc_after.layer(lower).is_some());
         assert!(doc_after.layer(group).is_none());
@@ -1085,17 +1075,17 @@ fn grouping_is_capped_at_the_document_nesting_limit() {
     let mut s = session(8);
     let a = rect_layer(&mut s, Rect::new(0, 0, 5, 5));
     select_all(&mut s, &[a]);
-    for _ in 0..photocraft_doc::MAX_GROUP_DEPTH {
+    for _ in 0..lienzo_doc::MAX_GROUP_DEPTH {
         s.execute("layer.groupLayers", json!({})).unwrap();
     }
-    assert_eq!(doc(&s).max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH);
+    assert_eq!(doc(&s).max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH);
     // One more wrapping group would pass the cap: rejected, document untouched.
     let err = s.execute("layer.groupLayers", json!({})).unwrap_err();
     assert!(err.to_string().contains("deeper than 100"), "{err}");
-    assert_eq!(doc(&s).max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH);
+    assert_eq!(doc(&s).max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH);
     // The rejected call recorded no history step: undo still lands one grouping earlier.
     s.undo();
-    assert_eq!(doc(&s).max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH - 1);
+    assert_eq!(doc(&s).max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH - 1);
 }
 
 #[test]
@@ -1236,7 +1226,7 @@ fn undo_of_document_wide_steps_still_composites_everything() {
     let _ = rect_layer(&mut s, Rect::new(10, 10, 20, 20));
     // A canvas change has no bounded damage.
     s.execute("image.crop", json!({"x": 0, "y": 0, "width": 30, "height": 25})).unwrap();
-    assert_ne!(doc(&s).size, photocraft_doc::Size::new(100, 80));
+    assert_ne!(doc(&s).size, lienzo_doc::Size::new(100, 80));
     s.undo();
     assert_eq!(damage(&s), None, "a size change recomposites the whole canvas");
     // A layer removed and restored changes only where it draws.
@@ -1392,7 +1382,7 @@ fn bring_forward_on_a_group_holding_a_video_layer_is_unbounded() {
     s.edit("video", |doc, _| {
         let l = doc.layer_mut(v).unwrap();
         let frame = l.surface().unwrap().clone();
-        l.video = Some(photocraft_doc::VideoData::new(vec![frame.clone(), frame], 24.0));
+        l.video = Some(lienzo_doc::VideoData::new(vec![frame.clone(), frame], 24.0));
         Ok(())
     })
     .unwrap();
@@ -1415,7 +1405,7 @@ fn a_reorder_inside_a_group_with_a_drop_shadow_damages_the_shadow() {
     let b = rect_layer(&mut s, Rect::new(20, 20, 50, 50));
     s.edit("knockout", |doc, _| {
         let l = doc.layer_mut(k).unwrap();
-        l.advanced.knockout = photocraft_doc::Knockout::Shallow;
+        l.advanced.knockout = lienzo_doc::Knockout::Shallow;
         l.fill_opacity = 0.0;
         Ok(())
     })
@@ -1423,7 +1413,7 @@ fn a_reorder_inside_a_group_with_a_drop_shadow_damages_the_shadow() {
     select_all(&mut s, &[k, b]);
     let g = LayerId(s.execute("layer.groupLayers", json!({})).unwrap()["layer"].as_u64().unwrap());
     s.edit("fx", |doc, _| {
-        doc.layer_mut(g).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(g).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -1443,7 +1433,7 @@ fn adding_or_deleting_a_layer_inside_a_group_with_a_drop_shadow_damages_the_shad
     select_all(&mut s, &[k, b]);
     let g = LayerId(s.execute("layer.groupLayers", json!({})).unwrap()["layer"].as_u64().unwrap());
     s.edit("fx", |doc, _| {
-        doc.layer_mut(g).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(g).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -1456,7 +1446,7 @@ fn shadowed_group(s: &mut Session, layers: &[LayerId]) -> LayerId {
     select_all(s, layers);
     let g = LayerId(s.execute("layer.groupLayers", json!({})).unwrap()["layer"].as_u64().unwrap());
     s.edit("fx", |doc, _| {
-        doc.layer_mut(g).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(g).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
@@ -1465,9 +1455,9 @@ fn shadowed_group(s: &mut Session, layers: &[LayerId]) -> LayerId {
 
 /// [`bounded_step`] for a step that must change canvas pixels, so it can't pass vacuously.
 fn bounded_visible_step(s: &mut Session, id: &str, p: serde_json::Value) -> Rect {
-    let before = photocraft_compose::render(doc(s), doc(s).bounds());
+    let before = lienzo_compose::render(doc(s), doc(s).bounds());
     let r = bounded_step(s, id, p);
-    assert_ne!(photocraft_compose::render(doc(s), doc(s).bounds()).px, before.px, "{id}: no canvas pixel changed");
+    assert_ne!(lienzo_compose::render(doc(s), doc(s).bounds()).px, before.px, "{id}: no canvas pixel changed");
     r
 }
 
@@ -1492,7 +1482,7 @@ fn reordering_an_off_canvas_layer_damages_its_group_shadow_on_the_canvas() {
     let b = rect_layer(&mut s, Rect::new(-14, 20, -1, 40));
     s.edit("knockout", |doc, _| {
         let l = doc.layer_mut(k).unwrap();
-        l.advanced.knockout = photocraft_doc::Knockout::Shallow;
+        l.advanced.knockout = lienzo_doc::Knockout::Shallow;
         l.fill_opacity = 0.0;
         Ok(())
     })
@@ -1531,7 +1521,7 @@ fn a_property_change_inside_a_shadowed_group_damages_the_shadow() {
 /// group's frame, which lays the gradient out again over the rest of the group (#4053).
 #[test]
 fn hiding_or_deleting_a_layer_in_a_group_with_a_gradient_overlay_damages_the_group() {
-    use photocraft_doc::{Effect, FxCommon, Gradient};
+    use lienzo_doc::{Effect, FxCommon, Gradient};
     let mut s = session(8);
     let a = rect_layer(&mut s, Rect::new(10, 10, 30, 30));
     let b = rect_layer(&mut s, Rect::new(60, 40, 80, 60));
@@ -1539,7 +1529,7 @@ fn hiding_or_deleting_a_layer_in_a_group_with_a_gradient_overlay_damages_the_gro
     let g = LayerId(s.execute("layer.groupLayers", json!({})).unwrap()["layer"].as_u64().unwrap());
     s.edit("fx", |doc, _| {
         doc.layer_mut(g).unwrap().effects.items.push(Effect::GradientOverlay {
-            common: FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
+            common: FxCommon::new(lienzo_doc::BlendMode::Normal, 1.0),
             gradient: Gradient::default(),
             dither: false,
             interpolation: None,

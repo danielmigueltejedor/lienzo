@@ -6,11 +6,11 @@
 //! straight edge at 100 % zoom; the spacing is the distance between consecutive fastening points.
 
 use egui::Modifiers;
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_ui_egui::canvas::{ToolEvent, tool_event};
-use photocraft_ui_egui::state::Tool;
-use photocraft_ui_egui::{PhotocraftApp, Services};
+use lienzo_engine::Session;
+use lienzo_geom::Rect;
+use lienzo_ui_egui::canvas::{ToolEvent, tool_event};
+use lienzo_ui_egui::state::Tool;
+use lienzo_ui_egui::{LienzoApp, Services};
 use serde_json::json;
 
 const W: i32 = 900;
@@ -21,8 +21,8 @@ const START_X: f64 = 20.0;
 const END_X: f64 = 880.0;
 
 /// A white document with a black lower half, the Magnetic Lasso at `frequency`, 100 % zoom.
-fn app(frequency: f32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(Session::new(), Services::default());
+fn app(frequency: f32) -> LienzoApp {
+    let mut app = LienzoApp::new(Session::new(), Services::default());
     app.run("file.new", json!({"width": W, "height": H})).unwrap();
     app.sync_views();
     app.session
@@ -41,7 +41,7 @@ fn app(frequency: f32) -> PhotocraftApp {
 
 /// Click the first point on the edge, then move along it to the far end in 2 px steps; with
 /// `held` the button stays down for the whole walk, otherwise it is released after the click.
-fn walk(app: &mut PhotocraftApp, held: bool) {
+fn walk(app: &mut LienzoApp, held: bool) {
     let m = Modifiers::NONE;
     tool_event(app, ToolEvent::Down { x: START_X, y: EDGE_Y, pressure: 1.0 }, m);
     if !held {
@@ -55,7 +55,7 @@ fn walk(app: &mut PhotocraftApp, held: bool) {
 }
 
 /// The distances between consecutive fastening points of the border so far.
-fn gaps(app: &PhotocraftApp) -> Vec<f64> {
+fn gaps(app: &LienzoApp) -> Vec<f64> {
     let m = &app.ui.magnetic;
     let pts: Vec<[f64; 2]> = m.anchors.iter().map(|&i| m.path[i]).collect();
     pts.windows(2).map(|w| (w[1][0] - w[0][0]).hypot(w[1][1] - w[0][1])).collect()
@@ -132,7 +132,7 @@ fn out_of_range_and_non_finite_frequencies_are_clamped() {
 
 /// Walks the edge like `walk`, at `zoom` (1.0 = 100 %), with the pointer moving 2 screen px a step
 /// below 100 % and 4 screen px from 100 % up (coarser steps give alternating gaps at 50 %).
-fn walk_at(app: &mut PhotocraftApp, held: bool, zoom: f32) {
+fn walk_at(app: &mut LienzoApp, held: bool, zoom: f32) {
     app.ui.views[0].zoom = zoom;
     assert!((app.point_zoom() - zoom).abs() < 1e-6, "the view is at the zoom under test");
     let m = Modifiers::NONE;

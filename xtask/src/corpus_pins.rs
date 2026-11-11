@@ -13,16 +13,16 @@ use crate::pinned::{PinnedCorpus, Upstream};
 
 /// https://github.com/storytold/photocraft-corpus: our Photoshop-authored oracle PSDs
 /// (`photoshop/`). Bump through a PR after committing there.
-pub const PHOTOCRAFT_CORPUS_COMMIT: &str = "f5b1178cab15309e05b7b504545df3c701f6d8fd";
+pub const LIENZO_CORPUS_COMMIT: &str = "f5b1178cab15309e05b7b504545df3c701f6d8fd";
 /// https://github.com/storytold/photocraft-corpus: our GIMP-authored XCF oracles (`gimp/`). Its own
 /// pin, so that set can move without refetching `photoshop/`. Bump through a PR after committing there.
-pub const PHOTOCRAFT_CORPUS_GIMP_COMMIT: &str = "fbe9227a48d06de87061e527541209a178fd685c";
+pub const LIENZO_CORPUS_GIMP_COMMIT: &str = "fbe9227a48d06de87061e527541209a178fd685c";
 /// https://github.com/psd-tools/psd-tools (MIT): `tests/psd_files` (main, 2026-10-05).
 pub const PSD_TOOLS_COMMIT: &str = "96eb134c17b2c65edf4c4151c0f00b802ada86c2";
 /// https://github.com/Agamnentzar/ag-psd (MIT): `test/` (master, 2026-07-02).
 pub const AG_PSD_COMMIT: &str = "387049670cb89b88fb8fe1b7c01aeacf98dd2e3b";
 /// https://github.com/tbraun96/heic-rs (MIT OR Apache-2.0): `tests/fixtures` at the v0.1.1 tag, the
-/// version photocraft-heif pins (2026-09-12).
+/// version lienzo-heif pins (2026-09-12).
 pub const HEIC_RS_COMMIT: &str = "4f0d4df474c773dfc3b14fa80e7219be6898866e";
 /// https://github.com/bigcat88/pillow_heif (BSD-3-Clause): `tests/images` (master, 2026-09-25).
 pub const PILLOW_HEIF_COMMIT: &str = "b16be1196dfa465a342d68894696e685ca3655cb";
@@ -55,7 +55,7 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
     upstreams: &[Upstream {
         prefix: "",
         repo: "storytold/photocraft-corpus",
-        commit: PHOTOCRAFT_CORPUS_COMMIT,
+        commit: LIENZO_CORPUS_COMMIT,
         subdir: "photoshop",
         extras: &[("README.md", "README.md"), ("LICENSE-MIT", "LICENSE-MIT"), ("LICENSE-APACHE", "LICENSE-APACHE")],
     }],
@@ -64,7 +64,7 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
     subset: false,
     sources_md: |c| {
         format!(
-            "# Photoshop oracle corpus\n\n`photoshop/` of https://github.com/storytold/photocraft-corpus at commit {PHOTOCRAFT_CORPUS_COMMIT} \
+            "# Photoshop oracle corpus\n\n`photoshop/` of https://github.com/storytold/photocraft-corpus at commit {LIENZO_CORPUS_COMMIT} \
              (see `README.md`). MIT OR Apache-2.0, authored by the PhotoCraft contributors. Fetched and sha256-verified by \
              `cargo xtask corpus --photoshop` against `{}`. Gitignored; never commit these files.\n",
             c.manifest
@@ -73,14 +73,14 @@ pub const PHOTOSHOP: PinnedCorpus = PinnedCorpus {
 };
 
 /// `corpus/gimp`: 14 XCF files written by GIMP 3.2.6 by the photocraft-corpus generator, each with
-/// GIMP's merged rendering as a PNG (28 files), the oracles of `photocraft-io`'s XCF reader.
+/// GIMP's merged rendering as a PNG (28 files), the oracles of `lienzo-io`'s XCF reader.
 pub const GIMP: PinnedCorpus = PinnedCorpus {
     name: "gimp",
     dest: "gimp",
     upstreams: &[Upstream {
         prefix: "",
         repo: "storytold/photocraft-corpus",
-        commit: PHOTOCRAFT_CORPUS_GIMP_COMMIT,
+        commit: LIENZO_CORPUS_GIMP_COMMIT,
         subdir: "gimp",
         extras: &[("README.md", "README.md"), ("LICENSE-MIT", "LICENSE-MIT"), ("LICENSE-APACHE", "LICENSE-APACHE")],
     }],
@@ -89,7 +89,7 @@ pub const GIMP: PinnedCorpus = PinnedCorpus {
     subset: false,
     sources_md: |c| {
         format!(
-            "# GIMP XCF oracle corpus\n\n`gimp/` of https://github.com/storytold/photocraft-corpus at commit {PHOTOCRAFT_CORPUS_GIMP_COMMIT} \
+            "# GIMP XCF oracle corpus\n\n`gimp/` of https://github.com/storytold/photocraft-corpus at commit {LIENZO_CORPUS_GIMP_COMMIT} \
              (see `README.md`). MIT OR Apache-2.0, authored by the PhotoCraft contributors with GIMP 3.2.6. Fetched and sha256-verified by \
              `cargo xtask corpus --gimp` against `{}`. Gitignored; never commit these files.\n",
             c.manifest
@@ -209,7 +209,7 @@ The `*.deep.exr` files of https://github.com/AcademySoftwareFoundation/openexr/t
 
 /// `corpus/affinity`: public Affinity documents saved by Affinity 1.x to 3.x, chosen for having no
 /// personal paths in their metadata. Each embeds Affinity's own render of itself (its thumbnail),
-/// the oracle `photocraft-io`'s corpus test compares the imported document against. The manifest
+/// the oracle `lienzo-io`'s corpus test compares the imported document against. The manifest
 /// selects the files.
 pub const AFFINITY: PinnedCorpus = PinnedCorpus {
     name: "affinity",
@@ -268,7 +268,7 @@ pub const AFFINITY: PinnedCorpus = PinnedCorpus {
     },
 };
 /// Photoshop Actions files (`.atn`) from public repositories under permissive licences, the
-/// real-file oracles of `photocraft-psd::atn` and the engine's `.atn` import (2026-10-12).
+/// real-file oracles of `lienzo-psd::atn` and the engine's `.atn` import (2026-10-12).
 /// https://github.com/sbaril/Photoshop-Scripts (MIT): `Actions/`.
 pub const SBARIL_COMMIT: &str = "622493c9c617c9d2ff38500e8e512c0ad421eed9";
 /// https://github.com/bjango/Bjango-Actions (BSD, `Help/License.md`): three sets at the root.
@@ -339,7 +339,7 @@ pub const ALL: &[&PinnedCorpus] = &[&PSD_MIXED, &PSD_TOOLS, &PHOTOSHOP, &GIMP, &
 
 /// `corpus/pixls`: real camera raws from <https://raw.pixls.us> (released into the public
 /// domain / CC0 by their photographers; see ATTRIBUTION.md). One file per decode path
-/// `photocraft-raw` supports, plus the packed-ORF known-unsupported oracle. Fetched as single
+/// `lienzo-raw` supports, plus the packed-ORF known-unsupported oracle. Fetched as single
 /// files (the server 301-redirects `/data/` to `/download/`), verified against
 /// `xtask/pixls.sha256`.
 pub const PIXLS_BASE: &str = "https://raw.pixls.us/data/";

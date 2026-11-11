@@ -228,7 +228,7 @@ fn xmp_number(x: &str, prop: &str) -> Option<f64> {
 /// for display. Read from the EXIF block (JPEG APP1, PSD resource 1058, …); properties it lacks
 /// fall back to the XMP `tiff:`/`exif:`/`aux:` copies (files without an EXIF block).
 pub fn camera_data(exif: Option<&[u8]>, xmp: Option<&str>) -> Value {
-    let e = exif.map(photocraft_algo::exif::read).unwrap_or_default();
+    let e = exif.map(lienzo_algo::exif::read).unwrap_or_default();
     let x = xmp.unwrap_or("");
     let text = |v: Option<String>, props: &[&str]| v.or_else(|| props.iter().find_map(|p| xmp_value(x, p)));
     let num =

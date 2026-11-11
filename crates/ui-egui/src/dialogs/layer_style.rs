@@ -14,12 +14,12 @@
 //!   the page-only `blendIfChannel`; `channelNames`: the document's colour channels.
 
 use egui::{Color32, RichText, Sense, Stroke, StrokeKind, vec2};
-use photocraft_doc::effects::{FxPaint, GlowSource, GlowTechnique, StrokePosition};
-use photocraft_doc::{Effect, Layer};
+use lienzo_doc::effects::{FxPaint, GlowSource, GlowTechnique, StrokePosition};
+use lienzo_doc::{Effect, Layer};
 use serde_json::{Map, Value, json};
 
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, widgets};
+use crate::{LienzoApp, widgets};
 
 #[cfg(test)]
 mod bevel_modes_tests;
@@ -76,11 +76,11 @@ fn multi(kind: &str) -> bool {
 }
 
 fn kind_of(e: &Effect) -> &'static str {
-    photocraft_engine::layer_style::kind_of(e)
+    lienzo_engine::layer_style::kind_of(e)
 }
 
 fn defaults(kind: &str) -> Value {
-    let mut p = photocraft_engine::layer_style::effect_defaults(kind);
+    let mut p = lienzo_engine::layer_style::effect_defaults(kind);
     if kind == "gradientOverlay" {
         gradient_field::from_to_to_stops(&mut p);
     }
@@ -229,7 +229,7 @@ fn spec(kind: &str) -> &'static [(&'static str, &'static str, P)] {
     }
 }
 
-fn hex(c: &photocraft_doc::Color) -> String {
+fn hex(c: &lienzo_doc::Color) -> String {
     let [r, g, b, _] = c.to_rgba8();
     format!("#{r:02x}{g:02x}{b:02x}")
 }
@@ -260,7 +260,7 @@ fn values_of(e: &Effect, light: f32) -> Value {
             set(&mut v, "distance", json!(s.distance));
             set(&mut v, if matches!(e, Effect::DropShadow(_)) { "spread" } else { "choke" }, json!((s.spread * 100.0).round()));
             set(&mut v, "size", json!(s.size));
-            set(&mut v, "contour", photocraft_engine::layer_style::contour_param(&s.contour));
+            set(&mut v, "contour", lienzo_engine::layer_style::contour_param(&s.contour));
             set(&mut v, "antiAlias", json!(s.anti_alias));
             set(&mut v, "noise", json!((s.noise * 100.0).round()));
             if matches!(e, Effect::DropShadow(_)) {
@@ -279,7 +279,7 @@ fn values_of(e: &Effect, light: f32) -> Value {
             set(&mut v, if matches!(e, Effect::OuterGlow(_)) { "spread" } else { "choke" }, json!((g.spread * 100.0).round()));
             set(&mut v, "size", json!(g.size));
             set(&mut v, "range", json!((g.range * 100.0).round()));
-            set(&mut v, "contour", photocraft_engine::layer_style::contour_param(&g.contour));
+            set(&mut v, "contour", lienzo_engine::layer_style::contour_param(&g.contour));
             set(&mut v, "antiAlias", json!(g.anti_alias));
             set(&mut v, "noise", json!((g.noise * 100.0).round()));
             if matches!(e, Effect::InnerGlow(_)) {
@@ -329,11 +329,11 @@ fn values_of(e: &Effect, light: f32) -> Value {
                 &mut v,
                 "style",
                 json!(match g.style {
-                    photocraft_doc::effects::GradientStyle::Radial => "radial",
-                    photocraft_doc::effects::GradientStyle::Angle => "angle",
-                    photocraft_doc::effects::GradientStyle::Reflected => "reflected",
-                    photocraft_doc::effects::GradientStyle::Diamond => "diamond",
-                    photocraft_doc::effects::GradientStyle::Linear => "linear",
+                    lienzo_doc::effects::GradientStyle::Radial => "radial",
+                    lienzo_doc::effects::GradientStyle::Angle => "angle",
+                    lienzo_doc::effects::GradientStyle::Reflected => "reflected",
+                    lienzo_doc::effects::GradientStyle::Diamond => "diamond",
+                    lienzo_doc::effects::GradientStyle::Linear => "linear",
                 }),
             );
             set(&mut v, "angle", json!(g.angle));
@@ -357,7 +357,7 @@ fn values_of(e: &Effect, light: f32) -> Value {
             set(&mut v, "distance", json!(s.distance));
             set(&mut v, "size", json!(s.size));
             set(&mut v, "invert", json!(s.invert));
-            set(&mut v, "contour", photocraft_engine::layer_style::contour_param(&s.contour));
+            set(&mut v, "contour", lienzo_engine::layer_style::contour_param(&s.contour));
             set(&mut v, "antiAlias", json!(s.anti_alias));
         }
         Effect::BevelEmboss(b) => {
@@ -365,20 +365,20 @@ fn values_of(e: &Effect, light: f32) -> Value {
                 &mut v,
                 "style",
                 json!(match b.style {
-                    photocraft_doc::effects::BevelStyle::OuterBevel => "outer",
-                    photocraft_doc::effects::BevelStyle::Emboss => "emboss",
-                    photocraft_doc::effects::BevelStyle::PillowEmboss => "pillow",
-                    photocraft_doc::effects::BevelStyle::StrokeEmboss => "stroke",
-                    photocraft_doc::effects::BevelStyle::InnerBevel => "inner",
+                    lienzo_doc::effects::BevelStyle::OuterBevel => "outer",
+                    lienzo_doc::effects::BevelStyle::Emboss => "emboss",
+                    lienzo_doc::effects::BevelStyle::PillowEmboss => "pillow",
+                    lienzo_doc::effects::BevelStyle::StrokeEmboss => "stroke",
+                    lienzo_doc::effects::BevelStyle::InnerBevel => "inner",
                 }),
             );
             set(
                 &mut v,
                 "technique",
                 json!(match b.technique {
-                    photocraft_doc::effects::BevelTechnique::ChiselHard => "chiselHard",
-                    photocraft_doc::effects::BevelTechnique::ChiselSoft => "chiselSoft",
-                    photocraft_doc::effects::BevelTechnique::Smooth => "smooth",
+                    lienzo_doc::effects::BevelTechnique::ChiselHard => "chiselHard",
+                    lienzo_doc::effects::BevelTechnique::ChiselSoft => "chiselSoft",
+                    lienzo_doc::effects::BevelTechnique::Smooth => "smooth",
                 }),
             );
             set(&mut v, "depth", json!((b.depth * 100.0).round()));
@@ -388,7 +388,7 @@ fn values_of(e: &Effect, light: f32) -> Value {
             set(&mut v, "useGlobalLight", json!(b.use_global_light));
             set(&mut v, "altitude", json!(b.altitude));
             set(&mut v, "direction", json!(if b.up { "up" } else { "down" }));
-            set(&mut v, "glossContour", photocraft_engine::layer_style::contour_param(&b.gloss_contour));
+            set(&mut v, "glossContour", lienzo_engine::layer_style::contour_param(&b.gloss_contour));
             set(&mut v, "glossAntiAlias", json!(b.gloss_anti_alias));
             set(&mut v, "highlightBlend", json!(b.highlight.blend.label()));
             set(&mut v, "highlightColor", json!(hex(&b.highlight_color)));
@@ -398,7 +398,7 @@ fn values_of(e: &Effect, light: f32) -> Value {
             set(&mut v, "shadowOpacity", json!((b.shadow.opacity * 100.0).round()));
             set(&mut v, "contour", json!(b.contour.is_some()));
             if let Some(c) = &b.contour {
-                set(&mut v, "contourName", photocraft_engine::layer_style::contour_param(&c.contour));
+                set(&mut v, "contourName", lienzo_engine::layer_style::contour_param(&c.contour));
                 set(&mut v, "contourRange", json!((c.range * 100.0).round()));
                 set(&mut v, "contourAntiAlias", json!(c.anti_alias));
             }
@@ -552,13 +552,13 @@ pub fn end_gradient_drag(f: &mut Map<String, Value>) {
 }
 
 /// The width and height of the layer the dialog `f` is open on, what a Gradient Overlay's offset
-/// is a fraction of (`photocraft_compose::layer_bounds`, what the renderer paints against): `None`
+/// is a fraction of (`lienzo_compose::layer_bounds`, what the renderer paints against): `None`
 /// once that layer is gone or while it is empty (a gradient paints nothing there), when a drag on
 /// the image has nothing to move and the Hand tool pans.
-pub fn gradient_layer_bounds(session: &photocraft_engine::Session, f: &Map<String, Value>) -> Option<[f64; 2]> {
+pub fn gradient_layer_bounds(session: &lienzo_engine::Session, f: &Map<String, Value>) -> Option<[f64; 2]> {
     let id = f.get("layer").and_then(Value::as_u64)?;
     let st = session.active()?;
-    let b = photocraft_compose::layer_bounds(st.doc.layer(photocraft_doc::LayerId(id))?, st.doc.bounds());
+    let b = lienzo_compose::layer_bounds(st.doc.layer(lienzo_doc::LayerId(id))?, st.doc.bounds());
     let [w, h] = [f64::from(b.width()), f64::from(b.height())];
     (w > 0.0 && h > 0.0).then_some([w, h])
 }
@@ -623,7 +623,7 @@ pub fn initial_fields_with(layer: &Layer, select: Option<&str>, light: f32, user
     f.insert("layer".into(), json!(layer.id.0));
     f.insert("globalLight".into(), json!(light));
     f.insert("preview".into(), json!(true));
-    set_blending_fields(&mut f, layer, photocraft_color::ColorMode::Rgb);
+    set_blending_fields(&mut f, layer, lienzo_color::ColorMode::Rgb);
     let mut effects = Vec::new();
     for (i, e) in layer.effects.items.iter().enumerate() {
         effects.push(json!({
@@ -662,7 +662,7 @@ pub fn initial_fields_with(layer: &Layer, select: Option<&str>, light: f32, user
     f
 }
 
-pub fn open(app: &mut PhotocraftApp, select: Option<&str>) -> Option<u64> {
+pub fn open(app: &mut LienzoApp, select: Option<&str>) -> Option<u64> {
     // An open Free Transform box is applied first, as in Photoshop (#4821): the canvas shows the
     // box's preview while it is open, so the dialog's preview would not show until Enter.
     if app.ui.transform.is_some() {
@@ -686,7 +686,7 @@ pub fn open(app: &mut PhotocraftApp, select: Option<&str>) -> Option<u64> {
 
 /// Double-click on an effect row of the Layers panel: open Layer Style for that row's layer. A
 /// row of another layer selects it first, as its right-click menu does (Photoshop does the same).
-pub fn open_for_layer(app: &mut PhotocraftApp, layer: photocraft_doc::LayerId, select: Option<&str>) -> Option<u64> {
+pub fn open_for_layer(app: &mut LienzoApp, layer: lienzo_doc::LayerId, select: Option<&str>) -> Option<u64> {
     let active = app.session.active().is_some_and(|s| s.active_layer == Some(layer));
     if !active {
         app.run("layer.select", json!({"layer": layer.0})).ok()?;
@@ -695,7 +695,7 @@ pub fn open_for_layer(app: &mut PhotocraftApp, layer: photocraft_doc::LayerId, s
 }
 
 /// `[[id, name], …]` of the patterns a style can use (document's, then the library's).
-pub fn pattern_list(app: &PhotocraftApp) -> Value {
+pub fn pattern_list(app: &LienzoApp) -> Value {
     let mut out: Vec<Value> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     let doc_pats = app.session.active().map(|d| d.doc.patterns.clone()).unwrap_or_default();
@@ -708,7 +708,7 @@ pub fn pattern_list(app: &PhotocraftApp) -> Value {
 }
 
 /// Apply the dialog: replace the layer's effects with the dialog's instances.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     apply(f, |id, p| app.run(id, p))
 }
 
@@ -829,11 +829,11 @@ pub fn preview_hash(f: &Map<String, Value>) -> u64 {
 
 /// `doc` with the dialog's style applied, run on a scratch session (no history) for the live preview.
 pub fn preview_document(
-    doc: &photocraft_doc::Document,
-    patterns: &photocraft_engine::pattern_cmds::PatternLibrary,
+    doc: &lienzo_doc::Document,
+    patterns: &lienzo_engine::pattern_cmds::PatternLibrary,
     f: &Map<String, Value>,
-) -> Result<photocraft_doc::Document, String> {
-    let mut s = photocraft_engine::Session::new();
+) -> Result<lienzo_doc::Document, String> {
+    let mut s = lienzo_engine::Session::new();
     s.patterns = patterns.clone();
     s.add_document(doc.clone(), None);
     apply(f, |id, p| s.execute(id, p).map_err(|e| e.to_string()))?;
@@ -842,8 +842,8 @@ pub fn preview_document(
 
 /// Applies a style preset to the dialog fields in-place without touching the document.
 /// Clicking Cancel leaves the document untouched; clicking OK commits.
-fn apply_style_preset(app: &PhotocraftApp, f: &mut Map<String, Value>, name: &str) {
-    let Ok(style) = photocraft_engine::presets::styles::find_style(&app.session, &json!({"preset": name}), "apply_style_preset") else { return };
+fn apply_style_preset(app: &LienzoApp, f: &mut Map<String, Value>, name: &str) {
+    let Ok(style) = lienzo_engine::presets::styles::find_style(&app.session, &json!({"preset": name}), "apply_style_preset") else { return };
     let light = f.get("pendingGlobalLight").or_else(|| f.get("globalLight")).and_then(Value::as_f64).unwrap_or(120.0) as f32;
     let mut effects = Vec::new();
     for (i, e) in style.effects.iter().enumerate() {
@@ -868,7 +868,7 @@ fn apply_style_preset(app: &PhotocraftApp, f: &mut Map<String, Value>, name: &st
 }
 
 /// Saves the dialog's pending state (enabled instances + blending page) as a style preset.
-fn save_new_style(app: &mut PhotocraftApp, f: &Map<String, Value>) {
+fn save_new_style(app: &mut LienzoApp, f: &Map<String, Value>) {
     let mut entries = Vec::new();
     for e in effects_of(f) {
         if e.get("on").and_then(Value::as_bool) != Some(true) {
@@ -920,14 +920,14 @@ fn fx_checkbox(p: &egui::Painter, cb: egui::Rect, on: bool, t: &Tokens) {
     }
 }
 
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let _ = body_with_response(app, ui, f, true);
 }
 
 /// Layer Style's body, laid out like Photoshop's: the effect list over its fx / move / delete
 /// bar, the selected page, and a column with OK, Cancel, New Style…, Preview and the preview
 /// swatch. Returns OK (true) or Cancel (false) once chosen; Enter is OK.
-pub fn body_with_response(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, interactive: bool) -> Option<bool> {
+pub fn body_with_response(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, interactive: bool) -> Option<bool> {
     let selected = f.get("selected").and_then(Value::as_str).unwrap_or("dropShadow").to_string();
     let mut style_click: Option<String> = None;
     let mut new_style = false;
@@ -970,8 +970,8 @@ pub fn body_with_response(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Ma
 }
 
 /// Colour channel names of a document mode, as Blending Options lists them (Channels, Blend If).
-pub fn channel_names(mode: photocraft_color::ColorMode) -> Vec<&'static str> {
-    use photocraft_color::ColorMode as M;
+pub fn channel_names(mode: lienzo_color::ColorMode) -> Vec<&'static str> {
+    use lienzo_color::ColorMode as M;
     match mode {
         M::Rgb | M::Indexed | M::Multichannel => vec!["R", "G", "B"],
         M::Cmyk => vec!["C", "M", "Y", "K"],
@@ -993,7 +993,7 @@ const ADVANCED_CHECKS: &[(&str, &str)] = &[
 
 /// The Blending Options page's fields for `layer` in a `mode` document (the parameters of
 /// `layer.layerStyle.blendingOptions`, plus the page's Blend If channel), and the channel names.
-pub fn set_blending_fields(f: &mut Map<String, Value>, layer: &Layer, mode: photocraft_color::ColorMode) {
+pub fn set_blending_fields(f: &mut Map<String, Value>, layer: &Layer, mode: lienzo_color::ColorMode) {
     let names = channel_names(mode);
     let n = names.len();
     let a = &layer.advanced;
@@ -1043,8 +1043,8 @@ fn blending_page(ui: &mut egui::Ui, p: &mut Value, names: &[String]) {
         widgets::row_label(ui, "Blend Mode", LABEL_W);
         let mut cur = p.get("blend").and_then(Value::as_str).unwrap_or("Normal").to_string();
         // Photoshop's modes, plus the layer's own Paint.NET mode when it has one (an imported .pdn).
-        let own = photocraft_color::BlendMode::PAINT_NET_MODES.into_iter().find(|m| m.label() == cur);
-        let opts: Vec<(String, &str)> = photocraft_color::BlendMode::LAYER_MODES.into_iter().chain(own).map(|m| (m.label().to_string(), m.label())).collect();
+        let own = lienzo_color::BlendMode::PAINT_NET_MODES.into_iter().find(|m| m.label() == cur);
+        let opts: Vec<(String, &str)> = lienzo_color::BlendMode::LAYER_MODES.into_iter().chain(own).map(|m| (m.label().to_string(), m.label())).collect();
         if widgets::dropdown(ui, "fx-blend-blendingOptions", tl!("Blend Mode"), &mut cur, &opts, 150.0) {
             p["blend"] = json!(cur);
         }
@@ -1570,7 +1570,7 @@ fn checkbox_line(ui: &mut egui::Ui, on: &mut bool, label: &str) -> bool {
 }
 
 /// The selected page: the Styles gallery, Blending Options, or an effect's parameters.
-fn page(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, selected: &str, invalid: Option<&str>, style_click: &mut Option<String>) {
+fn page(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, selected: &str, invalid: Option<&str>, style_click: &mut Option<String>) {
     let t = Tokens::get(ui.ctx());
     // Photoshop's rows sit close together: every page fits the dialog without scrolling.
     ui.spacing_mut().item_spacing.y = 3.0;
@@ -1675,7 +1675,7 @@ fn page(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, 
                 ui.horizontal(|ui| {
                     widgets::row_label(ui, label, LABEL_W);
                     let mut cur = disp.get(key).and_then(Value::as_str).unwrap_or("Normal").to_string();
-                    let opts: Vec<(String, &str)> = photocraft_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
+                    let opts: Vec<(String, &str)> = lienzo_color::BlendMode::LAYER_MODES.iter().map(|m| (m.label().to_string(), m.label())).collect();
                     if widgets::dropdown(ui, &format!("fx-blend-{selected}-{key}"), tl!(&label), &mut cur, &opts, 150.0) {
                         let value = json!(cur);
                         disp[key] = value.clone();
@@ -1695,7 +1695,7 @@ fn page(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, 
                     ];
                     // Old/imported curves have no method record. Preserve them until
                     // the user explicitly chooses an interpolation method.
-                    if photocraft_io::GradientMethod::from_name(&current).is_none() {
+                    if lienzo_io::GradientMethod::from_name(&current).is_none() {
                         current = "custom".into();
                         options.insert(0, ("custom".into(), "Custom"));
                     }
@@ -1792,7 +1792,7 @@ fn page(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, 
 }
 
 /// Photoshop's right-hand column: OK, Cancel, New Style…, Preview and the preview swatch.
-fn side_column(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, new_style: &mut bool) -> Option<bool> {
+fn side_column(app: &LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, new_style: &mut bool) -> Option<bool> {
     let mut outcome = None;
     if widgets::primary_button(ui, tl!("OK"), SIDE_W).clicked() {
         outcome = Some(true);
@@ -1817,7 +1817,7 @@ fn side_column(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value
 
 /// Photoshop's preview swatch: the dialog's pending style on a sample square, redrawn when the
 /// style changes.
-fn preview_swatch(app: &PhotocraftApp, ui: &mut egui::Ui, f: &Map<String, Value>, size: f32) {
+fn preview_swatch(app: &LienzoApp, ui: &mut egui::Ui, f: &Map<String, Value>, size: f32) {
     let t = Tokens::get(ui.ctx());
     let (rect, _) = ui.allocate_exact_size(egui::Vec2::splat(size), Sense::hover());
     ui.painter().rect_filled(rect, t.radius_sm, t.field);
@@ -1829,7 +1829,7 @@ fn preview_swatch(app: &PhotocraftApp, ui: &mut egui::Ui, f: &Map<String, Value>
     let id = egui::Id::unique("layer-style-swatch");
     let cached = ui.data(|d| d.get_temp::<(u64, u32, egui::TextureHandle)>(id)).filter(|c| (c.0, c.1) == key).map(|c| c.2);
     let tex = cached.or_else(|| {
-        let rgba = photocraft_engine::presets::styles::thumbnail(&app.session, &pending_style(app, f)?, px);
+        let rgba = lienzo_engine::presets::styles::thumbnail(&app.session, &pending_style(app, f)?, px);
         let side = px as usize;
         (rgba.len() == side * side * 4).then(|| {
             let tex = ui.ctx().load_texture("layer-style-swatch", egui::ColorImage::from_rgba_unmultiplied([side, side], &rgba), egui::TextureOptions::LINEAR);
@@ -1845,16 +1845,16 @@ fn preview_swatch(app: &PhotocraftApp, ui: &mut egui::Ui, f: &Map<String, Value>
 
 /// The dialog's pending style as a preset, built on a scratch layer the way the canvas preview
 /// builds it on the real one (instance snapshots, blending options and patterns all apply).
-fn pending_style(app: &PhotocraftApp, f: &Map<String, Value>) -> Option<photocraft_engine::presets::styles::StylePreset> {
-    let mut s = photocraft_engine::Session::new();
+fn pending_style(app: &LienzoApp, f: &Map<String, Value>) -> Option<lienzo_engine::presets::styles::StylePreset> {
+    let mut s = lienzo_engine::Session::new();
     s.patterns = app.session.patterns.clone();
     s.execute("file.new", json!({"width": 8, "height": 8})).ok()?;
     let layer = s.execute("layer.new.layer", json!({})).ok()?.get("layer")?.as_u64()?;
     let mut f = f.clone();
     f.insert("layer".into(), json!(layer));
     apply(&f, |cmd, p| s.execute(cmd, p).map_err(|e| e.to_string())).ok()?;
-    let l = s.active()?.doc.layer(photocraft_doc::LayerId(layer))?;
-    Some(photocraft_engine::presets::styles::StylePreset {
+    let l = s.active()?.doc.layer(lienzo_doc::LayerId(layer))?;
+    Some(lienzo_engine::presets::styles::StylePreset {
         name: String::new(),
         effects: l.effects.items.clone(),
         blend: Some(l.blend),

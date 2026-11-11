@@ -3,23 +3,23 @@
 //! inside, and a ⇧ / ⌥ press still select the line under the release.
 
 use egui::Modifiers;
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// An 800 × 600 document with snapping off, so the drags land where they are sent.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.ui.extras.snap = false;
     app
 }
 
 /// A drag with `tool` from `a` to `b`, as the canvas sends it.
-fn drag(app: &mut PhotocraftApp, tool: Tool, a: [f64; 2], b: [f64; 2], m: Modifiers) {
+fn drag(app: &mut LienzoApp, tool: Tool, a: [f64; 2], b: [f64; 2], m: Modifiers) {
     app.ui.tool = tool;
     tool_event(app, ToolEvent::Down { x: a[0], y: a[1], pressure: 1.0 }, m);
     let mid = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
@@ -28,43 +28,43 @@ fn drag(app: &mut PhotocraftApp, tool: Tool, a: [f64; 2], b: [f64; 2], m: Modifi
     tool_event(app, ToolEvent::Up { x: b[0], y: b[1] }, m);
 }
 
-fn click(app: &mut PhotocraftApp, tool: Tool, p: [f64; 2], m: Modifiers) {
+fn click(app: &mut LienzoApp, tool: Tool, p: [f64; 2], m: Modifiers) {
     app.ui.tool = tool;
     tool_event(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, m);
     tool_event(app, ToolEvent::Up { x: p[0], y: p[1] }, m);
 }
 
-fn bounds(app: &PhotocraftApp) -> Rect {
+fn bounds(app: &LienzoApp) -> Rect {
     app.session.active().unwrap().doc.selection.as_ref().map_or(Rect::EMPTY, |s| s.content_bounds())
 }
 
-fn selected(app: &PhotocraftApp, x: i32, y: i32) -> bool {
+fn selected(app: &LienzoApp, x: i32, y: i32) -> bool {
     app.session.active().unwrap().doc.selection.as_ref().is_some_and(|s| s.sample_channel(x, y, 0) > 0.5)
 }
 
-fn step(app: &PhotocraftApp) -> Option<String> {
+fn step(app: &LienzoApp) -> Option<String> {
     app.session.active().unwrap().history.undo_label().map(str::to_string)
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
 /// The active layer's pixel at `(x, y)`.
-fn pixel(app: &PhotocraftApp, x: i32, y: i32) -> [f32; 4] {
+fn pixel(app: &LienzoApp, x: i32, y: i32) -> [f32; 4] {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(x, y)
 }
 
 /// Rows 150 and 250 (New, then ⇧ adds).
-fn two_rows(app: &mut PhotocraftApp) {
+fn two_rows(app: &mut LienzoApp) {
     click(app, Tool::SingleRowMarquee, [300.0, 250.5], Modifiers::NONE);
     click(app, Tool::SingleRowMarquee, [200.0, 150.5], Modifiers::SHIFT);
     assert_eq!(bounds(app), Rect::new(0, 150, 800, 251));
 }
 
 /// Columns 200 and 300.
-fn two_columns(app: &mut PhotocraftApp) {
+fn two_columns(app: &mut LienzoApp) {
     click(app, Tool::SingleColumnMarquee, [300.5, 250.0], Modifiers::NONE);
     click(app, Tool::SingleColumnMarquee, [200.5, 150.0], Modifiers::SHIFT);
     assert_eq!(bounds(app), Rect::new(200, 0, 301, 600));
@@ -72,7 +72,7 @@ fn two_columns(app: &mut PhotocraftApp) {
 
 /// What the Rectangular Marquee's move of the same selection gives: where the part moved past the
 /// canvas goes, and the History step's name.
-fn rect_marquee_move(select: impl Fn(&mut PhotocraftApp), a: [f64; 2], b: [f64; 2]) -> (Rect, Option<String>) {
+fn rect_marquee_move(select: impl Fn(&mut LienzoApp), a: [f64; 2], b: [f64; 2]) -> (Rect, Option<String>) {
     let mut app = app();
     select(&mut app);
     drag(&mut app, Tool::RectMarquee, a, b, Modifiers::NONE);
@@ -158,8 +158,8 @@ fn click_inside_with_snapping_on_selects_the_line() {
 /// where it is by the press, which drags the outline (#11368).
 #[test]
 fn a_drag_snapped_back_to_its_start_leaves_the_selection() {
-    let floats = |app: &PhotocraftApp| app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let floats = |app: &LienzoApp| app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.run("view.newGuide", json!({"orientation": "horizontal", "position": 150})).unwrap();
     app.ui.extras.snap = false;
@@ -188,15 +188,15 @@ fn a_drag_snapped_back_to_its_start_leaves_the_selection() {
 /// is dropped where it is by the press, which drags the outline (#11368).
 #[test]
 fn a_drag_that_returns_to_its_start_leaves_the_selection() {
-    let floats = |app: &PhotocraftApp| app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
-    let out_and_back = |app: &mut PhotocraftApp, tool: Tool, p: [f64; 2]| {
+    let floats = |app: &LienzoApp| app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
+    let out_and_back = |app: &mut LienzoApp, tool: Tool, p: [f64; 2]| {
         app.ui.tool = tool;
         tool_event(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, Modifiers::NONE);
         tool_event(app, ToolEvent::Move { x: p[0] + 60.0, y: p[1] + 40.0, pressure: 1.0 }, Modifiers::NONE);
         tool_event(app, ToolEvent::Move { x: p[0] + 0.2, y: p[1], pressure: 1.0 }, Modifiers::NONE);
         tool_event(app, ToolEvent::Up { x: p[0] + 0.2, y: p[1] }, Modifiers::NONE);
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.ui.extras.snap = false;
     two_rows(&mut app);
@@ -227,7 +227,7 @@ fn a_drag_that_returns_to_its_start_leaves_the_selection() {
 /// selection with them instead of deselecting.
 #[test]
 fn a_jittered_click_inside_with_snapping_on_is_still_a_click() {
-    let jittered_click = |app: &mut PhotocraftApp, tool: Tool, p: [f64; 2]| {
+    let jittered_click = |app: &mut LienzoApp, tool: Tool, p: [f64; 2]| {
         app.ui.tool = tool;
         let q = [p[0] + 0.2, p[1] - 0.3];
         tool_event(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, Modifiers::NONE);
@@ -255,7 +255,7 @@ fn click_inside_snaps_the_line_to_a_guide() {
     app.run("view.newGuide", json!({"orientation": "horizontal", "position": 252})).unwrap();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 302})).unwrap();
     // The selections are made unsnapped; only the click under test snaps.
-    let snapped_click = |app: &mut PhotocraftApp, tool: Tool, p: [f64; 2]| {
+    let snapped_click = |app: &mut LienzoApp, tool: Tool, p: [f64; 2]| {
         app.ui.extras.snap = true;
         click(app, tool, p, Modifiers::NONE);
         app.ui.extras.snap = false;
@@ -315,8 +315,8 @@ fn ctrl_release_inside_does_not_snap_the_line_to_a_guide() {
 /// tools. It only dropped an unmoved piece (keeping its outline) and left a moved one floating.
 #[test]
 fn click_on_a_floating_piece_drops_it_and_selects_the_line() {
-    let floats = |app: &PhotocraftApp| app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let floats = |app: &LienzoApp| app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.ui.extras.snap = false;
     app.run("select.rect", json!({"x": 100, "y": 100, "width": 200, "height": 100})).unwrap();
@@ -358,8 +358,8 @@ fn a_press_that_snaps_onto_the_selection_is_still_outside_it() {
 /// the press, is not a click: the piece keeps floating. The Move tool's click shortcut dropped it.
 #[test]
 fn a_snapped_back_move_tool_drag_keeps_the_piece_floating() {
-    let floats = |app: &PhotocraftApp| app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some());
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let floats = |app: &LienzoApp| app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "transparent"})).unwrap();
     app.run("view.newGuide", json!({"orientation": "horizontal", "position": 150})).unwrap();
     app.run("select.rect", json!({"x": 100, "y": 150, "width": 200, "height": 100})).unwrap();

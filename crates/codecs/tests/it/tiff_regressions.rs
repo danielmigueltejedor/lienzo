@@ -1,7 +1,7 @@
 use crate::common;
 
 use common::tiffgen::*;
-use photocraft_codecs::{Image, decode, exif_orientation, upright_exif};
+use lienzo_codecs::{Image, decode, exif_orientation, upright_exif};
 
 fn classic_white_is_zero() -> Vec<u8> {
     let width = 4u16;
@@ -156,7 +156,7 @@ fn ccitt_group4_tiff_decodes() {
 /// means uncompressed strips with no predictor, classic offsets and unassociated alpha.
 #[test]
 fn default_tiff_is_baseline() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, SampleType, encode};
+    use lienzo_codecs::{ChannelLayout, EncodeOptions, Format, SampleType, encode};
     use std::io::Cursor;
     use tiff::tags::Tag;
 

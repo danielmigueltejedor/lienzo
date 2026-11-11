@@ -6,19 +6,19 @@ use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
-fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(tool: Tool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = tool;
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 200})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -28,7 +28,7 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -38,7 +38,7 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, LienzoApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     ViewXform {
@@ -52,7 +52,7 @@ fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
     .to_screen(x, y)
 }
 
-fn hover(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) -> egui::CursorIcon {
+fn hover(h: &mut Harness<'static, LienzoApp>, x: f32, y: f32, m: Modifiers) -> egui::CursorIcon {
     h.event(egui::Event::ModifiersChanged(m));
     let p = screen(h, x, y);
     h.event(egui::Event::PointerMoved(p));
@@ -60,7 +60,7 @@ fn hover(h: &mut Harness<'static, PhotocraftApp>, x: f32, y: f32, m: Modifiers) 
     h.output().platform_output.cursor_icon
 }
 
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: f32, to: f32, m: Modifiers) {
+fn drag(h: &mut Harness<'static, LienzoApp>, from: f32, to: f32, m: Modifiers) {
     let p = screen(h, from, 150.0);
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -76,7 +76,7 @@ fn drag(h: &mut Harness<'static, PhotocraftApp>, from: f32, to: f32, m: Modifier
     h.run_steps(2);
 }
 
-fn diagonal(h: &mut Harness<'static, PhotocraftApp>, a: [f32; 2], b: [f32; 2], m: Modifiers) {
+fn diagonal(h: &mut Harness<'static, LienzoApp>, a: [f32; 2], b: [f32; 2], m: Modifiers) {
     h.event(egui::Event::ModifiersChanged(m));
     let p = screen(h, a[0], a[1]);
     h.event(egui::Event::PointerMoved(p));
@@ -180,7 +180,7 @@ fn sticky_command_shows_the_guide_cursor() {
 #[test]
 fn command_guide_at_decides_for_every_tool_that_moves_guides() {
     use crate::canvas::command_guide_at;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.run("view.newGuide", json!({"orientation": "vertical", "position": 200})).unwrap();

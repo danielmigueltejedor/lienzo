@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use photocraft_psd::PsdFile;
+use lienzo_psd::PsdFile;
 
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = std::fs::read_dir(dir) else { return };
@@ -23,9 +23,9 @@ fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
 /// against those without adding personal files or new corpus pins.
 #[test]
 fn corpus_animation_syntax() {
-    use photocraft_psd::ResourceData;
-    use photocraft_psd::animation::{frame_info, frame_sets, layer_frame_states};
-    use photocraft_psd::metadata::parse_shmd;
+    use lienzo_psd::ResourceData;
+    use lienzo_psd::animation::{frame_info, frame_sets, layer_frame_states};
+    use lienzo_psd::metadata::parse_shmd;
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/psd/ag-psd/read-write");
     for (case, delay) in [("animation-frame", Some(30)), ("animation-offset", Some(50)), ("animation-effects", None)] {

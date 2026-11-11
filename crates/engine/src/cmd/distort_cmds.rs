@@ -3,8 +3,8 @@
 //!
 //! All three take their whole edit as data, so each is one replayable command and one history
 //! step: Liquify the brush strokes (replayed onto a fresh displacement field,
-//! `photocraft_algo::liquify`), Puppet Warp the pins (`photocraft_algo::puppet`, ARAP on a mesh
-//! of the opaque region), Perspective Warp the planes (`photocraft_algo::perspective`). On a
+//! `lienzo_algo::liquify`), Puppet Warp the pins (`lienzo_algo::puppet`, ARAP on a mesh
+//! of the opaque region), Perspective Warp the planes (`lienzo_algo::perspective`). On a
 //! smart object each becomes a smart filter (as in Photoshop): the params are stored with the
 //! smart object and re-applied to a fresh render of the source, so editing never accumulates
 //! resampling. The params are the data in every case (strokes, pins and planes are small
@@ -12,15 +12,15 @@
 
 use std::cell::RefCell;
 
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, apply_liquify, auto_cell};
-use photocraft_algo::perspective::{PerspectiveMap, Plane, Straighten, straighten};
-use photocraft_algo::puppet::{PuppetDensity, PuppetMesh, PuppetMode, PuppetPin, PuppetWarp, puppet_warp, puppet_warp_with_mask, warp_with_mesh};
-use photocraft_algo::transform::Interp;
-use photocraft_algo::warp::{warp_mesh_gray, warp_mesh_surface};
-use photocraft_color::PixelFormat;
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, Locks, SmartFilter};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::liquify::{LiquifyField, LiquifyStroke, apply_liquify, auto_cell};
+use lienzo_algo::perspective::{PerspectiveMap, Plane, Straighten, straighten};
+use lienzo_algo::puppet::{PuppetDensity, PuppetMesh, PuppetMode, PuppetPin, PuppetWarp, puppet_warp, puppet_warp_with_mask, warp_with_mesh};
+use lienzo_algo::transform::Interp;
+use lienzo_algo::warp::{warp_mesh_gray, warp_mesh_surface};
+use lienzo_color::PixelFormat;
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, Locks, SmartFilter};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -119,7 +119,7 @@ pub fn stored_puppet_mesh(p: &Value) -> Option<(PuppetMesh, Vec<[f64; 2]>)> {
 /// `params` of smart filter `command` on `sm`, without a stored Puppet Warp mesh made for another
 /// placement than `sm`'s (`mesh.placement`, recorded on import): a mesh in document pixels doesn't
 /// fit a smart object moved, transformed or warped since, so its pins are solved instead.
-pub fn placed_puppet_params<'a>(command: &str, params: &'a Value, sm: &photocraft_doc::SmartObject) -> std::borrow::Cow<'a, Value> {
+pub fn placed_puppet_params<'a>(command: &str, params: &'a Value, sm: &lienzo_doc::SmartObject) -> std::borrow::Cow<'a, Value> {
     let stale = command == PUPPET_SMART && params.get("mesh").is_some_and(|m| m.get("placement") != Some(&sm.placement_json()));
     if !stale {
         return std::borrow::Cow::Borrowed(params);
@@ -199,7 +199,7 @@ pub fn liquify_surface(surf: &Surface, strokes: &[LiquifyStroke], cell: f64, can
 }
 
 /// Puppet-warps a surface's content; `None` when the result would span more than
-/// [`photocraft_algo::puppet::MAX_WARP_PIXELS`].
+/// [`lienzo_algo::puppet::MAX_WARP_PIXELS`].
 pub fn puppet_surface(surf: &Surface, w: &PuppetWarp, interp: Interp) -> Option<Surface> {
     let b = surf.content_bounds();
     if w.is_identity() || b.is_empty() {
@@ -302,7 +302,7 @@ fn run_on_layer(s: &mut Session, cmd: &str, label: &str, p: &Value, moves: bool,
             // As filters do: a pixel or full lock refuses the smart filter (the position lock
             // doesn't, since the smart object itself stays put).
             check_locks(l, group, false)?;
-            let sf = SmartFilter { command: cmd.to_string(), params: params.clone(), blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+            let sf = SmartFilter { command: cmd.to_string(), params: params.clone(), blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
             return crate::smart_cmds::add_smart_filter(doc, id, sf, selection.as_ref());
         }
         check_locks(l, group, moves && !colors)?;

@@ -3,13 +3,13 @@ use super::commit::{cancel, commit, start_steps};
 use super::draw::texture_quad;
 use super::preview::{Above, AbovePlan, preview_image};
 use super::{
-    Arc, BezierMesh, CAS_ONLY_SCALES, Color32, DocId, Document, Follow, Homography, LOCKED, LayerContent, LayerId, MadeLayer, OtherTexels, PhotocraftApp,
-    Several, Steps, TransformPreview, TransformSession, Warp, WarpStyle, corners, default_interpolation, json, swap_mode_texels,
+    Arc, BezierMesh, CAS_ONLY_SCALES, Color32, DocId, Document, Follow, Homography, LOCKED, LayerContent, LayerId, LienzoApp, MadeLayer, OtherTexels, Several,
+    Steps, TransformPreview, TransformSession, Warp, WarpStyle, corners, default_interpolation, json, swap_mode_texels,
 };
 
 /// Start Free Transform on the active layer (or its selected pixels), or on the targeted unlinked
 /// layer mask, alpha channel or Quick Mask.
-pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     if app.transform_preparing.is_some() {
         return Err("Free Transform is still preparing the layer".into());
     }
@@ -19,30 +19,30 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
     if crate::canvas::multiple_color_target(app) {
         return Err("Move and transforms on several colour channels are not implemented yet".into());
     }
-    if app.session.active().is_some_and(|st| photocraft_engine::float_cmds::floating(st).is_some()) {
+    if app.session.active().is_some_and(|st| lienzo_engine::float_cmds::floating(st).is_some()) {
         app.run("select.drop", json!({}))?;
     }
     let target = crate::canvas::paint_target(app);
     let st = app.session.active().ok_or("no document")?;
     let (doc, revision) = (st.doc.clone(), st.revision);
-    let lone = photocraft_engine::transform_cmds::lone_target(&doc, st.active_layer, &json!({ "target": target })).map_err(|e| e.to_string())?.cloned();
+    let lone = lienzo_engine::transform_cmds::lone_target(&doc, st.active_layer, &json!({ "target": target })).map_err(|e| e.to_string())?.cloned();
     if let Some(surf) = lone {
         return begin_lone(app, ctx, doc, surf, target);
     }
     let id = st.active_layer.ok_or("no active layer")?;
     // Several layers selected: one box moves them all, as in Photoshop (#6501).
-    let targets = photocraft_engine::transform_cmds::selection_targets(st);
+    let targets = lienzo_engine::transform_cmds::selection_targets(st);
     // The selection takes its linked layers along, as `edit.transform` does: in Photoshop the box
     // over one linked layer frames and moves the whole link group (#11217), but not a linked
     // Background (`box_targets`). Unlinked, unchanged.
-    let targets = photocraft_engine::transform_cmds::box_targets(&doc, &targets);
+    let targets = lienzo_engine::transform_cmds::box_targets(&doc, &targets);
     if targets != [id] {
         return begin_several(app, ctx, doc, revision, id, targets);
     }
     let layer = doc.layer(id).ok_or("no layer")?;
     let frame_only =
         app.ui.tool == crate::state::Tool::Frame && layer.frame.is_some() && crate::frame_tool::target(app, layer) == crate::frame_tool::Target::Frame;
-    if photocraft_engine::transform_cmds::locked_for_transform(&doc, id) {
+    if lienzo_engine::transform_cmds::locked_for_transform(&doc, id) {
         // Photoshop refuses before the box opens rather than when it is committed (#2585).
         app.ui.open_dialog(crate::state::DialogKind::Error, json!({"message": tl!(LOCKED)}).as_object().cloned().unwrap_or_default());
         return Err(LOCKED.into());
@@ -51,7 +51,7 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
         return Err("Adjustment layers have nothing to transform".into());
     }
     // With a selection the box is the selection's (#5297).
-    let b = photocraft_engine::transform_cmds::transform_frame(&doc, layer);
+    let b = lienzo_engine::transform_cmds::transform_frame(&doc, layer);
     if b.is_empty() {
         return Err("Could not transform: the layer is empty".into());
     }
@@ -62,9 +62,9 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
     let mut pd = (*doc).clone();
     let mut lifted = None;
     // Type, shapes and smart objects move whole, selection or not (#2630): only pixels are lifted.
-    if let Some(sel) = doc.selection.clone().filter(|_| !photocraft_engine::transform_cmds::moves_whole(layer) && layer.surface().is_some()) {
+    if let Some(sel) = doc.selection.clone().filter(|_| !lienzo_engine::transform_cmds::moves_whole(layer) && layer.surface().is_some()) {
         if let Some(surf) = pd.layer_mut(id).and_then(|l| l.surface_mut()) {
-            let (l, rest) = photocraft_engine::transform_cmds::split_selected(surf, &sel).map_err(|e| e.to_string())?;
+            let (l, rest) = lienzo_engine::transform_cmds::split_selected(surf, &sel).map_err(|e| e.to_string())?;
             *surf = rest;
             lifted = Some(l);
         }
@@ -81,8 +81,8 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
     let canvas = doc.bounds();
     let area = std::iter::once(id)
         .chain(plan.ids.iter().copied())
-        .map(|l| doc.layer(l).map_or(Some(canvas), |l| photocraft_compose::change_bounds(l, canvas)))
-        .try_fold(photocraft_geom::Rect::EMPTY, |r, b| {
+        .map(|l| doc.layer(l).map_or(Some(canvas), |l| lienzo_compose::change_bounds(l, canvas)))
+        .try_fold(lienzo_geom::Rect::EMPTY, |r, b| {
             let b = b?;
             Some(if r.is_empty() {
                 b
@@ -94,7 +94,7 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
         });
     // A style is drawn again from the pixels as the box moves them, so they are read without it.
     // Not for the selected part of a layer: its style belongs to that part and the rest together.
-    let styled = lifted.is_none() && photocraft_compose::effects::has_effects(layer);
+    let styled = lifted.is_none() && lienzo_compose::effects::has_effects(layer);
     let opacity = layer.opacity * layer.fill_opacity;
     let whole = lifted.is_none();
     // Reading the moving pixels and compositing the layers over them is the heavy part: hundreds
@@ -106,7 +106,7 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
     let doc_id = doc.id;
     let finish_ctx = ctx.clone();
     let selected = selected_now(app);
-    let finish = move |app: &mut PhotocraftApp, prepared: Prepared| -> Result<(), String> {
+    let finish = move |app: &mut LienzoApp, prepared: Prepared| -> Result<(), String> {
         let ctx = &finish_ctx;
         // The document is locked while preparing; still, never open a box on another state (or
         // in another tab). The revision is read again: the job itself may have moved it on.
@@ -198,12 +198,12 @@ pub fn begin(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String>
         )
         .map_err(|e| e.to_string())?;
     match started {
-        photocraft_engine::jobs::Started::Job(job) => {
+        lienzo_engine::jobs::Started::Job(job) => {
             app.transform_preparing = Some(super::Preparing { job, out, finish: Box::new(finish), layer: (doc_id, id), made: None });
             Ok(())
         }
         // Ran inline after all (a session without workers).
-        photocraft_engine::jobs::Started::Done(_) => {
+        lienzo_engine::jobs::Started::Done(_) => {
             let prepared = out.lock().ok().and_then(|mut o| o.take()).ok_or("Free Transform: nothing was prepared")?;
             finish(app, prepared)
         }
@@ -227,13 +227,13 @@ fn plan_pixels(plan: &AbovePlan) -> u64 {
 
 /// The preparing job of a large layer's box ended: open the box, or drop it (canceled, failed).
 /// `true` when the event was that job's.
-pub(crate) fn on_prepared(app: &mut PhotocraftApp, e: &photocraft_engine::jobs::JobEvent) -> bool {
+pub(crate) fn on_prepared(app: &mut LienzoApp, e: &lienzo_engine::jobs::JobEvent) -> bool {
     if app.transform_preparing.as_ref().is_none_or(|p| p.job != e.id) {
         return false;
     }
     let Some(p) = app.transform_preparing.take() else { return true };
     let (made, (document, layer)) = (p.made, p.layer);
-    let prepared = if matches!(e.outcome, photocraft_engine::jobs::JobOutcome::Done(_)) { p.out.lock().ok().and_then(|mut o| o.take()) } else { None };
+    let prepared = if matches!(e.outcome, lienzo_engine::jobs::JobOutcome::Done(_)) { p.out.lock().ok().and_then(|mut o| o.take()) } else { None };
     let opened = match prepared.map(|prepared| (p.finish)(app, prepared)) {
         Some(Ok(())) => true,
         Some(Err(err)) => {
@@ -254,7 +254,7 @@ pub(crate) fn on_prepared(app: &mut PhotocraftApp, e: &photocraft_engine::jobs::
 }
 
 /// Mark the box `begin` opened, or the one it is still preparing, as made for `made`.
-fn mark_made(app: &mut PhotocraftApp, made: MadeLayer) {
+fn mark_made(app: &mut LienzoApp, made: MadeLayer) {
     if let Some(t) = app.ui.transform.as_mut() {
         t.made = Some(made);
     } else if let Some(p) = app.transform_preparing.as_mut() {
@@ -262,8 +262,8 @@ fn mark_made(app: &mut PhotocraftApp, made: MadeLayer) {
     }
 }
 
-pub(super) fn interpolation_preference(interpolation: &str) -> Option<photocraft_engine::prefs::Interpolation> {
-    use photocraft_engine::prefs::Interpolation;
+pub(super) fn interpolation_preference(interpolation: &str) -> Option<lienzo_engine::prefs::Interpolation> {
+    use lienzo_engine::prefs::Interpolation;
     match interpolation {
         "nearest" => Some(Interpolation::Nearest),
         "bilinear" => Some(Interpolation::Bilinear),
@@ -276,8 +276,8 @@ pub(super) fn interpolation_preference(interpolation: &str) -> Option<photocraft
 /// preview moves their composite, drawn over the layers they cover. `active` stays the session's
 /// `layer`, so picking another layer still applies the box. The selected pixels of each pixel
 /// layer move when there is a selection; type, shapes, smart objects and groups move whole.
-fn begin_several(app: &mut PhotocraftApp, ctx: &egui::Context, doc: Arc<Document>, revision: u64, active: LayerId, ids: Vec<LayerId>) -> Result<(), String> {
-    use photocraft_engine::transform_cmds as tc;
+fn begin_several(app: &mut LienzoApp, ctx: &egui::Context, doc: Arc<Document>, revision: u64, active: LayerId, ids: Vec<LayerId>) -> Result<(), String> {
+    use lienzo_engine::transform_cmds as tc;
     // The Background among them refuses the same way, rather than being left out (#11101).
     if tc::background_among(&doc, &ids).is_some() || ids.iter().any(|id| tc::locked_for_transform(&doc, *id)) {
         app.ui.open_dialog(crate::state::DialogKind::Error, json!({"message": tl!(LOCKED)}).as_object().cloned().unwrap_or_default());
@@ -374,9 +374,9 @@ fn begin_several(app: &mut PhotocraftApp, ctx: &egui::Context, doc: Arc<Document
 /// The moving texture's texel at document point `p` as the box opened (full resolution), and
 /// where the texture's corners are drawn now: what a test of a box over several layers sees.
 #[cfg(test)]
-pub(crate) fn moving_texel(app: &PhotocraftApp, p: [i32; 2]) -> (Option<Color32>, [[f64; 2]; 4]) {
+pub(crate) fn moving_texel(app: &LienzoApp, p: [i32; 2]) -> (Option<Color32>, [[f64; 2]; 4]) {
     let (Some(t), Some(pv)) = (&app.ui.transform, &app.transform_preview) else { return (None, [[0.0; 2]; 4]) };
-    let r = pv.several.as_ref().map_or(photocraft_geom::Rect::new(t.rect[0] as i32, t.rect[1] as i32, t.rect[2] as i32, t.rect[3] as i32), |sv| sv.rect);
+    let r = pv.several.as_ref().map_or(lienzo_geom::Rect::new(t.rect[0] as i32, t.rect[1] as i32, t.rect[2] as i32, t.rect[3] as i32), |sv| sv.rect);
     let texel = pv.texture.level_image(0).and_then(|(image, _)| {
         let (x, y) = (usize::try_from(p[0] - r.x0).ok()?, usize::try_from(p[1] - r.y0).ok()?);
         (x < image.size[0] && y < image.size[1]).then(|| image.pixels[y * image.size[0] + x])
@@ -385,7 +385,7 @@ pub(crate) fn moving_texel(app: &PhotocraftApp, p: [i32; 2]) -> (Option<Color32>
 }
 
 /// The Layers panel's selection, sorted, as a layer's box records it when it opens (#11101).
-pub(super) fn selected_now(app: &PhotocraftApp) -> Option<Vec<LayerId>> {
+pub(super) fn selected_now(app: &LienzoApp) -> Option<Vec<LayerId>> {
     let mut ids = app.session.active()?.selected_layers();
     ids.sort_unstable();
     Some(ids)
@@ -397,7 +397,7 @@ pub(crate) fn moving_layers(t: &TransformSession) -> Vec<LayerId> {
 }
 
 /// Is any of the layers the box moves of this kind?
-pub(super) fn moves_kind(app: &PhotocraftApp, t: &TransformSession, kind: fn(&LayerContent) -> bool) -> bool {
+pub(super) fn moves_kind(app: &LienzoApp, t: &TransformSession, kind: fn(&LayerContent) -> bool) -> bool {
     app.session.active().is_some_and(|st| moving_layers(t).iter().any(|id| st.doc.layer(*id).is_some_and(|l| kind(&l.content))))
 }
 
@@ -406,7 +406,7 @@ pub const WARP_ONE_LAYER: &str = "Warp works on one layer at a time: select a si
 
 /// Free Transform on a copy (⌥⌘T, no menu item): duplicates the active layer (with a selection,
 /// its selected pixels, as Layer via Copy) and transforms the copy (#352).
-pub fn begin_copy(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin_copy(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     let selection = app.session.active().is_some_and(|d| d.doc.selection.is_some());
     // A linked layer without a selection: the reference application makes no copy and frames the
     // whole link group, as Free Transform does (measured, #11217). Unlinked layers get the copy,
@@ -414,9 +414,9 @@ pub fn begin_copy(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), St
     let target = crate::canvas::paint_target(app);
     let linked = !selection
         && app.session.active().is_some_and(|st| {
-            let lone = photocraft_engine::transform_cmds::lone_target(&st.doc, st.active_layer, &json!({ "target": target }));
-            let targets = photocraft_engine::transform_cmds::selection_targets(st);
-            matches!(lone, Ok(None)) && photocraft_engine::transform_cmds::box_targets(&st.doc, &targets) != targets
+            let lone = lienzo_engine::transform_cmds::lone_target(&st.doc, st.active_layer, &json!({ "target": target }));
+            let targets = lienzo_engine::transform_cmds::selection_targets(st);
+            matches!(lone, Ok(None)) && lienzo_engine::transform_cmds::box_targets(&st.doc, &targets) != targets
         });
     if linked {
         return begin(app, ctx);
@@ -437,7 +437,7 @@ pub fn begin_copy(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), St
 /// Free Transform on the layer a file dropped on the canvas just placed, like the reference app's
 /// Place: Esc takes the place back, ↩ makes the place and the transform one Place Embedded step.
 /// With Preferences ▸ General ▸ Skip Transform when Placing on, the place stands as it is.
-pub fn begin_placed(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin_placed(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     if app.session.prefs().general.skip_transform_when_placing {
         return Ok(());
     }
@@ -449,12 +449,7 @@ pub fn begin_placed(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), 
 /// Edit › Content-Aware Scale (#3096): a scale-only box over `region` of the active pixel layer
 /// (the selection's bounds, else the layer's content), cleared under the box as the command
 /// clears it. OK runs `edit.contentAwareScale` (cas_transform.rs) instead of `edit.transform`.
-pub(crate) fn begin_content_aware(
-    app: &mut PhotocraftApp,
-    ctx: &egui::Context,
-    region: photocraft_geom::Rect,
-    live: crate::cas_transform::Live,
-) -> Result<(), String> {
+pub(crate) fn begin_content_aware(app: &mut LienzoApp, ctx: &egui::Context, region: lienzo_geom::Rect, live: crate::cas_transform::Live) -> Result<(), String> {
     let st = app.session.active().ok_or("no document")?;
     let (doc, revision) = (st.doc.clone(), st.revision);
     let id = st.active_layer.ok_or("no active layer")?;
@@ -475,7 +470,7 @@ pub(crate) fn begin_content_aware(
         let mut fill = vec![0.0; fmt.channels()];
         if let Some([r, g, b, _]) = background {
             let mut enc = [0.0f32; 8];
-            let n = photocraft_raster::from_rgba_into(&fmt, [r, g, b, 1.0], &mut enc);
+            let n = lienzo_raster::from_rgba_into(&fmt, [r, g, b, 1.0], &mut enc);
             if let (Some(dst), Some(src)) = (fill.get_mut(..n), enc.get(..n)) {
                 dst.copy_from_slice(src);
             }
@@ -533,7 +528,7 @@ pub(crate) fn begin_content_aware(
 
 /// Undoes the layer a cancelled or failed session made (⌥⌘T's copy, a placed file), leaving
 /// nothing to redo.
-pub(super) fn take_back_made(app: &mut PhotocraftApp, document: DocId, layer: LayerId) {
+pub(super) fn take_back_made(app: &mut LienzoApp, document: DocId, layer: LayerId) {
     // Tabs can move or close while transforming. Only undo the creation in its own document,
     // and only while it is still the latest step (it may already have been undone).
     let Some(index) = app.session.documents().iter().position(|st| {
@@ -559,7 +554,7 @@ pub(super) fn take_back_made(app: &mut PhotocraftApp, document: DocId, layer: La
 
 /// After the transform: the step that made the layer and the transform become one history step,
 /// the transform's for a copy and Place Embedded for a placed file.
-pub(super) fn fold_made(app: &mut PhotocraftApp, document: DocId, layer: LayerId, made: MadeLayer) {
+pub(super) fn fold_made(app: &mut LienzoApp, document: DocId, layer: LayerId, made: MadeLayer) {
     // A background commit lands in its own document, which need not be the active one by then.
     let Some(index) = app.session.documents().iter().position(|st| st.doc.id == document) else { return };
     let active = app.session.active_index();
@@ -571,7 +566,7 @@ pub(super) fn fold_made(app: &mut PhotocraftApp, document: DocId, layer: LayerId
     {
         st.history.purge_last();
         if made == MadeLayer::Place {
-            st.history.set_current_label(photocraft_engine::file_cmds::PLACE_EMBEDDED);
+            st.history.set_current_label(lienzo_engine::file_cmds::PLACE_EMBEDDED);
         }
     }
     if let Some(active) = active {
@@ -582,14 +577,8 @@ pub(super) fn fold_made(app: &mut PhotocraftApp, document: DocId, layer: LayerId
 /// Free Transform of a targeted unlinked layer mask, alpha channel or Quick Mask by itself: the
 /// box frames its content (or the selection) and previews the moving values in grey over the
 /// document with them vacated.
-fn begin_lone(
-    app: &mut PhotocraftApp,
-    ctx: &egui::Context,
-    doc: Arc<Document>,
-    surf: photocraft_raster::Surface,
-    target: serde_json::Value,
-) -> Result<(), String> {
-    use photocraft_engine::transform_cmds as tc;
+fn begin_lone(app: &mut LienzoApp, ctx: &egui::Context, doc: Arc<Document>, surf: lienzo_raster::Surface, target: serde_json::Value) -> Result<(), String> {
+    use lienzo_engine::transform_cmds as tc;
     let b = tc::target_frame(&doc, &surf);
     if b.is_empty() {
         return Err("Could not transform: nothing is selected".into());
@@ -598,7 +587,7 @@ fn begin_lone(
     let sel = match &doc.selection {
         Some(s) => s,
         None => {
-            let mut s = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
+            let mut s = lienzo_raster::Surface::new(lienzo_color::PixelFormat::GRAY8);
             s.fill_rect(b, &[1.0]);
             whole = s;
             &whole
@@ -662,7 +651,7 @@ fn begin_lone(
 
 /// Edit › Free Transform Path: the box frames the path's anchors and handles and draws the
 /// path through it; OK commits one `path.transform` step.
-fn begin_path(app: &mut PhotocraftApp, ctx: &egui::Context, params: serde_json::Value, path: photocraft_doc::vector::Path) -> Result<(), String> {
+fn begin_path(app: &mut LienzoApp, ctx: &egui::Context, params: serde_json::Value, path: lienzo_doc::vector::Path) -> Result<(), String> {
     let (x0, y0, x1, y1) = path.control_bounds().ok_or("the path has no points to transform")?;
     let st = app.session.active().ok_or("no document")?;
     let doc = st.doc.clone();
@@ -718,7 +707,7 @@ fn begin_path(app: &mut PhotocraftApp, ctx: &egui::Context, params: serde_json::
 
 /// The affine map taking `rect`'s corners to `quad`'s; `None` when the box was distorted out of a
 /// parallelogram (Distort, Perspective): the path then goes as a `quad`.
-pub(super) fn rect_to_quad_affine(r: [f64; 4], q: [[f64; 2]; 4]) -> Option<photocraft_geom::Affine> {
+pub(super) fn rect_to_quad_affine(r: [f64; 4], q: [[f64; 2]; 4]) -> Option<lienzo_geom::Affine> {
     let (w, h) = (r[2] - r[0], r[3] - r[1]);
     if w <= 0.0 || h <= 0.0 {
         return None;
@@ -730,12 +719,12 @@ pub(super) fn rect_to_quad_affine(r: [f64; 4], q: [[f64; 2]; 4]) -> Option<photo
     let (a, b) = ((q[1][0] - q[0][0]) / w, (q[1][1] - q[0][1]) / w);
     let (c, d) = ((q[3][0] - q[0][0]) / h, (q[3][1] - q[0][1]) / h);
     let m = [a, b, c, d, q[0][0] - a * r[0] - c * r[1], q[0][1] - b * r[0] - d * r[1]];
-    m.iter().all(|v| v.is_finite()).then_some(photocraft_geom::Affine { m })
+    m.iter().all(|v| v.is_finite()).then_some(lienzo_geom::Affine { m })
 }
 
 /// Start Select › Transform Selection: the same box over the selection's bounds, previewing the
 /// selection mask (the marching ants are hidden meanwhile); commits `select.transformSelection`.
-pub fn begin_selection(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin_selection(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     let st = app.session.active().ok_or("no document")?;
     let doc = st.doc.clone();
     let sel = doc.selection.clone().ok_or("no selection")?;
@@ -805,7 +794,7 @@ pub fn begin_selection(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(
 }
 
 /// Start (or switch an active Free Transform into) Warp mode.
-pub fn begin_warp(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn begin_warp(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
     if app.ui.transform.as_ref().is_some_and(|t| t.content_aware.is_some()) {
         return Err(CAS_ONLY_SCALES.into());
     }
@@ -831,7 +820,7 @@ pub fn begin_warp(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), St
 /// Switch to Warp mode: a smart object's existing warp (when the box is untouched), else a
 /// custom mesh following the current box (so a transform made first carries over). Editable type
 /// gets its own Warp Text style instead ([`enter_type_warp`]).
-pub fn enter_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn enter_warp(app: &mut LienzoApp, ctx: &egui::Context) {
     // Several layers keep the box (#6501), even when the active one is type.
     if app.ui.transform.as_ref().is_some_and(|t| !t.layers.is_empty()) {
         return;
@@ -840,7 +829,7 @@ pub fn enter_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
         return enter_type_warp(app, ctx);
     }
     let existing =
-        app.session.active().and_then(|d| d.doc.layer(LayerId(app.ui.transform.as_ref()?.layer)).and_then(photocraft_engine::warp_cmds::smart_warp_doc_space));
+        app.session.active().and_then(|d| d.doc.layer(LayerId(app.ui.transform.as_ref()?.layer)).and_then(lienzo_engine::warp_cmds::smart_warp_doc_space));
     let Some(t) = app.ui.transform.as_mut() else { return };
     // Warp moves layers and paths (#3027): a lone mask or channel keeps the box, and so do
     // several layers (#6501).
@@ -881,7 +870,7 @@ pub fn enter_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Whether the active layer is warped: a Warp box is open on it, or it is a smart object with a
 /// stored warp, which Edit › Transform › Warp then opens for editing (its menu item is checked).
-pub fn warps_active_layer(app: &PhotocraftApp) -> bool {
+pub fn warps_active_layer(app: &LienzoApp) -> bool {
     if app.ui.transform.as_ref().is_some_and(|t| t.warp.is_some()) {
         return true;
     }
@@ -897,20 +886,20 @@ pub fn warps_active_layer(app: &PhotocraftApp) -> bool {
 /// picture well inside the grid (#9798). Those texels and the box are kept as the other mode's
 /// ([`OtherTexels`]), for leaving Warp mode. False when the source can't be re-rendered (a
 /// missing linked file): the texels keep the warp, so the caller must not adopt it.
-fn preview_without_smart_warp(app: &mut PhotocraftApp, ctx: &egui::Context, r: [f64; 4]) -> bool {
+fn preview_without_smart_warp(app: &mut LienzoApp, ctx: &egui::Context, r: [f64; 4]) -> bool {
     let (Some(t), Some(st)) = (app.ui.transform.as_ref(), app.session.active()) else { return false };
     let (id, session, box_rect, box_quad) = (LayerId(t.layer), t.session, t.rect, t.quad);
     let doc = st.doc.clone();
     let Some(LayerContent::Smart(sm)) = doc.layer(id).map(|l| &l.content) else { return false };
     let mut flat = sm.clone();
     flat.warp = None;
-    let Ok(Some(surface)) = photocraft_engine::smart_cmds::render(&doc, &flat) else { return false };
+    let Ok(Some(surface)) = lienzo_engine::smart_cmds::render(&doc, &flat) else { return false };
     flat.cache = Some(surface);
     let mut plain = (*doc).clone();
     if let Some(l) = plain.layer_mut(id) {
         l.content = LayerContent::Smart(flat);
     }
-    let b = photocraft_geom::Rect::new(r[0].round() as i32, r[1].round() as i32, r[2].round() as i32, r[3].round() as i32);
+    let b = lienzo_geom::Rect::new(r[0].round() as i32, r[1].round() as i32, r[2].round() as i32, r[3].round() as i32);
     if b.is_empty() {
         return false;
     }
@@ -924,7 +913,7 @@ fn preview_without_smart_warp(app: &mut PhotocraftApp, ctx: &egui::Context, r: [
 
 /// The open transform moves an editable type layer as a whole (not a lone mask, channel, path or
 /// the selection). Its Warp is Warp Text: only the styles, and the type stays editable (#3004).
-pub fn warps_type(app: &PhotocraftApp) -> bool {
+pub fn warps_type(app: &LienzoApp) -> bool {
     let Some(t) = &app.ui.transform else { return false };
     if t.selection || t.target.is_some() || t.path.is_some() {
         return false;
@@ -935,7 +924,7 @@ pub fn warps_type(app: &PhotocraftApp) -> bool {
 /// Warp on editable type, as in Photoshop: no rasterizing, no mesh to drag, just the warp styles
 /// of the options bar (Warp Text's). A box scaled or rotated first is applied first (that keeps
 /// type editable). The preview shows the type without its current Warp Text, under that style.
-fn enter_type_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn enter_type_warp(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.ui.transform.as_ref().is_some_and(|t| t.quad != corners(t.rect)) {
         commit(app);
         if app.ui.transform.is_some() {
@@ -956,9 +945,9 @@ fn enter_type_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
         && current.is_some()
     {
         tt.warp = None;
-        photocraft_engine::type_cmds::refresh(&doc, tt);
+        lienzo_engine::type_cmds::refresh(&doc, tt);
     }
-    let Some(b) = plain.layer(id).map(|l| photocraft_engine::transform_cmds::transform_bounds(&plain, l)).filter(|b| !b.is_empty()) else { return };
+    let Some(b) = plain.layer(id).map(|l| lienzo_engine::transform_cmds::transform_bounds(&plain, l)).filter(|b| !b.is_empty()) else { return };
     let rect = [b.x0 as f64, b.y0 as f64, b.x1 as f64, b.y1 as f64];
     if current.is_some()
         && let Some(pv) = app.transform_preview.as_mut()
@@ -987,7 +976,7 @@ fn enter_type_warp(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Leave Warp mode (back to the box; warp edits are dropped, like Photoshop's mode toggle on an
 /// untouched warp).
-pub fn leave_warp(app: &mut PhotocraftApp) {
+pub fn leave_warp(app: &mut LienzoApp) {
     if let Some(t) = app.ui.transform.as_mut() {
         t.warp = None;
         // A stored warp's edit showed the source without it: the box shows the render with it.

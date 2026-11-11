@@ -1,7 +1,7 @@
-use photocraft_color::SampleType;
-use photocraft_engine::{Session, brush_cmds::LiveStroke, channel_cmds::ChannelTarget, color_channels};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_color::SampleType;
+use lienzo_engine::{Session, brush_cmds::LiveStroke, channel_cmds::ChannelTarget, color_channels};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::json;
 
 fn setup(mode: &str, depth: u32) -> Session {
@@ -177,8 +177,8 @@ fn live_brush_and_eraser_match_commit_at_all_native_depths() {
 
 #[test]
 fn live_mixer_captures_selected_components_and_matches_commit_and_replay() {
-    use photocraft_engine::brush_cmds::mixer_live::LiveMixer;
-    use photocraft_engine::paint::StrokePoint;
+    use lienzo_engine::brush_cmds::mixer_live::LiveMixer;
+    use lienzo_engine::paint::StrokePoint;
 
     for mode in ["rgb", "cmyk", "lab"] {
         for depth in [8, 16, 32] {
@@ -235,10 +235,10 @@ fn unsupported_geometric_edits_and_camera_raw_fail_before_modification() {
 #[test]
 fn native_float_payloads_survive_unselected_component_restoration() {
     // Exercise the low-level helper directly with raw HDR, signed zero and NaN payloads.
-    let fmt = photocraft_color::PixelFormat::RGBA32F;
+    let fmt = lienzo_color::PixelFormat::RGBA32F;
     let mut before = Surface::new(fmt);
     before.fill_rect(Rect::new(0, 0, 1, 1), &[2.0, 0.1, -1.0, 0.5]);
-    let coord = photocraft_geom::TileCoord { tx: 0, ty: 0 };
+    let coord = lienzo_geom::TileCoord { tx: 0, ty: 0 };
     before.tile_mut(coord).bytes_mut()[4..8].copy_from_slice(&0x7fc0_1234u32.to_ne_bytes());
     let mut after = Surface::new(fmt);
     after.fill_rect(Rect::new(0, 0, 1, 1), &[0.3, 0.5, 0.7, 0.9]);
@@ -258,13 +258,13 @@ fn live_retouching_matches_direct_replay_and_preserves_unselected_bytes() {
                 let original = surface(&s);
                 let p = json!({"points":[[6,7,1],[23,15,0.7]],"size":9,"source":[2,2]});
                 let shown = if matches!(cmd, "paint.cloneStamp" | "paint.historyBrush") {
-                    let live = photocraft_engine::retouch_cmds::LiveRetouch::begin(&s, cmd, &p).unwrap();
+                    let live = lienzo_engine::retouch_cmds::LiveRetouch::begin(&s, cmd, &p).unwrap();
                     let st = s.active().unwrap();
                     let shown = live.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().clone();
                     s.offer_live_retouch(live).unwrap();
                     shown
                 } else {
-                    let live = photocraft_engine::retouch_cmds::LiveDab::begin(&s, cmd, &p).unwrap();
+                    let live = lienzo_engine::retouch_cmds::LiveDab::begin(&s, cmd, &p).unwrap();
                     let st = s.active().unwrap();
                     let shown = live.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().clone();
                     s.offer_live_dab(live).unwrap();
@@ -324,7 +324,7 @@ fn background_eraser_on_an_opaque_background_edits_only_selected_channels() {
         let before = surface(&s);
         let id = s.active().unwrap().active_layer.unwrap();
         let p = json!({"points":[[12,12]],"size":12,"hardness":1,"tolerance":100});
-        let live = photocraft_engine::eraser_cmds::live_background_eraser(&s, &p).unwrap();
+        let live = lienzo_engine::eraser_cmds::live_background_eraser(&s, &p).unwrap();
         let shown = live.doc.layer(id).unwrap().surface().unwrap().clone();
         s.execute("paint.backgroundEraser", p).unwrap();
         let after = surface(&s);
@@ -376,7 +376,7 @@ fn explicit_copy_and_singleton_paste_use_the_requested_components() {
     assert_eq!(s.clipboard.as_ref().unwrap().components, Some(vec![0, 2]));
     s.execute("channel.target", json!({"colors":[0,2]})).unwrap();
     s.execute("edit.copy", json!({"target":{"colors":[1]}})).unwrap();
-    assert_eq!(s.clipboard.as_ref().unwrap().surface.format().mode, photocraft_color::ColorMode::Grayscale);
+    assert_eq!(s.clipboard.as_ref().unwrap().surface.format().mode, lienzo_color::ColorMode::Grayscale);
     let layers = s.active().unwrap().doc.layers.len();
     s.execute("edit.pasteSpecial.pasteInPlace", json!({"target":{"colors":[0]}})).unwrap();
     assert_eq!(s.active().unwrap().doc.layers.len(), layers);
@@ -547,7 +547,7 @@ fn lab_chroma_inversion_materializes_selected_default_pixels_and_preserves_holes
             s.edit("sparse opaque", |doc, id| {
                 let surf = doc.layer_mut(id.unwrap()).unwrap().surface_mut().unwrap();
                 *surf = Surface::with_default(surf.format(), &[0.2, 0.3, 0.4, 1.0]);
-                let mut mask = Surface::new(photocraft_color::PixelFormat::GRAY8);
+                let mut mask = Surface::new(lienzo_color::PixelFormat::GRAY8);
                 if inverse {
                     mask.fill_rect(doc.bounds(), &[1.0]);
                 }
@@ -663,7 +663,7 @@ fn last_filter_rejects_non_object_journal_params_without_panicking() {
         let before = surface(&s);
         let p = json!({"target":{"colors":[0,2]},"layer":s.active().unwrap().active_layer.unwrap().0});
         assert!(s.execute("filter.lastFilter", p.clone()).is_err());
-        let spec = photocraft_engine::command_specs().iter().find(|s| s.id == "filter.lastFilter").unwrap();
+        let spec = lienzo_engine::command_specs().iter().find(|s| s.id == "filter.lastFilter").unwrap();
         assert!((spec.run)(&mut s, &p).is_err());
         assert_eq!(surface(&s), before);
     }
@@ -681,9 +681,9 @@ fn first_single_channel_retouch_preview_preserves_every_other_sample() {
         let before = surface(&s);
         let p = json!({"points":[[6,7,1],[23,15,0.7]],"size":9,"color":"#ffffff","tolerance":100});
         let live = if cmd == "paint.colorReplacement" {
-            photocraft_engine::brush_cmds::live_color_replacement(&s, &p).unwrap()
+            lienzo_engine::brush_cmds::live_color_replacement(&s, &p).unwrap()
         } else {
-            photocraft_engine::retouch_cmds::LiveDab::begin(&s, cmd, &p).unwrap()
+            lienzo_engine::retouch_cmds::LiveDab::begin(&s, cmd, &p).unwrap()
         };
         let shown = live.doc.layer(s.active().unwrap().active_layer.unwrap()).unwrap().surface().unwrap();
         for y in 0..24 {
@@ -744,9 +744,9 @@ fn native_plane_writeback_rejects_incompatible_formats_without_editing() {
     let mut dest = surface(&setup("rgb", 16));
     let before = dest.clone();
     for format in [
-        photocraft_color::PixelFormat::GRAY8,
-        photocraft_color::PixelFormat::RGBA8,
-        photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Grayscale, SampleType::U16, true),
+        lienzo_color::PixelFormat::GRAY8,
+        lienzo_color::PixelFormat::RGBA8,
+        lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Grayscale, SampleType::U16, true),
     ] {
         let plane = Surface::new(format);
         assert!(color_channels::scatter(&mut dest, &plane, 0, Rect::new(0, 0, 32, 24)).is_err());
@@ -756,14 +756,14 @@ fn native_plane_writeback_rejects_incompatible_formats_without_editing() {
 
 #[test]
 fn lab_single_channel_tone_parameters_round_trip_without_applying_lightness_twice() {
-    use photocraft_engine::adjust_params;
+    use lienzo_engine::adjust_params;
     for (kind, params) in [("levels", json!({"lightness":{"gamma":2.0}})), ("curves", json!({"lightness":[[0,0],[128,200],[255,255]]}))] {
         let mut raw = setup("lab", 32);
         let mut canonical = setup("lab", 32);
         for session in [&mut raw, &mut canonical] {
             session.execute("channel.target", json!({"channel":{"color":0}})).unwrap();
         }
-        let serialized = adjust_params::to_params(&adjust_params::from_params(kind, &params, None, photocraft_color::ColorMode::Lab).unwrap());
+        let serialized = adjust_params::to_params(&adjust_params::from_params(kind, &params, None, lienzo_color::ColorMode::Lab).unwrap());
         let command = format!("image.adjustments.{kind}");
         raw.execute(&command, params).unwrap();
         canonical.execute(&command, serialized).unwrap();
@@ -852,7 +852,7 @@ fn small_filter_selections_preserve_shared_tiles_outside_the_selection() {
     let before = surface(&s);
     s.execute("filter.noise.addNoise", json!({"amount":50,"seed":42})).unwrap();
     let after = surface(&s);
-    let distant = photocraft_geom::TileCoord { tx: 1, ty: 1 };
+    let distant = lienzo_geom::TileCoord { tx: 1, ty: 1 };
     assert_eq!(before.pixel(300, 300), after.pixel(300, 300));
     assert!(std::sync::Arc::ptr_eq(before.tile(distant).unwrap(), after.tile(distant).unwrap()));
 }
@@ -909,7 +909,7 @@ fn color_replacement_live_preview_forwards_explicit_component_and_pixel_targets(
         let mut s = flat_rgb_at(16);
         subset(&mut s);
         let params = json!({"points":[[8,8],[22,12]],"size":9,"tolerance":100,"mode":"luminosity","color":"#ffffff","seed":42,"target":target});
-        let live = photocraft_engine::brush_cmds::live_color_replacement(&s, &params).unwrap();
+        let live = lienzo_engine::brush_cmds::live_color_replacement(&s, &params).unwrap();
         let id = s.active().unwrap().active_layer.unwrap();
         let preview = live.doc.layer(id).unwrap().surface().unwrap().clone();
         s.execute("paint.colorReplacement", params).unwrap();
@@ -1037,7 +1037,7 @@ fn named_layers_resolve_identically_for_painting_and_component_restoration() {
 
 #[test]
 fn patch_and_content_aware_move_previews_protect_the_same_components_as_commit() {
-    use photocraft_engine::retouch_cmds;
+    use lienzo_engine::retouch_cmds;
     for command in ["paint.patch", "paint.contentAwareMove"] {
         let mut s = Session::new();
         s.execute("file.new", json!({"width":100,"height":60})).unwrap();
@@ -1050,7 +1050,7 @@ fn patch_and_content_aware_move_previews_protect_the_same_components_as_commit()
         let preview = if command == "paint.patch" {
             retouch_cmds::patch_preview(&s, &params, 16384, 1).unwrap().0
         } else {
-            retouch_cmds::content_aware_move_preview(&s, &params).unwrap().run(&photocraft_engine::jobs::JobCtx::new()).unwrap().0
+            retouch_cmds::content_aware_move_preview(&s, &params).unwrap().run(&lienzo_engine::jobs::JobCtx::new()).unwrap().0
         };
         unchanged(&before, preview.layer(id).unwrap().surface().unwrap());
         assert_eq!(surface(&s), before, "preview is read-only");
@@ -1181,7 +1181,7 @@ fn selections_with_a_selected_default_and_stored_holes_edit_the_remaining_compon
         let mut s = setup("rgb", depth);
         let before = surface(&s);
         s.edit("selected default with a hole", |doc, _| {
-            let mut mask = Surface::with_default(photocraft_color::PixelFormat::GRAY8, &[1.0]);
+            let mut mask = Surface::with_default(lienzo_color::PixelFormat::GRAY8, &[1.0]);
             mask.fill_rect(Rect::new(0, 0, 4, 4), &[0.0]);
             doc.selection = Some(mask);
             Ok(())
@@ -1210,7 +1210,7 @@ fn geometric_filters_on_colour_sets_preserve_background_identity_and_linked_mask
         s.edit("coloured background and linked mask", |doc, _| {
             let layer = doc.layer_mut(id).unwrap();
             layer.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 12, 24), &[0.2, 0.4, 0.6, 1.0]);
-            let mut mask = photocraft_doc::LayerMask::reveal_all();
+            let mut mask = lienzo_doc::LayerMask::reveal_all();
             mask.surface.fill_rect(Rect::new(0, 0, 10, 24), &[0.3]);
             layer.mask = Some(mask);
             Ok(())
@@ -1336,7 +1336,7 @@ fn clear_and_cut_in_mask_view_preserve_pixels_and_clear_only_selected_mask_sampl
                 s.execute("view.layerMask", json!({"mode":"gray"})).unwrap();
                 s.execute("tools.setColors", json!({"background":"#000000"})).unwrap();
                 s.edit("Feathered selection", |doc, _| {
-                    let mut mask = Surface::new(photocraft_color::PixelFormat::GRAY8);
+                    let mut mask = Surface::new(lienzo_color::PixelFormat::GRAY8);
                     mask.fill_rect(Rect::new(4, 4, 12, 12), &[0.5]);
                     doc.selection = Some(mask);
                     Ok(())
@@ -1355,7 +1355,7 @@ fn clear_and_cut_in_mask_view_preserve_pixels_and_clear_only_selected_mask_sampl
                 assert_eq!(s.active().unwrap().history.past_len(), steps + 1);
                 if command == "edit.cut" {
                     let clip = s.clipboard.as_ref().unwrap();
-                    assert_eq!(clip.surface.format().mode, photocraft_doc::ColorMode::Grayscale);
+                    assert_eq!(clip.surface.format().mode, lienzo_doc::ColorMode::Grayscale);
                     assert_eq!(clip.surface.sample_channel(8, 8, 0), 1.0);
                     assert!(clip.components.is_none());
                 }
@@ -1444,8 +1444,8 @@ fn mask_view_routes_implicit_edits_and_tone_editors_to_the_mask_before_colour_se
                     let before = surface(&s);
                     let st = s.active().unwrap();
                     let layer = st.active_layer.unwrap();
-                    let descriptor = photocraft_engine::channel_cmds::isolated_curve_channel(st).unwrap();
-                    assert_eq!(descriptor.gray, Some(photocraft_engine::channel_cmds::GraySurface::LayerMask));
+                    let descriptor = lienzo_engine::channel_cmds::isolated_curve_channel(st).unwrap();
+                    assert_eq!(descriptor.gray, Some(lienzo_engine::channel_cmds::GraySurface::LayerMask));
                     assert!(descriptor.components.is_none());
                     s.execute("image.adjustments.invert", json!({})).unwrap();
                     assert_eq!(surface(&s), before);
@@ -1462,10 +1462,10 @@ fn mask_view_routes_implicit_edits_and_tone_editors_to_the_mask_before_colour_se
                     assert_ne!(surface(&s), before);
                     assert_eq!(mask(&s), mask_before);
                     s.execute("channel.target", json!({"colors":colors})).unwrap();
-                    assert!(photocraft_engine::mask_view_cmds::current(s.active().unwrap()).is_none(), "selecting colours leaves mask view");
+                    assert!(lienzo_engine::mask_view_cmds::current(s.active().unwrap()).is_none(), "selecting colours leaves mask view");
                     s.execute("view.layerMask", json!({"mode":view})).unwrap();
                     s.execute("channel.target", json!({"channel":"composite"})).unwrap();
-                    assert!(photocraft_engine::mask_view_cmds::current(s.active().unwrap()).is_none(), "selecting the composite leaves mask view");
+                    assert!(lienzo_engine::mask_view_cmds::current(s.active().unwrap()).is_none(), "selecting the composite leaves mask view");
                 }
             }
         }
@@ -1547,10 +1547,10 @@ fn named_red_eye_target_does_not_bypass_channel_protection_on_the_active_layer()
 #[test]
 fn only_pixel_editing_paint_commands_follow_a_colour_set() {
     for id in ["paint.patch", "paint.contentAwareMove", "paint.stroke", "paint.magicEraser"] {
-        assert!(photocraft_engine::channel_cmds::follows_target(id), "{id}");
+        assert!(lienzo_engine::channel_cmds::follows_target(id), "{id}");
     }
     for id in ["paint.mixerLoad", "paint.setSymmetry", "paint.symmetryFromPath", "paint.symmetryDisable"] {
-        assert!(!photocraft_engine::channel_cmds::follows_target(id), "{id}");
+        assert!(!lienzo_engine::channel_cmds::follows_target(id), "{id}");
     }
     // ⌥-click with the Mixer Brush samples a fill layer with a colour set targeted: it edits
     // nothing, so it is not refused with "Rasterize the layer".

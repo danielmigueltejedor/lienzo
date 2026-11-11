@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, Size, SmartContentsId, SmartObject, SmartSource};
-use photocraft_format::{LoadOptions, SaveOptions, load_from_bytes, load_from_bytes_with, save_to_bytes, zip};
-use photocraft_geom::Affine;
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, Size, SmartContentsId, SmartObject, SmartSource};
+use lienzo_format::{LoadOptions, SaveOptions, load_from_bytes, load_from_bytes_with, save_to_bytes, zip};
+use lienzo_geom::Affine;
 
 fn embedded(bytes: &Arc<Vec<u8>>) -> Layer {
     Layer::new(
@@ -147,7 +147,7 @@ fn native_vector_display_preview_roundtrips_separately_from_original_payload() {
     let source = Arc::new(b"%PDF-1.7\noriginal editable source".to_vec());
     let svg = Arc::new(br#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="6"/>"#.to_vec());
     let mut smart = SmartObject::new(SmartSource::Embedded { file_name: "Artwork.ai".into(), bytes: source.clone() }, Affine::IDENTITY, None);
-    smart.vector_preview = Some(photocraft_doc::VectorPreview { source_hash: *blake3::hash(&source).as_bytes(), svg });
+    smart.vector_preview = Some(lienzo_doc::VectorPreview { source_hash: *blake3::hash(&source).as_bytes(), svg });
     let mut doc = Document::new("native vector", Size::new(8, 6), ColorMode::Rgb, SampleType::U8);
     doc.layers.push(Layer::new("vector", LayerContent::Smart(smart)));
     let bytes = save_to_bytes(&doc, &Default::default()).unwrap();

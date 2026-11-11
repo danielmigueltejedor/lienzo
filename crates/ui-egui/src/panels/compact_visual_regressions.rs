@@ -7,14 +7,14 @@ fn input_at_scale(screen: Rect, scale: f32) -> egui::RawInput {
     input
 }
 
-fn toolbar_harness(kind: theme::ThemeKind, scale: f32) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn toolbar_harness(kind: theme::ThemeKind, scale: f32) -> egui_kittest::Harness<'static, LienzoApp> {
     toolbar_harness_sized(kind, scale, 360.0)
 }
 
-fn toolbar_harness_sized(kind: theme::ThemeKind, scale: f32, height: f32) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn toolbar_harness_sized(kind: theme::ThemeKind, scale: f32, height: f32) -> egui_kittest::Harness<'static, LienzoApp> {
     let mut ready = false;
     let mut harness = egui_kittest::Harness::builder().with_size(vec2(400.0, height)).with_pixels_per_point(scale).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut LienzoApp| {
             if !ready {
                 egui_extras::install_image_loaders(ui.ctx());
                 theme::install_fonts(ui.ctx());
@@ -26,7 +26,7 @@ fn toolbar_harness_sized(kind: theme::ThemeKind, scale: f32, height: f32) -> egu
             crate::shortcuts::handle(app, ui.ctx());
             toolbar(app, ui);
         },
-        PhotocraftApp::new(photocraft_engine::Session::new(), Default::default()),
+        LienzoApp::new(lienzo_engine::Session::new(), Default::default()),
     );
     harness.run_steps(4);
     harness
@@ -101,18 +101,18 @@ fn tall_toolbar_keeps_the_colour_chips_under_the_tools() {
 
 #[test]
 fn capture_compact_visual_fixtures() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some(directory) = std::env::var_os("CRAFT_UI_VISUAL_FIXTURES").map(std::path::PathBuf::from) else { return };
     std::fs::create_dir_all(&directory).unwrap();
     for kind in crate::theme::ThemeKind::ALL {
         for (width, height) in [(800.0, 480.0), (1280.0, 720.0)] {
             for scale in [1.0, 1.5, 2.0] {
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
                 app.session.tools.foreground = [1.0, 0.0, 1.0, 1.0];
                 app.session.tools.background = [0.0, 1.0, 0.0, 1.0];
                 let mut ready = false;
                 let mut harness = egui_kittest::Harness::builder().with_size(vec2(width, height)).with_pixels_per_point(scale).wgpu().build_ui_state(
-                    move |ui, app: &mut PhotocraftApp| {
+                    move |ui, app: &mut LienzoApp| {
                         if !ready {
                             egui_extras::install_image_loaders(ui.ctx());
                             crate::theme::install_fonts(ui.ctx());
@@ -128,7 +128,7 @@ fn capture_compact_visual_fixtures() {
                 );
                 harness.input_mut().max_texture_side = Some(8192);
                 harness.run_steps(4);
-                let stem = format!("photocraft-compact-{}-{width}-{height}-{scale}x", kind.id());
+                let stem = format!("lienzo-compact-{}-{width}-{height}-{scale}x", kind.id());
                 harness.render().unwrap().save(directory.join(format!("{stem}.png"))).unwrap();
                 let mut regions = serde_json::Map::new();
                 for id in ["options_bar", "toolbar"] {
@@ -167,7 +167,7 @@ fn color_chips_stay_centred_when_the_tools_scroll() {
         egui_extras::install_image_loaders(&ctx);
         crate::theme::install_fonts(&ctx);
         crate::theme::apply(&ctx, kind);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.session.tools.foreground = [1.0, 0.0, 1.0, 1.0];
         app.session.tools.background = [0.0, 1.0, 0.0, 1.0];
         app.ui.panels.toolbar_double = double;
@@ -211,7 +211,7 @@ fn compact_toolbar_keeps_both_color_chips_visible() {
                 egui_extras::install_image_loaders(&ctx);
                 crate::theme::install_fonts(&ctx);
                 crate::theme::apply(&ctx, kind);
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
                 app.session.tools.foreground = [1.0, 0.0, 1.0, 1.0];
                 app.session.tools.background = [0.0, 1.0, 0.0, 1.0];
                 let mut output = ctx.run_ui(input_at_scale(Rect::from_min_size(egui::Pos2::ZERO, vec2(800.0, height)), scale), |ui| toolbar(&mut app, ui));
@@ -241,7 +241,7 @@ fn tab_focus_reveals_the_final_narrow_tool_option() {
         for scale in [1.0, 1.5, 2.0] {
             let mut ready = false;
             let mut harness = egui_kittest::Harness::builder().with_size(vec2(360.0, 120.0)).with_pixels_per_point(scale).build_ui_state(
-                move |ui, app: &mut PhotocraftApp| {
+                move |ui, app: &mut LienzoApp| {
                     if !ready {
                         egui_extras::install_image_loaders(ui.ctx());
                         theme::install_fonts(ui.ctx());
@@ -254,7 +254,7 @@ fn tab_focus_reveals_the_final_narrow_tool_option() {
                     crate::shortcuts::handle(app, ui.ctx());
                     options_bar(app, ui);
                 },
-                PhotocraftApp::new(photocraft_engine::Session::new(), Default::default()),
+                LienzoApp::new(lienzo_engine::Session::new(), Default::default()),
             );
             harness.run_steps(4);
             let pro = Tokens::get(&harness.ctx).pro;
@@ -311,7 +311,7 @@ fn a_wide_crop_options_bar_does_not_scroll() {
                 let ctx = egui::Context::default();
                 crate::theme::install_fonts(&ctx);
                 crate::theme::apply(&ctx, kind);
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
                 if !Tokens::get(&ctx).pro {
                     continue;
                 }
@@ -372,7 +372,7 @@ fn the_crop_ratio_fields_show_three_decimals() {
         return;
     };
     crate::theme::apply(&ctx, kind);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.ui.tool = Tool::Crop;
     app.ui.tool_options.crop_ratio = "1.414:1".into();
     let screen = Rect::from_min_size(egui::Pos2::ZERO, vec2(1600.0, 120.0));
@@ -406,14 +406,14 @@ fn a_typed_crop_ratio_fits_from_the_frame_the_edit_started_with() {
         return;
     };
     crate::theme::apply(&ctx, kind);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.ui.tool = Tool::Crop;
     app.ui.tool_options.crop_shield.classic_mode = true;
     app.ui.tool_options.crop_ratio = "4:3".into();
     app.ui.crop_rect = Some([0.0, 0.0, 400.0, 300.0]);
     let screen = Rect::from_min_size(egui::Pos2::ZERO, vec2(1600.0, 120.0));
-    let step = |app: &mut PhotocraftApp, events: Vec<egui::Event>| {
+    let step = |app: &mut LienzoApp, events: Vec<egui::Event>| {
         let mut input = input_at_scale(screen, 1.0);
         input.events = events;
         ctx.run_ui(input, |ui| options_bar(app, ui)).textures_delta.clear();
@@ -443,9 +443,9 @@ fn the_narrow_options_bar_preference_shortens_the_bar() {
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     crate::theme::apply(&ctx, crate::theme::ThemeKind::ALL[0]);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     let screen = Rect::from_min_size(egui::Pos2::ZERO, vec2(1600.0, 900.0));
-    let run = |app: &mut PhotocraftApp| {
+    let run = |app: &mut LienzoApp| {
         let mut top = 0.0;
         let mut out = ctx.run_ui(input_at_scale(screen, 1.0), |ui| {
             options_bar(app, ui);
@@ -471,7 +471,7 @@ fn narrow_tool_options_can_scroll_to_the_last_control() {
                 egui_extras::install_image_loaders(&ctx);
                 crate::theme::install_fonts(&ctx);
                 crate::theme::apply(&ctx, kind);
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
                 let (tool, last_label) = if Tokens::get(&ctx).pro { (Tool::Pencil, "Auto Erase") } else { (Tool::Brush, "Pressure for Opacity") };
                 app.ui.tool = tool;
                 let screen = Rect::from_min_size(egui::Pos2::ZERO, vec2(width, 120.0));

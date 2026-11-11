@@ -2,7 +2,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 use proptest::prelude::*;
 
 fn tight() -> DecodeOptions {

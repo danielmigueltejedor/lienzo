@@ -1,21 +1,21 @@
-//! #6541: the Layers panel marks an adjustment layer PhotoCraft keeps as imported but cannot
+//! #6541: the Layers panel marks an adjustment layer Lienzo keeps as imported but cannot
 //! render, so a picture that differs from Photoshop's has a visible reason.
 
 use egui::vec2;
 use egui_kittest::Harness;
-use photocraft_doc::{Adjustment, Layer, LayerContent, LayerId};
+use lienzo_doc::{Adjustment, Layer, LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::layer_row_ui::{Indicator, RowRects, recorded};
 
-fn row(h: &Harness<'_, PhotocraftApp>, id: LayerId) -> RowRects {
+fn row(h: &Harness<'_, LienzoApp>, id: LayerId) -> RowRects {
     recorded(&h.ctx).into_iter().find(|r| r.layer == id.0).unwrap()
 }
 
 #[test]
 fn an_unsupported_adjustment_row_carries_a_warning_marker() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     let plain = LayerId(s.execute("layer.new.layer", json!({"name": "plain"})).unwrap()["layer"].as_u64().unwrap());
     let mystery = Layer::new("Mystery", LayerContent::Adjustment(Adjustment::Unsupported { psd_key: "xyzw".into(), raw: vec![1, 2, 3].into() }));
@@ -27,8 +27,8 @@ fn an_unsupported_adjustment_row_carries_a_warning_marker() {
     })
     .unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(8);
     let marked = row(&h, mystery_id);

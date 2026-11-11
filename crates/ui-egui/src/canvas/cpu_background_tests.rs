@@ -30,7 +30,7 @@ fn cpu_canvas_omits_only_a_checker_hidden_by_an_opaque_texture() {
 #[test]
 fn cpu_texture_opacity_follows_full_and_partial_uploads() {
     for depth in [8, 16, 32] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width": 32, "height": 24, "depth": depth, "background": "transparent"})).unwrap();
         let key = cache_key(app.session.documents()[0].doc.id, None);
@@ -62,13 +62,13 @@ fn cpu_texture_opacity_follows_full_and_partial_uploads() {
     }
 }
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// The CPU-canvas fixture on the offscreen software adapter, or `None` when this machine has no
 /// graphics adapter. Only creating the renderer may be skipped: a failing fixture command or a
 /// panic in the first frames must fail the test, not pass it as "no adapter".
 fn harness(size: [u32; 2], background: &str) -> Option<Harness> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     // app.gpu remains None: compose on the CPU, use the harness's software window adapter.
     app.run("file.new", json!({"width": size[0], "height": size[1], "background": background})).unwrap();
     app.run("select.rect", json!({"x": size[0] / 2, "y": size[1] / 2, "width": size[0] / 10, "height": size[1] / 10})).unwrap();
@@ -76,11 +76,11 @@ fn harness(size: [u32; 2], background: &str) -> Option<Harness> {
     app.run("select.deselect", json!({})).unwrap();
     // `wgpu()` creates the render state and panics when no adapter is found.
     let builder = std::panic::catch_unwind(|| {
-        egui_kittest::Harness::<PhotocraftApp>::builder().with_size(egui::vec2(1440.0, 900.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu()
+        egui_kittest::Harness::<LienzoApp>::builder().with_size(egui::vec2(1440.0, 900.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu()
     })
     .ok()?;
     let mut h = builder.build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         if let Some(rs) = &cc.wgpu_render_state {
             app.perf.gpu_info.set_adapter(&rs.adapter.get_info());
         }
@@ -135,7 +135,7 @@ fn omitting_an_occluded_checker_preserves_cpu_canvas_pixels() {
         let reference = h.render().unwrap();
         h.step();
         let optimized = h.render().unwrap();
-        if let Some(dir) = std::env::var_os("PHOTOCRAFT_CPU_PIXEL_OUTPUT") {
+        if let Some(dir) = std::env::var_os("LIENZO_CPU_PIXEL_OUTPUT") {
             let dir = std::path::PathBuf::from(dir);
             std::fs::create_dir_all(&dir).unwrap();
             let tag = format!("rotation-{rotation}-flip-{flip}-pattern-{pattern}");
@@ -200,7 +200,7 @@ fn pattern_preview_keeps_the_legacy_checker_for_every_copy() {
 fn cpu_canvas_background_benchmark() {
     use std::time::Instant;
     let mut results = Vec::new();
-    let output = std::env::var_os("PHOTOCRAFT_CPU_BENCH_OUTPUT").map(std::path::PathBuf::from);
+    let output = std::env::var_os("LIENZO_CPU_BENCH_OUTPUT").map(std::path::PathBuf::from);
     for background in ["white", "transparent"] {
         let mut h = harness([6000, 4000], background).expect("an offscreen graphics adapter");
         assert_fixture(&h, background);

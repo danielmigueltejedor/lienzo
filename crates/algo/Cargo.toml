@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-algo"
+name = "lienzo-algo"
 description = "Depth-agnostic, tile-aware CPU image filters (blur, sharpen, noise, distort, stylize)"
 version.workspace = true
 edition.workspace = true
@@ -10,9 +10,9 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-raster = { workspace = true }
+lienzo-geom = { workspace = true }
+lienzo-color = { workspace = true }
+lienzo-raster = { workspace = true }
 serde = { workspace = true }
 rustfft = "6.4.1"
 
@@ -21,7 +21,7 @@ rustfft = "6.4.1"
 rayon = { workspace = true }
 
 [dev-dependencies]
-photocraft-testkit = { workspace = true }
+lienzo-testkit = { workspace = true }
 serde_json = { workspace = true }
 criterion = { workspace = true }
 

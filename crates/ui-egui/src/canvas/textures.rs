@@ -3,7 +3,7 @@ use super::filter_preview::filter_channel_preview;
 use super::navigator::navigator_waits_for_drag;
 use super::strokes::live_stroke;
 use super::view_xform::ViewXform;
-use super::{CanvasCache, CpuTextures, DRect, DetailTexture, Document, InView, LayerContent, PhotocraftApp, TextureOptions, pos2};
+use super::{CanvasCache, CpuTextures, DRect, DetailTexture, Document, InView, LayerContent, LienzoApp, TextureOptions, pos2};
 
 /// Largest texture side we upload; bigger documents are uploaded downsampled, with the part in
 /// view added at the screen's resolution when zoomed in (`detail_plan`).
@@ -85,7 +85,7 @@ pub(super) fn canvas_texture_options(factor: u32) -> TextureOptions {
 
 /// Make sure the canvas texture for document `idx` on `display` is current; returns (texture
 /// id, scale).
-pub fn ensure_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, display: Option<u32>) -> Option<(egui::TextureId, f32)> {
+pub fn ensure_texture(app: &mut LienzoApp, ctx: &egui::Context, idx: usize, display: Option<u32>) -> Option<(egui::TextureId, f32)> {
     ensure_texture_in_view(app, ctx, idx, display, None).map(|t| (t.texture, t.scale))
 }
 
@@ -93,7 +93,7 @@ pub fn ensure_texture(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, 
 /// previewed at proxy factor `k`: the document's bounds when it is the document's size (reduced by
 /// `k`), else its own size (times `k`) centred on the document's centre, as the GPU canvas centres
 /// a size-changing preview (Image › Rotation).
-pub(super) fn preview_bounds(doc: photocraft_geom::Size, preview: photocraft_geom::Size, k: u32) -> DRect {
+pub(super) fn preview_bounds(doc: lienzo_geom::Size, preview: lienzo_geom::Size, k: u32) -> DRect {
     let k = k.max(1);
     let full = DRect::from_size(doc);
     if doc.width.div_ceil(k) == preview.width && doc.height.div_ceil(k) == preview.height {
@@ -112,13 +112,7 @@ pub(super) fn preview_bounds(doc: photocraft_geom::Size, preview: photocraft_geo
 
 /// [`ensure_texture`], and for a canvas showing `view` of a document too large for one
 /// full-resolution texture, the detail texture of the part in view ([`detail_plan`], #7568).
-pub(crate) fn ensure_texture_in_view(
-    app: &mut PhotocraftApp,
-    ctx: &egui::Context,
-    idx: usize,
-    display: Option<u32>,
-    view: Option<InView>,
-) -> Option<CpuTextures> {
+pub(crate) fn ensure_texture_in_view(app: &mut LienzoApp, ctx: &egui::Context, idx: usize, display: Option<u32>, view: Option<InView>) -> Option<CpuTextures> {
     let output = display;
     let (revision, last_damage, id) = {
         let st = app.session.documents().get(idx)?;
@@ -184,7 +178,7 @@ pub(crate) fn ensure_texture_in_view(
         if let (Some(d), Some(t)) = (damage, current) {
             // Only what the edit or stroke touched: the reduced texture's pixels over it, with the
             // values the whole reduction gives them (factor 1 is the plain composite of `d`).
-            let buf = photocraft_compose::render_reduced_damage(&doc, w, h, d);
+            let buf = lienzo_compose::render_reduced_damage(&doc, w, h, d);
             let r = buf.rect;
             if !r.is_empty() {
                 let t1 = crate::gpu_canvas::now_ms();
@@ -198,7 +192,7 @@ pub(crate) fn ensure_texture_in_view(
             }
         } else {
             // Reduced in bands straight from the compositor: no full-size composite in memory.
-            let full = photocraft_compose::render_reduced(&doc, w, h);
+            let full = lienzo_compose::render_reduced(&doc, w, h);
             let t1 = crate::gpu_canvas::now_ms();
             let (img, scale) = (display_image(display.as_deref(), &full), 1.0 / factor as f32);
             cache.texture_opaque = img.pixels.iter().all(|p| p.is_opaque());
@@ -251,7 +245,7 @@ const MAX_DETAIL_VIEWS: usize = 4;
 fn update_detail(
     ctx: &egui::Context,
     doc: &Document,
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
+    display: Option<&lienzo_engine::display_color::CanvasDisplay>,
     name: String,
     plan: DetailPlan,
     old: Option<DetailTexture>,
@@ -271,7 +265,7 @@ fn update_detail(
         // An edit or a stroke step in view: only the texels it touched.
         if let Some(dmg) = damage {
             let dmg = dmg.intersect(&plan.region);
-            let buf = (!dmg.is_empty()).then(|| photocraft_compose::render_reduced_damage(doc, w, h, dmg));
+            let buf = (!dmg.is_empty()).then(|| lienzo_compose::render_reduced_damage(doc, w, h, dmg));
             let fits = buf.as_ref().is_none_or(|b| d.out.contains_rect(&b.rect));
             if fits {
                 if let Some(b) = buf.filter(|b| !b.rect.is_empty()) {
@@ -292,7 +286,7 @@ fn update_detail(
 fn render_detail(
     ctx: &egui::Context,
     doc: &Document,
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
+    display: Option<&lienzo_engine::display_color::CanvasDisplay>,
     name: String,
     plan: DetailPlan,
     texture: Option<egui::TextureHandle>,
@@ -300,7 +294,7 @@ fn render_detail(
 ) -> Option<DetailTexture> {
     let (w, h) = ((doc.size.width / plan.factor).max(1), (doc.size.height / plan.factor).max(1));
     let options = canvas_texture_options(plan.factor);
-    let buf = photocraft_compose::render_reduced_damage(doc, w, h, plan.region);
+    let buf = lienzo_compose::render_reduced_damage(doc, w, h, plan.region);
     let out = buf.rect;
     if out.is_empty() {
         return None;
@@ -318,10 +312,10 @@ fn render_detail(
 
 /// What changed since a canvas cache showed (`revision`, `preview key`) `seen`, when only a
 /// rectangle did: the document's damage since revision `damage_from` (one revision, or a whole
-/// command's span: [`photocraft_engine::DocState::damage_from`]), or the live stroke's dabs since
+/// command's span: [`lienzo_engine::DocState::damage_from`]), or the live stroke's dabs since
 /// then. Cached keys have the colour display's key folded in (`^ display_key`); `now`'s is still raw.
 pub(crate) fn damage_since(
-    app: &PhotocraftApp,
+    app: &LienzoApp,
     idx: usize,
     seen: (u64, u64),
     now: (u64, u64),
@@ -436,7 +430,7 @@ pub(crate) fn damage_since(
 /// Document `doc`'s canvas caches showed a preview that the edit just committed reproduces
 /// (`was_preview` tells its keys): count it as the document itself, so the commit's damage rect
 /// refreshes only that area instead of everything.
-pub(crate) fn shown_as_document(app: &mut PhotocraftApp, doc: photocraft_doc::DocId, was_preview: impl Fn(u64) -> bool) {
+pub(crate) fn shown_as_document(app: &mut LienzoApp, doc: lienzo_doc::DocId, was_preview: impl Fn(u64) -> bool) {
     let Some(d) = app.session.documents().iter().find(|st| st.doc.id == doc).map(|st| st.doc.clone()) else { return };
     if let Some(c) = app.channel_views.get_mut(&doc.0)
         && was_preview(c.preview_key)
@@ -461,12 +455,12 @@ pub(crate) fn shown_as_document(app: &mut PhotocraftApp, doc: photocraft_doc::Do
 
 /// How far beyond an edit's damage rect the composite can change: layer effects (shadows, glows,
 /// strokes, …) on the edited layer and on the groups around it reach that far.
-pub(crate) fn effect_reach(layers: &[photocraft_doc::Layer]) -> i32 {
+pub(crate) fn effect_reach(layers: &[lienzo_doc::Layer]) -> i32 {
     layers
         .iter()
         .filter(|l| l.visible)
         .map(|l| {
-            let own = if photocraft_compose::effects::has_effects(l) { photocraft_compose::effects::margin(l) } else { 0 };
+            let own = if lienzo_compose::effects::has_effects(l) { lienzo_compose::effects::margin(l) } else { 0 };
             let inner = match &l.content {
                 LayerContent::Group(g) => effect_reach(&g.children),
                 _ => 0,
@@ -480,7 +474,7 @@ pub(crate) fn effect_reach(layers: &[photocraft_doc::Layer]) -> i32 {
 /// GPU path: make sure document `idx` is current in the GPU canvas. Edits draw their damage;
 /// unchanged lower-stack composites can be reused by the compositor inside that region.
 /// Returns false if there is no GPU canvas.
-pub(super) fn ensure_gpu(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, visible: DRect) -> bool {
+pub(super) fn ensure_gpu(app: &mut LienzoApp, ctx: &egui::Context, idx: usize, visible: DRect) -> bool {
     let Some(gpu) = app.gpu.clone() else { return false };
     let Some((revision, last_damage, id)) =
         app.session.documents().get(idx).map(|st| {
@@ -635,7 +629,7 @@ pub(super) fn ensure_gpu(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usiz
 /// or Memory Usage, the document's pixels and History (charged where the GPU shares the system's
 /// memory), physical memory and the GPU's own: on full refreshes (pixels counted once per
 /// structural change, not per brush dab) and whenever either preference changes.
-fn gpu_budget(app: &mut PhotocraftApp, gpu: &crate::gpu_canvas::GpuCanvas, idx: usize, partial: bool, visible: DRect) {
+fn gpu_budget(app: &mut LienzoApp, gpu: &crate::gpu_canvas::GpuCanvas, idx: usize, partial: bool, visible: DRect) {
     gpu.set_focus(Some(visible));
     let allowance = budget_allowance(app);
     let changed = app.perf.gpu_budget_allowance != allowance;
@@ -654,7 +648,7 @@ fn gpu_budget(app: &mut PhotocraftApp, gpu: &crate::gpu_canvas::GpuCanvas, idx: 
 }
 
 /// Memory Usage and GPU Memory (Preferences › Performance), in bytes.
-fn budget_allowance(app: &PhotocraftApp) -> (u64, u64) {
+fn budget_allowance(app: &LienzoApp) -> (u64, u64) {
     let performance = &app.session.prefs().performance;
     (u64::from(performance.effective_memory_usage_mb()).saturating_mul(1 << 20), u64::from(performance.gpu_memory_mb).saturating_mul(1 << 20))
 }
@@ -686,16 +680,16 @@ pub(super) fn redraw_focus(target: &ViewXform, displayed: &ViewXform) -> DRect {
 
 /// A CPU composite as the GPU canvas texture stores it (sRGB-encoded for linear documents).
 pub(super) fn texture_buffer<'a>(
-    display: Option<&photocraft_engine::display_color::CanvasDisplay>,
-    buf: &'a photocraft_compose::Buffer,
-) -> std::borrow::Cow<'a, photocraft_compose::Buffer> {
+    display: Option<&lienzo_engine::display_color::CanvasDisplay>,
+    buf: &'a lienzo_compose::Buffer,
+) -> std::borrow::Cow<'a, lienzo_compose::Buffer> {
     match display {
         Some(d) => d.texture_buffer(buf),
         None => std::borrow::Cow::Borrowed(buf),
     }
 }
 
-pub(crate) fn retain_gpu_documents(app: &mut PhotocraftApp) {
+pub(crate) fn retain_gpu_documents(app: &mut LienzoApp) {
     // Remove a closed adjustment owner's proxy before collecting its live GPU keys.
     crate::adjust_preview::retain_documents(app);
     if let Some(gpu) = &app.gpu {

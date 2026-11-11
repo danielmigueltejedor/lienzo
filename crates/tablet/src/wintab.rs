@@ -98,10 +98,10 @@ pub fn install(hwnd: isize, wake: Box<dyn Fn()>) -> Result<(), Error> {
 /// timeout remains only as a fallback for drivers that never report the leave.
 ///
 /// Coordinates in the packet are not used: with Windows Ink off, the vendor driver moves the
-/// normal cursor, and PhotoCraft's existing pointer path supplies the position.
+/// normal cursor, and Lienzo's existing pointer path supplies the position.
 ///
 /// `focused` is whether the app's window has focus. Another tablet application can take the top
-/// WinTab overlap priority; when PhotoCraft is activated again it has to ask for it back. The
+/// WinTab overlap priority; when Lienzo is activated again it has to ask for it back. The
 /// window procedure belongs to winit, so focus from the app's input is the activation signal.
 pub fn poll(focused: bool, callback: &dyn Fn(Option<Sample>)) {
     STATE.with_borrow_mut(|slot| {

@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into, to_rgba};
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba_into, to_rgba};
 
 use crate::brush::{BrushSettings, MaskMode, Pattern, TipShape};
 use crate::dynamics::{DabGenerator, grid_cell};
@@ -1144,7 +1144,7 @@ impl StrokeRenderer {
         let mut pool = std::mem::take(&mut self.regions.0);
         // The document's CMYK profile is active per thread: the workers enter the caller's, or a
         // blend mode other than Normal would convert their tiles through the built-in coated CMYK.
-        let cmyk = photocraft_color::convert::active_cmyk_space();
+        let cmyk = lienzo_color::convert::active_cmyk_space();
         for batch in keys.chunks(BATCH) {
             let mut items: Vec<((i32, i32), Rect, Vec<f32>)> = batch.iter().map(|&key| (key, Rect::EMPTY, pool.pop().unwrap_or_default())).collect();
             let composite_tile = |(key, done, region): &mut ((i32, i32), Rect, Vec<f32>)| {
@@ -1224,9 +1224,9 @@ impl StrokeRenderer {
                             let d = to_rgba(&fmt, px);
                             let sr = to_rgba(&fmt, &src[..n]);
                             let o = if lock_transparency {
-                                photocraft_color::blend::composite_atop(b.mode, d, sr, k)
+                                lienzo_color::blend::composite_atop(b.mode, d, sr, k)
                             } else {
-                                photocraft_color::blend::composite(b.mode, d, sr, k)
+                                lienzo_color::blend::composite(b.mode, d, sr, k)
                             };
                             let mut enc = [0.0f32; 8];
                             from_rgba_into(&fmt, o, &mut enc);
@@ -1240,7 +1240,7 @@ impl StrokeRenderer {
                 *done = tr;
             };
             for_each_item(&mut items, batch.len() * (COV_TILE * COV_TILE) as usize, |item| {
-                photocraft_color::convert::with_cmyk_space(cmyk.as_ref(), || composite_tile(item))
+                lienzo_color::convert::with_cmyk_space(cmyk.as_ref(), || composite_tile(item))
             });
             for (_, tr, region) in items {
                 if !tr.is_empty() {

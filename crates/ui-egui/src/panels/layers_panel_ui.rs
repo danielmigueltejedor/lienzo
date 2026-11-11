@@ -1,17 +1,17 @@
 //! Layers panel flyout and display preferences, observed from Photoshop's panel menu.
 //! UI options do not edit document pixels or add history steps.
 use egui::{self, Context, Ui};
-use photocraft_doc::Document;
+use lienzo_doc::Document;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{LayerThumbnailContents, LayerThumbnailSize, LayersPanelDialog, LayersPanelOptions};
 
 const OPTIONS_PREF: &str = "ui.layersPanelOptions";
 
 /// Save independently of Workspace > Remember Workspace Changes, as Photoshop does. A pick of the
 /// current value writes nothing unless the saved entry is missing or stale.
-pub fn persist_options(app: &mut PhotocraftApp) {
+pub fn persist_options(app: &mut LienzoApp) {
     if let Ok(value) = serde_json::to_value(&app.ui.layers_panel_options) {
         if app.session.prefs().dialogs.get(OPTIONS_PREF) == Some(&value) {
             return;
@@ -23,7 +23,7 @@ pub fn persist_options(app: &mut PhotocraftApp) {
 }
 
 /// Restore independently from a saved workspace. Older preferences retain the defaults.
-pub fn restore_options(app: &mut PhotocraftApp) {
+pub fn restore_options(app: &mut LienzoApp) {
     if let Some(opts) = app.session.prefs().dialogs.get(OPTIONS_PREF)
         && let Ok(value) = serde_json::from_value(opts.clone())
     {
@@ -35,7 +35,7 @@ pub fn restore_options(app: &mut PhotocraftApp) {
 /// menu command dispatcher, which handles rename's in-place editor, opens a command's dialog where
 /// it has one and does other shell routing. Greyed when `params` is `None` (nothing to act on) or
 /// where the menu bar greys the command.
-pub fn run_menu_command(app: &mut PhotocraftApp, ui: &mut Ui, label: &str, id: &str, params: Option<serde_json::Value>) {
+pub fn run_menu_command(app: &mut LienzoApp, ui: &mut Ui, label: &str, id: &str, params: Option<serde_json::Value>) {
     let on = params.is_some() && crate::menus::is_enabled(app, id);
     if ui.add_enabled(on, egui::Button::new(label)).clicked()
         && let Some(params) = params
@@ -51,12 +51,12 @@ pub fn run_menu_command(app: &mut PhotocraftApp, ui: &mut Ui, label: &str, id: &
 
 /// Thumbnail Contents as the shared preference has it: Layer Bounds is Clip Thumbnails to Layer
 /// Bounds (#4281), which frames each layer's pixels instead of the canvas.
-pub fn thumbnail_contents(app: &PhotocraftApp) -> LayerThumbnailContents {
+pub fn thumbnail_contents(app: &LienzoApp) -> LayerThumbnailContents {
     if app.session.prefs().interface.clip_thumbnails_to_layer_bounds { LayerThumbnailContents::LayerBounds } else { LayerThumbnailContents::EntireDocument }
 }
 
 /// Panel Options › OK: the panel's own options, and Thumbnail Contents into the shared preference.
-fn apply_options(app: &mut PhotocraftApp, options: LayersPanelOptions) -> Result<(), String> {
+fn apply_options(app: &mut LienzoApp, options: LayersPanelOptions) -> Result<(), String> {
     let contents = options.thumbnail_contents;
     app.ui.layers_panel_options = options;
     persist_options(app);
@@ -70,7 +70,7 @@ fn apply_options(app: &mut PhotocraftApp, options: LayersPanelOptions) -> Result
 /// Preview cache recomputes only when hovering a new target, not each pointer frame.
 /// Compositor sees it as a temporary document and never commits it to history.
 pub(crate) struct ReorderPreview {
-    pub source: photocraft_doc::DocId,
+    pub source: lienzo_doc::DocId,
     pub revision: u64,
     pub signature: u64,
     pub key: u64,
@@ -79,7 +79,7 @@ pub(crate) struct ReorderPreview {
 
 /// Cache the on-canvas preview of the layer drop in `payload` (a `layer.moveTo` request), unless Preview on Canvas is off.
 /// Marks the destination as hovered every frame; the preview itself is rebuilt only when the target changes.
-pub(crate) fn preview_reorder(app: &mut PhotocraftApp, payload: &serde_json::Value) {
+pub(crate) fn preview_reorder(app: &mut LienzoApp, payload: &serde_json::Value) {
     if !app.ui.layers_panel_options.preview_on_canvas_when_reordering_layers {
         app.reorder_preview = None;
         return;
@@ -98,7 +98,7 @@ pub(crate) fn preview_reorder(app: &mut PhotocraftApp, payload: &serde_json::Val
     }
     let (source, revision) = (st.doc.id, st.revision);
     let add_copy = app.ui.layers_panel_options.add_copy_to_copied_layers_and_groups;
-    let preview = photocraft_engine::layer_multi_cmds::preview_move(&st.doc, payload, add_copy);
+    let preview = lienzo_engine::layer_multi_cmds::preview_move(&st.doc, payload, add_copy);
     app.reorder_preview = preview.map(|document| ReorderPreview {
         source,
         revision,
@@ -109,7 +109,7 @@ pub(crate) fn preview_reorder(app: &mut PhotocraftApp, payload: &serde_json::Val
 }
 
 /// The cached reorder preview and its compositor cache key for document `index`, if it was built for that document's current revision.
-pub(crate) fn display_reorder(app: &PhotocraftApp, index: usize) -> Option<(std::sync::Arc<Document>, u64)> {
+pub(crate) fn display_reorder(app: &LienzoApp, index: usize) -> Option<(std::sync::Arc<Document>, u64)> {
     if !app.ui.layers_panel_options.preview_on_canvas_when_reordering_layers {
         return None;
     }
@@ -260,7 +260,7 @@ fn options_body(ui: &mut Ui, draft: &mut LayersPanelOptions) {
 }
 
 /// Show the pending Layers panel dialog (Panel Options, New Layer, New Group, Lock Layers) as a modal and apply it on OK.
-pub fn show_dialog(app: &mut PhotocraftApp, ctx: &Context) {
+pub fn show_dialog(app: &mut LienzoApp, ctx: &Context) {
     let Some(mut dialog) = app.ui.layers_panel_dialog.take() else { return };
     let mut confirmed = false;
     let mut cancelled = ctx.input(|i| i.key_pressed(egui::Key::Escape));
@@ -369,9 +369,9 @@ mod tests {
     /// (#4281): the dialog shows it and OK sets it, so the two never disagree.
     #[test]
     fn thumbnail_contents_is_clip_thumbnails_to_layer_bounds() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = LienzoApp::new(session, crate::Services::default());
         assert_eq!(thumbnail_contents(&app), LayerThumbnailContents::EntireDocument);
         let mut options = app.ui.layers_panel_options.clone();
         options.thumbnail_contents = LayerThumbnailContents::LayerBounds;
@@ -401,9 +401,9 @@ mod tests {
     /// With the option off a new fill layer has no mask and the mask is not targeted; with it on the new layer's mask is targeted.
     #[test]
     fn disabling_default_fill_masks_never_targets_an_absent_mask() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", json!({"width": 32, "height": 24})).unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = LienzoApp::new(session, crate::Services::default());
         app.ui.layers_panel_options.use_default_masks_on_fill_layers = false;
         persist_options(&mut app);
         app.run("layer.newFillLayer.solidColor", json!({"color": "#778899"})).unwrap();
@@ -421,9 +421,9 @@ mod tests {
     /// Every option, including the mask badges, goes to the preferences and comes back from them.
     #[test]
     fn prefs_options_save_and_restore_all_switches() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", json!({"width": 8, "height": 8})).unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = LienzoApp::new(session, crate::Services::default());
         let saved = LayersPanelOptions {
             thumbnail_size: LayerThumbnailSize::Large,
             thumbnail_contents: LayerThumbnailContents::EntireDocument,
@@ -445,11 +445,11 @@ mod tests {
     /// The flyout's Flatten Image runs the real `layer.flattenImage` command, and Undo brings the layers back.
     #[test]
     fn flyout_flatten_routes_to_real_engine_and_undo_restores_layers() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", json!({"width": 18, "height": 12})).unwrap();
         session.execute("layer.new.layer", json!({"name": "Red pixels"})).unwrap();
         session.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = LienzoApp::new(session, crate::Services::default());
         let count = app.session.active().unwrap().doc.layers.len();
         assert!(count >= 2);
         // The flyout uses menus::invoke with this exact command id.

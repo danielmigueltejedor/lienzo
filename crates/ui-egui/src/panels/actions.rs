@@ -8,15 +8,15 @@ use egui::{Align2, Color32, Rect, Sense, Stroke, pos2, vec2};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use photocraft_engine::actions_cmds::{self, Action};
+use lienzo_engine::actions_cmds::{self, Action};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::file_dialog::{FileDialogAnswer, FileDialogRequest};
 use crate::icons;
 use crate::theme::Tokens;
 
 /// Which row is selected and which rows are expanded. The action list itself is
-/// [`photocraft_engine::Session::actions`].
+/// [`lienzo_engine::Session::actions`].
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ActionsUi {
@@ -57,7 +57,7 @@ struct RenameAction {
 }
 
 pub(crate) fn label_of(id: &str) -> String {
-    photocraft_engine::commands::find(id)
+    lienzo_engine::commands::find(id)
         .map(|c| c.label)
         .or_else(|| crate::menus::UI_COMMANDS.iter().find(|c| c.0 == id).map(|c| c.1))
         // Shell menu items recorded as steps, like Save a Copy (#4373).
@@ -68,7 +68,7 @@ pub(crate) fn label_of(id: &str) -> String {
 
 /// The selected action, else the first action of the selected set (Batch and Create Droplet start
 /// on the panel's selection), else the first one.
-pub fn selected_action(app: &PhotocraftApp) -> Option<&Action> {
+pub fn selected_action(app: &LienzoApp) -> Option<&Action> {
     let list = &app.session.actions.list;
     let idx = app.ui.actions.selected.filter(|i| *i < list.len());
     idx.and_then(|i| list.get(i)).or_else(|| selected_set_actions(app).first().and_then(|i| list.get(*i))).or_else(|| list.first())
@@ -77,7 +77,7 @@ pub fn selected_action(app: &PhotocraftApp) -> Option<&Action> {
 /// The Set and Action dropdowns of the Batch and Create Droplet dialogs, as in the reference
 /// application: each action name once and each set once, in list order. A loaded library can hold
 /// one name in two sets, so the dialog sends the set too and the command picks that set's action.
-pub fn action_form_choices(app: &PhotocraftApp) -> (Vec<String>, Vec<String>) {
+pub fn action_form_choices(app: &LienzoApp) -> (Vec<String>, Vec<String>) {
     let (mut names, mut sets) = (Vec::new(), Vec::new());
     for action in &app.session.actions.list {
         if !names.contains(&action.name) {
@@ -91,23 +91,23 @@ pub fn action_form_choices(app: &PhotocraftApp) -> (Vec<String>, Vec<String>) {
 }
 
 /// The selected set folder, if no action is selected and the set still exists.
-fn selected_set(app: &PhotocraftApp) -> Option<&str> {
+fn selected_set(app: &LienzoApp) -> Option<&str> {
     if app.ui.actions.selected.is_some_and(|i| i < app.session.actions.list.len()) {
         return None;
     }
     let set = app.ui.actions.selected_set.as_deref()?;
-    photocraft_engine::actions_edit_cmds::set_names(&app.session).iter().any(|n| n == set).then_some(set)
+    lienzo_engine::actions_edit_cmds::set_names(&app.session).iter().any(|n| n == set).then_some(set)
 }
 
 /// The actions of the selected set, in list order (empty when no set is selected, or it is empty).
-fn selected_set_actions(app: &PhotocraftApp) -> Vec<usize> {
+fn selected_set_actions(app: &LienzoApp) -> Vec<usize> {
     let Some(set) = selected_set(app) else { return Vec::new() };
     app.session.actions.list.iter().enumerate().filter(|(_, a)| a.set.as_deref() == Some(set)).map(|(i, _)| i).collect()
 }
 
 /// What Play plays: the selected action; with a set folder selected, every action of that set in
 /// order, as Photoshop plays a selected set (nothing for an empty set); else the first action.
-fn playback_targets(app: &PhotocraftApp) -> Vec<usize> {
+fn playback_targets(app: &LienzoApp) -> Vec<usize> {
     if selected_set(app).is_some() {
         return selected_set_actions(app);
     }
@@ -119,7 +119,7 @@ fn playback_targets(app: &PhotocraftApp) -> Vec<usize> {
 /// (Cancel stops them all, as it stops one action), also from inside an action it calls: that one
 /// continues into its callers first. A Stop with its dialog off ends the set. Returns the last result with `ran` counting the steps
 /// of all of them plus `before` (steps the same Play ran before a pause), or `None` when there was nothing to play.
-fn play_targets(app: &mut PhotocraftApp, targets: &[usize], before: u64) -> Result<Option<Value>, String> {
+fn play_targets(app: &mut LienzoApp, targets: &[usize], before: u64) -> Result<Option<Value>, String> {
     // A new Play ends a Step by Step or Pause For playback that is waiting for its next step.
     playback::stop(app);
     let (mut last, mut ran) = (None, before);
@@ -161,7 +161,7 @@ fn waiting_dialog(paused: &Value) -> Option<&Value> {
 }
 
 /// The token of the paused playback waiting at `dialog` (see [`waiting_dialog`]).
-fn paused_token(app: &mut PhotocraftApp, dialog: &Value) -> Option<u64> {
+fn paused_token(app: &mut LienzoApp, dialog: &Value) -> Option<u64> {
     match dialog.as_u64() {
         Some(id) => app.ui.dialog_mut(id).and_then(|d| d.fields.get(RESUME)).and_then(Value::as_u64),
         None if dialog.as_str() == Some(playback::PLAYBACK_TIMER) => playback::waiting(app),
@@ -171,7 +171,7 @@ fn paused_token(app: &mut PhotocraftApp, dialog: &Value) -> Option<u64> {
 
 /// Index of the playback target. Photoshop's Play button uses the first action when
 /// the panel has actions but none of its rows is selected.
-fn playback_selection(app: &PhotocraftApp) -> Option<usize> {
+fn playback_selection(app: &LienzoApp) -> Option<usize> {
     let n = app.session.actions.list.len();
     if n == 0 { None } else { Some(app.ui.actions.selected.filter(|i| *i < n).unwrap_or(0)) }
 }
@@ -190,7 +190,7 @@ pub(crate) fn shortcut_id(name: &str) -> String {
     format!("{SHORTCUT_PREFIX}{name}")
 }
 
-pub(crate) fn assign_shortcut(app: &mut PhotocraftApp, name: &str, shortcut: &str) -> Result<Value, String> {
+pub(crate) fn assign_shortcut(app: &mut LienzoApp, name: &str, shortcut: &str) -> Result<Value, String> {
     let id = shortcut_id(name);
     let mut set = serde_json::Map::new();
     // A function key belongs to only one action. Ordinary menu bindings remain
@@ -206,7 +206,7 @@ pub(crate) fn assign_shortcut(app: &mut PhotocraftApp, name: &str, shortcut: &st
 
 /// Replay edits synchronously, with view steps handled by the shell in the same order.
 /// Engine steps keep the headless action semantics (no dialogs or background jobs).
-pub(crate) fn play(app: &mut PhotocraftApp, params: &Value) -> Result<Value, String> {
+pub(crate) fn play(app: &mut LienzoApp, params: &Value) -> Result<Value, String> {
     // A new Play ends a Step by Step or Pause For playback that is waiting for its next step (none
     // waits while a playback runs its steps, so a Play Action step never ends its own).
     playback::stop(app);
@@ -229,7 +229,7 @@ enum Called {
 /// Read the result of step `i` (`id`) of `caller`: a nested failure, a pause (the caller joins the
 /// paused playback's [`PausedPlayback::callers`], so it continues after the called action) or a
 /// silent stop end the caller there.
-fn called(app: &mut PhotocraftApp, caller: &str, i: usize, id: &str, value: &Value, target: Option<photocraft_doc::DocId>) -> Called {
+fn called(app: &mut LienzoApp, caller: &str, i: usize, id: &str, value: &Value, target: Option<lienzo_doc::DocId>) -> Called {
     if let Some(error) = actions_cmds::nested_failure(id, value).or_else(|| actions_cmds::save_target_closed(&app.session, id, target)) {
         // Keep the same child-result detail as headless Actions and Scripts.
         return Called::Failed(json!({"step": i, "id": id, "error": error, "result": value}));
@@ -274,7 +274,7 @@ fn end_at(c: Called, ran: &mut u64, failed: &mut Option<Value>, paused: &mut Opt
 /// A resumed playback goes on in the action this one called (`inner`, see [`play_owned`]) inside
 /// this one's playback frame, so its recursion checks still see this caller; the call was step
 /// `from - 1`. `None` when there is nothing to replay.
-fn replay_inner(app: &mut PhotocraftApp, caller: &str, from: usize, inner: &[(String, usize)]) -> Option<Called> {
+fn replay_inner(app: &mut LienzoApp, caller: &str, from: usize, inner: &[(String, usize)]) -> Option<Called> {
     let ((name, child_from), rest) = inner.split_first()?;
     let step = from.saturating_sub(1);
     let target = app.session.active().map(|d| d.doc.id);
@@ -284,7 +284,7 @@ fn replay_inner(app: &mut PhotocraftApp, caller: &str, from: usize, inner: &[(St
     })
 }
 
-type Player = fn(&mut PhotocraftApp, &Value) -> Result<Value, String>;
+type Player = fn(&mut LienzoApp, &Value) -> Result<Value, String>;
 
 /// The shell's player for a step that plays another action: Play Action, or a Conditional's branch.
 fn nested_call(id: &str) -> Option<Player> {
@@ -299,7 +299,7 @@ fn nested_call(id: &str) -> Option<Player> {
 /// through [`play`] like a Play Action step, so the branch's steps keep their pacing, step dialogs
 /// and Stop messages. The result is the engine command's, with the branch's `paused` or `stopped`.
 /// Malformed params go to the engine command, which refuses them with its own error.
-fn conditional(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
+fn conditional(app: &mut LienzoApp, p: &Value) -> Result<Value, String> {
     let branch = |key: &str| match p.get(key) {
         None | Some(Value::Null) => Some(None),
         Some(Value::String(n)) => Some(Some(n.clone()).filter(|n| !n.trim().is_empty())),
@@ -308,7 +308,7 @@ fn conditional(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
     let (Some(condition), Some(then), Some(otherwise)) = (p.get("if").and_then(Value::as_str), branch("then"), branch("else")) else {
         return app.session.execute("actions.conditional", p.clone()).map_err(|e| e.to_string());
     };
-    let Ok(holds) = photocraft_engine::actions_edit_cmds::evaluate(&app.session, condition) else {
+    let Ok(holds) = lienzo_engine::actions_edit_cmds::evaluate(&app.session, condition) else {
         return app.session.execute("actions.conditional", p.clone()).map_err(|e| e.to_string());
     };
     let played = if holds { then } else { otherwise };
@@ -329,8 +329,8 @@ fn conditional(app: &mut PhotocraftApp, p: &Value) -> Result<Value, String> {
 /// Step `i` of `action` is a Stop: with its dialog toggle on it shows its message and pauses
 /// (Continue, when the step allows it, resumes after it); with the toggle off it ends the playback
 /// without a word, as in the reference application.
-fn stop_step(app: &mut PhotocraftApp, action: &Action, i: usize, p: &Value) -> Called {
-    let id = photocraft_engine::atn_cmds::STOP_MESSAGE;
+fn stop_step(app: &mut LienzoApp, action: &Action, i: usize, p: &Value) -> Called {
+    let id = lienzo_engine::atn_cmds::STOP_MESSAGE;
     if !action.dialogs.contains(&i) {
         return Called::Stopped(json!({"step": i, "id": id}));
     }
@@ -347,8 +347,8 @@ fn stop_step(app: &mut PhotocraftApp, action: &Action, i: usize, p: &Value) -> C
 
 /// Let the engine handle programmatic playback and stateless items. Interactive Play opens
 /// the settings editor and retains its command, document and receiver until confirmation.
-fn pause_menu_item(app: &mut PhotocraftApp, action: &str, from: usize, id: &str, params: &Value) -> Result<Option<u64>, String> {
-    use photocraft_engine::atn_cmds::{MENU_ITEM, menu_item_command, menu_item_needs_settings};
+fn pause_menu_item(app: &mut LienzoApp, action: &str, from: usize, id: &str, params: &Value) -> Result<Option<u64>, String> {
+    use lienzo_engine::atn_cmds::{MENU_ITEM, menu_item_command, menu_item_needs_settings};
 
     if id != MENU_ITEM || !playback::is_interactive(app) {
         return Ok(None);
@@ -376,7 +376,7 @@ fn pause_menu_item(app: &mut PhotocraftApp, action: &str, from: usize, id: &str,
 }
 
 /// Route playback and Record Again to the same settings editor used by the command.
-fn open_step_editor(app: &mut PhotocraftApp, command: &str) -> Result<u64, String> {
+fn open_step_editor(app: &mut LienzoApp, command: &str) -> Result<u64, String> {
     if crate::sizing::is_sizing(command) {
         crate::sizing::open(app, command).ok_or_else(|| tl!("No document.").into())
     } else if crate::filter_dialog::has_dialog(command) || crate::adjust_dialog::has_dialog(command) {
@@ -387,7 +387,7 @@ fn open_step_editor(app: &mut PhotocraftApp, command: &str) -> Result<u64, Strin
 }
 
 /// Open the recorded step's editor and retain the receiver for confirmation.
-fn pause_recorded_step(app: &mut PhotocraftApp, action: &Action, i: usize, id: &str, p: &Value) -> Value {
+fn pause_recorded_step(app: &mut LienzoApp, action: &Action, i: usize, id: &str, p: &Value) -> Value {
     let label = label_of(id);
     let active_layer = app.session.active().and_then(|st| st.active_layer);
     let dialog = crate::dialogs::open_command_dialog(app, id, &label);
@@ -416,7 +416,7 @@ fn pause_recorded_step(app: &mut PhotocraftApp, action: &Action, i: usize, id: &
 /// back, with that named call journaled, only when the whole call ends. `inner` are the called
 /// actions a resumed playback replays first, outermost first, each `(action, from)`: the first is
 /// the one this action's step before `from` called ([`resume`]).
-fn play_owned(app: &mut PhotocraftApp, params: &Value, suspended: Option<Value>, inner: &[(String, usize)]) -> Result<Value, String> {
+fn play_owned(app: &mut LienzoApp, params: &Value, suspended: Option<Value>, inner: &[(String, usize)]) -> Result<Value, String> {
     let (action, from) = match actions_cmds::playback_plan(&app.session, params) {
         Ok(plan) => plan,
         Err(e) => {
@@ -470,7 +470,7 @@ fn play_owned(app: &mut PhotocraftApp, params: &Value, suspended: Option<Value>,
         }
         // A Stop shows its message or ends the playback (`stop_step`). Agents keep the headless
         // semantics of the engine command.
-        if id == photocraft_engine::atn_cmds::STOP_MESSAGE && interactive {
+        if id == lienzo_engine::atn_cmds::STOP_MESSAGE && interactive {
             end_at(stop_step(app, &action, i, p), &mut ran, &mut failed, &mut paused, &mut stopped);
             break;
         }
@@ -592,7 +592,7 @@ fn play_owned(app: &mut PhotocraftApp, params: &Value, suspended: Option<Value>,
 
 /// Execute the actual menu command, not a synthetic keystroke. Fit is deferred
 /// until canvas layout, so it uses the dimensions after all preceding action steps.
-pub(crate) fn run_view(app: &mut PhotocraftApp, id: &str, params: Value) -> Result<Value, String> {
+pub(crate) fn run_view(app: &mut LienzoApp, id: &str, params: Value) -> Result<Value, String> {
     app.sync_views();
     let i = app.session.active_index().ok_or("no document")?;
     let v = app.ui.views.get_mut(i).ok_or("no document view")?;
@@ -625,14 +625,14 @@ pub(crate) fn run_view(app: &mut PhotocraftApp, id: &str, params: Value) -> Resu
 }
 
 /// The set New Action records into: the selected action's, else the selected set folder's.
-fn new_action_set(app: &PhotocraftApp) -> Option<String> {
+fn new_action_set(app: &LienzoApp) -> Option<String> {
     match app.ui.actions.selected.and_then(|i| app.session.actions.list.get(i)) {
         Some(action) => action.set.clone(),
-        None => app.ui.actions.selected_set.clone().filter(|set| photocraft_engine::actions_edit_cmds::set_names(&app.session).contains(set)),
+        None => app.ui.actions.selected_set.clone().filter(|set| lienzo_engine::actions_edit_cmds::set_names(&app.session).contains(set)),
     }
 }
 
-fn begin_recording(app: &mut PhotocraftApp, append: bool) {
+fn begin_recording(app: &mut LienzoApp, append: bool) {
     if app.session.actions.recording.is_some() {
         return;
     }
@@ -655,7 +655,7 @@ fn begin_recording(app: &mut PhotocraftApp, append: bool) {
     }
 }
 
-pub(crate) fn report_play(app: &mut PhotocraftApp, v: &Value) {
+pub(crate) fn report_play(app: &mut LienzoApp, v: &Value) {
     if v.get("stopped").is_some_and(Value::is_object) {
         app.ui.status = tl!("Action playback stopped").to_string();
         app.ui.status_error = false;
@@ -686,7 +686,7 @@ pub(crate) fn report_play(app: &mut PhotocraftApp, v: &Value) {
     app.ui.status_error = true;
 }
 
-fn visible_steps(app: &PhotocraftApp, action: usize) -> Vec<(String, Value)> {
+fn visible_steps(app: &LienzoApp, action: usize) -> Vec<(String, Value)> {
     app.session.actions.list.get(action).into_iter().flat_map(|a| a.steps.iter()).chain(actions_cmds::pending_steps(&app.session, action)).cloned().collect()
 }
 
@@ -744,12 +744,12 @@ fn step_label(id: &str, params: &Value) -> String {
         let cond = params.get("if").and_then(Value::as_str).unwrap_or("?");
         let branch = |k: &str| params.get(k).and_then(Value::as_str).unwrap_or("–").to_string();
         format!("{}: {cond} → {} / {}", label_of(id), branch("then"), branch("else"))
-    } else if id == photocraft_engine::atn_cmds::MENU_ITEM {
-        photocraft_engine::atn_cmds::menu_item_command(params).map_or_else(|_| label_of(id), label_of)
-    } else if id == photocraft_engine::atn_cmds::STOP_MESSAGE {
+    } else if id == lienzo_engine::atn_cmds::MENU_ITEM {
+        lienzo_engine::atn_cmds::menu_item_command(params).map_or_else(|_| label_of(id), label_of)
+    } else if id == lienzo_engine::atn_cmds::STOP_MESSAGE {
         format!("{}: {}", label_of(id), params.get("message").and_then(Value::as_str).unwrap_or_default())
-    } else if id == photocraft_engine::atn_cmds::PHOTOSHOP_STEP {
-        // A step from a .atn file PhotoCraft can't play yet: its Photoshop name, marked.
+    } else if id == lienzo_engine::atn_cmds::PHOTOSHOP_STEP {
+        // A step from a .atn file Lienzo can't play yet: its Photoshop name, marked.
         let name = params.get("name").and_then(Value::as_str).filter(|n| !n.is_empty()).unwrap_or("?");
         crate::i18n::fmt(tl!("{name} (Photoshop)"), &[("name", name)])
     } else {
@@ -765,16 +765,16 @@ fn source(name: &str, bytes: &[u8]) -> Value {
         return json!({"path": name});
     }
     let _ = name;
-    json!({"data": photocraft_engine::paint::tile::b64_encode(bytes)})
+    json!({"data": lienzo_engine::paint::tile::b64_encode(bytes)})
 }
 
 /// Load a `.atn` file's bytes into the Actions panel (the panel menu's Load Actions…).
-pub fn load_bytes(app: &mut PhotocraftApp, name: &str, bytes: &[u8]) -> Result<Value, String> {
+pub fn load_bytes(app: &mut LienzoApp, name: &str, bytes: &[u8]) -> Result<Value, String> {
     load_source(app, name, source(name, bytes))
 }
 
 /// Import one set and reveal its first action, for both native paths and browser contents.
-fn load_source(app: &mut PhotocraftApp, name: &str, params: Value) -> Result<Value, String> {
+fn load_source(app: &mut LienzoApp, name: &str, params: Value) -> Result<Value, String> {
     let r = app.run("actions.load", params)?;
     let n = r["actions"].as_array().map_or(0, Vec::len) as u64;
     let unsupported = r["unsupported"].as_array().map_or(0, Vec::len);
@@ -806,7 +806,7 @@ fn load_source(app: &mut PhotocraftApp, name: &str, params: Value) -> Result<Val
 }
 
 /// Load every chosen action file in order, retaining failures and unsupported-step warnings.
-fn load_dialog(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn load_dialog(app: &mut LienzoApp) -> Result<Value, String> {
     let initial_dir = crate::file_dialog::last_used_dir(&app.ui.recent_files);
     app.ask_file(FileDialogRequest::Open { multiple: true, initial_dir, extensions: Some(vec!["atn".into()]) }, |app, answer| {
         let files: Vec<_> = match answer {
@@ -885,16 +885,16 @@ fn load_dialog(app: &mut PhotocraftApp) -> Result<Value, String> {
 
 /// Save Actions…: the selected action's set (every action of it), else the selected set folder,
 /// or every action when none came from a set, as a `.atn` file Photoshop loads.
-fn save_dialog(app: &mut PhotocraftApp, set: Option<String>) -> Result<Value, String> {
+fn save_dialog(app: &mut LienzoApp, set: Option<String>) -> Result<Value, String> {
     let selected_set = app.ui.actions.selected.is_none().then(|| app.ui.actions.selected_set.clone()).flatten();
-    let selected_set = selected_set.filter(|set| photocraft_engine::actions_edit_cmds::set_names(&app.session).contains(set));
+    let selected_set = selected_set.filter(|set| lienzo_engine::actions_edit_cmds::set_names(&app.session).contains(set));
     let set = set.or(selected_set).or_else(|| selected_action(app).and_then(|a| a.set.clone()));
     let params = match &set {
         Some(set) => json!({"set": set, "skipUnsupported": true}),
         None => json!({"skipUnsupported": true}),
     };
     let r = app.run("actions.save", params)?;
-    let bytes = r["data"].as_str().and_then(photocraft_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
+    let bytes = r["data"].as_str().and_then(lienzo_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
     let n = r["actions"].as_array().map_or(0, Vec::len) as u64;
     let skipped = r["skipped"].as_array().map_or(0, Vec::len);
     // A set name can hold characters a file name can't (as in Keyboard Shortcuts' Save), or be a
@@ -906,7 +906,7 @@ fn save_dialog(app: &mut PhotocraftApp, set: Option<String>) -> Result<Value, St
         .map(|c| if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
         .collect();
     // A file name holds at most 255 bytes: the stem gets what `.atn` leaves, cut at a character.
-    let mut stem = photocraft_engine::file_cmds::portable_device_name(stem);
+    let mut stem = lienzo_engine::file_cmds::portable_device_name(stem);
     let mut cut = 255 - ".atn".len();
     while !stem.is_char_boundary(cut.min(stem.len())) {
         cut -= 1;
@@ -946,8 +946,8 @@ pub fn owns_new_set(fields: &serde_json::Map<String, Value>) -> bool {
 }
 
 /// New Set…: name an empty set folder (Photoshop's default "Set N").
-fn new_set_dialog(app: &mut PhotocraftApp) -> Result<Value, String> {
-    let names = photocraft_engine::actions_edit_cmds::set_names(&app.session);
+fn new_set_dialog(app: &mut LienzoApp) -> Result<Value, String> {
+    let names = lienzo_engine::actions_edit_cmds::set_names(&app.session);
     let name = (1u32..).map(|n| format!("Set {n}")).find(|n| !names.contains(n)).unwrap_or_default();
     let fields = json!({NEW_SET: true, "__command": "actions.newSet", "__label": "New Set", "name": name});
     let id = app.ui.open_dialog(crate::state::DialogKind::Command, fields.as_object().cloned().unwrap_or_default());
@@ -964,7 +964,7 @@ pub fn new_set_body(ui: &mut egui::Ui, fields: &mut serde_json::Map<String, Valu
 }
 
 /// Make the set and select it, so New Action records into it.
-pub fn new_set_confirm(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
+pub fn new_set_confirm(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
     let r = app.run("actions.newSet", json!({"name": fields.get("name").cloned().unwrap_or(Value::Null)}))?;
     app.ui.actions.selected_set = r["set"].as_str().map(str::to_string);
     app.ui.actions.selected = None;
@@ -977,7 +977,7 @@ pub fn owns_insert_stop(fields: &serde_json::Map<String, Value>) -> bool {
 }
 
 /// Insert Stop…: a message step after the selected step (or at the end of the selected action).
-fn insert_stop_dialog(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn insert_stop_dialog(app: &mut LienzoApp) -> Result<Value, String> {
     let action = app.ui.actions.selected.filter(|i| *i < app.session.actions.list.len()).ok_or_else(|| tl!("Select an action first").to_string())?;
     let len = app.session.actions.list[action].steps.len() + actions_cmds::pending_steps(&app.session, action).count();
     let at = app.ui.actions.selected_step.map_or(len, |s| (s + 1).min(len));
@@ -998,12 +998,12 @@ pub fn insert_stop_body(ui: &mut egui::Ui, fields: &mut serde_json::Map<String, 
     fields.insert("allowContinue".into(), json!(allow));
 }
 
-pub fn insert_stop_confirm(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
+pub fn insert_stop_confirm(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
     let action = fields.get("action").and_then(Value::as_u64).ok_or("the dialog names no action")?;
     let params = json!({
         "action": action,
         "at": fields.get("at").cloned().unwrap_or(Value::Null),
-        "id": photocraft_engine::atn_cmds::STOP_MESSAGE,
+        "id": lienzo_engine::atn_cmds::STOP_MESSAGE,
         "params": {"message": fields.get("message").cloned().unwrap_or(json!("")), "allowContinue": fields.get("allowContinue").cloned().unwrap_or(json!(false))},
     });
     let r = app.run("actions.insert", params)?;
@@ -1055,7 +1055,7 @@ const STOP_SEEN: &str = "__actionStopSeen";
 
 /// Continue (OK, ↩, automation): the action goes on after the Stop when the step allows it, as
 /// recorded; otherwise it ends there like Stop.
-pub fn stop_message_confirm(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
+pub fn stop_message_confirm(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) -> Result<Value, String> {
     let allow = fields.get(RESUME).and_then(Value::as_u64).and_then(|t| app.paused_playbacks.paused.get(&t)).is_some_and(|p| p.allow_continue);
     if allow {
         resume(app, fields)?;
@@ -1069,7 +1069,7 @@ pub fn stop_message_confirm(app: &mut PhotocraftApp, fields: &serde_json::Map<St
 pub const RESUME: &str = "__resumeAction";
 
 /// Resume the recording a paused call suspended and journal that call, once.
-fn restore_recording(app: &mut PhotocraftApp, owner: Option<&Value>) {
+fn restore_recording(app: &mut LienzoApp, owner: Option<&Value>) {
     let Some(owner) = owner else { return };
     let (Some(idx), Some(into), Some(name)) = (
         owner.get("index").and_then(Value::as_u64).and_then(|n| usize::try_from(n).ok()),
@@ -1092,7 +1092,7 @@ fn restore_recording(app: &mut PhotocraftApp, owner: Option<&Value>) {
 }
 
 /// Whether a paused playback holds a suspended recording.
-fn suspended(app: &PhotocraftApp) -> bool {
+fn suspended(app: &LienzoApp) -> bool {
     app.paused_playbacks.paused.values().any(|p| p.record.is_some())
 }
 
@@ -1100,7 +1100,7 @@ fn suspended(app: &PhotocraftApp) -> bool {
 /// recording (the restore would find recording taken) or deleting/moving actions (the recorded
 /// action could go away or change place). The engine checks these against `recording`, which
 /// is `None` then.
-pub(crate) fn suspended_guard(app: &PhotocraftApp, id: &str) -> Result<(), String> {
+pub(crate) fn suspended_guard(app: &LienzoApp, id: &str) -> Result<(), String> {
     if matches!(id, "actions.record" | "actions.delete" | "actions.move" | "actions.duplicate" | "actions.recordAgain" | "actions.allowToolRecording")
         && suspended(app)
     {
@@ -1110,7 +1110,7 @@ pub(crate) fn suspended_guard(app: &PhotocraftApp, id: &str) -> Result<(), Strin
 }
 
 /// A step dialog's command failed: the action ends there.
-pub fn abandoned(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) {
+pub fn abandoned(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) {
     let paused = fields.get(RESUME).and_then(|t| app.paused_playbacks.take(t));
     let record = paused.and_then(|p| {
         drop(p.history);
@@ -1120,11 +1120,11 @@ pub fn abandoned(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value
     restore_recording(app, record.as_ref());
 }
 
-/// The automation gate a session installs ([`photocraft_engine::Session::authorize`]).
-type Gate = fn(&str, &Value) -> photocraft_engine::Result<()>;
+/// The automation gate a session installs ([`lienzo_engine::Session::authorize`]).
+type Gate = fn(&str, &Value) -> lienzo_engine::Result<()>;
 
 /// Deferred Actions dialogs retain their caller's gate and also honor current permissions.
-fn authorize_owned(app: &PhotocraftApp, id: &str, params: &Value, gate: Option<Gate>, automated: bool) -> Result<(), String> {
+fn authorize_owned(app: &LienzoApp, id: &str, params: &Value, gate: Option<Gate>, automated: bool) -> Result<(), String> {
     if let Some(gate) = gate {
         gate(id, params).map_err(|e| e.to_string())?;
     }
@@ -1172,10 +1172,10 @@ pub(crate) struct PausedPlayback {
     ran: u64,
     /// The document a pause at Check Spelling was playing on. That dialog doesn't block the
     /// document tabs, so Done ([`resume_spelling`]) continues only on this document.
-    doc: Option<photocraft_doc::DocId>,
+    doc: Option<lienzo_doc::DocId>,
     /// An implicit filter/adjustment step resolves this active layer at the pause. The outer Option marks
     /// that binding even when there was no active layer; explicit-layer and other dialogs omit it.
-    filter_receiver: Option<Option<photocraft_doc::LayerId>>,
+    filter_receiver: Option<Option<lienzo_doc::LayerId>>,
     /// Descriptor-free menu playback owns this settings dialog and the concrete command it opened.
     menu_editor: Option<(u64, String)>,
     /// The actions that called this one through Play Action steps, nearest first, each with the
@@ -1255,7 +1255,7 @@ fn document_target(params: &Value) -> bool {
 
 /// Before a preview or confirmation evaluates settings, check the actual editor and its permissions.
 pub(crate) fn authorize_panel_preview(
-    app: &PhotocraftApp,
+    app: &LienzoApp,
     dialog: u64,
     fields: &serde_json::Map<String, Value>,
     command: &str,
@@ -1273,7 +1273,7 @@ pub(crate) fn authorize_panel_preview(
 }
 
 /// Check that preview and confirmation still target the command and receiver that opened the editor.
-fn check_menu_editor(app: &PhotocraftApp, paused: &PausedPlayback, command: &str, params: &Value) -> Result<(), String> {
+fn check_menu_editor(app: &LienzoApp, paused: &PausedPlayback, command: &str, params: &Value) -> Result<(), String> {
     if let Some((_, original)) = &paused.menu_editor
         && (original != command
             || app.session.active().map(|st| st.doc.id) != paused.doc
@@ -1287,7 +1287,7 @@ fn check_menu_editor(app: &PhotocraftApp, paused: &PausedPlayback, command: &str
 /// Admit the final dialog command before resuming history or starting a worker. The captured
 /// policy judges the edited parameters; a current live gate still governs dispatch and nested
 /// work. With no live gate, reinstall the captured gate for job admission and rendering.
-pub(crate) fn run_step_dialog(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>, command: &str, params: Value) -> Result<Value, String> {
+pub(crate) fn run_step_dialog(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>, command: &str, params: Value) -> Result<Value, String> {
     let Some(token) = fields.get(RESUME) else { return app.run(command, params) };
     let token = token.as_u64().ok_or("this dialog doesn't belong to a paused action")?;
     let paused = app.paused_playbacks.paused.get(&token).ok_or("this dialog doesn't belong to a paused action")?;
@@ -1318,7 +1318,7 @@ pub(crate) fn run_step_dialog(app: &mut PhotocraftApp, fields: &serde_json::Map<
 }
 
 /// Bind the dialog's own edit to its suspended action before it runs or starts a worker.
-pub(crate) fn prepare_history(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) -> Result<(), String> {
+pub(crate) fn prepare_history(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) -> Result<(), String> {
     let Some(token) = fields.get(RESUME).and_then(Value::as_u64) else { return Ok(()) };
     let history = app.paused_playbacks.paused.get_mut(&token).ok_or("this dialog doesn't belong to a paused action")?.history.take();
     if let Some(history) = history
@@ -1333,7 +1333,7 @@ pub(crate) fn prepare_history(app: &mut PhotocraftApp, fields: &serde_json::Map<
 }
 
 /// Check Spelling owns each correction only while it runs; the open window owns a bound token.
-pub(crate) fn spelling_change(app: &mut PhotocraftApp, params: Value) -> Result<Value, String> {
+pub(crate) fn spelling_change(app: &mut LienzoApp, params: Value) -> Result<Value, String> {
     let Some(token) = app.ui.type_panels.spell.as_ref().and_then(|dialog| dialog.resume) else {
         return app.run("edit.checkSpelling", params);
     };
@@ -1368,7 +1368,7 @@ pub(crate) fn spelling_change(app: &mut PhotocraftApp, params: Value) -> Result<
 /// Check Spelling's Done for the action paused at its step: the action continues when the document
 /// it was playing on is still the active one, and otherwise ends there with the reason in the
 /// status bar. Returns `Ok` when nothing failed.
-pub(crate) fn resume_spelling(app: &mut PhotocraftApp, token: u64) -> Result<(), String> {
+pub(crate) fn resume_spelling(app: &mut LienzoApp, token: u64) -> Result<(), String> {
     let fields = serde_json::Map::from_iter([(RESUME.to_string(), json!(token))]);
     let Some((from, doc)) = app.paused_playbacks.paused.get(&token).map(|p| (p.from, p.doc)) else {
         return resume(app, &fields);
@@ -1386,7 +1386,7 @@ pub(crate) fn resume_spelling(app: &mut PhotocraftApp, token: u64) -> Result<(),
 ///
 /// The remaining steps run under the gate the playback paused with, however the dialog was
 /// confirmed: a control request, synthetic Enter or OK, or a click.
-pub fn resume(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) -> Result<(), String> {
+pub fn resume(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) -> Result<(), String> {
     let Some(token) = fields.get(RESUME) else { return Ok(()) };
     let Some(paused) = app.paused_playbacks.take(token) else {
         return Err("this dialog doesn't belong to a paused action".into());
@@ -1511,7 +1511,7 @@ pub fn resume(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) 
 }
 
 /// A step dialog cancelled: the action stops there, as in Photoshop.
-pub fn stopped(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>) {
+pub fn stopped(app: &mut LienzoApp, fields: &serde_json::Map<String, Value>) {
     if fields.contains_key(RESUME) {
         abandoned(app, fields);
         app.ui.status = tl!("Action playback stopped").to_string();
@@ -1520,7 +1520,7 @@ pub fn stopped(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>)
 }
 
 /// The Actions entries of the panel group's menu ("…").
-pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let mut act: Option<&str> = None;
     let recording = app.session.actions.recording.is_some();
     let any = !app.session.actions.list.is_empty();
@@ -1533,7 +1533,7 @@ pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         act = Some("newSet");
     }
     let can_duplicate_set =
-        !recording && app.ui.actions.selected_set.as_ref().is_some_and(|set| photocraft_engine::actions_edit_cmds::set_names(&app.session).contains(set));
+        !recording && app.ui.actions.selected_set.as_ref().is_some_and(|set| lienzo_engine::actions_edit_cmds::set_names(&app.session).contains(set));
     if ui.add_enabled(can_delete || can_duplicate_set, egui::Button::new(tl!("Duplicate"))).clicked() {
         act = Some("duplicate");
     }
@@ -1561,7 +1561,7 @@ pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         act = Some("stop");
     }
     let path_selected =
-        app.ui.selected_path.as_deref().is_some_and(|name| photocraft_engine::actions_edit_cmds::selected_recording_path(&app.session, name).is_ok());
+        app.ui.selected_path.as_deref().is_some_and(|name| lienzo_engine::actions_edit_cmds::selected_recording_path(&app.session, name).is_ok());
     if ui.add_enabled(selected && path_selected, egui::Button::new(tl!("Insert Path"))).clicked() {
         act = Some("insertPath");
     }
@@ -1579,7 +1579,7 @@ pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         act = Some("load");
     }
     // A selected set folder saves even when empty, as Photoshop saves an empty set.
-    let set_selected = app.ui.actions.selected_set.as_ref().is_some_and(|set| photocraft_engine::actions_edit_cmds::set_names(&app.session).contains(set));
+    let set_selected = app.ui.actions.selected_set.as_ref().is_some_and(|set| lienzo_engine::actions_edit_cmds::set_names(&app.session).contains(set));
     if ui.add_enabled(any || set_selected, egui::Button::new(tl!("Save Actions…"))).clicked() {
         act = Some("save");
     }
@@ -1653,7 +1653,7 @@ fn drag_row(ui: &egui::Ui, response: &egui::Response, row: DragRow, t: &Tokens) 
     response.dnd_release_payload::<DragRow>().map(|source| (*source, to))
 }
 
-fn move_row(app: &mut PhotocraftApp, source: DragRow, to: usize) {
+fn move_row(app: &mut LienzoApp, source: DragRow, to: usize) {
     let mut params = json!({"action": source.action, "to": to});
     if let Some(step) = source.step {
         params["step"] = json!(step);
@@ -1680,7 +1680,7 @@ fn move_row(app: &mut PhotocraftApp, source: DragRow, to: usize) {
 }
 
 /// Keep the selection and disclosure rows on the new copy after the engine edits the list.
-fn duplicate_selection(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn duplicate_selection(app: &mut LienzoApp) -> Result<Value, String> {
     if app.ui.actions.selected.is_none()
         && let Some(set) = app.ui.actions.selected_set.clone()
     {
@@ -1704,7 +1704,7 @@ fn duplicate_selection(app: &mut PhotocraftApp) -> Result<Value, String> {
 
 /// Duplicate one action or step (the selected row, or one dropped on Create new action, #12373)
 /// and select the copy.
-fn duplicate_row(app: &mut PhotocraftApp, action: usize, step: Option<usize>) -> Result<Value, String> {
+fn duplicate_row(app: &mut LienzoApp, action: usize, step: Option<usize>) -> Result<Value, String> {
     let count = app.session.actions.list.len();
     let expanded = app.ui.actions.expanded.get(action).copied().unwrap_or(false);
     let result = app.run("actions.duplicate", json!({"action": action, "step": step}))?;
@@ -1729,7 +1729,7 @@ fn duplicate_row(app: &mut PhotocraftApp, action: usize, step: Option<usize>) ->
     Ok(result)
 }
 
-fn delete_selection(app: &mut PhotocraftApp) {
+fn delete_selection(app: &mut LienzoApp) {
     let Some(action) = app.ui.actions.selected else { return };
     let step = app.ui.actions.selected_step;
     if !delete_row(app, action, step) {
@@ -1743,7 +1743,7 @@ fn delete_selection(app: &mut PhotocraftApp) {
 
 /// Delete one action or step (the selected row, or one dropped on the trash, #12373) and keep
 /// the selection and disclosure rows pointing at the same rows. False when the engine refused.
-fn delete_row(app: &mut PhotocraftApp, action: usize, step: Option<usize>) -> bool {
+fn delete_row(app: &mut LienzoApp, action: usize, step: Option<usize>) -> bool {
     let mut params = json!({"action": action});
     if let Some(step) = step {
         params["step"] = json!(step);
@@ -1796,7 +1796,7 @@ fn drop_target_highlight(ui: &egui::Ui, response: &egui::Response, active: bool,
 
 /// The in-place name field of the action being renamed. Enter, Tab or clicking elsewhere
 /// returns the new name to commit; Escape cancels and keeps the old name.
-fn rename_field(app: &mut PhotocraftApp, ui: &mut egui::Ui, index: usize, rect: Rect) -> Option<String> {
+fn rename_field(app: &mut LienzoApp, ui: &mut egui::Ui, index: usize, rect: Rect) -> Option<String> {
     let mut r = app.ui.actions.renaming.take().filter(|r| r.index == index)?;
     let id = egui::Id::unique(("action-rename-field", index));
     let te = ui.put(rect, egui::TextEdit::singleline(&mut r.text).id(id).font(egui::FontId::proportional(12.0))).accessible_name(tl!("Name"));
@@ -1823,7 +1823,7 @@ fn rename_field(app: &mut PhotocraftApp, ui: &mut egui::Ui, index: usize, rect: 
     }
 }
 
-fn rename_action(app: &mut PhotocraftApp, index: usize, name: String) {
+fn rename_action(app: &mut LienzoApp, index: usize, name: String) {
     if let Err(e) = app.run("actions.rename", json!({"action": index, "name": name})) {
         let template = "Could not rename the action: {error}";
         app.ui.status = crate::i18n::fmt(tl!(template), &[("error", &e)]);
@@ -1911,7 +1911,7 @@ fn draw_set_header(ui: &mut egui::Ui, set: &str, count: u64, collapsed: bool, se
 /// The sets New Set made that hold no action yet: empty folder rows after the rest. Returns the
 /// set whose row was clicked (whether it toggles, whether it selects) and the set whose Save Set…
 /// was chosen.
-fn draw_empty_sets(app: &PhotocraftApp, ui: &mut egui::Ui, rows: &[Row], t: &Tokens) -> (Option<(String, bool, bool)>, Option<String>) {
+fn draw_empty_sets(app: &LienzoApp, ui: &mut egui::Ui, rows: &[Row], t: &Tokens) -> (Option<(String, bool, bool)>, Option<String>) {
     let (mut clicked, mut save) = (None, None);
     for set in app.session.actions.sets.iter().filter(|set| !rows.iter().any(|r| r.set.as_ref() == Some(*set))) {
         let selected = app.ui.actions.selected.is_none() && app.ui.actions.selected_set.as_ref() == Some(set);
@@ -1927,16 +1927,16 @@ fn draw_empty_sets(app: &PhotocraftApp, ui: &mut egui::Ui, rows: &[Row], t: &Tok
     (clicked, save)
 }
 
-fn action_context_menu(app: &mut PhotocraftApp, response: &egui::Response, index: usize, name: &str, swatch: &str) {
+fn action_context_menu(app: &mut LienzoApp, response: &egui::Response, index: usize, name: &str, swatch: &str) {
     egui::Popup::context_menu(response).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
         ui.label(tl!("Keyboard Shortcuts"));
         let current = app.session.prefs().shortcuts.get(&shortcut_id(name)).cloned().unwrap_or_default();
         // Photoshop's Action Options: a function key, with Shift and Command (#7646).
-        let (key, mut shift, mut command) = photocraft_engine::atn_cmds::parse_function_key(&current).unwrap_or((0, false, false));
+        let (key, mut shift, mut command) = lienzo_engine::atn_cmds::parse_function_key(&current).unwrap_or((0, false, false));
         for number in std::iter::once(0).chain(1..=12) {
             let label = if number == 0 { tl!("None").to_string() } else { format!("F{number}") };
             if ui.selectable_label(key == number, label).clicked() {
-                let chosen = if number == 0 { String::new() } else { photocraft_engine::atn_cmds::function_key_name(number, shift, command) };
+                let chosen = if number == 0 { String::new() } else { lienzo_engine::atn_cmds::function_key_name(number, shift, command) };
                 let _ = assign_shortcut(app, name, &chosen);
                 ui.close();
             }
@@ -1945,7 +1945,7 @@ fn action_context_menu(app: &mut PhotocraftApp, response: &egui::Response, index
             let command_label = if cfg!(target_os = "macos") { tl!("Command") } else { tl!("Ctrl") };
             let toggled = ui.checkbox(&mut shift, tl!("Shift")).changed() | ui.checkbox(&mut command, command_label).changed();
             if toggled {
-                let _ = assign_shortcut(app, name, &photocraft_engine::atn_cmds::function_key_name(key, shift, command));
+                let _ = assign_shortcut(app, name, &lienzo_engine::atn_cmds::function_key_name(key, shift, command));
             }
         });
         ui.separator();
@@ -1969,7 +1969,7 @@ fn action_context_menu(app: &mut PhotocraftApp, response: &egui::Response, index
     });
 }
 
-pub fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let recording = app.session.actions.recording;
     let rows: Vec<Row> = app
@@ -2290,7 +2290,7 @@ struct StepRowEvents {
     dialog_toggled: Option<(usize, usize)>,
 }
 
-fn draw_step_rows(app: &mut PhotocraftApp, ui: &mut egui::Ui, context: &StepRowsContext<'_>) -> StepRowEvents {
+fn draw_step_rows(app: &mut LienzoApp, ui: &mut egui::Ui, context: &StepRowsContext<'_>) -> StepRowEvents {
     let mut events = StepRowEvents::default();
     for (step, (id, params)) in context.steps.iter().enumerate() {
         let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 20.0), Sense::click_and_drag());
@@ -2312,7 +2312,7 @@ fn draw_step_rows(app: &mut PhotocraftApp, ui: &mut egui::Ui, context: &StepRows
     events
 }
 
-fn draw_step_label(app: &PhotocraftApp, ui: &egui::Ui, rect: Rect, response: &egui::Response, step: usize, label: &str, context: &StepRowsContext<'_>) {
+fn draw_step_label(app: &LienzoApp, ui: &egui::Ui, rect: Rect, response: &egui::Response, step: usize, label: &str, context: &StepRowsContext<'_>) {
     let selected = app.ui.actions.selected == Some(context.action) && app.ui.actions.selected_step == Some(step);
     response.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, selected, label));
     if selected {

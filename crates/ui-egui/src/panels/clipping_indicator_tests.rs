@@ -5,7 +5,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 #[test]
 fn clipping_indicator_points_down_inside_the_existing_row_slot() {
@@ -22,8 +22,8 @@ fn clipping_indicator_points_down_inside_the_existing_row_slot() {
 }
 
 /// Build a themed Layers panel for clipping-marker and pointer-gesture checks.
-fn harness(theme: crate::theme::ThemeKind, width: f32, scale: f32, gpu: bool) -> Harness<'static, PhotocraftApp> {
-    let mut session = photocraft_engine::Session::new();
+fn harness(theme: crate::theme::ThemeKind, width: f32, scale: f32, gpu: bool) -> Harness<'static, LienzoApp> {
+    let mut session = lienzo_engine::Session::new();
     session.execute("prefs.set", json!({"path": "interface.language", "value": "en"})).unwrap();
     session.execute("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     let upper = session.execute("layer.newFillLayer.gradient", json!({"from": "#235b49", "to": "#a7d4ab", "angle": 90})).unwrap()["layer"].as_u64().unwrap();
@@ -31,7 +31,7 @@ fn harness(theme: crate::theme::ThemeKind, width: f32, scale: f32, gpu: bool) ->
     let builder = Harness::builder().with_size(vec2(width, 250.0)).with_pixels_per_point(scale);
     let builder = if gpu { builder.wgpu() } else { builder };
     let mut h = builder.build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|fonts| fonts.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -41,15 +41,15 @@ fn harness(theme: crate::theme::ThemeKind, width: f32, scale: f32, gpu: bool) ->
                 super::layers(app, ui);
             });
         },
-        PhotocraftApp::new(session, Default::default()),
+        LienzoApp::new(session, Default::default()),
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }
 
 /// Toggle clipping through a real Alt-click at the boundary between the two layer rows.
-fn alt_click_line(h: &mut Harness<'_, PhotocraftApp>) {
+fn alt_click_line(h: &mut Harness<'_, LienzoApp>) {
     let rows = crate::layer_row_ui::recorded(&h.ctx);
     assert_eq!(rows.len(), 2);
     let p = pos2(rows[1].row.left() + 100.0, rows[1].row.top());
@@ -84,20 +84,20 @@ fn alt_click_clipping_still_creates_releases_and_undoes_without_moving_rows() {
 }
 
 /// Open one real adjustment editor inside a 250×160 scrollable Properties panel.
-fn adjustment_harness(kind: &str, depth: u32, theme: crate::theme::ThemeKind, scale: f32, gpu: bool) -> Harness<'static, PhotocraftApp> {
-    let mut session = photocraft_engine::Session::new();
+fn adjustment_harness(kind: &str, depth: u32, theme: crate::theme::ThemeKind, scale: f32, gpu: bool) -> Harness<'static, LienzoApp> {
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", json!({"width": 16, "height": 8, "depth": depth})).unwrap();
     session.execute("edit.fill", json!({"color": "#b04020"})).unwrap();
     session.execute("layer.new.layer", json!({})).unwrap();
     session.execute("select.rect", json!({"x": 8, "y": 0, "width": 8, "height": 8})).unwrap();
     session.execute("edit.fill", json!({"color": "#208040"})).unwrap();
     session.execute("select.deselect", json!({})).unwrap();
-    let mut app = PhotocraftApp::new(session, Default::default());
+    let mut app = LienzoApp::new(session, Default::default());
     app.ui.dock_tabs.properties = 1;
     let builder = Harness::builder().with_size(vec2(250.0, 160.0)).with_pixels_per_point(scale);
     let builder = if gpu { builder.wgpu() } else { builder };
     let mut h = builder.build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|fonts| fonts.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -113,7 +113,7 @@ fn adjustment_harness(kind: &str, depth: u32, theme: crate::theme::ThemeKind, sc
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h.get_by_label(kind).click();
     h.run_steps(4);
@@ -121,7 +121,7 @@ fn adjustment_harness(kind: &str, depth: u32, theme: crate::theme::ThemeKind, sc
 }
 
 /// Reach a control through real wheel input without enlarging the compact panel.
-fn scroll_to_adjustment_control(h: &mut Harness<'_, PhotocraftApp>, label: &str) -> egui::Rect {
+fn scroll_to_adjustment_control(h: &mut Harness<'_, LienzoApp>, label: &str) -> egui::Rect {
     let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, vec2(250.0, 160.0));
     for _ in 0..32 {
         if let Some(rect) = h.query_all_by_label(label).map(|node| node.rect()).find(|rect| viewport.contains_rect(*rect)) {
@@ -163,7 +163,7 @@ fn adjustment_scope_control_fits_compact_properties_before_scrolling() {
 }
 
 /// Read a document pixel on the shared scanline used by the clipping-output assertions.
-fn sample(h: &mut Harness<'_, PhotocraftApp>, x: i32) -> Vec<f32> {
+fn sample(h: &mut Harness<'_, LienzoApp>, x: i32) -> Vec<f32> {
     serde_json::from_value(h.state_mut().run("document.pixel", json!({"x": x, "y": 4})).unwrap()).unwrap()
 }
 
@@ -200,7 +200,7 @@ fn panel_adjustment_clips_to_selected_layer_and_scope_undoes_at_all_depths() {
 #[test]
 #[ignore = "writes synthetic compact adjustment-panel screenshots to log/adjustment-scope"]
 fn write_adjustment_scope_preview() {
-    let phase = std::env::var("PHOTOCRAFT_EVIDENCE_PHASE").unwrap_or_else(|_| "after".into());
+    let phase = std::env::var("LIENZO_EVIDENCE_PHASE").unwrap_or_else(|_| "after".into());
     let output = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../log/adjustment-scope");
     std::fs::create_dir_all(&output).unwrap();
     for theme in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
@@ -217,8 +217,8 @@ fn write_adjustment_scope_preview() {
         h.step();
         let image = captured.lock().ok().and_then(|mut c| c.take()).expect("the kittest renderer completes the screenshot callback");
         let rgba = image.pixels.iter().flat_map(|pixel| pixel.to_array()).collect();
-        let image = photocraft_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, photocraft_codecs::ChannelLayout::Rgba, rgba).unwrap();
-        let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+        let image = lienzo_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, lienzo_codecs::ChannelLayout::Rgba, rgba).unwrap();
+        let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
         std::fs::write(output.join(format!("{phase}-{}.png", theme.id())), png).unwrap();
     }
 }
@@ -226,7 +226,7 @@ fn write_adjustment_scope_preview() {
 #[test]
 #[ignore = "writes synthetic English Layers-panel screenshots for before/after inspection"]
 fn write_clipping_indicator_preview() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let output = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plan/evidence/clipping");
     std::fs::create_dir_all(&output).unwrap();
     for theme in crate::theme::ThemeKind::ALL {
@@ -246,9 +246,8 @@ fn write_clipping_indicator_preview() {
                 h.step();
                 let image = captured.lock().ok().and_then(|mut c| c.take()).expect("the kittest renderer completes the screenshot callback");
                 let rgba = image.pixels.iter().flat_map(|pixel| pixel.to_array()).collect();
-                let image =
-                    photocraft_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, photocraft_codecs::ChannelLayout::Rgba, rgba).unwrap();
-                let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+                let image = lienzo_codecs::Image::from_u8(image.size[0] as u32, image.size[1] as u32, lienzo_codecs::ChannelLayout::Rgba, rgba).unwrap();
+                let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).unwrap();
                 std::fs::write(output.join(format!("{}-{width:.0}-{scale:.0}x.png", theme.id())), png).unwrap();
             }
         }

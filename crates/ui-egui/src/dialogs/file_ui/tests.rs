@@ -7,7 +7,7 @@ fn busy_driver_page_requests_a_retry_without_input() {
     let (held_tx, held) = std::sync::mpsc::channel();
     let (release, released_rx) = std::sync::mpsc::channel::<()>();
     let holder = std::thread::spawn(move || {
-        photocraft_engine::print_cmds::with_spooler(|| {
+        lienzo_engine::print_cmds::with_spooler(|| {
             held_tx.send(()).unwrap();
             let _ = released_rx.recv_timeout(std::time::Duration::from_secs(5));
         });
@@ -23,13 +23,13 @@ fn busy_driver_page_requests_a_retry_without_input() {
     let initialized = fields.get("__driverPageInitialized").cloned();
     let _ = release.send(());
     holder.join().unwrap();
-    assert_eq!(busy, Some(json!(photocraft_engine::print_cmds::SPOOLER_BUSY)));
+    assert_eq!(busy, Some(json!(lienzo_engine::print_cmds::SPOOLER_BUSY)));
     assert_ne!(initialized, Some(json!(true)));
     assert!(delay <= std::time::Duration::from_millis(100), "busy driver repaint delay: {delay:?}");
-    photocraft_engine::print_cmds::with_spooler(|| {
+    lienzo_engine::print_cmds::with_spooler(|| {
         ctx.run_ui(Default::default(), |ui| print_body(&mut app, ui, &mut fields, 1)).textures_delta.clear();
         assert_eq!(fields.get("__driverPageInitialized"), Some(&json!(true)));
-        assert_ne!(fields.get("__pageError"), Some(&json!(photocraft_engine::print_cmds::SPOOLER_BUSY)));
+        assert_ne!(fields.get("__pageError"), Some(&json!(lienzo_engine::print_cmds::SPOOLER_BUSY)));
     });
 }
 
@@ -48,15 +48,15 @@ fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_empty() {
         }
     }));
     app.session.prefs.edit(|p| {
-        p.dialogs.insert(photocraft_engine::print_cmds::REMEMBERED.into(), json!({"printer": "Saved printer", "printerSettings": "0011"}));
+        p.dialogs.insert(lienzo_engine::print_cmds::REMEMBERED.into(), json!({"printer": "Saved printer", "printerSettings": "0011"}));
     });
-    let mut lister = photocraft_engine::Session::new();
+    let mut lister = lienzo_engine::Session::new();
     lister.printer_source = app.session.printer_source.clone();
     let (held_tx, held) = std::sync::mpsc::channel();
     let (release, released_rx) = std::sync::mpsc::channel::<()>();
     let holder = std::thread::spawn(move || {
-        photocraft_engine::print_cmds::with_spooler(|| {
-            assert!(photocraft_engine::print_cmds::rgb_printers(&lister).unwrap().is_empty());
+        lienzo_engine::print_cmds::with_spooler(|| {
+            assert!(lienzo_engine::print_cmds::rgb_printers(&lister).unwrap().is_empty());
             available.store(true, Ordering::SeqCst);
             held_tx.send(()).unwrap();
             let _ = released_rx.recv_timeout(std::time::Duration::from_secs(5));
@@ -72,7 +72,7 @@ fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_empty() {
     assert_eq!(pending, Some(json!(true)));
     assert_eq!(before_retry, (Some(json!("Saved printer")), Some(json!("0011"))));
     fields.insert("dryRun".into(), json!(true));
-    photocraft_engine::print_cmds::with_spooler(|| {
+    lienzo_engine::print_cmds::with_spooler(|| {
         ctx.run_ui(Default::default(), |ui| print_body(&mut app, ui, &mut fields, id)).textures_delta.clear();
         assert_eq!(fields["printer"], "Saved printer");
         assert_eq!(fields["printerSettings"], "0011");
@@ -95,7 +95,7 @@ fn print_dialog_retries_an_uncached_printer_list_after_the_spooler_is_released()
     let released = Arc::new(AtomicBool::new(false));
     let done = Arc::clone(&released);
     let holder = std::thread::spawn(move || {
-        photocraft_engine::print_cmds::with_spooler(|| {
+        lienzo_engine::print_cmds::with_spooler(|| {
             held_tx.send(()).unwrap();
             let _ = released_rx.recv_timeout(std::time::Duration::from_secs(5));
             done.store(true, Ordering::SeqCst);
@@ -113,7 +113,7 @@ fn print_dialog_retries_an_uncached_printer_list_after_the_spooler_is_released()
     assert!(!waited, "opening or drawing Print waited for the spooler");
     assert_eq!(calls_while_busy, 0);
     assert_eq!(fields["__systemPrinters"], json!([]));
-    photocraft_engine::print_cmds::with_spooler(|| {
+    lienzo_engine::print_cmds::with_spooler(|| {
         ctx.run_ui(Default::default(), |ui| print_body(&mut app, ui, &mut fields, id)).textures_delta.clear();
         assert_eq!(fields["__systemPrinters"], json!([{"name": "Retry printer", "default": true}]));
         assert_eq!(fields.get("__printers"), cfg!(windows).then(|| json!(["Retry printer"])).as_ref());
@@ -132,7 +132,7 @@ fn driver_calls_do_not_wait_while_the_spooler_is_busy() {
     let holder = {
         let released = Arc::clone(&released);
         std::thread::spawn(move || {
-            photocraft_engine::print_cmds::with_spooler(|| {
+            lienzo_engine::print_cmds::with_spooler(|| {
                 held_tx.send(()).unwrap();
                 let _ = released_rx.recv_timeout(std::time::Duration::from_secs(5));
                 released.store(true, Ordering::SeqCst);
@@ -154,8 +154,8 @@ fn driver_calls_do_not_wait_while_the_spooler_is_busy() {
     assert!(!waited, "a driver call waited for the spooler");
     assert!(!answered);
     assert!(page.get("__driverPageInitialized").is_none());
-    assert_eq!(page["__pageError"], photocraft_engine::print_cmds::SPOOLER_BUSY);
-    assert_eq!(turn["__pageError"], photocraft_engine::print_cmds::SPOOLER_BUSY);
+    assert_eq!(page["__pageError"], lienzo_engine::print_cmds::SPOOLER_BUSY);
+    assert_eq!(turn["__pageError"], lienzo_engine::print_cmds::SPOOLER_BUSY);
     assert_eq!((turn.get("paper"), turn.get("printerSettings")), (Some(&json!([595.28, 841.89])), None));
 }
 
@@ -173,17 +173,17 @@ fn print_drag_uses_the_resolved_layout_and_screen_points_without_accumulation() 
                 .as_object()
                 .unwrap()
                 .clone();
-                let start = photocraft_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
+                let start = lienzo_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
                 let page = egui::Rect::from_min_size(egui::pos2(20.0, 30.0), egui::vec2(start.paper.0 as f32, start.paper.1 as f32));
                 assert!(drag_print_position(&mut f, start, egui::Vec2::ZERO, 1.0));
-                let manual = photocraft_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
+                let manual = lienzo_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
                 assert!((manual.rect.0 - start.rect.0).abs() < 1e-9);
                 assert!((manual.rect.1 - start.rect.1).abs() < 1e-9);
                 assert_eq!(manual.scale, start.scale);
                 for k in [0.25, 0.5, 1.0, 2.0] {
                     let delta = egui::vec2(-90.0, 45.0) * k;
                     assert!(drag_print_position(&mut f, start, delta, k));
-                    let moved = photocraft_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
+                    let moved = lienzo_engine::print_cmds::layout(doc, &Value::Object(f.clone()), "file.print").unwrap();
                     let old_img = print_preview_image(start, page, k);
                     let new_img = print_preview_image(moved, page, k);
                     assert!((new_img.min - old_img.min - delta).length() < 0.001);
@@ -203,7 +203,7 @@ fn print_drag_uses_the_resolved_layout_and_screen_points_without_accumulation() 
 fn print_drag_rejects_nonfinite_input_and_bounds_offsets() {
     let (app, _) = app();
     let doc = &app.session.active().unwrap().doc;
-    let start = photocraft_engine::print_cmds::layout(doc, &json!({}), "file.print").unwrap();
+    let start = lienzo_engine::print_cmds::layout(doc, &json!({}), "file.print").unwrap();
     let mut f = Map::new();
     for k in [0.0, -1.0, f32::NAN, f32::INFINITY] {
         assert!(!drag_print_position(&mut f, start, egui::vec2(10.0, 10.0), k));
@@ -212,12 +212,12 @@ fn print_drag_rejects_nonfinite_input_and_bounds_offsets() {
     assert!(!drag_print_position(&mut f, start, egui::vec2(f32::NAN, 0.0), 1.0));
     assert!(f.is_empty());
     assert!(drag_print_position(&mut f, start, egui::vec2(-f32::MAX, f32::MAX), 1.0));
-    assert_eq!(f["left"], -photocraft_engine::print_cmds::MAX_POSITION_INCHES);
-    assert_eq!(f["top"], photocraft_engine::print_cmds::MAX_POSITION_INCHES);
+    assert_eq!(f["left"], -lienzo_engine::print_cmds::MAX_POSITION_INCHES);
+    assert_eq!(f["top"], lienzo_engine::print_cmds::MAX_POSITION_INCHES);
 }
 
-fn app() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.printer_source =
         Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), default: true, two_sided: None, description: String::new() }]));
     app.run("file.new", json!({"width": 120, "height": 80, "name": "web"})).unwrap();
@@ -234,8 +234,8 @@ fn droplet_folder_follows_the_document_or_uses_a_safe_fallback() {
     }
     #[cfg(not(target_os = "macos"))]
     assert_eq!(fallback, ".");
-    app.session.active_mut().unwrap().path = Some("/tmp/photocraft/drawing.pcraft".into());
-    assert_eq!(droplet_default_dir(&app), "/tmp/photocraft");
+    app.session.active_mut().unwrap().path = Some("/tmp/lienzo/drawing.pcraft".into());
+    assert_eq!(droplet_default_dir(&app), "/tmp/lienzo");
 }
 
 /// Two actions of one name in sets A and B: Create Droplet starts on the selected action's set
@@ -248,7 +248,7 @@ fn create_droplet_saves_the_selected_sets_action_among_same_named_ones() {
     app.run("file.new", json!({"width": 2, "height": 1})).unwrap();
     let mut list = Vec::new();
     for (set, step) in [("A", "image.adjustments.invert"), ("B", "image.imageRotation.90cw")] {
-        let mut action = photocraft_engine::actions_cmds::Action::new("Retouch", vec![(step.into(), json!({}))]);
+        let mut action = lienzo_engine::actions_cmds::Action::new("Retouch", vec![(step.into(), json!({}))]);
         action.set = Some(set.into());
         list.push(action);
     }
@@ -277,8 +277,8 @@ fn create_droplet_uses_the_action_selected_in_the_form() {
     app.run("file.new", json!({"width": 2, "height": 1})).unwrap();
     app.run("file.saveACopy", json!({"path": input})).unwrap();
     app.session.actions.list = vec![
-        photocraft_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]),
-        photocraft_engine::actions_cmds::Action::new("Rotate", vec![("image.imageRotation.90cw".into(), json!({}))]),
+        lienzo_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]),
+        lienzo_engine::actions_cmds::Action::new("Rotate", vec![("image.imageRotation.90cw".into(), json!({}))]),
     ];
     app.ui.actions.selected = Some(0);
     let id = crate::menus::invoke(&mut app, &ctx, "file.automate.createDroplet", json!({})).unwrap()["dialog"].as_u64().unwrap();
@@ -292,9 +292,9 @@ fn create_droplet_uses_the_action_selected_in_the_form() {
     crate::dialogs::confirm(&mut app, id).unwrap();
     let saved: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     assert_eq!(saved["action"]["steps"], json!([["image.imageRotation.90cw", {}]]));
-    let result = photocraft_engine::Session::new().execute("file.automate.runDroplet", json!({"droplet": path, "input": [input]})).unwrap();
+    let result = lienzo_engine::Session::new().execute("file.automate.runDroplet", json!({"droplet": path, "input": [input]})).unwrap();
     assert_eq!(result["errors"], json!([]));
-    let image = photocraft_io::import("source.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+    let image = lienzo_io::import("source.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
     assert_eq!((image.size.width, image.size.height), (1, 2));
 
     let cancelled = dir.path().join("cancelled.pcdroplet");
@@ -422,16 +422,16 @@ fn save_for_web_starts_at_the_current_document_size() {
 }
 
 /// Save for Web's Image Size on a 120 x 80 document, as a PNG-24 (no other number fields).
-fn web_size_dialog(app: PhotocraftApp) -> (egui_kittest::Harness<'static, PhotocraftApp>, u64) {
+fn web_size_dialog(app: LienzoApp) -> (egui_kittest::Harness<'static, LienzoApp>, u64) {
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1600.0, 1100.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 crate::dialogs::show(app, ui.ctx());
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     let id = open_web(h.state_mut());
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("format".into(), json!("png24"));
     h.run_steps(5);
@@ -439,7 +439,7 @@ fn web_size_dialog(app: PhotocraftApp) -> (egui_kittest::Harness<'static, Photoc
 }
 
 /// Types `text` into the number field now showing `value`, and leaves it with Tab.
-fn type_into_field(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, value: f64, text: &str) {
+fn type_into_field(h: &mut egui_kittest::Harness<'static, LienzoApp>, value: f64, text: &str) {
     use egui_kittest::kittest::{NodeT, Queryable};
     let field = h
         .query_all_by_role(egui::accesskit::Role::SpinButton)
@@ -488,7 +488,7 @@ fn save_for_web_width_keeps_proportions_and_sizes_the_file() {
     let r = crate::dialogs::confirm(h.state_mut(), id).unwrap();
     assert_eq!((r["width"].as_u64(), r["height"].as_u64()), (Some(60), Some(40)), "{r}");
     let st = h.state().session.active().unwrap();
-    assert_eq!((st.revision, st.doc.size), (revision, photocraft_doc::Size::new(120, 80)));
+    assert_eq!((st.revision, st.doc.size), (revision, lienzo_doc::Size::new(120, 80)));
 }
 
 /// Reopened on another document, Save for Web starts at that document's full size again
@@ -548,8 +548,8 @@ fn save_for_web_downloads_images_and_html_through_the_platform_writer() {
 
 #[test]
 fn save_for_web_authorizes_before_opening_a_picker() {
-    fn deny(_: &str, _: &Value) -> photocraft_engine::Result<()> {
-        Err(photocraft_engine::EngineError::Other("export denied".into()))
+    fn deny(_: &str, _: &Value) -> lienzo_engine::Result<()> {
+        Err(lienzo_engine::EngineError::Other("export denied".into()))
     }
     for explicit_path in [false, true] {
         for synthetic_input in [false, true] {
@@ -578,8 +578,8 @@ fn save_for_web_authorizes_before_opening_a_picker() {
 
 #[test]
 fn save_for_web_authorizes_generated_palette_before_opening_a_picker() {
-    fn deny_palette(_: &str, p: &Value) -> photocraft_engine::Result<()> {
-        if p.get("colorTable").is_some() { Err(photocraft_engine::EngineError::Other("palette denied".into())) } else { Ok(()) }
+    fn deny_palette(_: &str, p: &Value) -> lienzo_engine::Result<()> {
+        if p.get("colorTable").is_some() { Err(lienzo_engine::EngineError::Other("palette denied".into())) } else { Ok(()) }
     }
     for synthetic_input in [false, true] {
         let (mut app, _) = app();
@@ -616,9 +616,9 @@ fn save_for_web_keeps_its_width_while_the_matte_is_invalid() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(5);
-    let dialog = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.ctx.data(|m| m.get_temp::<Vec<egui::Rect>>(egui::Id::unique("pc-dialog-rects"))).unwrap()[0];
+    let dialog = |h: &egui_kittest::Harness<'_, LienzoApp>| h.ctx.data(|m| m.get_temp::<Vec<egui::Rect>>(egui::Id::unique("pc-dialog-rects"))).unwrap()[0];
     let before = dialog(&h);
     for matte in ["#1111", "", "#22222", "#111111"] {
         h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("matte".into(), json!(matte));
@@ -638,9 +638,8 @@ fn save_for_web_matte_takes_only_whole_colours() {
     let (mut h, id) = web_size_dialog(app);
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("format".into(), json!("png8"));
     h.run_steps(3);
-    let matte = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
-    let dialog =
-        |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.ctx.data(|m| m.get_temp::<Vec<egui::Rect>>(egui::Id::unique("pc-dialog-rects"))).unwrap()[0];
+    let matte = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
+    let dialog = |h: &egui_kittest::Harness<'static, LienzoApp>| h.ctx.data(|m| m.get_temp::<Vec<egui::Rect>>(egui::Id::unique("pc-dialog-rects"))).unwrap()[0];
     let before = dialog(&h);
     let field = h
         .query_all_by_role(egui::accesskit::Role::TextInput)
@@ -679,8 +678,8 @@ fn save_for_web_matte_short_form_case_paste_and_blur() {
     let (mut h, id) = web_size_dialog(app);
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("format".into(), json!("png8"));
     h.run_steps(3);
-    let matte = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
-    let values = |h: &egui_kittest::Harness<'static, PhotocraftApp>| -> Vec<String> {
+    let matte = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
+    let values = |h: &egui_kittest::Harness<'static, LienzoApp>| -> Vec<String> {
         h.query_all_by_role(egui::accesskit::Role::TextInput).map(|n| n.accesskit_node().value().unwrap_or_default()).collect()
     };
     let field = h
@@ -694,7 +693,7 @@ fn save_for_web_matte_short_form_case_paste_and_blur() {
     h.run_steps(1);
     h.drop_at(field.center());
     h.run_steps(2);
-    let replace_with = |h: &mut egui_kittest::Harness<'static, PhotocraftApp>, text: &str, paste: bool| {
+    let replace_with = |h: &mut egui_kittest::Harness<'static, LienzoApp>, text: &str, paste: bool| {
         h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
         h.key_press(egui::Key::Backspace);
         h.event(if paste { egui::Event::Paste(text.into()) } else { egui::Event::Text(text.into()) });
@@ -734,10 +733,10 @@ fn save_for_web_matte_keeps_typed_text_across_window_focus_loss() {
     let (mut h, id) = web_size_dialog(app);
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("format".into(), json!("png8"));
     h.run_steps(3);
-    let shown = |h: &egui_kittest::Harness<'static, PhotocraftApp>, want: &str| {
+    let shown = |h: &egui_kittest::Harness<'static, LienzoApp>, want: &str| {
         h.query_all_by_role(egui::accesskit::Role::TextInput).any(|n| n.accesskit_node().value().unwrap_or_default() == want)
     };
-    let matte = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
+    let matte = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
     let field = h
         .query_all_by_role(egui::accesskit::Role::TextInput)
         .find(|n| n.accesskit_node().value().as_deref() == Some("#ffffff"))
@@ -792,8 +791,8 @@ fn save_for_web_matte_caches_a_middle_click_paste_that_arrives_with_focus() {
     let (mut h, id) = web_size_dialog(app);
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("format".into(), json!("png8"));
     h.run_steps(3);
-    let matte = |h: &egui_kittest::Harness<'static, PhotocraftApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
-    let values = |h: &egui_kittest::Harness<'static, PhotocraftApp>| -> Vec<String> {
+    let matte = |h: &egui_kittest::Harness<'static, LienzoApp>| h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields["matte"].clone();
+    let values = |h: &egui_kittest::Harness<'static, LienzoApp>| -> Vec<String> {
         h.query_all_by_role(egui::accesskit::Role::TextInput).map(|n| n.accesskit_node().value().unwrap_or_default()).collect()
     };
     let field = h
@@ -831,9 +830,9 @@ fn web_preview_grows_with_resize_and_accepts_zoom_and_pan() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(5);
-    let pane = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+    let pane = |h: &egui_kittest::Harness<'_, LienzoApp>| {
         let r = &h.state().ui.dialogs[0].fields["__previewRects"][0];
         egui::Rect::from_min_max(
             egui::pos2(r[0].as_f64().unwrap() as f32, r[1].as_f64().unwrap() as f32),
@@ -894,21 +893,21 @@ fn web_preview_keeps_its_size_and_zoom_while_the_pointer_moves() {
     for ppp in [1.0, 1.25, 1.5, 1.75, 2.25] {
         for screen in [egui::vec2(1600.0, 1100.0), egui::vec2(1097.0, 617.0), egui::vec2(1280.0, 720.0)] {
             for view in ["2up", "4up", "original"] {
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
                 app.run("file.new", json!({"width": 1980, "height": 1200})).unwrap();
                 let id = open_web(&mut app);
                 app.ui.dialog_mut(id).unwrap().fields.insert("__view".into(), json!(view));
                 let mut h = egui_kittest::Harness::builder().with_size(screen).with_pixels_per_point(ppp).build_ui_state(
-                    |ui, app: &mut PhotocraftApp| {
+                    |ui, app: &mut LienzoApp| {
                         if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                             crate::dialogs::show(app, ui.ctx());
                         }
                     },
                     app,
                 );
-                PhotocraftApp::setup_context(&h.ctx, Default::default());
+                LienzoApp::setup_context(&h.ctx, Default::default());
                 h.run_steps(8);
-                let layout = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+                let layout = |h: &egui_kittest::Harness<'_, LienzoApp>| {
                     let f = &h.state().ui.dialogs[0].fields;
                     let rects: Vec<egui::Rect> = h.ctx.data(|m| m.get_temp(egui::Id::unique("pc-dialog-rects"))).unwrap();
                     (rects[0], f["__previewRects"].clone(), f["__effectiveZoom"].clone())
@@ -993,7 +992,7 @@ fn printer_menu_lists_the_spooler_printers_after_the_default() {
     assert_eq!(printer_options(None, "").len(), 1);
     // The dialog asks the engine, and the list never reaches file.print's params.
     let (mut app, ctx) = app();
-    let id = photocraft_engine::print_cmds::with_spooler(|| crate::menus::invoke(&mut app, &ctx, "file.print", json!({})).unwrap()["dialog"].as_u64().unwrap());
+    let id = lienzo_engine::print_cmds::with_spooler(|| crate::menus::invoke(&mut app, &ctx, "file.print", json!({})).unwrap()["dialog"].as_u64().unwrap());
     let f = &app.ui.dialog_mut(id).unwrap().fields;
     assert_eq!(f["__systemPrinters"], json!([{"name": "Test printer", "default": true}]));
     assert_eq!(f.get("__printers"), cfg!(windows).then(|| json!(["Test printer"])).as_ref());
@@ -1002,7 +1001,7 @@ fn printer_menu_lists_the_spooler_printers_after_the_default() {
     }
     assert!(params(f).get("__systemPrinters").is_none());
     assert!(params(f).get("__printers").is_none());
-    assert_eq!(photocraft_engine::print_cmds::system_printer_listings(), 0, "a test asked the system spooler for its printers");
+    assert_eq!(lienzo_engine::print_cmds::system_printer_listings(), 0, "a test asked the system spooler for its printers");
 }
 
 /// An output path or a preview typed and confirmed in one frame doesn't take the driver's area.
@@ -1025,8 +1024,7 @@ fn the_printable_area_goes_only_with_a_print_to_the_printer() {
 fn print_dialog_opens_with_the_settings_remembered_from_an_earlier_session() {
     let (mut app, _) = app();
     app.session.prefs.edit(|p| {
-        p.dialogs
-            .insert(photocraft_engine::print_cmds::REMEMBERED.into(), json!({"paper": "a5", "scale": 50, "orientation": "landscape", "intent": "perceptual"}));
+        p.dialogs.insert(lienzo_engine::print_cmds::REMEMBERED.into(), json!({"paper": "a5", "scale": 50, "orientation": "landscape", "intent": "perceptual"}));
     });
     let id = open_print(&mut app);
     let f = &app.ui.dialog_mut(id).unwrap().fields;
@@ -1043,8 +1041,8 @@ fn save_as_pdf_browse_fills_the_output_from_a_save_dialog() {
     let out = std::env::temp_dir().join(format!("pc-printui-browse-{}", std::process::id())).to_string_lossy().into_owned();
     let (show, asked) = crate::file_dialog::fake(vec![Some(FileDialogAnswer::SaveTo(out.clone()))]);
     let mut h = Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
         app.session.printer_source =
             Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), default: true, two_sided: None, description: String::new() }]));
         app
@@ -1098,7 +1096,7 @@ fn turning_without_a_driver_keeps_the_settings_and_shows_the_error() {
     assert!(craft_print::rgb::DevMode::from_hex(&hex).is_ok());
     let (mut app, _) = app();
     let mut f = Map::new();
-    f.insert("printer".into(), json!("photocraft-no-such-printer"));
+    f.insert("printer".into(), json!("lienzo-no-such-printer"));
     f.insert("printerSettings".into(), json!(hex));
     f.insert("paper".into(), json!([595.28, 841.89]));
     turn_driver(&mut app, &mut f, true);
@@ -1147,7 +1145,7 @@ fn a_turn_takes_the_printable_area_with_the_paper() {
     f.insert("printable".into(), json!([12.0, 12.0, 818.29, 1167.14]));
     f.insert("orientation".into(), json!("portrait"));
     take_turned_page(&mut f, &json!({"printerSettings": "new", "paper": [1191.14, 842.29], "printable": [12.0, 12.0, 1167.14, 818.29]}));
-    let l = photocraft_engine::print_cmds::layout(&doc, &print_params(&f), "file.print");
+    let l = lienzo_engine::print_cmds::layout(&doc, &print_params(&f), "file.print");
     assert_eq!(l.map(|l| l.paper).map_err(|e| e.to_string()), Ok((1191.14, 842.29)));
     assert_eq!(f.get("printable"), Some(&json!([12.0, 12.0, 1167.14, 818.29])));
     // An answer without a usable area drops the old one: the fixed margin, not a stale area.
@@ -1176,7 +1174,7 @@ fn the_web_preview_selects_slices_and_saves_only_the_selected_ones() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(5);
     let r = &h.state().ui.dialogs[0].fields["__previewRects"][0];
     let pane = egui::Rect::from_min_max(
@@ -1186,7 +1184,7 @@ fn the_web_preview_selects_slices_and_saves_only_the_selected_ones() {
     // The preview fits the document in the pane, centred.
     let scale = (pane.width() / 120.0).min(pane.height() / 80.0);
     let at = |x: f32, y: f32| pane.center() + egui::vec2(x - 60.0, y - 40.0) * scale;
-    let click = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, pos: egui::Pos2, modifiers: egui::Modifiers| {
+    let click = |h: &mut egui_kittest::Harness<'_, LienzoApp>, pos: egui::Pos2, modifiers: egui::Modifiers| {
         // The window reports held modifiers as their own event as well as on the button events.
         h.event(egui::Event::ModifiersChanged(modifiers));
         h.event(egui::Event::PointerMoved(pos));
@@ -1196,7 +1194,7 @@ fn the_web_preview_selects_slices_and_saves_only_the_selected_ones() {
         h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: false, modifiers });
         h.run_steps(2);
     };
-    let selected = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().ui.dialogs[0].fields.get("__selectedSlices").cloned();
+    let selected = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().ui.dialogs[0].fields.get("__selectedSlices").cloned();
     click(&mut h, at(30.0, 40.0), egui::Modifiers::NONE);
     assert_eq!(selected(&h), Some(json!([1])), "a click selects the slice under the pointer");
     click(&mut h, at(90.0, 40.0), egui::Modifiers::SHIFT);

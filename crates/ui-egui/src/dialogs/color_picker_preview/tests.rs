@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::{LayerContent, TextLayer};
+use lienzo_doc::{LayerContent, TextLayer};
 use serde_json::json;
 
 thread_local! {
@@ -7,15 +7,15 @@ thread_local! {
     pub(super) static BUILDS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-fn app_at(depth: u32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_at(depth: u32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 200, "depth": depth})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
     app
 }
 
-fn new_type_layer(app: &mut PhotocraftApp, text: &str) -> LayerId {
+fn new_type_layer(app: &mut LienzoApp, text: &str) -> LayerId {
     LayerId(app.run("type.create", json!({"text": text, "color": "#000000"})).unwrap()["layer"].as_u64().unwrap())
 }
 
@@ -41,18 +41,18 @@ fn rgb_at(doc: &Document, id: LayerId, ci: usize) -> [u8; 4] {
 }
 
 /// Open the text Color Picker and move it to `color`, as dragging in its field does.
-fn pick(app: &mut PhotocraftApp, color: &str) -> u64 {
+fn pick(app: &mut LienzoApp, color: &str) -> u64 {
     let dialog = crate::type_tool::open_color_picker(app, [0.0; 3]);
     set_color(app, color);
     dialog
 }
 
-fn set_color(app: &mut PhotocraftApp, color: &str) {
+fn set_color(app: &mut LienzoApp, color: &str) {
     app.ui.dialogs.last_mut().unwrap().fields.insert("color".into(), json!(color));
 }
 
 /// What the session holds: document, revision, dirty flag and history length.
-fn committed(app: &PhotocraftApp) -> (Arc<Document>, u64, bool, usize) {
+fn committed(app: &LienzoApp) -> (Arc<Document>, u64, bool, usize) {
     let st = app.session.active().unwrap();
     (st.doc.clone(), st.revision, st.is_dirty(), st.history.entries().len())
 }
@@ -246,7 +246,7 @@ fn ok_counts_the_previewed_canvas_as_the_document_so_only_the_layer_is_redrawn()
         // The canvas draws the preview, then OK commits it.
         crate::canvas::ensure_texture(&mut app, &ctx, 0, None).unwrap();
         let doc_id = app.session.active().unwrap().doc.id;
-        let cached = |app: &PhotocraftApp| {
+        let cached = |app: &LienzoApp| {
             let c = &app.canvases[&crate::canvas::cache_key(doc_id, None)];
             (c.tex_revision, c.tex_preview_key)
         };
@@ -259,7 +259,7 @@ fn ok_counts_the_previewed_canvas_as_the_document_so_only_the_layer_is_redrawn()
         let seen = cached(&app);
         assert_eq!(seen.1, dk, "gradient={gradient}: OK's edit is what the canvas already shows");
         // So the commit's own damage is all the canvas refreshes, not the whole document.
-        let edit = photocraft_geom::Rect::new(1, 2, 3, 4);
+        let edit = lienzo_geom::Rect::new(1, 2, 3, 4);
         let damage = crate::canvas::damage_since(&app, 0, seen, (revision, 0), dk, (revision - 1, Some(edit)));
         assert_eq!(damage, Some(edit), "gradient={gradient}");
     }
@@ -341,13 +341,13 @@ fn every_selected_type_layer_is_previewed_and_refreshed() {
 
 /// Colour stop `i` (by location) of gradient fill layer `id`, as 8-bit RGB.
 fn stop_rgb(doc: &Document, id: LayerId, i: usize) -> [u8; 3] {
-    let LayerContent::Fill(photocraft_doc::Fill::Gradient { stops, .. }) = &doc.layer(id).unwrap().content else { panic!("not a gradient fill") };
+    let LayerContent::Fill(lienzo_doc::Fill::Gradient { stops, .. }) = &doc.layer(id).unwrap().content else { panic!("not a gradient fill") };
     let mut sorted = stops.clone();
     sorted.sort_by(|a, b| a.0.total_cmp(&b.0));
     sorted[i].1.to_rgb().map(|v| (v * 255.0).round() as u8)
 }
 
-fn new_gradient_fill(app: &mut PhotocraftApp) -> LayerId {
+fn new_gradient_fill(app: &mut LienzoApp) -> LayerId {
     LayerId(app.run("layer.newFillLayer.gradient", json!({"from": "#000000", "to": "#ffffff"})).unwrap()["layer"].as_u64().unwrap())
 }
 

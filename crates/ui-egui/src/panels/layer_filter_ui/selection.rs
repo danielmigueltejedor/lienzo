@@ -4,17 +4,17 @@
 //! nothing. Like any layer selection this is no history step. A layer selected later, while the
 //! filter hides it, stays selected: the filter only acts when it changes.
 
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
 use super::Filter;
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Deselect the layers the filter hides when its criteria changed since the last call. The
 /// criteria are kept in `ctx`'s memory, so a change from the filter row or from `ui.set
 /// {layerFilter}` is seen the next time the row is drawn; with nothing kept yet (the row's first
 /// draw, e.g. after `ui.set` while the panel was closed) a filter that is on counts as applied.
-pub fn follow(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn follow(app: &mut LienzoApp, ctx: &egui::Context) {
     let id = egui::Id::unique("layer-filter-applied");
     let now = Filter::of(&app.ui);
     let before = ctx.data_mut(|d| {
@@ -29,7 +29,7 @@ pub fn follow(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Deselect the active document's selected layers that [`Filter::of_app`] doesn't list: through
 /// `select.deselectLayers` when none stays listed, else by keeping only the listed ones.
-pub fn deselect_hidden(app: &mut PhotocraftApp) {
+pub fn deselect_hidden(app: &mut LienzoApp) {
     let f = Filter::of_app(app);
     if !f.active() {
         return;
@@ -46,5 +46,5 @@ pub fn deselect_hidden(app: &mut PhotocraftApp) {
     }
     let active = st.active_layer.filter(|a| listed.contains(a)).or(listed.last().copied());
     let anchor = st.layer_anchor.filter(|a| listed.contains(a)).or(active);
-    let _ = photocraft_engine::layer_multi_cmds::set_selection(&mut app.session, listed, active, anchor);
+    let _ = lienzo_engine::layer_multi_cmds::set_selection(&mut app.session, listed, active, anchor);
 }

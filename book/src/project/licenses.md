@@ -1,6 +1,6 @@
 # Licenses
 
-PhotoCraft source is dual-licensed under MIT or Apache-2.0 at the user's option. The authoritative terms are the repository files:
+Lienzo source is dual-licensed under MIT or Apache-2.0 at the user's option. The authoritative terms are the repository files:
 
 - [`LICENSE-MIT`](https://github.com/storytold/photocraft/blob/main/LICENSE-MIT)
 - [`LICENSE-APACHE`](https://github.com/storytold/photocraft/blob/main/LICENSE-APACHE)

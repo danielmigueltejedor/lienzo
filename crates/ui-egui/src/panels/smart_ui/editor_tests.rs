@@ -3,16 +3,16 @@ use egui_kittest::{Harness, kittest::Queryable};
 use serde_json::json;
 
 use crate::{
-    PhotocraftApp,
+    LienzoApp,
     smart_filter_dialog::tests::{app, smart},
 };
 
 /// The app with a recorded Smart Object, in a `width`-point dock and the given theme, ready to click.
-fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'static, LienzoApp> {
     let (app, _) = app(8, "rgb");
     let mut h =
         Harness::builder().with_size(vec2(1200.0, 850.0)).with_pixels_per_point(scale).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, theme);
+            LienzoApp::setup_context(&cc.egui_ctx, theme);
             app
         });
     let ctx = h.ctx.clone();
@@ -26,7 +26,7 @@ fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'s
 }
 
 /// Click `at` with the primary button, hovering first so the row reacts.
-fn click(h: &mut Harness<'_, PhotocraftApp>, at: egui::Pos2) {
+fn click(h: &mut Harness<'_, LienzoApp>, at: egui::Pos2) {
     h.hover_at(at);
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: at, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -130,8 +130,8 @@ fn stored_after_confirming_unedited(mode: &str, command: &str, recorded: &serde_
     let sm = smart(&app, layer).clone();
     let index = sm.smart_filters.len() - 1;
     assert_eq!(sm.smart_filters[index].command, command);
-    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut PhotocraftApp| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut LienzoApp| crate::dialogs::show(app, ui.ctx()), app);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let ctx = h.ctx.clone();
     super::open_editor(h.state_mut(), &ctx, layer.0, &sm, index);
     let dialog = h.state().ui.dialogs.last().unwrap().id;
@@ -147,12 +147,12 @@ fn stored_after_confirming_unedited(mode: &str, command: &str, recorded: &serde_
 /// read over the recorded ones.
 #[test]
 fn confirming_an_unedited_adjustment_smart_filter_keeps_what_it_renders() {
-    use photocraft_doc::ColorMode::{Cmyk, Lab, Rgb};
-    use photocraft_engine::adjust_params::{default_for, from_params};
+    use lienzo_doc::ColorMode::{Cmyk, Lab, Rgb};
+    use lienzo_engine::adjust_params::{default_for, from_params};
     let dim = json!([[0, 0], [128, 64], [255, 255]]);
     let lift = json!([[0, 40], [255, 255]]);
-    let drawn: Vec<f64> = (0..photocraft_doc::adjust::CURVE_MAP_LEN).map(|level| level as f64 * 0.5).collect();
-    let jagged: Vec<f64> = (0..photocraft_doc::adjust::CURVE_MAP_LEN).map(|level| if level % 2 == 0 { 40.0 } else { 200.0 }).collect();
+    let drawn: Vec<f64> = (0..lienzo_doc::adjust::CURVE_MAP_LEN).map(|level| level as f64 * 0.5).collect();
+    let jagged: Vec<f64> = (0..lienzo_doc::adjust::CURVE_MAP_LEN).map(|level| if level % 2 == 0 { 40.0 } else { 200.0 }).collect();
     let cases = [
         ("lab", Lab, "curves", json!({"pencil": true, "smooth": 2, "points": jagged})),
         ("rgb", Rgb, "curves", json!({"pencil": true, "smooth": 2, "points": jagged})),
@@ -235,7 +235,7 @@ fn smart_and_layer_masks_have_separate_thumbnail_cache_entries() {
     let ctx = egui::Context::default();
     let first = app.mask_thumb(&ctx, &doc, layer, mask);
     let mut other = mask.clone();
-    other.surface.fill_rect(photocraft_geom::Rect::new(0, 0, 64, 48), &[0.0]);
+    other.surface.fill_rect(lienzo_geom::Rect::new(0, 0, 64, 48), &[0.0]);
     let second = app.mask_thumb_kind(&ctx, &doc, layer, &other, crate::mask_thumbs_ui::THUMB_SMART_MASK);
     assert_ne!(first, second);
     assert_eq!(first, app.mask_thumb(&ctx, &doc, layer, mask));
@@ -247,14 +247,14 @@ fn ctrl_i_uses_existing_invert_command_and_undo_redo_keep_the_source() {
     let mut h = harness(290.0, 1.0, Default::default());
     let layer = h.state().session.active().unwrap().active_layer.unwrap();
     let before = smart(h.state(), layer).clone();
-    let source = photocraft_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap();
+    let source = lienzo_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap();
     let steps = h.state().session.active().unwrap().history.past_len();
     h.key_press_modifiers(Modifiers::COMMAND, egui::Key::I);
     h.run_steps(4);
     let sm = smart(h.state(), layer);
     assert_eq!(sm.smart_filters.len(), 3);
     assert_eq!(sm.smart_filters[2].command, "image.adjustments.invert");
-    assert_eq!(photocraft_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap(), source);
+    assert_eq!(lienzo_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap(), source);
     assert_ne!(sm.cache.as_ref().unwrap().pixel(8, 8), before.cache.as_ref().unwrap().pixel(8, 8));
     assert_eq!(h.state().session.active().unwrap().history.past_len(), steps + 1);
     h.state_mut().run("edit.undo", json!({})).unwrap();
@@ -290,31 +290,31 @@ fn filter_editor_starts_missing_parameters_from_defaults_not_remembered_values()
 }
 
 /// A smart object in a `mode` document with `command` recorded as its one smart filter, and its layer id.
-fn adjustment_filter(mode: &str, command: &str, params: serde_json::Value) -> (PhotocraftApp, u64) {
-    let mut s = photocraft_engine::Session::new();
+fn adjustment_filter(mode: &str, command: &str, params: serde_json::Value) -> (LienzoApp, u64) {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48, "mode": mode})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("edit.fill", json!({"contents": "black"})).unwrap();
     let id = s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
     s.execute(command, params).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = LienzoApp::new(s, crate::Services::default());
     app.background_jobs = false;
     (app, id)
 }
 
 /// The smart object on layer `id`.
-fn recorded(app: &PhotocraftApp, id: u64) -> photocraft_doc::SmartObject {
-    match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.clone(),
+fn recorded(app: &LienzoApp, id: u64) -> lienzo_doc::SmartObject {
+    match &app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().content {
+        lienzo_doc::LayerContent::Smart(sm) => sm.clone(),
         other => panic!("expected a smart object, got {}", other.kind_name()),
     }
 }
 
 /// The app in a harness with the editor of the layer's first smart filter open, and the dialog's id.
-fn edit_first_filter(app: PhotocraftApp, id: u64) -> (Harness<'static, PhotocraftApp>, u64) {
+fn edit_first_filter(app: LienzoApp, id: u64) -> (Harness<'static, LienzoApp>, u64) {
     let sm = recorded(&app, id);
-    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut PhotocraftApp| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut LienzoApp| crate::dialogs::show(app, ui.ctx()), app);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let ctx = h.ctx.clone();
     super::open_editor(h.state_mut(), &ctx, id, &sm, 0);
     let dialog = h.state().ui.dialogs.last().unwrap().id;
@@ -339,8 +339,8 @@ fn a_channel_mixer_smart_filter_turned_off_monochrome_keeps_its_red_row() {
 
     let sm = recorded(h.state(), id);
     assert_eq!(sm.smart_filters.len(), 1, "no filter was stacked");
-    let adjustment = photocraft_engine::adjust_params::from_params("channelMixer", &sm.smart_filters[0].params, None, photocraft_doc::ColorMode::Rgb).unwrap();
-    let photocraft_doc::Adjustment::ChannelMixer { matrix, monochrome } = adjustment else { panic!("Channel Mixer params") };
+    let adjustment = lienzo_engine::adjust_params::from_params("channelMixer", &sm.smart_filters[0].params, None, lienzo_doc::ColorMode::Rgb).unwrap();
+    let lienzo_doc::Adjustment::ChannelMixer { matrix, monochrome } = adjustment else { panic!("Channel Mixer params") };
     assert!(!monochrome);
     assert!(matrix[0].iter().zip([0.7, 0.3, 0.0, 0.0]).all(|(a, b)| (a - b).abs() < 1e-5), "the edited Red row renders: {:?}", matrix[0]);
 }
@@ -363,9 +363,9 @@ fn a_lab_curves_smart_filter_keeps_a_lightness_edit() {
 
     let sm = recorded(h.state(), id);
     assert_eq!(sm.smart_filters.len(), 1, "no filter was stacked");
-    let read = |params: &serde_json::Value| photocraft_engine::adjust_params::from_params("curves", params, None, photocraft_doc::ColorMode::Lab).unwrap();
-    let photocraft_doc::Adjustment::Curves { per_channel, .. } = read(&sm.smart_filters[0].params) else { panic!("Curves params") };
-    let photocraft_doc::Adjustment::Curves { per_channel: wanted, .. } = read(&json!({"lightness": edited})) else { panic!("Curves params") };
+    let read = |params: &serde_json::Value| lienzo_engine::adjust_params::from_params("curves", params, None, lienzo_doc::ColorMode::Lab).unwrap();
+    let lienzo_doc::Adjustment::Curves { per_channel, .. } = read(&sm.smart_filters[0].params) else { panic!("Curves params") };
+    let lienzo_doc::Adjustment::Curves { per_channel: wanted, .. } = read(&json!({"lightness": edited})) else { panic!("Curves params") };
     assert_eq!(per_channel[0], wanted[0], "the edited Lightness renders");
     assert!(sm.smart_filters[0].params.get("points").is_none(), "the removed alias is not stored");
 }

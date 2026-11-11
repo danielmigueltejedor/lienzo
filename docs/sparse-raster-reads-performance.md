@@ -31,7 +31,7 @@ The shared harness times in-memory operations. Input loading, image conversion, 
 
 All real read-region and render float bits match main. The committed previous-read-region oracle also covers sparse boundaries, negative coordinates, signed zero, defaults and eight pixel formats.
 
-Current local checks: `cargo test -p photocraft-raster --locked --lib` (27 passed, one ignored manual benchmark); strict all-target Clippy; affected wasm32 check. All passed. The existing previous-read-path oracle covers the shared loop.
+Current local checks: `cargo test -p lienzo-raster --locked --lib` (27 passed, one ignored manual benchmark); strict all-target Clippy; affected wasm32 check. All passed. The existing previous-read-path oracle covers the shared loop.
 
 Local raw evidence and the shared harness: `.local/perf-real-261019/` in the repository checkout (ignored). This comparison supersedes the earlier synthetic performance table. Small synthetic unit fixtures remain correctness checks; ignored synthetic timing tests were not run.
 
@@ -39,7 +39,7 @@ Local raw evidence and the shared harness: `.local/perf-real-261019/` in the rep
 
 These checks passed when the split was prepared; they were not all rerun for this benchmark review. Current affected checks are listed above where production code changed.
 
-- `cargo test -p photocraft-raster --locked`: passed (27 passed, 1 ignored).
-- `cargo clippy -p photocraft-raster --locked --all-targets -- -D warnings`: passed.
+- `cargo test -p lienzo-raster --locked`: passed (27 passed, 1 ignored).
+- `cargo clippy -p lienzo-raster --locked --all-targets -- -D warnings`: passed.
 - `cargo xtask layers`: passed.
-- `cargo check -p photocraft-raster --locked --target wasm32-unknown-unknown`: passed.
+- `cargo check -p lienzo-raster --locked --target wasm32-unknown-unknown`: passed.

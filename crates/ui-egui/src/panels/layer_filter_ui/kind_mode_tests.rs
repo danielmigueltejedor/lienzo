@@ -2,21 +2,21 @@
 //! layers (solid colour without a vector shape, gradient, pattern) match no Kind button, a solid
 //! colour fill with a vector mask lists as a shape, and the Mode list has no Pass Through.
 
-use photocraft_color::BlendMode;
-use photocraft_doc::Document;
+use lienzo_color::BlendMode;
+use lienzo_doc::Document;
 use serde_json::json;
 
 use super::{Filter, FilterBy, KINDS};
 use crate::state::UiState;
 
-fn new_session() -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn new_session() -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s
 }
 
 /// Make a layer with `cmd`, name it `name` and return its id.
-fn make(s: &mut photocraft_engine::Session, cmd: &str, params: serde_json::Value, name: &str) -> u64 {
+fn make(s: &mut lienzo_engine::Session, cmd: &str, params: serde_json::Value, name: &str) -> u64 {
     let id = s.execute(cmd, params).unwrap()["layer"].as_u64().unwrap();
     s.execute("layer.setProps", json!({"layer": id, "name": name})).unwrap();
     id
@@ -36,7 +36,7 @@ fn mode(mode: BlendMode) -> Filter {
 }
 
 /// Every kind of fill layer, a solid fill with a vector mask, and a Gradient Map adjustment.
-fn fills() -> photocraft_engine::Session {
+fn fills() -> lienzo_engine::Session {
     let mut s = new_session();
     make(&mut s, "layer.newFillLayer.solidColor", json!({"color": "#112233"}), "Solid");
     let shaped = make(&mut s, "layer.newFillLayer.solidColor", json!({"color": "#445566"}), "Solid shape");

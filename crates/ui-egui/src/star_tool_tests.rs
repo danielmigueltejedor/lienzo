@@ -1,25 +1,25 @@
 //! The Star Tool (#11377): in the shape slot between Polygon and Line, on U, and a drag makes a
-//! live star shape layer with PhotoCraft's star defaults (5 points, star ratio 0.5).
+//! live star shape layer with Lienzo's star defaults (5 points, star ratio 0.5).
 
 use egui::{Key, Modifiers};
-use photocraft_doc::{Color, Fill, LayerContent, LiveShape, ShapeLayer};
+use lienzo_doc::{Color, Fill, LayerContent, LiveShape, ShapeLayer};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::panels::toolbar::TOOL_SECTIONS;
 use crate::state::Tool;
 
 const SHAPES: [Tool; 7] = [Tool::Rectangle, Tool::EllipseShape, Tool::Triangle, Tool::Polygon, Tool::Star, Tool::Line, Tool::CustomShape];
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app
 }
 
-fn press(app: &mut PhotocraftApp, key: Key, modifiers: Modifiers) {
+fn press(app: &mut LienzoApp, key: Key, modifiers: Modifiers) {
     let ctx = egui::Context::default();
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
@@ -30,14 +30,14 @@ fn press(app: &mut PhotocraftApp, key: Key, modifiers: Modifiers) {
     ctx.end_pass().textures_delta.clear();
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Move { x: (from[0] + to[0]) / 2.0, y: (from[1] + to[1]) / 2.0, pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Move { x: to[0], y: to[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, mods);
 }
 
-fn shape_layer(app: &PhotocraftApp) -> Option<ShapeLayer> {
+fn shape_layer(app: &LienzoApp) -> Option<ShapeLayer> {
     let st = app.session.active()?;
     match &st.doc.layer(st.active_layer?)?.content {
         LayerContent::Shape(s) => Some(s.clone()),
@@ -45,7 +45,7 @@ fn shape_layer(app: &PhotocraftApp) -> Option<ShapeLayer> {
     }
 }
 
-fn live_shape(app: &PhotocraftApp) -> Option<LiveShape> {
+fn live_shape(app: &LienzoApp) -> Option<LiveShape> {
     shape_layer(app)?.live
 }
 

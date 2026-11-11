@@ -72,7 +72,7 @@ pub(super) fn caf_from(d: &Descriptor) -> Mapped {
     let Some(mut p) = recorded(d) else { return Mapped::Unsupported { harmless: false } };
     if descriptor(&p).as_ref() != Some(d) {
         // Key order, descriptor identity and ID encoding are wire data, not native options.
-        p[SOURCE] = photocraft_paint::tile::b64_encode(&d.to_bytes()).into();
+        p[SOURCE] = lienzo_paint::tile::b64_encode(&d.to_bytes()).into();
     }
     step(CMD, p)
 }
@@ -83,7 +83,7 @@ pub(super) fn caf_to(_: &str, p: &Value) -> Option<Descriptor> {
     if p.get(SOURCE).is_none() {
         return Some(canonical);
     }
-    let source = Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
+    let source = Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
     // Validate preserved data even after an edit; it cannot hide unsupported source options.
     let original = descriptor(&recorded(&source)?)?;
     // A supported edit has a verified canonical form; stale wire data cannot override it.

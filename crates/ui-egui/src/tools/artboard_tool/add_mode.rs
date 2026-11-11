@@ -5,27 +5,27 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 /// True while the Artboard tool is current and its placing mode is on.
-pub(super) fn active(app: &PhotocraftApp) -> bool {
+pub(super) fn active(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Artboard && app.ui.artboard_tool.adding
 }
 
 /// The Add New Artboard button: turns the mode on, or off when it is already on.
-pub(super) fn toggle(app: &mut PhotocraftApp) {
+pub(super) fn toggle(app: &mut LienzoApp) {
     app.ui.artboard_tool.adding = !app.ui.artboard_tool.adding;
 }
 
 /// Another tool is current: the mode ends.
-pub(super) fn leave(app: &mut PhotocraftApp) {
+pub(super) fn leave(app: &mut LienzoApp) {
     app.ui.artboard_tool.adding = false;
 }
 
 /// A click at document point `p` on empty canvas: one `layer.new.artboard` with the bar's size and
 /// its top-left corner at the click, rounded to whole pixels. None when the mode is off.
-pub(super) fn click(app: &mut PhotocraftApp, p: [f64; 2]) -> Option<Result<Value, String>> {
+pub(super) fn click(app: &mut LienzoApp, p: [f64; 2]) -> Option<Result<Value, String>> {
     if !active(app) {
         return None;
     }

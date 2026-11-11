@@ -3,7 +3,7 @@
 //! any size; and it opens images whose single buffer the whole-image decoder refuses.
 
 use crate::common::tiffgen::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 /// A deterministic byte pattern.
 fn noise(n: usize, seed: u32) -> Vec<u8> {

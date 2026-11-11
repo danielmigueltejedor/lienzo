@@ -7,107 +7,107 @@
     {
       "number": 3139,
       "commit": "ab7b1412d0e62257049af1ce66f24710d86ef9b7",
-      "title": "Merge approved PhotoCraft PR #3139: Draw right-to-left layer names in visual word order"
+      "title": "Merge approved Lienzo PR #3139: Draw right-to-left layer names in visual word order"
     },
     {
       "number": 3345,
       "commit": "5a5e2c48ddbd36bb98c1e4378e34dc3d906915c4",
-      "title": "Merge approved PhotoCraft PR #3345: Add grouped gradient presets and selectable style icons"
+      "title": "Merge approved Lienzo PR #3345: Add grouped gradient presets and selectable style icons"
     },
     {
       "number": 3967,
       "commit": "97dfeda00cbcd1399532db4dca7eb419a01f47b2",
-      "title": "Merge approved PhotoCraft PR #3967: Add move and delete actions to Smart Filter rows"
+      "title": "Merge approved Lienzo PR #3967: Add move and delete actions to Smart Filter rows"
     },
     {
       "number": 4042,
       "commit": "b753d0e942e67a5eb4d0dcefa9b1a53804ccfb8c",
-      "title": "Merge approved PhotoCraft PR #4042: feat(canvas): rotate view with Shift + middle-mouse drag"
+      "title": "Merge approved Lienzo PR #4042: feat(canvas): rotate view with Shift + middle-mouse drag"
     },
     {
       "number": 4783,
       "commit": "7836d4b9e6914452cce273de75e786db1ae2932c",
-      "title": "Merge approved PhotoCraft PR #4783: Fix/4758 type extreme finite geometry 20261013s1215"
+      "title": "Merge approved Lienzo PR #4783: Fix/4758 type extreme finite geometry 20261013s1215"
     },
     {
       "number": 4890,
       "commit": "1daf3bc079e7105ee5a8536ebf1b41480ba0cfeb",
-      "title": "Merge approved PhotoCraft PR #4890: Add scrollbar visibility preferences (#3262)"
+      "title": "Merge approved Lienzo PR #4890: Add scrollbar visibility preferences (#3262)"
     },
     {
       "number": 5453,
       "commit": "8323688e1f21cb4362e3386bd027bcc5d5c33806",
-      "title": "Merge approved PhotoCraft PR #5453: Shapes: independent fill and stroke paints (solid, gradient, pattern), part 1"
+      "title": "Merge approved Lienzo PR #5453: Shapes: independent fill and stroke paints (solid, gradient, pattern), part 1"
     },
     {
       "number": 5493,
       "commit": "c81347aaa86e7304fbcd11f873f5b4de1e910263",
-      "title": "Merge approved PhotoCraft PR #5493: Import Photoshop custom shape sets into the Shapes panel"
+      "title": "Merge approved Lienzo PR #5493: Import Photoshop custom shape sets into the Shapes panel"
     },
     {
       "number": 6621,
       "commit": "78f9c137b36b38fe90ebbebe2d3661a174a52622",
-      "title": "Merge approved PhotoCraft PR #6621: Crop: right-click on the pending crop opens the crop menu (#6561)"
+      "title": "Merge approved Lienzo PR #6621: Crop: right-click on the pending crop opens the crop menu (#6561)"
     },
     {
       "number": 8347,
       "commit": "a62b9ee21771e5d7d312cc2be02ba02a8d3b6383",
-      "title": "Merge approved PhotoCraft PR #8347: Type: Roman Hanging Punctuation (trailing marks hang, don't steer the alignment)"
+      "title": "Merge approved Lienzo PR #8347: Type: Roman Hanging Punctuation (trailing marks hang, don't steer the alignment)"
     },
     {
       "number": 9282,
       "commit": "0fd326b1ccb0d548e78d5eeabcbf80aeb44d54b0",
-      "title": "Merge approved PhotoCraft PR #9282: feat(ui): Preset menus for Levels, Exposure, Black & White and Channel Mixer"
+      "title": "Merge approved Lienzo PR #9282: feat(ui): Preset menus for Levels, Exposure, Black & White and Channel Mixer"
     },
     {
       "number": 7742,
       "commit": "99cf87f5ec7fb6b25d121b6c29c33a83be020d68",
-      "title": "Merge approved PhotoCraft PR #7742: Actions: a fractional setting an integer field cannot hold is refused, not rounded"
+      "title": "Merge approved Lienzo PR #7742: Actions: a fractional setting an integer field cannot hold is refused, not rounded"
     },
     {
       "number": 5090,
       "commit": "2f6156bebe1271bfe64fe0e594cc68e62d792726",
-      "title": "Merge approved PhotoCraft PR #5090: Actions: add editable PhotoCraft Essentials starter presets"
+      "title": "Merge approved Lienzo PR #5090: Actions: add editable Lienzo Essentials starter presets"
     },
     {
       "number": 3455,
       "commit": "6e13443ca662e262bd9f8c1eb33718c69259fc85",
-      "title": "Merge approved PhotoCraft PR #3455: Undo and redo action definition edits from the Actions panel"
+      "title": "Merge approved Lienzo PR #3455: Undo and redo action definition edits from the Actions panel"
     },
     {
       "number": 1991,
       "commit": "45e790c2166c89db505bf7926982ebfddf6673ed",
-      "title": "Merge approved PhotoCraft PR #1991: feat(actions): import and export reusable Actions JSON files"
+      "title": "Merge approved Lienzo PR #1991: feat(actions): import and export reusable Actions JSON files"
     },
     {
       "number": 4305,
       "commit": "17c4dabf90b48ce284fb8b1fb6e5a151d5dd1777",
-      "title": "Merge approved PhotoCraft PR #4305: Filter > Other > Frequency Separation (#1714)"
+      "title": "Merge approved Lienzo PR #4305: Filter > Other > Frequency Separation (#1714)"
     },
     {
       "number": 5939,
       "commit": "cb1c76e6cf29015ca80683ae83b40562383c79f0",
-      "title": "Merge approved PhotoCraft PR #5939: fix(paint): scale blur sigma with brush size (#5892)"
+      "title": "Merge approved Lienzo PR #5939: fix(paint): scale blur sigma with brush size (#5892)"
     },
     {
       "number": 4883,
       "commit": "bb436088f14e88a56762b2d320527a3b19f7ee2d",
-      "title": "Merge approved PhotoCraft PR #4883: feat(ui): show selection and active-layer bounds in the status bar"
+      "title": "Merge approved Lienzo PR #4883: feat(ui): show selection and active-layer bounds in the status bar"
     },
     {
       "number": 9172,
       "commit": "a074b07b4b697de4887b09b4c4b6b4fbe21a090f",
-      "title": "Merge approved PhotoCraft PR #9172: Gradient Fill layer: default to Foreground to Transparent (#8708)"
+      "title": "Merge approved Lienzo PR #9172: Gradient Fill layer: default to Foreground to Transparent (#8708)"
     },
     {
       "number": 7153,
       "commit": "fe2379f27fb1ebb53a10aeec79f57b47e387ea46",
-      "title": "Merge approved PhotoCraft PR #7153: Smart Filters: double-clicking a Liquify filter reopens it in the Liquify workspace"
+      "title": "Merge approved Lienzo PR #7153: Smart Filters: double-clicking a Liquify filter reopens it in the Liquify workspace"
     },
     {
       "number": 5870,
       "commit": "63fbd96e2be807496d458d406c5ed52fc5a56580",
-      "title": "Merge approved PhotoCraft PR #5870: fix(format): reject duplicate native layer identities"
+      "title": "Merge approved Lienzo PR #5870: fix(format): reject duplicate native layer identities"
     }
   ],
   "retained": [
@@ -474,7 +474,7 @@
     {
       "number": 4742,
       "head": "b7145b5a8afb85d0eef3922931d6749436966943",
-      "title": "fix(macos): bundle photocraft-cli and resolve it from droplet scripts"
+      "title": "fix(macos): bundle lienzo-cli and resolve it from droplet scripts"
     },
     {
       "number": 4711,
@@ -484,7 +484,7 @@
     {
       "number": 4547,
       "head": "a08f7a2295488c2692f68902835a693322017b64",
-      "title": "fix(icons): PhotoCraft icon corner radius matches other Craft apps (#4478)"
+      "title": "fix(icons): Lienzo icon corner radius matches other Craft apps (#4478)"
     },
     {
       "number": 4035,

@@ -3,7 +3,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use photocraft_psd::asl;
+use lienzo_psd::asl;
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(f) = asl::parse(data)

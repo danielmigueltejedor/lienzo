@@ -4,7 +4,7 @@
 //! texels that differ. Between uploads it frees render targets cleared to red, so stale memory is
 //! red if the driver hands it back without honouring the copy.
 //!
-//! cargo run --release -p photocraft-gpu --example zero_block_probe -- [dx12|vulkan|gl] [rounds] [guard] [adapter=<name>]
+//! cargo run --release -p lienzo-gpu --example zero_block_probe -- [dx12|vulkan|gl] [rounds] [guard] [adapter=<name>]
 //!
 //! `adapter=<name>` probes the first adapter whose name contains `<name>` (case-insensitive), e.g.
 //! `adapter=iris` on a machine that also has a discrete GPU; without it wgpu picks its default adapter.
@@ -30,7 +30,7 @@ fn main() {
         _ => wgpu::Backends::DX12,
     };
     let rounds: usize = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(300);
-    // `guard`: transparent texels are uploaded as (0, 0, 0, 1), as `photocraft_ui_egui::texel_guard` does.
+    // `guard`: transparent texels are uploaded as (0, 0, 0, 1), as `lienzo_ui_egui::texel_guard` does.
     let guard = args.get(3).is_some_and(|a| a == "guard");
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..wgpu::InstanceDescriptor::new_without_display_handle() });
     let adapter = match args.iter().find_map(|a| a.strip_prefix("adapter=")).map(str::to_lowercase) {

@@ -7,7 +7,7 @@
 //! - `style.presets.exportAsl` writes styles (all, one group or named ones) as an `.asl`, with the
 //!   patterns their effects use.
 //!
-//! The container lives in `photocraft-psd` (`asl`), the mapping onto effects in `photocraft-io`
+//! The container lives in `lienzo-psd` (`asl`), the mapping onto effects in `lienzo-io`
 //! (`asl_map`).
 
 use serde_json::{Value, json};
@@ -16,7 +16,7 @@ use crate::commands::CommandSpec;
 use crate::presets::styles::StylePreset;
 use crate::presets::{Group, find, unique_name};
 use crate::{EngineError, Result, Session};
-use photocraft_io::asl_map::{self, AslStyle};
+use lienzo_io::asl_map::{self, AslStyle};
 
 fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
     EngineError::BadParams { cmd: cmd.into(), msg: msg.into() }
@@ -107,8 +107,8 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(EXPORT, "no styles to export"));
     }
     // The patterns the styles use, from the open document or the library.
-    let all_fx: Vec<photocraft_doc::Effect> = chosen.iter().flat_map(|st| st.effects.iter().cloned()).collect();
-    let mut patterns: Vec<photocraft_doc::Pattern> = Vec::new();
+    let all_fx: Vec<lienzo_doc::Effect> = chosen.iter().flat_map(|st| st.effects.iter().cloned()).collect();
+    let mut patterns: Vec<lienzo_doc::Pattern> = Vec::new();
     let mut warnings = Vec::new();
     for (name, id) in asl_map::referenced_patterns(&all_fx) {
         let key = if id.is_empty() { &name } else { &id };
@@ -130,7 +130,7 @@ fn export(s: &mut Session, p: &Value) -> Result<Value> {
             crate::file_cmds::write_file(path, &bytes)?;
             out["path"] = json!(path);
         }
-        None => out["data"] = json!(photocraft_paint::tile::b64_encode(&bytes)),
+        None => out["data"] = json!(lienzo_paint::tile::b64_encode(&bytes)),
     }
     Ok(out)
 }
@@ -164,7 +164,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_paint::tile::{b64_decode, b64_encode};
+    use lienzo_paint::tile::{b64_decode, b64_encode};
 
     fn session() -> Session {
         let mut s = Session::new();
@@ -221,7 +221,7 @@ mod tests {
         let id = s.active().unwrap().active_layer.unwrap();
         s.execute("layer.layerStyle.blendingOptions", json!({"layer": id.0, "opacity": 40, "blend": "multiply", "fillOpacity": 30})).unwrap();
         let l = s.active().unwrap().doc.layer(id).unwrap().clone();
-        assert_eq!(l.blend, photocraft_color::BlendMode::Multiply);
+        assert_eq!(l.blend, lienzo_color::BlendMode::Multiply);
         s.execute("style.presets.new", json!({"name": "Blended", "group": "Mine", "layer": id.0})).unwrap();
         let data = s.execute(EXPORT, json!({"styles": ["Blended"]})).unwrap()["data"].as_str().unwrap().to_string();
         s.execute(IMPORT, json!({"data": data, "group": "Again"})).unwrap();
@@ -245,7 +245,7 @@ mod tests {
         let mut s = session();
         let mut pat = s.patterns.items[1].clone();
         pat.id = "asl-replaced-pattern".into();
-        let asl = |p: &photocraft_doc::Pattern| {
+        let asl = |p: &lienzo_doc::Pattern| {
             let style = AslStyle { name: "Pat".into(), effects: vec![], blend: None, opacity: None, fill_opacity: None };
             b64_encode(&asl_map::write_asl(&[style], std::slice::from_ref(p)).unwrap())
         };
@@ -266,8 +266,8 @@ mod tests {
         renamed.id = "asl-test-pattern".into();
         renamed.name = "Asl Test".into();
         let fx = match fx {
-            photocraft_doc::Effect::PatternOverlay { common, scale, angle, link, phase, .. } => {
-                photocraft_doc::Effect::PatternOverlay { common, name: renamed.name.clone(), id: renamed.id.clone(), scale, angle, link, phase }
+            lienzo_doc::Effect::PatternOverlay { common, scale, angle, link, phase, .. } => {
+                lienzo_doc::Effect::PatternOverlay { common, name: renamed.name.clone(), id: renamed.id.clone(), scale, angle, link, phase }
             }
             other => other,
         };

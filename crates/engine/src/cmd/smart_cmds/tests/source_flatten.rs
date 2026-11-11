@@ -15,7 +15,7 @@ fn block(fmt: &PixelFormat, r: Rect) -> Surface {
         for x in r.x0..r.x1 {
             let v = ((x * 7 + y * 13) % 23) as f32 / 22.0;
             let a = if (x + y) % 5 == 0 { 0.5 } else { 1.0 };
-            data.extend(photocraft_raster::from_rgba(fmt, [v, 1.0 - v, ((x * y) % 7) as f32 / 6.0, a]));
+            data.extend(lienzo_raster::from_rgba(fmt, [v, 1.0 - v, ((x * y) % 7) as f32 / 6.0, a]));
         }
     }
     s.write_region(r, &data);
@@ -29,7 +29,7 @@ fn pixels(s: &Surface, bounds: Rect) -> Vec<u32> {
 
 /// The composite through the full-size RGBA buffer, the way sources were rendered before.
 fn through_buffer(doc: &Document, fmt: PixelFormat) -> Surface {
-    source_surface_from_buffer(doc, &photocraft_compose::flatten(doc), fmt).unwrap()
+    source_surface_from_buffer(doc, &lienzo_compose::flatten(doc), fmt).unwrap()
 }
 
 fn same(label: &str, doc: &Document, fmt: PixelFormat) {
@@ -87,7 +87,7 @@ fn a_layered_source_with_a_mask_blend_mode_and_effect_matches() {
         top.mask = Some(mask);
         doc.layers.push(top);
         let mut shadowed = Layer::new("shadowed", LayerContent::Raster(block(&fmt, Rect::new(8, 20, 24, 36))));
-        shadowed.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        shadowed.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         shadowed.effects.enabled = true;
         doc.layers.push(shadowed);
         same(&format!("layered {depth:?}"), &doc, fmt);
@@ -117,8 +117,8 @@ fn effects_across_block_edges_match() {
         let fmt = doc.pixel_format();
         let x0 = if width > 4096 { 3800 } else { 100 };
         let mut base = Layer::new("base", LayerContent::Raster(block(&fmt, Rect::new(x0, 200, x0 + 800, 560))));
-        let mut glow = photocraft_doc::Effect::default_drop_shadow();
-        if let photocraft_doc::Effect::DropShadow(d) = &mut glow {
+        let mut glow = lienzo_doc::Effect::default_drop_shadow();
+        if let lienzo_doc::Effect::DropShadow(d) = &mut glow {
             d.size = 40.0;
             d.distance = 30.0;
         }

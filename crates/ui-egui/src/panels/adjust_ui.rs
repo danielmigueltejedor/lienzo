@@ -6,16 +6,16 @@
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use photocraft_doc::{Adjustment, LayerId};
+use lienzo_doc::{Adjustment, LayerId};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 use crate::widgets;
 
 /// Ask the platform for one LUT. Send embedded text through the same engine command on
 /// desktop and web, so the result doesn't depend on ambient filesystem permissions.
-fn browse_color_lookup(app: &mut PhotocraftApp, layer: LayerId) -> Result<Value, String> {
+fn browse_color_lookup(app: &mut LienzoApp, layer: LayerId) -> Result<Value, String> {
     let doc = app.active_doc_id()?;
     app.pick_file_bytes_filtered(&["cube", "3dl", "look"], move |app, file_name, bytes| {
         // Reject invalid UTF-8 instead of silently changing the LUT before parsing.
@@ -72,7 +72,7 @@ fn start_folder_scan(folder: String, ctx: egui::Context) -> Arc<Mutex<Option<Fol
     let result = Arc::new(Mutex::new(None));
     let shared = Arc::clone(&result);
     let work = move || {
-        let luts = photocraft_engine::adjust_cmds::folder_luts(&folder);
+        let luts = lienzo_engine::adjust_cmds::folder_luts(&folder);
         *shared.lock().unwrap_or_else(PoisonError::into_inner) = Some(luts);
         ctx.request_repaint();
     };
@@ -91,7 +91,7 @@ fn current_lookup(name: &str, has_lut: bool, folder: &[(String, String)]) -> Str
     if !has_lut {
         return "none".into();
     }
-    if let Some((id, _)) = photocraft_engine::adjust_cmds::LOOKS.iter().find(|b| b.1 == name) {
+    if let Some((id, _)) = lienzo_engine::adjust_cmds::LOOKS.iter().find(|b| b.1 == name) {
         return id.to_string();
     }
     folder.iter().find(|(file, _)| file == name).map_or_else(|| "custom".into(), |(_, path)| format!("{FOLDER_LUT}{path}"))
@@ -106,12 +106,12 @@ fn lookup_params(key: &str) -> Value {
     }
 }
 
-pub fn color_lookup_editor(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: LayerId, adj: &Adjustment) {
+pub fn color_lookup_editor(app: &mut LienzoApp, ui: &mut egui::Ui, id: LayerId, adj: &Adjustment) {
     let t = Tokens::get(ui.ctx());
     let Adjustment::ColorLookup { name, lut, size, tetrahedral, dither, .. } = adj else {
         return;
     };
-    let builtins = photocraft_engine::adjust_cmds::LOOKS;
+    let builtins = lienzo_engine::adjust_cmds::LOOKS;
     let folder = folder_luts(&app.session.prefs().file_handling.lut_folder, ui.ctx());
     let current = current_lookup(name, lut.is_some(), &folder);
     let current = app
@@ -222,7 +222,7 @@ mod lookup_picker_tests {
     #[test]
     fn chosen_lut_is_embedded_into_the_requested_adjustment_layer() {
         let (dialog, asked) = file_dialog::fake(vec![Some(FileDialogAnswer::Contents("custom.cube".into(), CUBE.as_bytes().to_vec()))]);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
         app.run("file.new", json!({"width": 16, "height": 12})).unwrap();
         let layer = app.run("layer.newAdjustmentLayer.colorLookup", json!({})).unwrap()["layer"].as_u64().unwrap();
         browse_color_lookup(&mut app, LayerId(layer)).unwrap();
@@ -233,7 +233,7 @@ mod lookup_picker_tests {
         app.poll_file_dialog(&egui::Context::default(), None);
         let adj = &app.session.active().unwrap().doc.layer(LayerId(layer)).unwrap().content;
         assert!(
-            matches!(adj, photocraft_doc::LayerContent::Adjustment(Adjustment::ColorLookup { name, lut: Some(_), size: 2, .. }) if name == "custom.cube"),
+            matches!(adj, lienzo_doc::LayerContent::Adjustment(Adjustment::ColorLookup { name, lut: Some(_), size: 2, .. }) if name == "custom.cube"),
             "{adj:?}"
         );
     }
@@ -245,7 +245,7 @@ mod lookup_picker_tests {
         let dir = tmp.path();
         let path = dir.join("film.cube");
         std::fs::write(&path, CUBE).unwrap();
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("prefs.set", json!({"path": "fileHandling.lutFolder", "value": dir.to_str().unwrap()})).unwrap();
         // The scan runs on a worker thread: ask again until it has finished.
         let ctx = egui::Context::default();
@@ -265,7 +265,7 @@ mod lookup_picker_tests {
         let mut p = lookup_params(&key);
         p["layer"] = json!(layer);
         app.run("layer.setAdjustment", p).unwrap();
-        let photocraft_doc::LayerContent::Adjustment(Adjustment::ColorLookup { name, lut, .. }) =
+        let lienzo_doc::LayerContent::Adjustment(Adjustment::ColorLookup { name, lut, .. }) =
             &app.session.active().unwrap().doc.layer(LayerId(layer)).unwrap().content
         else {
             panic!("not a Color Lookup layer")
@@ -279,7 +279,7 @@ mod lookup_picker_tests {
     #[test]
     fn invalid_lut_does_not_modify_the_existing_adjustment() {
         let (dialog, _) = file_dialog::fake(vec![Some(FileDialogAnswer::Contents("broken.cube".into(), b"invalid".to_vec()))]);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
         app.run("file.new", json!({"width": 16, "height": 12})).unwrap();
         let layer = app.run("layer.newAdjustmentLayer.colorLookup", json!({})).unwrap()["layer"].as_u64().unwrap();
         let before = app.session.active().unwrap().doc.layer(LayerId(layer)).unwrap().content.clone();
@@ -293,7 +293,7 @@ mod lookup_picker_tests {
     #[test]
     fn cancelling_the_lut_picker_preserves_the_adjustment() {
         let (dialog, _) = file_dialog::fake(vec![None]);
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services { file_dialog: Some(dialog), ..Default::default() });
         app.run("file.new", json!({"width": 16, "height": 12})).unwrap();
         let layer = app.run("layer.newAdjustmentLayer.colorLookup", json!({})).unwrap()["layer"].as_u64().unwrap();
         let before = app.session.active().unwrap().doc.layer(LayerId(layer)).unwrap().content.clone();

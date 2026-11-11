@@ -2,16 +2,16 @@
 //! `raw_params` passed it through, so an exposure of 128 or more overflowed `2^exposure` to
 //! infinity and a 32-bit layer was left with non-finite samples.
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 #[test]
 fn camera_raw_clamps_exposure() {
-    let hi = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": 255.0})).expect("params parse");
+    let hi = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": 255.0})).expect("params parse");
     assert_eq!(hi.exposure, 5.0, "exposure 255 must clamp to 5");
-    let lo = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": -255.0})).expect("params parse");
+    let lo = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": -255.0})).expect("params parse");
     assert_eq!(lo.exposure, -5.0, "exposure -255 must clamp to -5");
-    let mid = photocraft_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": 1.5})).expect("params parse");
+    let mid = lienzo_engine::lens_cmds::raw_params("filter.cameraRaw", &json!({"exposure": 1.5})).expect("params parse");
     assert_eq!(mid.exposure, 1.5, "in-range exposure stays untouched");
 }
 

@@ -1,23 +1,23 @@
-use photocraft_color::BlendMode;
-use photocraft_doc::{LabelColor, Layer, LayerContent, LayerId};
+use lienzo_color::BlendMode;
+use lienzo_doc::{LabelColor, Layer, LayerContent, LayerId};
 use serde_json::json;
 
 use super::*;
 
 /// Background, then `A` and `B` (`B` active).
-fn app() -> (PhotocraftApp, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> (LienzoApp, LayerId, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 40, "height": 30})).unwrap();
     let a = LayerId(app.run("layer.new.layer", json!({"name": "A"})).unwrap()["layer"].as_u64().unwrap());
     let b = LayerId(app.run("layer.new.layer", json!({"name": "B"})).unwrap()["layer"].as_u64().unwrap());
     (app, a, b)
 }
 
-fn groups(app: &PhotocraftApp) -> Vec<Layer> {
+fn groups(app: &LienzoApp) -> Vec<Layer> {
     app.session.active().unwrap().doc.walk().into_iter().map(|(_, _, l)| l).filter(|l| l.is_group()).cloned().collect()
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -46,7 +46,7 @@ fn menu_invocations_open_the_dialog_but_explicit_params_run_directly() {
     crate::menus::invoke(&mut app, &ctx, "layer.groupLayers", json!({})).unwrap();
     assert!(app.ui.dialogs.is_empty());
     // Without a document nothing opens.
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     assert!(crate::menus::invoke(&mut empty, &ctx, NEW_GROUP, json!({})).is_err());
     assert!(crate::menus::invoke(&mut empty, &ctx, FROM_LAYERS, json!({})).is_err());
     assert!(empty.ui.dialogs.is_empty());
@@ -108,7 +108,7 @@ fn typing_replaces_the_selected_name_and_enter_confirms() {
     use egui_kittest::kittest::Queryable;
     let (app, _, _) = app();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     open(h.state_mut(), NEW_GROUP);
     h.run_steps(4);
     for label in ["OK", "Cancel"] {

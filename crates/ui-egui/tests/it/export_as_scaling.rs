@@ -6,10 +6,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use egui_kittest::kittest::Queryable;
-use photocraft_ui_egui::{FileDialogAnswer, FileDialogRequest, PhotocraftApp, Services, menus};
+use lienzo_ui_egui::{FileDialogAnswer, FileDialogRequest, LienzoApp, Services, menus};
 use serde_json::json;
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, LienzoApp>;
 type Writes = Rc<RefCell<Vec<(String, Vec<u8>)>>>;
 
 fn harness() -> Option<(Harness, Writes)> {
@@ -18,7 +18,7 @@ fn harness() -> Option<(Harness, Writes)> {
         let captured = writes.clone();
         let h = egui_kittest::Harness::builder().with_size(egui::vec2(1100.0, 760.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(
             move |cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+                LienzoApp::setup_context(&cc.egui_ctx, Default::default());
                 let services = Services {
                     // Save dialogs answer with the suggested name.
                     file_dialog: Some(Box::new(|request, _parent, reply| {
@@ -29,11 +29,11 @@ fn harness() -> Option<(Harness, Writes)> {
                         })
                     })),
                     export: Some(Box::new(|doc, path, settings| {
-                        let opts = photocraft_io::ExportOptions {
-                            xmp: if settings.xmp_all { photocraft_io::XmpEmbed::All } else { photocraft_io::XmpEmbed::None },
+                        let opts = lienzo_io::ExportOptions {
+                            xmp: if settings.xmp_all { lienzo_io::XmpEmbed::All } else { lienzo_io::XmpEmbed::None },
                             ..Default::default()
                         };
-                        photocraft_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
+                        lienzo_io::export(doc, path, &opts).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
                     })),
                     write: Some(Box::new(move |path, bytes| {
                         captured.borrow_mut().push((path.to_string(), bytes.to_vec()));
@@ -41,7 +41,7 @@ fn harness() -> Option<(Harness, Writes)> {
                     })),
                     ..Default::default()
                 };
-                let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+                let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
                 app.session.prefs.edit(|p| p.interface.language = "en".into());
                 if let Some(rs) = cc.wgpu_render_state.as_ref() {
                     app.set_wgpu(rs.clone());
@@ -61,7 +61,7 @@ fn harness() -> Option<(Harness, Writes)> {
 }
 
 fn evidence(h: &mut Harness, depth: u8, stage: &str) {
-    if let Some(dir) = std::env::var_os("PHOTOCRAFT_EXPORT_EVIDENCE_DIR") {
+    if let Some(dir) = std::env::var_os("LIENZO_EXPORT_EVIDENCE_DIR") {
         std::fs::create_dir_all(&dir).expect("evidence directory");
         h.render().expect("render UI").save(std::path::Path::new(&dir).join(format!("{stage}-{depth}bit.png"))).expect("save UI evidence");
     }
@@ -69,7 +69,7 @@ fn evidence(h: &mut Harness, depth: u8, stage: &str) {
 
 #[test]
 fn export_as_scales_a_narrow_image_without_editing_the_source() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some((mut h, writes)) = harness() else { return };
     h.run_steps(4);
     for depth in [8, 16, 32] {
@@ -110,10 +110,10 @@ fn export_as_scales_a_narrow_image_without_editing_the_source() {
         assert_eq!(written.len(), 1, "{depth}-bit: Export writes one file");
         let (path, bytes) = &written[0];
         assert!(path.ends_with(".png"), "PNG export path: {path}");
-        if let Some(dir) = std::env::var_os("PHOTOCRAFT_EXPORT_EVIDENCE_DIR") {
+        if let Some(dir) = std::env::var_os("LIENZO_EXPORT_EVIDENCE_DIR") {
             std::fs::write(std::path::Path::new(&dir).join(format!("exported-{depth}bit.png")), bytes).expect("save exported PNG evidence");
         }
-        let png = photocraft_codecs::decode_as(photocraft_codecs::Format::Png, bytes).expect("decode the written PNG");
+        let png = lienzo_codecs::decode_as(lienzo_codecs::Format::Png, bytes).expect("decode the written PNG");
         assert_eq!(png.dimensions(), (1, 50), "{depth}-bit: written dimensions match the dialog");
 
         let st = h.state().session.active().expect("source remains open");
@@ -128,7 +128,7 @@ fn export_as_scales_a_narrow_image_without_editing_the_source() {
 /// at 200 %, and every source pixel arrives as an exact 2 × 2 block; the choice is remembered.
 #[test]
 fn export_as_resample_menu_writes_nearest_neighbor_blocks() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let Some((mut h, writes)) = harness() else { return };
     h.run_steps(4);
     {
@@ -137,13 +137,13 @@ fn export_as_resample_menu_writes_nearest_neighbor_blocks() {
         app.session
             .edit("checker", |doc, active| {
                 let b = doc.bounds();
-                let layer = (*active).ok_or(photocraft_engine::EngineError::NoDocument)?;
-                let surf = doc.layer_mut(layer).and_then(|l| l.surface_mut()).ok_or(photocraft_engine::EngineError::NoDocument)?;
+                let layer = (*active).ok_or(lienzo_engine::EngineError::NoDocument)?;
+                let surf = doc.layer_mut(layer).and_then(|l| l.surface_mut()).ok_or(lienzo_engine::EngineError::NoDocument)?;
                 let fmt = surf.format();
                 let mut data = Vec::new();
                 for y in b.y0..b.y1 {
                     for x in b.x0..b.x1 {
-                        data.extend(photocraft_raster::from_rgba(&fmt, if (x + y) % 2 == 0 { [1.0, 0.0, 0.0, 1.0] } else { [0.0, 0.0, 1.0, 1.0] }));
+                        data.extend(lienzo_raster::from_rgba(&fmt, if (x + y) % 2 == 0 { [1.0, 0.0, 0.0, 1.0] } else { [0.0, 0.0, 1.0, 1.0] }));
                     }
                 }
                 surf.write_region(b, &data);
@@ -175,7 +175,7 @@ fn export_as_resample_menu_writes_nearest_neighbor_blocks() {
     h.run_steps(6);
     let written = writes.borrow();
     assert_eq!(written.len(), 1, "Export writes one file");
-    let png = photocraft_io::import("out.png", &written[0].1).expect("decode the written PNG").document;
+    let png = lienzo_io::import("out.png", &written[0].1).expect("decode the written PNG").document;
     assert_eq!((png.size.width, png.size.height), (8, 6));
     let surf = png.layers[0].surface().expect("pixels");
     for y in 0..6 {

@@ -3,8 +3,8 @@
 //! two, so the profile's saturation level must follow the sample depth: a 12-bit D4 frame has to
 //! develop as bright as the same scene at 14 bits.
 
-use photocraft_raw::testgen::{Val, tiff_ep};
-use photocraft_raw::{Demosaic, DevelopOptions, Limits, Rect, WhiteBalance, decode, develop_sensor};
+use lienzo_raw::testgen::{Val, tiff_ep};
+use lienzo_raw::{Demosaic, DevelopOptions, Limits, Rect, WhiteBalance, decode, develop_sensor};
 
 const WIDTH: usize = 4992;
 const HEIGHT: usize = 3292;

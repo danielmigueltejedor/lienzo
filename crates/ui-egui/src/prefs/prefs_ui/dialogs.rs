@@ -1,11 +1,11 @@
 use super::shortcuts::shortcut_items;
-use super::{BTreeMap, DialogKind, Map, PhotocraftApp, RichText, SECTIONS, Tokens, Value, json, prefs};
+use super::{BTreeMap, DialogKind, LienzoApp, Map, RichText, SECTIONS, Tokens, Value, json, prefs};
 
 // ------------------------------------------------------------------ menu routing
 
 /// Shell front ends for Edit-menu commands invoked without parameters (dialogs, pickers).
 /// `None` when `id` isn't handled here.
-pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn invoke(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let empty = params.as_object().is_none_or(|o| o.is_empty());
     if !empty {
         return None;
@@ -37,7 +37,7 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &V
         }
         "edit.fade" | "edit.findAndReplaceText" | "edit.defineBrushPreset" | "edit.defineCustomShape" | "edit.autoAlignLayers" | "edit.autoBlendLayers" => {
             if !app.session.is_enabled(id) {
-                return Some(Err(photocraft_engine::commands::find(id)
+                return Some(Err(lienzo_engine::commands::find(id)
                     .map_or("not available".into(), |c| format!("{} is not available right now", c.label.trim_end_matches('…')))));
             }
             let d = crate::filter_dialog::open(app, id);
@@ -64,7 +64,7 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &V
     }
 }
 
-fn open_kind(app: &mut PhotocraftApp, kind: &str, label: &str, fields: Value) -> u64 {
+fn open_kind(app: &mut LienzoApp, kind: &str, label: &str, fields: Value) -> u64 {
     let mut f = Map::new();
     f.insert("__prefsui".into(), json!(kind));
     f.insert("__label".into(), json!(label));
@@ -90,12 +90,12 @@ pub(super) fn preference_values(p: &prefs::Preferences) -> Map<String, Value> {
 }
 
 /// Compare the editable sections, excluding settings managed outside Preferences.
-pub fn preferences_changed(app: &PhotocraftApp, fields: &Map<String, Value>) -> bool {
+pub fn preferences_changed(app: &LienzoApp, fields: &Map<String, Value>) -> bool {
     is_preferences(fields) && fields.get("values").and_then(Value::as_object).is_some_and(|values| *values != preference_values(app.session.prefs()))
 }
 
 /// Commit the working copy and keep the current section open. Failure leaves the draft intact.
-pub fn apply(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
+pub fn apply(app: &mut LienzoApp, id: u64) -> Result<Value, String> {
     let d = app.ui.dialogs.iter().find(|d| d.id == id).ok_or_else(|| format!("no dialog {id}"))?;
     if d.kind != DialogKind::Command || !is_preferences(&d.fields) {
         return Err("Apply is only available for Preferences".into());
@@ -134,7 +134,7 @@ pub fn width(fields: &Map<String, Value>, available: f32) -> Option<f32> {
 }
 
 /// Open Edit › Preferences on `section`.
-pub fn open_preferences(app: &mut PhotocraftApp, section: &str) -> u64 {
+pub fn open_preferences(app: &mut LienzoApp, section: &str) -> u64 {
     let section = if SECTIONS.iter().any(|(id, _)| *id == section) { section } else { "general" };
     let working = preference_values(app.session.prefs());
     let order = field_order(app.session.prefs(), &working);
@@ -160,7 +160,7 @@ fn field_order(p: &prefs::Preferences, sections: &Map<String, Value>) -> Value {
 }
 
 /// Open Keyboard Shortcuts and Menus on a tab (0 shortcuts, 1 menus, 2 toolbar).
-pub fn open_shortcuts(app: &mut PhotocraftApp, tab: u64) -> u64 {
+pub fn open_shortcuts(app: &mut LienzoApp, tab: u64) -> u64 {
     let p = app.session.prefs();
     let fields = json!({
         "tab": tab,
@@ -184,7 +184,7 @@ pub fn open_shortcuts(app: &mut PhotocraftApp, tab: u64) -> u64 {
 /// Cancel back to `open_prompt`.
 /// `names` carries the embedded and working profile names and the Color Settings policy a
 /// remembered choice is saved to (`policyKey`, null for a mode without one).
-pub fn open_mismatch(app: &mut PhotocraftApp, message: &str, action: &str, missing: bool, marker: &str, names: Value) -> u64 {
+pub fn open_mismatch(app: &mut LienzoApp, message: &str, action: &str, missing: bool, marker: &str, names: Value) -> u64 {
     let mut fields = json!({"message": message, "action": action, "missing": missing, "remember": false});
     if let (Some(f), Value::Object(n)) = (fields.as_object_mut(), names) {
         f.extend(n);
@@ -218,7 +218,7 @@ pub(super) fn toolbar_tab(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     f.insert("toolbarHidden".into(), json!(hidden));
 }
 
-pub(super) fn presets_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(super) fn presets_body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let mut kind = f.get("kind").and_then(Value::as_str).unwrap_or("brushes").to_string();
     ui.horizontal(|ui| {
@@ -319,7 +319,7 @@ pub(super) fn mismatch_body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 // ------------------------------------------------------------------ confirm
 
 /// OK on one of our dialogs.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     match f.get("__prefsui").and_then(Value::as_str).unwrap_or("") {
         "prefs" => {
             let values = f.get("values").cloned().unwrap_or(Value::Null);

@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_raster::{Interrupt, Surface};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_raster::{Interrupt, Surface};
 
 mod reference;
 

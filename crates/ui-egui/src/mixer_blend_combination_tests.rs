@@ -8,19 +8,19 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
 use super::{MIXER_COMBINATION_GROUPS, MIXER_COMBINATIONS};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 const TIP: &str = "Useful mixer brush combinations";
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.ui.tool = Tool::MixerBrush;
     crate::paint_mouse::sync_tool_brush(&mut app);
     app.run("tools.setBrush", json!({"brush": {"mixer": {"flow": 0.42}}})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1800.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -28,24 +28,24 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
-fn has_fonts(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn has_fonts(h: &Harness<'static, LienzoApp>) -> bool {
     h.ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into())))
 }
 
 /// The combinations dropdown, by the entry it shows.
-fn dropdown_rect(h: &Harness<'static, PhotocraftApp>, shows: &str) -> egui::Rect {
+fn dropdown_rect(h: &Harness<'static, LienzoApp>, shows: &str) -> egui::Rect {
     h.get_all_by_role(egui::accesskit::Role::ComboBox)
         .find(|n| n.accesskit_node().value().as_deref() == Some(shows))
         .unwrap_or_else(|| panic!("no dropdown showing {shows}"))
         .rect()
 }
 
-fn open_and_pick(h: &mut Harness<'static, PhotocraftApp>, shows: &str, entry: &str) {
+fn open_and_pick(h: &mut Harness<'static, LienzoApp>, shows: &str, entry: &str) {
     h.get_all_by_role(egui::accesskit::Role::ComboBox).find(|n| n.accesskit_node().value().as_deref() == Some(shows)).unwrap().click();
     h.run_steps(3);
     entry_node(h, entry).click();
@@ -53,16 +53,16 @@ fn open_and_pick(h: &mut Harness<'static, PhotocraftApp>, shows: &str, entry: &s
 }
 
 /// An entry of the open list (not the Wet field, which shares the "Wet" label).
-fn entry_node<'a>(h: &'a Harness<'static, PhotocraftApp>, entry: &'a str) -> egui_kittest::Node<'a> {
+fn entry_node<'a>(h: &'a Harness<'static, LienzoApp>, entry: &'a str) -> egui_kittest::Node<'a> {
     h.get_all_by_label(entry).rfind(|n| n.accesskit_node().role() != egui::accesskit::Role::SpinButton).unwrap_or_else(|| panic!("no entry {entry}"))
 }
 
-fn mixer(h: &Harness<'static, PhotocraftApp>) -> (f32, f32, f32, f32) {
+fn mixer(h: &Harness<'static, LienzoApp>) -> (f32, f32, f32, f32) {
     let m = &h.state().session.tools.brush.mixer;
     (m.wet, m.load, m.mix, m.flow)
 }
 
-fn set_brush_count(h: &Harness<'static, PhotocraftApp>) -> usize {
+fn set_brush_count(h: &Harness<'static, LienzoApp>) -> usize {
     h.state().session.journal.iter().filter(|(id, _)| id == "tools.setBrush").count()
 }
 

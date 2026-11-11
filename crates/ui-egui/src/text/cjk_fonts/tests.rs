@@ -4,13 +4,13 @@ use std::sync::Mutex;
 
 #[test]
 fn lazy_fallbacks_follow_ui_font_size_and_survive_size_changes() {
-    use photocraft_engine::prefs::UiFontSize;
+    use lienzo_engine::prefs::UiFontSize;
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     ctx.run_ui(Default::default(), |_| {}).textures_delta.clear();
     crate::theme::set_ui_font_size(&ctx, UiFontSize::Large);
     let name = "test-lazy-fallback".to_string();
-    add_to_all_families(&ctx, name.clone(), FontData::from_static(photocraft_text::fonts::INTER_REGULAR.as_slice()));
+    add_to_all_families(&ctx, name.clone(), FontData::from_static(lienzo_text::fonts::INTER_REGULAR.as_slice()));
     for (size, scale) in [(UiFontSize::Large, 16.0 / 12.0), (UiFontSize::Tiny, 10.0 / 12.0), (UiFontSize::Small, 1.0)] {
         crate::theme::set_ui_font_size(&ctx, size);
         for _ in 0..2 {
@@ -34,7 +34,7 @@ fn lazy_fallbacks_follow_ui_font_size_and_survive_size_changes() {
 /// with the old stack.
 #[test]
 fn discovered_faces_use_the_scale_of_the_definitions_they_were_laid_out_with() {
-    use photocraft_engine::prefs::UiFontSize;
+    use lienzo_engine::prefs::UiFontSize;
     fn thai_reader(_: &std::path::Path) -> Option<Vec<u8>> {
         Some(synthetic_font(&[(0x0E01, 0x0E5B)]))
     }
@@ -158,7 +158,7 @@ fn variable_fallbacks_are_drawn_at_regular_weight() {
     assert_eq!(regular_weight(&fvar_font(&[(b"wght", 500.0, 600.0, 900.0)], false), 0), Some(500.0), "Regular clamped into the axis");
     assert_eq!(regular_weight(&fvar_font(&[(b"wght", 100.0, 400.0, 900.0)], false), 0), None, "already Regular");
     assert_eq!(regular_weight(&fvar_font(&[(b"wdth", 75.0, 100.0, 100.0)], false), 0), None, "no weight axis");
-    assert_eq!(regular_weight(photocraft_text::fonts::INTER_REGULAR.as_slice(), 0), None, "static font");
+    assert_eq!(regular_weight(lienzo_text::fonts::INTER_REGULAR.as_slice(), 0), None, "static font");
     for bad in [&thin[..thin.len() - 9], &thin[..30], &b"ttcf"[..], &[][..]] {
         assert_eq!(regular_weight(bad, 1), None);
     }
@@ -166,7 +166,7 @@ fn variable_fallbacks_are_drawn_at_regular_weight() {
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     ctx.run_ui(Default::default(), |_| {}).textures_delta.clear();
-    add_to_all_families(&ctx, "test-static".into(), FontData::from_static(photocraft_text::fonts::INTER_REGULAR.as_slice()));
+    add_to_all_families(&ctx, "test-static".into(), FontData::from_static(lienzo_text::fonts::INTER_REGULAR.as_slice()));
     ctx.run_ui(Default::default(), |_| {}).textures_delta.clear();
     let fonts = ctx.fonts(|f| f.definitions().clone());
     assert_eq!(fonts.font_data.get("test-static").map(|d| d.tweak.coords.clone()), Some(Default::default()));
@@ -209,7 +209,7 @@ fn changing_language_resets_the_loader_once_and_reorders_scripts() {
 fn fake_dir() -> PathBuf {
     let mut g = DIR.lock().unwrap();
     g.get_or_insert_with(|| {
-        let dir = std::env::temp_dir().join(format!("photocraft-cjk-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("lienzo-cjk-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("font.ttf"), include_bytes!("../../../../../assets/fonts/Inter-Regular.ttf")).unwrap();
         std::fs::write(dir.join("empty.ttf"), b"").unwrap();
@@ -870,7 +870,7 @@ fn hant_system_file() -> Option<PathBuf> {
     static FILE: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
     let face = craft_fonts::CRAFT_FONTS.iter().find(|f| f.family == "Noto Sans CJK SC" && !f.bytes.is_empty())?;
     FILE.get_or_init(|| {
-        let path = std::env::temp_dir().join(format!("photocraft-hant-{}.otf", std::process::id()));
+        let path = std::env::temp_dir().join(format!("lienzo-hant-{}.otf", std::process::id()));
         std::fs::write(&path, face.bytes).ok().map(|()| path)
     })
     .clone()

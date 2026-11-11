@@ -1,11 +1,11 @@
 use super::{
-    Align2, Color32, CornerRadius, Ev, FontId, GroupView, ItemView, PhotocraftApp, Place, Pos2, Rect, Sense, Stroke, TextureHandle, Tokens, Tool, Value,
-    browser, canvas_drop_rect, empty, generic, json, paint_gradient, pattern_texture, pos2, run, shape_texture, style_texture, vec2,
+    Align2, Color32, CornerRadius, Ev, FontId, GroupView, ItemView, LienzoApp, Place, Pos2, Rect, Sense, Stroke, TextureHandle, Tokens, Tool, Value, browser,
+    canvas_drop_rect, empty, generic, json, paint_gradient, pattern_texture, pos2, run, shape_texture, style_texture, vec2,
 };
 
 // ------------------------------------------------------------------ Gradients
 
-pub fn gradients_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn gradients_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let (fg, bg) = (app.session.tools.foreground, app.session.tools.background);
     let groups_src = app.session.presets.gradients.clone();
     // Current gradient (what the Gradient tool paints), like the panel's top "recent" row.
@@ -46,11 +46,11 @@ pub fn gradients_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 // ------------------------------------------------------------------ Patterns
 
-pub fn patterns_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn patterns_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // Until the preset store has loaded the saved patterns, their folder entries would look
     // deleted: don't prune them yet.
     if app.services.preset_store.is_none() {
-        photocraft_engine::presets::patterns::sync(&mut app.session);
+        lienzo_engine::presets::patterns::sync(&mut app.session);
     }
     let lib = app.session.patterns.items.clone();
     let groups: Vec<GroupView> = app
@@ -68,7 +68,7 @@ pub fn patterns_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
                 .collect(),
         })
         .collect();
-    let pats: Vec<Vec<photocraft_doc::Pattern>> =
+    let pats: Vec<Vec<lienzo_doc::Pattern>> =
         app.session.presets.pattern_groups.iter().map(|g| g.items.iter().filter_map(|id| lib.iter().find(|p| &p.id == id).cloned()).collect()).collect();
     let canvas = canvas_drop_rect(app);
     let mut st = std::mem::take(&mut app.ui.presets_ui);
@@ -106,13 +106,13 @@ pub fn patterns_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 // ------------------------------------------------------------------ floating panels
 
 fn float_window(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ctx: &egui::Context,
     key: &str,
     title: &str,
     width: f32,
     offset: f32,
-    body: impl FnOnce(&mut PhotocraftApp, &mut egui::Ui),
+    body: impl FnOnce(&mut LienzoApp, &mut egui::Ui),
 ) -> bool {
     let t = Tokens::get(ctx);
     let frame = egui::Frame::NONE
@@ -156,7 +156,7 @@ fn float_window(
 }
 
 /// Draws the open floating panels (Styles, Shapes, Tool Presets, Clone Source).
-pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
     let p = app.ui.presets_ui.clone();
     if p.styles && float_window(app, ctx, "styles", tl!("Styles"), 250.0, 0.0, styles_panel) {
         app.ui.presets_ui.styles = false;
@@ -174,7 +174,7 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 // ------------------------------------------------------------------ Styles
 
-pub fn styles_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn styles_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let src = app.session.presets.styles.clone();
     let groups: Vec<GroupView> = src
         .iter()
@@ -222,7 +222,7 @@ pub fn styles_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// The Styles panel menu ("…"): Import Styles… / Export Selected Styles… / Export Styles…
 /// (Photoshop layer style libraries, `.asl`).
-fn styles_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn styles_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let any = app.session.presets.styles.iter().any(|g| !g.items.is_empty());
     let selected = app.ui.presets_ui.selected.get("styles").cloned();
     let mut act: Option<&str> = None;
@@ -257,9 +257,9 @@ fn styles_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// Builds the `.asl` through `style.presets.exportAsl`, then asks where to save it.
-fn export_styles(app: &mut PhotocraftApp, params: Value, suggested: &str) -> Result<Value, String> {
+fn export_styles(app: &mut LienzoApp, params: Value, suggested: &str) -> Result<Value, String> {
     let r = app.run("style.presets.exportAsl", params)?;
-    let bytes = r["data"].as_str().and_then(photocraft_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
+    let bytes = r["data"].as_str().and_then(lienzo_engine::paint::tile::b64_decode).ok_or("the export returned no data")?;
     let n = r["count"].as_u64().unwrap_or(0);
     let stem: String = suggested.chars().filter(|c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')).collect();
     let stem = if stem.trim().is_empty() { "Styles".to_string() } else { stem.trim().to_string() };
@@ -277,8 +277,8 @@ fn export_styles(app: &mut PhotocraftApp, params: Value, suggested: &str) -> Res
 
 // ------------------------------------------------------------------ Shapes
 
-pub fn shapes_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
-    let src = photocraft_engine::presets::shapes::all_groups(&app.session);
+pub fn shapes_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
+    let src = lienzo_engine::presets::shapes::all_groups(&app.session);
     let groups: Vec<GroupView> = src
         .iter()
         .map(|g| GroupView { name: g.name.clone(), items: g.items.iter().map(|i| ItemView { key: i.name.clone(), name: i.name.clone() }).collect() })
@@ -328,17 +328,17 @@ pub fn shapes_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
 }
 
-fn shape_fill(app: &PhotocraftApp) -> Value {
+fn shape_fill(app: &LienzoApp) -> Value {
     let f = app.session.tools.foreground;
     let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
     if app.ui.tool_options.shape_fill { json!(format!("#{:02x}{:02x}{:02x}", q(f[0]), q(f[1]), q(f[2]))) } else { Value::Null }
 }
 
 /// Options-bar shape picker for the Custom Shape tool.
-pub fn shape_picker(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn shape_picker(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     ui.label(egui::RichText::new(tl!("Shape:")).color(t.text_dim).size(12.0));
-    let groups = photocraft_engine::presets::shapes::all_groups(&app.session);
+    let groups = lienzo_engine::presets::shapes::all_groups(&app.session);
     let cur = app.ui.presets_ui.shape().to_string();
     let ctx = ui.ctx().clone();
     let (r, resp) = ui.allocate_exact_size(vec2(36.0, 22.0), Sense::click());
@@ -390,10 +390,10 @@ pub fn shape_picker(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// Custom Shape tool drag: places the selected shape in the dragged rect (⇧ keeps proportions).
-pub fn finish_custom_shape(app: &mut PhotocraftApp, rect: [f64; 4], keep: bool, fill: Value, stroke: Value) {
+pub fn finish_custom_shape(app: &mut LienzoApp, rect: [f64; 4], keep: bool, fill: Value, stroke: Value) {
     let name = app.ui.presets_ui.shape().to_string();
     let r = run(app, "shape.presets.place", json!({"preset": name, "rect": rect, "keepAspect": keep, "fill": fill, "stroke": stroke}));
-    if r.is_none() && !photocraft_engine::presets::shapes::all_groups(&app.session).iter().any(|g| g.items.iter().any(|s| s.name == name)) {
+    if r.is_none() && !lienzo_engine::presets::shapes::all_groups(&app.session).iter().any(|g| g.items.iter().any(|s| s.name == name)) {
         let template = "No custom shape \"{name}\": pick one in the options bar or Window › Shapes";
         app.ui.status = crate::i18n::fmt(tl!(template), &[("name", &name)]);
     }
@@ -408,7 +408,7 @@ pub(super) fn tool_id(t: Tool) -> String {
 }
 
 /// Apply a tool preset: the engine sets the brush/colour, the shell switches tool and options.
-pub fn select_tool_preset(app: &mut PhotocraftApp, name: &str) {
+pub fn select_tool_preset(app: &mut LienzoApp, name: &str) {
     let before_ratio = crate::crop_ui::preset_ratio(app);
     let Some(r) = run(app, "tool.presets.select", json!({"preset": name})) else { return };
     if let Some(tool) = r["tool"].as_str().and_then(Tool::from_name) {
@@ -446,7 +446,7 @@ pub fn select_tool_preset(app: &mut PhotocraftApp, name: &str) {
 
 /// The `tool.presets.new` params for the + button: `tool`'s own options only, so choosing the
 /// preset later leaves the other tools' settings alone.
-pub(super) fn new_tool_preset_params(app: &PhotocraftApp, tool: Tool) -> Value {
+pub(super) fn new_tool_preset_params(app: &LienzoApp, tool: Tool) -> Value {
     let all = serde_json::to_value(&app.ui.tool_options).unwrap_or_default();
     let mut own: serde_json::Map<String, Value> =
         crate::tool_reset::option_keys(tool).iter().filter_map(|k| Some(((*k).to_string(), all.get(*k)?.clone()))).collect();
@@ -459,7 +459,7 @@ pub(super) fn new_tool_preset_params(app: &PhotocraftApp, tool: Tool) -> Value {
     json!({"name": tool.label(), "tool": tool_id(tool), "options": {"toolOptions": own}})
 }
 
-pub fn tool_presets_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn tool_presets_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let only = app.ui.presets_ui.current_tool_only;
     let cur = app.ui.tool;
@@ -549,7 +549,7 @@ pub fn tool_presets_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 // ------------------------------------------------------------------ Clone Source
 
-pub fn clone_source_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn clone_source_panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let cs = app.session.presets.clone.clone();
     let slot = cs.active().clone();
@@ -557,7 +557,7 @@ pub fn clone_source_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     // The five source buttons.
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
-        for i in 0..photocraft_engine::presets::clone_source::SLOTS {
+        for i in 0..lienzo_engine::presets::clone_source::SLOTS {
             let set = cs.slots[i].source.is_some();
             let tip = match cs.slots[i].source {
                 Some(s) => format!("Clone source {}: {:.0}, {:.0}", i + 1, s[0], s[1]),
@@ -577,12 +577,12 @@ pub fn clone_source_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
         }
     });
     ui.add_space(4.0);
-    let src_line =
-        match (slot.source, slot.layer.and_then(|l| app.session.active().and_then(|d| d.doc.layer(photocraft_doc::LayerId(l)).map(|x| x.name.clone())))) {
-            (Some(_), Some(l)) => format!("Source: {} : {l}", app.session.active().map(|d| d.doc.name.clone()).unwrap_or_default()),
-            (Some(_), None) => "Source: set".to_string(),
-            _ => crate::i18n::fmt(tl!("Source: not set ({key}-click with Clone Stamp)"), &[("key", &crate::shortcuts::pretty("Alt"))]),
-        };
+    let src_line = match (slot.source, slot.layer.and_then(|l| app.session.active().and_then(|d| d.doc.layer(lienzo_doc::LayerId(l)).map(|x| x.name.clone()))))
+    {
+        (Some(_), Some(l)) => format!("Source: {} : {l}", app.session.active().map(|d| d.doc.name.clone()).unwrap_or_default()),
+        (Some(_), None) => "Source: set".to_string(),
+        _ => crate::i18n::fmt(tl!("Source: not set ({key}-click with Clone Stamp)"), &[("key", &crate::shortcuts::pretty("Alt"))]),
+    };
     ui.label(egui::RichText::new(src_line).color(t.text_dim).size(11.0));
     ui.add_space(4.0);
     let lbl = |ui: &mut egui::Ui, s: &str| {
@@ -675,8 +675,8 @@ pub fn clone_source_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// Where the active clone source samples for document point `at` (for the canvas marker).
 /// The first stroke anchors at its press, so the marker follows before the stroke commits.
-pub fn clone_sample_point(app: &PhotocraftApp, at: Option<[f64; 2]>) -> Option<[f64; 2]> {
-    use photocraft_engine::presets::clone_source::{Mapping, transform_matrix};
+pub fn clone_sample_point(app: &LienzoApp, at: Option<[f64; 2]>) -> Option<[f64; 2]> {
+    use lienzo_engine::presets::clone_source::{Mapping, transform_matrix};
     let s = app.session.presets.clone.active();
     let src = s.source?;
     let stroking = app.drag.as_ref().filter(|d| matches!(d.tool, Tool::CloneStamp | Tool::Healing)).map(|d| d.start);

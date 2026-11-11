@@ -16,19 +16,19 @@
 //!   segments) and the Pen carries on drawing from its last anchor once ⌘/Ctrl is let go; a
 //!   ⌘/Ctrl-press anywhere else ends it, as in Photoshop (#4022).
 //!
-//! A drag previews with `photocraft_vector::edit` and commits once on release through the engine
+//! A drag previews with `lienzo_vector::edit` and commits once on release through the engine
 //! (`path.moveAnchors`, `path.moveHandle`, `path.bendSegment`, `path.convertPoint`): one history
 //! step per drag, and the same commands drive it over MCP and the control channel. The Pen path
 //! being drawn is not in the document yet: its edits apply to it directly, without a command.
 
 use egui::{Color32, Modifiers, Pos2};
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
-use photocraft_vector::edit::{self, Handle, Hit};
+use lienzo_doc::vector::Path;
+use lienzo_geom::Point;
+use lienzo_vector::edit::{self, Handle, Hit};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
@@ -50,7 +50,7 @@ pub enum PathRef {
 impl PathRef {
     /// The engine's target params for this path. A saved path goes by its name; one that is gone
     /// gets an empty name, which the engine refuses.
-    pub(crate) fn params(self, app: &PhotocraftApp) -> Value {
+    pub(crate) fn params(self, app: &LienzoApp) -> Value {
         match self {
             PathRef::Work => json!({"name": "work"}),
             PathRef::Layer(id) => json!({"name": "layer", "layer": id}),
@@ -90,10 +90,10 @@ pub struct DirectSelection {
 /// Runtime selection ownership is never restored from settings onto another document.
 #[derive(Clone, Debug)]
 pub(crate) struct Owner {
-    document: photocraft_doc::DocId,
-    source: std::sync::Weak<photocraft_doc::Document>,
+    document: lienzo_doc::DocId,
+    source: std::sync::Weak<lienzo_doc::Document>,
     revision: u64,
-    layer: Option<photocraft_doc::LayerId>,
+    layer: Option<lienzo_doc::LayerId>,
     selected_path: Option<String>,
     vector_mask: bool,
     tool: Tool,
@@ -108,7 +108,7 @@ impl PartialEq for Owner {
 }
 
 impl Owner {
-    pub(crate) fn current(app: &PhotocraftApp) -> Option<Self> {
+    pub(crate) fn current(app: &LienzoApp) -> Option<Self> {
         let st = app.session.active()?;
         Some(Self {
             document: st.doc.id,
@@ -116,28 +116,28 @@ impl Owner {
             revision: st.revision,
             layer: st.active_layer,
             selected_path: app.ui.selected_path.clone(),
-            vector_mask: app.ui.vector_mask_target || st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::VectorMask,
+            vector_mask: app.ui.vector_mask_target || st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::VectorMask,
             tool: app.ui.tool,
         })
     }
 
-    fn same_target(&self, app: &PhotocraftApp) -> bool {
+    fn same_target(&self, app: &LienzoApp) -> bool {
         self.same_path_target(app) && app.ui.tool == self.tool
     }
 
-    fn same_path_target(&self, app: &PhotocraftApp) -> bool {
+    fn same_path_target(&self, app: &LienzoApp) -> bool {
         app.session.active().is_some_and(|st| {
             st.doc.id == self.document
                 && st.active_layer == self.layer
-                && (app.ui.vector_mask_target || st.channel_view.target == photocraft_engine::channel_cmds::ChannelTarget::VectorMask) == self.vector_mask
+                && (app.ui.vector_mask_target || st.channel_view.target == lienzo_engine::channel_cmds::ChannelTarget::VectorMask) == self.vector_mask
         }) && app.ui.selected_path == self.selected_path
     }
 
-    fn valid(&self, app: &PhotocraftApp) -> bool {
+    fn valid(&self, app: &LienzoApp) -> bool {
         self.valid_path(app) && app.ui.tool == self.tool
     }
 
-    fn valid_path(&self, app: &PhotocraftApp) -> bool {
+    fn valid_path(&self, app: &LienzoApp) -> bool {
         self.same_path_target(app)
             && app.session.active().is_some_and(|st| st.revision == self.revision && self.source.ptr_eq(&std::sync::Arc::downgrade(&st.doc)))
     }
@@ -146,13 +146,13 @@ impl Owner {
 /// Is `ds` still about the document, revision and target it was made on? Convert Point works on
 /// the handles selected with Direct Selection, so an idle selection crosses those two tools; a
 /// drag keeps its own tool.
-pub(crate) fn still_valid(app: &PhotocraftApp, ds: &DirectSelection) -> bool {
+pub(crate) fn still_valid(app: &LienzoApp, ds: &DirectSelection) -> bool {
     ds.owner.as_ref().is_some_and(|owner| owner.valid(app) || (ds.drag.is_none() && owns(owner.tool) && owns(app.ui.tool) && owner.valid_path(app)))
 }
 
 /// Clear stale anchors and gestures, keeping the pointer until the old release arrives. True
 /// when a drag was cancelled.
-pub(crate) fn cancel_stale(app: &mut PhotocraftApp) -> bool {
+pub(crate) fn cancel_stale(app: &mut LienzoApp) -> bool {
     let ds = &app.ui.direct_selection;
     let empty = ds.target.is_none() && ds.anchors.is_empty() && ds.segment.is_none() && ds.drag.is_none();
     if (ds.owner.is_none() && empty) || still_valid(app, ds) {
@@ -164,7 +164,7 @@ pub(crate) fn cancel_stale(app: &mut PhotocraftApp) -> bool {
 }
 
 /// Rebind a selection to the revision its own command made; another target or tool drops it.
-pub(crate) fn keep_after_command(app: &mut PhotocraftApp, mut selection: DirectSelection) {
+pub(crate) fn keep_after_command(app: &mut LienzoApp, mut selection: DirectSelection) {
     if selection.owner.as_ref().is_some_and(|owner| owner.same_target(app)) {
         selection.owner = Owner::current(app);
         app.ui.direct_selection = selection;
@@ -244,7 +244,7 @@ fn converting(tool: Tool, mods: Modifiers, pen_idle: bool) -> bool {
 /// The selected anchor when it is the only one and an endpoint of an open subpath of the active
 /// path: where the Curvature Pen carries the path on from (#10726), as Photoshop does after a
 /// click, or ⌘/Ctrl-click, on the last point. The path, the subpath's index and the knot's.
-pub(crate) fn selected_open_end(app: &PhotocraftApp) -> Option<(PathRef, usize, usize)> {
+pub(crate) fn selected_open_end(app: &LienzoApp) -> Option<(PathRef, usize, usize)> {
     let ds = &app.ui.direct_selection;
     let ([[s, k]], Some(target)) = (ds.anchors.as_slice(), ds.target) else { return None };
     let (_, path) = active_paths(app).into_iter().find(|(r, _)| *r == target)?;
@@ -255,7 +255,7 @@ pub(crate) fn selected_open_end(app: &PhotocraftApp) -> Option<(PathRef, usize, 
 
 /// Is the Curvature Pen idle (no path being drawn, no ⌘/Ctrl)? Then it edits the active path in
 /// place, as in Photoshop: a press on one of its anchors drags it, with no modifier.
-fn curvature_idle(app: &PhotocraftApp, mods: Modifiers) -> bool {
+fn curvature_idle(app: &LienzoApp, mods: Modifiers) -> bool {
     app.ui.tool == Tool::CurvaturePen && !mods.command && app.ui.pen.as_ref().is_none_or(|p| p.knots.is_empty())
 }
 
@@ -266,7 +266,7 @@ fn owns(tool: Tool) -> bool {
 
 /// Does the canvas draw Direct Selection's overlay instead of the plain path outlines? The Add /
 /// Delete Anchor Point tools show it too: they edit the same paths.
-pub fn shows(app: &PhotocraftApp, mods: Modifiers) -> bool {
+pub fn shows(app: &LienzoApp, mods: Modifiers) -> bool {
     direct(app.ui.tool, mods)
         || curvature_idle(app, mods)
         || app.ui.direct_selection.drag.is_some()
@@ -276,7 +276,7 @@ pub fn shows(app: &PhotocraftApp, mods: Modifiers) -> bool {
 /// The active paths, front first: the targeted vector mask, the active shape layer's path or the
 /// active type layer's Type Path (#9114), then the work path. The Pen's Auto Add/Delete edits these
 /// (`anchor_tools::pen_auto`).
-pub(crate) fn active_paths(app: &PhotocraftApp) -> Vec<(PathRef, Path)> {
+pub(crate) fn active_paths(app: &LienzoApp) -> Vec<(PathRef, Path)> {
     let layer = crate::vector_ui::targeted_vector_mask(app)
         .or_else(|| crate::vector_ui::active_shape_path(app))
         .map(|(id, p)| (PathRef::Layer(id), p))
@@ -295,7 +295,7 @@ pub(crate) fn active_paths(app: &PhotocraftApp) -> Vec<(PathRef, Path)> {
 
 /// The paths Direct Selection edits, front first: the Pen path being drawn, the active paths, every
 /// visible shape layer, then the work path.
-pub(crate) fn candidates(app: &PhotocraftApp) -> Vec<(PathRef, Path)> {
+pub(crate) fn candidates(app: &LienzoApp) -> Vec<(PathRef, Path)> {
     let active = app.session.active().map(|st| st.doc.id);
     let pen = app
         .ui
@@ -310,7 +310,7 @@ pub(crate) fn candidates(app: &PhotocraftApp) -> Vec<(PathRef, Path)> {
             if !l.visible || !(1..=path.len()).all(|n| st.doc.layer_at(&path[..n]).is_some_and(|a| a.visible)) {
                 continue;
             }
-            if let photocraft_doc::LayerContent::Shape(sh) = &l.content
+            if let lienzo_doc::LayerContent::Shape(sh) = &l.content
                 && !out.iter().any(|(r, _)| *r == PathRef::Layer(l.id.0))
             {
                 out.push((PathRef::Layer(l.id.0), sh.path.clone()));
@@ -324,10 +324,10 @@ pub(crate) fn candidates(app: &PhotocraftApp) -> Vec<(PathRef, Path)> {
 }
 
 /// Can `target` be edited: a layer's path only while the layer is not locked.
-pub(crate) fn writable(app: &PhotocraftApp, target: &PathRef) -> bool {
+pub(crate) fn writable(app: &LienzoApp, target: &PathRef) -> bool {
     match target {
         PathRef::Layer(id) | PathRef::TypePath(id) => app.session.active().is_some_and(|st| {
-            let id = photocraft_doc::LayerId(*id);
+            let id = lienzo_doc::LayerId(*id);
             let locks = st.doc.effective_locks(id);
             st.doc.layer(id).is_some() && !locks.all && !locks.pixels
         }),
@@ -337,7 +337,7 @@ pub(crate) fn writable(app: &PhotocraftApp, target: &PathRef) -> bool {
 
 /// The frontmost editable path under `p` and what is hit on it: the handles shown on a selection
 /// still valid count when `handles` is set. The hover and the press share it.
-pub(crate) fn hit_target(app: &PhotocraftApp, p: [f64; 2], handles: bool) -> Option<(PathRef, Path, Hit)> {
+pub(crate) fn hit_target(app: &LienzoApp, p: [f64; 2], handles: bool) -> Option<(PathRef, Path, Hit)> {
     let tol = 6.0 / f64::from(app.point_zoom().max(0.01));
     let ds = &app.ui.direct_selection;
     let valid = handles && still_valid(app, ds);
@@ -347,7 +347,7 @@ pub(crate) fn hit_target(app: &PhotocraftApp, p: [f64; 2], handles: bool) -> Opt
     })
 }
 
-fn retracted(k: &photocraft_doc::Knot, h: Handle) -> bool {
+fn retracted(k: &lienzo_doc::Knot, h: Handle) -> bool {
     let c = if h == Handle::In { k.in_ctrl } else { k.out_ctrl };
     (c.x - k.anchor.x).abs() < 1e-9 && (c.y - k.anchor.y).abs() < 1e-9
 }
@@ -371,7 +371,7 @@ fn shown_handles(ds: &DirectSelection, path: &Path) -> Vec<([usize; 2], Handle)>
 
 /// Canvas pointer events for Direct Selection and the Pen's ⌘ / ⌥ modes; false when the event is
 /// not theirs.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     cancel_stale(app);
     if app.ui.direct_selection.cancelled_drag {
         // The rest of a gesture cancelled on another document or target goes nowhere.
@@ -444,13 +444,13 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
 }
 
 /// Does a press at `p` hit the Pen path being drawn: one of its anchors, shown handles or segments?
-fn hits_pen(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+fn hits_pen(app: &LienzoApp, p: [f64; 2]) -> bool {
     hit_target(app, p, true).is_some_and(|(r, ..)| r == PathRef::Pen)
 }
 
 /// A press: pick what's under the pointer and start a drag. False lets the Pen handle a ⌥-press
 /// that hit nothing; the Convert Point tool has nothing else to do, so it keeps the press.
-fn press(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers, convert: bool) -> bool {
+fn press(app: &mut LienzoApp, p: [f64; 2], mods: Modifiers, convert: bool) -> bool {
     let own_tool = app.ui.tool == Tool::ConvertPoint;
     let Some((target, base, hit)) = hit_target(app, p, true) else {
         if convert {
@@ -523,7 +523,7 @@ fn press(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers, convert: bool) -
 
 /// What the idle Curvature Pen has under document point `p` on the active paths: an anchor or a
 /// segment, with the path it is on. Handles don't count.
-fn curvature_target(app: &PhotocraftApp, p: [f64; 2]) -> Option<(PathRef, Path, Hit)> {
+fn curvature_target(app: &LienzoApp, p: [f64; 2]) -> Option<(PathRef, Path, Hit)> {
     let tol = 6.0 / f64::from(app.point_zoom().max(0.01));
     active_paths(app).into_iter().find_map(|(r, path)| match edit::hit(&path, Point::new(p[0], p[1]), tol, &[]) {
         Some(h @ (Hit::Anchor(_) | Hit::Segment(..))) => Some((r, path, h)),
@@ -534,7 +534,7 @@ fn curvature_target(app: &PhotocraftApp, p: [f64; 2]) -> Option<(PathRef, Path, 
 /// What a Curvature Pen press at `p` would do to an existing point, for its cursor: the anchor
 /// under it (idle: one of the active path's; drawing: one of the path being drawn), or the active
 /// path's segment it would add an anchor to.
-pub fn curvature_hover(app: &PhotocraftApp, p: [f64; 2], mods: Modifiers) -> Option<Hit> {
+pub fn curvature_hover(app: &LienzoApp, p: [f64; 2], mods: Modifiers) -> Option<Hit> {
     if app.ui.tool != Tool::CurvaturePen || mods.command {
         return None;
     }
@@ -546,7 +546,7 @@ pub fn curvature_hover(app: &PhotocraftApp, p: [f64; 2], mods: Modifiers) -> Opt
 
 /// The idle Curvature Pen's double-click on an anchor of the active path: smooth ↔ corner, and
 /// the subpath reflows (one `path.convertPoint` with `curvature`).
-pub(crate) fn curvature_toggle_active(app: &mut PhotocraftApp, p: [f64; 2]) {
+pub(crate) fn curvature_toggle_active(app: &mut LienzoApp, p: [f64; 2]) {
     let Some((target, _, Hit::Anchor([s, k]))) = curvature_target(app, p) else { return };
     let mut params = json!({"subpath": s, "knot": k, "curvature": true});
     if let (Some(o), Some(tp)) = (params.as_object_mut(), target.params(app).as_object()) {
@@ -564,7 +564,7 @@ pub(crate) fn curvature_toggle_active(app: &mut PhotocraftApp, p: [f64; 2]) {
 /// way the curve reflows smoothly through the moved anchor, as in Photoshop (`path.moveAnchors`
 /// with `curvature` on release), and an added anchor and its drag are one history step. False
 /// when the press hits neither, so it starts a new path.
-fn curvature_press(app: &mut PhotocraftApp, p: [f64; 2]) -> bool {
+fn curvature_press(app: &mut LienzoApp, p: [f64; 2]) -> bool {
     let Some((target, mut base, hit)) = curvature_target(app, p) else { return false };
     let mut coalesce = None;
     let k = match hit {
@@ -600,7 +600,7 @@ fn curvature_press(app: &mut PhotocraftApp, p: [f64; 2]) -> bool {
 
 /// End of an edit drag: commit it as one command. A click (no movement) commits nothing, except
 /// Pen + ⌥ on an anchor, which makes it a corner. The Pen path being drawn takes the edit directly.
-fn release(app: &mut PhotocraftApp, target: PathRef, base: &Path, edit: &Edit, start: [f64; 2], end: [f64; 2], mods: Modifiers) {
+fn release(app: &mut LienzoApp, target: PathRef, base: &Path, edit: &Edit, start: [f64; 2], end: [f64; 2], mods: Modifiers) {
     let moved = (end[0] - start[0]).hypot(end[1] - start[1]) * f64::from(app.point_zoom()) >= 1.0;
     if target == PathRef::Pen {
         let edited = match edit {
@@ -655,7 +655,7 @@ fn release(app: &mut PhotocraftApp, target: PathRef, base: &Path, edit: &Edit, s
 
 /// End of a marquee: select the anchors inside it on the frontmost path that has any (⇧ adds).
 /// A click on empty canvas deselects.
-fn marquee(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2], add: bool) {
+fn marquee(app: &mut LienzoApp, start: [f64; 2], end: [f64; 2], add: bool) {
     let rect = [start[0], start[1], end[0], end[1]];
     let hits = candidates(app).into_iter().map(|(r, path)| (r, edit::anchors_in(&path, rect))).find(|(_, a)| !a.is_empty());
     let owner = Owner::current(app);
@@ -682,7 +682,7 @@ fn marquee(app: &mut PhotocraftApp, start: [f64; 2], end: [f64; 2], add: bool) {
 /// Arrow keys with Direct Selection and selected anchors (#4486), as in Photoshop: nudge them
 /// 1 px (⇧ 10 px) through `path.moveAnchors`, one history step per press. Not while a drag is
 /// in progress. Returns true when a key was used.
-pub fn arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn arrow_keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     cancel_stale(app);
     let ds = &app.ui.direct_selection;
     let Some(target) = ds.target.filter(|_| app.ui.tool == Tool::DirectSelection && !ds.anchors.is_empty() && ds.drag.is_none()) else {
@@ -727,7 +727,7 @@ pub fn arrow_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 /// Paths with their anchors (selected ones filled), the shown handles, the drag's preview in
 /// place of its path, and the marquee. `paths` false (View › Show › Target Path off) leaves only
 /// the marquee.
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, paths: bool) {
+pub fn draw_overlay(app: &LienzoApp, painter: &egui::Painter, to_scr: &dyn Fn([f64; 2]) -> Pos2, accent: Color32, paths: bool) {
     let ds = &app.ui.direct_selection;
     // The idle Curvature Pen shows the anchors of the path it edits, not every shape's.
     let shown = if !paths {
@@ -773,12 +773,12 @@ mod freeform_command_tests {
     use super::*;
 
     /// Is a Direct Selection drag under way on the document and target it started on?
-    fn captured_drag(app: &PhotocraftApp) -> bool {
+    fn captured_drag(app: &LienzoApp) -> bool {
         app.ui.direct_selection.drag.is_some() && app.ui.direct_selection.owner.as_ref().is_some_and(|owner| owner.valid(app))
     }
 
-    fn app(tool: Tool) -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app(tool: Tool) -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
         for name in ["work", "Saved drawing"] {
             app.run("path.set", json!({"name": name, "path":{"subpaths":[{"knots":[[20,20],[120,20]]}]}})).unwrap();

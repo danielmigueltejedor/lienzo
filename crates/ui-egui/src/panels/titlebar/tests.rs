@@ -1,13 +1,13 @@
 use super::*;
 use egui::{Event, Pos2, RawInput, ViewportId};
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 
 /// #5826: the drag overlay under a dialog doesn't depend on the custom title bar. On macOS
 /// (OS traffic lights over the app's own title strip) a dialog left the window undraggable.
 #[test]
 fn a_dialog_keeps_the_title_strip_draggable_with_either_title_bar() {
     for custom in [false, true] {
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.custom_titlebar = custom;
         app.run("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
         assert!(!app.titlebar_modal_drag(true), "no dialog, no overlay");
@@ -22,7 +22,7 @@ fn a_dialog_keeps_the_title_strip_draggable_with_either_title_bar() {
 /// A headless window `width` pt wide showing the title bar and the resize zones.
 struct Win {
     ctx: egui::Context,
-    app: PhotocraftApp,
+    app: LienzoApp,
     width: f32,
     time: f64,
     maximized: bool,
@@ -31,8 +31,8 @@ struct Win {
 impl Win {
     fn new(width: f32) -> Self {
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut app = LienzoApp::new(Session::new(), crate::Services::default());
         app.custom_titlebar = true;
         Self { ctx, app, width, time: 0.0, maximized: false }
     }
@@ -48,7 +48,7 @@ impl Win {
         if let Some(v) = input.viewports.get_mut(&ViewportId::ROOT) {
             v.maximized = Some(self.maximized);
         }
-        // What `PhotocraftApp::raw_input_hook` does.
+        // What `LienzoApp::raw_input_hook` does.
         release_after_os_resize(&self.ctx, &mut input);
         let app = &mut self.app;
         let mut out = self.ctx.run_ui(input, |ui| {

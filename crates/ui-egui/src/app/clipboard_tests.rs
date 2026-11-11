@@ -13,7 +13,7 @@ fn os_clipboard_bridge() {
         clipboard_get_image: Some(Box::new(move || Ok(b.lock().unwrap().clone()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.session.execute("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.run("select.rect", serde_json::json!({"x": 0, "y": 0, "width": 8, "height": 4})).unwrap();
@@ -47,7 +47,7 @@ fn os_clipboard_honours_export_clipboard_preference() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.session.execute("prefs.set", serde_json::json!({"values": {"general.exportClipboard": false}})).unwrap();
     app.session.execute("file.new", serde_json::json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -64,7 +64,7 @@ const CLIP_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="8" hei
 fn svg_clipboard_paste_as_keeps_source_and_creates_the_requested_content() {
     for mode in ["pixels", "path", "shape"] {
         let services = Services { clipboard_get_svg: Some(Box::new(|| Ok(Some(CLIP_SVG.as_bytes().to_vec())))), ..Default::default() };
-        let mut app = PhotocraftApp::new(Session::new(), services);
+        let mut app = LienzoApp::new(Session::new(), services);
         app.run("file.new", json!({"width": 24, "height": 20})).unwrap();
         let (layers, paths) = {
             let doc = &app.session.active().unwrap().doc;
@@ -78,8 +78,8 @@ fn svg_clipboard_paste_as_keeps_source_and_creates_the_requested_content() {
         } else {
             let content = &state.doc.layer(state.active_layer.unwrap()).unwrap().content;
             assert!(match mode {
-                "pixels" => matches!(content, photocraft_doc::LayerContent::Raster(_)),
-                _ => matches!(content, photocraft_doc::LayerContent::Shape(_)),
+                "pixels" => matches!(content, lienzo_doc::LayerContent::Raster(_)),
+                _ => matches!(content, lienzo_doc::LayerContent::Shape(_)),
             });
         }
         let source = app.session.clipboard.as_ref().unwrap().svg.clone().unwrap();
@@ -97,7 +97,7 @@ fn svg_clipboard_errors_preserve_the_copy_and_empty_reads_invalidate_external_so
     let response = Arc::new(Mutex::new(Ok(Some(CLIP_SVG.as_bytes().to_vec()))));
     let read = response.clone();
     let services = Services { clipboard_get_svg: Some(Box::new(move || read.lock().unwrap().clone())), ..Default::default() };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.run("file.new", json!({"width": 24, "height": 20})).unwrap();
     app.run("edit.paste", json!({"as": "path"})).unwrap();
     let before = app.session.active().unwrap().doc.clone();
@@ -127,11 +127,11 @@ fn explicit_pixel_paste_still_reads_raster_clipboards() {
         clipboard_get_image: Some(Box::new(|| Ok(Some((2, 1, vec![255; 8]))))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.run("file.new", json!({"width": 24, "height": 20})).unwrap();
     app.run("edit.paste", json!({"as": "pixels"})).unwrap();
     let state = app.session.active().unwrap();
-    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, photocraft_doc::LayerContent::Raster(_)));
+    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, lienzo_doc::LayerContent::Raster(_)));
     assert!(app.session.clipboard.as_ref().unwrap().svg.is_none());
 }
 
@@ -147,7 +147,7 @@ fn newer_internal_copies_survive_an_unchanged_external_svg() {
             clipboard_get_image: Some(Box::new(move || Ok(read.lock().unwrap().clone()))),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(Session::new(), services);
+        let mut app = LienzoApp::new(Session::new(), services);
         app.run("file.new", json!({"width":64,"height":64})).unwrap();
         app.import_os_svg_clipboard().unwrap();
         let clip = app.session.clipboard.as_ref().unwrap();
@@ -171,13 +171,13 @@ fn newer_internal_copies_survive_an_unchanged_external_svg() {
 #[test]
 fn action_vector_paste_reads_the_current_svg_source() {
     let services = Services { clipboard_get_svg: Some(Box::new(|| Ok(Some(CLIP_SVG.as_bytes().to_vec())))), ..Default::default() };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.run("file.new", json!({"width": 24, "height": 20})).unwrap();
-    app.session.actions.list.push(photocraft_engine::actions_cmds::Action::new("SVG", vec![("edit.paste".into(), json!({"as": "shape"}))]));
+    app.session.actions.list.push(lienzo_engine::actions_cmds::Action::new("SVG", vec![("edit.paste".into(), json!({"as": "shape"}))]));
     let result = app.run("actions.play", json!({"action": "SVG"})).unwrap();
     assert!(result.get("failed").is_none(), "{result}");
     let state = app.session.active().unwrap();
-    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, photocraft_doc::LayerContent::Shape(_)));
+    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, lienzo_doc::LayerContent::Shape(_)));
 }
 
 #[test]
@@ -197,7 +197,7 @@ fn failed_clipboard_reads_preserve_editable_contents_until_retry() {
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(Session::new(), services);
+        let mut app = LienzoApp::new(Session::new(), services);
         app.run("file.new", serde_json::json!({"width": 80, "height": 60})).unwrap();
         app.run("shape.create", serde_json::json!({"kind": "rect", "rect": [10, 10, 40, 20], "fill": "#ff0000"})).unwrap();
         app.run("edit.copy", serde_json::json!({})).unwrap();
@@ -226,7 +226,7 @@ fn failed_clipboard_reads_preserve_editable_contents_until_retry() {
         busy.store(false, Ordering::SeqCst);
         app.run("edit.pasteSpecial.pasteInPlace", serde_json::json!({})).unwrap();
         let state = app.session.active().unwrap();
-        assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, photocraft_doc::LayerContent::Shape(_)));
+        assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, lienzo_doc::LayerContent::Shape(_)));
         assert!(!app.ui.status_error);
     }
 }
@@ -246,7 +246,7 @@ fn internal_only_clipboard_remains_usable_when_native_access_fails() {
                 })),
                 ..Default::default()
             };
-            let mut app = PhotocraftApp::new(Session::new(), services);
+            let mut app = LienzoApp::new(Session::new(), services);
             app.session.edit_prefs(|prefs| prefs.general.export_clipboard = export);
             app.run("file.new", serde_json::json!({"width": 80, "height": 60})).unwrap();
             app.run("shape.create", serde_json::json!({"kind": "rect", "rect": [10, 10, 40, 20], "fill": "#ff0000"})).unwrap();
@@ -265,7 +265,7 @@ fn internal_only_clipboard_remains_usable_when_native_access_fails() {
             } else {
                 assert_eq!(app.session.documents().len(), 2);
                 let state = app.session.active().unwrap();
-                assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, photocraft_doc::LayerContent::Shape(_)));
+                assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, lienzo_doc::LayerContent::Shape(_)));
             }
             app.run("edit.purge.clipboard", serde_json::json!({})).unwrap();
             assert!(app.session.clipboard.is_none());
@@ -305,7 +305,7 @@ fn newer_unexported_copies_do_not_track_an_older_os_signature() {
                     })),
                     ..Default::default()
                 };
-                let mut app = PhotocraftApp::new(Session::new(), services);
+                let mut app = LienzoApp::new(Session::new(), services);
                 app.run("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
                 if imported {
                     *os.lock().unwrap() = Some((2, 2, [255u8, 0, 0, 255].repeat(4)));
@@ -362,7 +362,7 @@ fn failed_clipboard_reads_do_not_paste_an_external_or_missing_copy() {
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(Session::new(), services);
+        let mut app = LienzoApp::new(Session::new(), services);
         app.run("file.new", serde_json::json!({"width": 80, "height": 60})).unwrap();
         if external {
             assert!(app.import_os_clipboard().unwrap());
@@ -384,13 +384,13 @@ fn failed_clipboard_reads_do_not_paste_an_external_or_missing_copy() {
 }
 
 /// An app whose OS clipboard is `os`, counting every read in `reads`.
-fn app_with_os_clipboard(os: &OsClip, reads: &Arc<std::sync::atomic::AtomicUsize>) -> PhotocraftApp {
+fn app_with_os_clipboard(os: &OsClip, reads: &Arc<std::sync::atomic::AtomicUsize>) -> LienzoApp {
     let (b, n) = (os.clone(), reads.clone());
     let get = move || {
         n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Ok(b.lock().unwrap().clone())
     };
-    let mut app = PhotocraftApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
+    let mut app = LienzoApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
     app.session.execute("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app
@@ -413,7 +413,7 @@ fn external_clipboard_enables_and_centres_paste() {
     assert_eq!(r["offset"], serde_json::json!([38, 18]), "external image is centred in the view: {r}");
     assert_eq!(reads.load(std::sync::atomic::Ordering::SeqCst), 1, "one read per explicit paste");
     // Without a clipboard service Paste greys until something is copied in the app.
-    let mut plain = PhotocraftApp::new(Session::new(), Services::default());
+    let mut plain = LienzoApp::new(Session::new(), Services::default());
     plain.session.execute("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
     assert!(!crate::menus::is_enabled(&plain, "edit.paste"));
 }
@@ -428,7 +428,7 @@ fn os_clipboard_image_becomes_a_new_document() {
         n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Ok(b.lock().unwrap().clone())
     };
-    let mut app = PhotocraftApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
+    let mut app = LienzoApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
     let ctx = egui::Context::default();
     // Listed right after File › New…, enabled without reading the clipboard.
     let items = crate::menus::menu_items(&app);
@@ -473,12 +473,12 @@ fn idle_frames_never_read_the_os_clipboard() {
     *os.lock().unwrap() = Some((4, 4, [255u8, 0, 0, 255].repeat(16)));
     let (b, n) = (os.clone(), reads.clone());
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let get = move || {
             n.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok(b.lock().unwrap().clone())
         };
-        let mut app = PhotocraftApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
+        let mut app = LienzoApp::new(Session::new(), Services { clipboard_get_image: Some(Box::new(get)), ..Default::default() });
         app.session.execute("file.new", serde_json::json!({"width": 64, "height": 64})).unwrap();
         app
     });
@@ -548,12 +548,12 @@ fn targeting_a_mask_swaps_to_its_own_colour_pair() {
     const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
     const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-    let mut app = PhotocraftApp::new(Session::new(), Services::default());
+    let mut app = LienzoApp::new(Session::new(), Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     let masked = app.run("layer.new.layer", json!({})).unwrap()["layer"].clone();
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
-    let pair = |app: &PhotocraftApp| (app.session.tools.foreground, app.session.tools.background);
-    let target = |app: &mut PhotocraftApp, mask: bool| {
+    let pair = |app: &LienzoApp| (app.session.tools.foreground, app.session.tools.background);
+    let target = |app: &mut LienzoApp, mask: bool| {
         app.ui.mask_target = mask;
         app.sync_views();
     };
@@ -585,19 +585,19 @@ type SvgClip = Arc<Mutex<Result<Option<Vec<u8>>, String>>>;
 
 /// An app whose OS clipboard holds the SVG `svg` and the bitmap `image`, exporting nothing
 /// (so an internal copy stays newer than what the OS clipboard holds).
-fn app_with_svg_and_image(svg: &SvgClip, image: &OsClip) -> PhotocraftApp {
+fn app_with_svg_and_image(svg: &SvgClip, image: &OsClip) -> LienzoApp {
     let (s, i) = (svg.clone(), image.clone());
     let services = Services {
         clipboard_get_svg: Some(Box::new(move || s.lock().unwrap().clone())),
         clipboard_get_image: Some(Box::new(move || Ok(i.lock().unwrap().clone()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(Session::new(), services);
+    let mut app = LienzoApp::new(Session::new(), services);
     app.session.edit_prefs(|prefs| prefs.general.export_clipboard = false);
     app
 }
 
-fn copy_blue(app: &mut PhotocraftApp) {
+fn copy_blue(app: &mut LienzoApp) {
     app.run("file.new", json!({"width":8,"height":6})).unwrap();
     app.run("edit.fill", json!({"color":"#0000ff"})).unwrap();
     app.run("edit.copy", json!({})).unwrap();
@@ -660,7 +660,7 @@ fn pixel_paste_reads_the_bitmap_when_the_svg_read_fails() {
     app.run("file.new", json!({"width":24,"height":20})).unwrap();
     app.run("edit.paste", json!({"as":"pixels"})).unwrap();
     let state = app.session.active().unwrap();
-    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, photocraft_doc::LayerContent::Raster(_)));
+    assert!(matches!(state.doc.layer(state.active_layer.unwrap()).unwrap().content, lienzo_doc::LayerContent::Raster(_)));
     assert!(!app.ui.status_error, "{}", app.ui.status);
     let mut app = app_with_svg_and_image(&svg, &Arc::new(Mutex::new(None)));
     app.run("file.new", json!({"width":24,"height":20})).unwrap();

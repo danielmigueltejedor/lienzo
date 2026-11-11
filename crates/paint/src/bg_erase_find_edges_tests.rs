@@ -3,9 +3,9 @@
 //! values are the reference application's measurements from the issue (8-bit RGB, 40 px and 60 px
 //! hard round tips, Tolerance 50, Sampling Continuous).
 
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba};
+use lienzo_color::PixelFormat;
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba};
 
 use crate::bg_erase::{BgEraseSettings, apply_background_eraser};
 use crate::replace::{Limits, Sampling};

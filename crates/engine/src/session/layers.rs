@@ -20,7 +20,7 @@ impl Session {
         if clean {
             st.saved_revision = st.revision;
         }
-        st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+        st.last_damage = Some(lienzo_geom::Rect::EMPTY);
         self.note_layer_change(before);
         Ok(())
     }
@@ -47,19 +47,19 @@ impl Session {
         if clean {
             st.saved_revision = st.revision;
         }
-        st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+        st.last_damage = Some(lienzo_geom::Rect::EMPTY);
         self.note_layer_change(before);
         Ok(())
     }
 
     /// Re-renders the pixels of type layers whose font arrived after they were drawn (the web
-    /// build fetches served fonts on demand, `photocraft_text::served`). The layers' model is
+    /// build fetches served fonts on demand, `lienzo_text::served`). The layers' model is
     /// unchanged, so this is no history step and leaves a clean document clean. Unknown documents
     /// and layers are skipped. A document a background job is computing from must not move under
     /// it: its layers are returned, to try again later.
     pub fn refresh_type_layers(&mut self, layers: &[TypeLayerRef]) -> Vec<TypeLayerRef> {
         let mut busy = Vec::new();
-        let mut docs: Vec<photocraft_doc::DocId> = Vec::new();
+        let mut docs: Vec<lienzo_doc::DocId> = Vec::new();
         for l in layers {
             if !docs.contains(&l.doc) {
                 docs.push(l.doc);
@@ -113,11 +113,11 @@ impl Session {
 
 /// `doc` with its type layers among `ids` re-rendered (`Session::refresh_type_layers`), or `None`
 /// when none of them is a type layer of `doc`.
-fn refresh_text_layers(doc: &Arc<photocraft_doc::Document>, ids: &[LayerId]) -> Option<photocraft_doc::Document> {
+fn refresh_text_layers(doc: &Arc<lienzo_doc::Document>, ids: &[LayerId]) -> Option<lienzo_doc::Document> {
     let mut out = (**doc).clone();
     let mut changed = false;
     for id in ids {
-        if let Some(photocraft_doc::Layer { content: photocraft_doc::LayerContent::Text(t), .. }) = out.layer_mut(*id) {
+        if let Some(lienzo_doc::Layer { content: lienzo_doc::LayerContent::Text(t), .. }) = out.layer_mut(*id) {
             type_cmds::refresh(doc, t);
             changed = true;
         }

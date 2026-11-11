@@ -5,7 +5,7 @@ use egui::{RichText, vec2};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 /// Timeline panel view state.
@@ -21,7 +21,7 @@ pub struct TimelineUi {
 }
 
 /// Menu checkmark for Window › Timeline.
-pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &LienzoApp, id: &str) -> Option<bool> {
     (id == "window.panel.timeline").then_some(app.ui.timeline.open)
 }
 
@@ -31,7 +31,7 @@ pub fn handles(id: &str) -> bool {
 }
 
 /// Toggle the Timeline panel.
-pub fn menu(app: &mut PhotocraftApp, id: &str, _params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut LienzoApp, id: &str, _params: &Value) -> Option<Result<Value, String>> {
     if id == "window.panel.timeline" {
         app.ui.timeline.open = !app.ui.timeline.open;
         return Some(Ok(json!({ "open": app.ui.timeline.open })));
@@ -40,7 +40,7 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, _params: &Value) -> Option<Result
 }
 
 /// Render the Timeline panel.
-pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
     if !app.ui.timeline.open {
         return;
     }
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn stop_step_and_scrub_pause_playback_and_second_stop_rewinds() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 100, "height": 80})).unwrap();
         app.run("timeline.create", json!({"duration": 10, "fps": 30.0})).unwrap();
         app.ui.timeline.open = true;

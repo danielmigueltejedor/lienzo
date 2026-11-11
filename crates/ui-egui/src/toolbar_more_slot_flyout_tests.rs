@@ -3,11 +3,11 @@
 
 use egui::{Event, Pos2, Rect, vec2};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::panels::toolbar::{TOOL_SECTIONS, toolbar};
 use crate::theme::Tokens;
 
-fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<Event>) {
+fn frame(app: &mut LienzoApp, ctx: &egui::Context, time: f64, events: Vec<Event>) {
     let mut out = ctx.run_ui(
         egui::RawInput { time: Some(time), events, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(1200.0, 1800.0))), ..Default::default() },
         |ui| toolbar(app, ui),
@@ -15,10 +15,10 @@ fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, time: f64, events: Vec<Ev
     out.textures_delta.clear();
 }
 
-fn setup() -> (PhotocraftApp, egui::Context, Pos2) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn setup() -> (LienzoApp, egui::Context, Pos2) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     frame(&mut app, &ctx, 0.0, vec![]);
     frame(&mut app, &ctx, 0.1, vec![]);
     let bx = if Tokens::get(&ctx).pro { 30.0 } else { 36.0 };
@@ -36,7 +36,7 @@ fn button(pos: Pos2, which: egui::PointerButton, pressed: bool) -> Event {
     Event::PointerButton { pos, button: which, pressed, modifiers: Default::default() }
 }
 
-fn right_click(app: &mut PhotocraftApp, ctx: &egui::Context, at: Pos2, t: f64) {
+fn right_click(app: &mut LienzoApp, ctx: &egui::Context, at: Pos2, t: f64) {
     frame(app, ctx, t, vec![Event::PointerMoved(at), button(at, egui::PointerButton::Secondary, true)]);
     frame(app, ctx, t + 0.05, vec![button(at, egui::PointerButton::Secondary, false)]);
     frame(app, ctx, t + 0.1, vec![]);

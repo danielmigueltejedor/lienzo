@@ -9,21 +9,21 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
 use super::{ONE_TO_100, ZERO_TO_100};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{DialogKind, Tool};
 
-pub(super) fn bar(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn bar(tool: Tool) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1800.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
 /// Types `text` into the field named `label`, then Tabs out of it.
-pub(super) fn type_into(h: &mut Harness<'static, PhotocraftApp>, label: &str, text: &str) {
+pub(super) fn type_into(h: &mut Harness<'static, LienzoApp>, label: &str, text: &str) {
     // The fields take their captions' names ("Opacity:").
     let label = &format!("{label}:");
     h.query_all_by_role(Role::SpinButton)
@@ -38,18 +38,18 @@ pub(super) fn type_into(h: &mut Harness<'static, PhotocraftApp>, label: &str, te
     h.run_steps(3);
 }
 
-pub(super) fn alerts(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+pub(super) fn alerts(h: &Harness<'static, LienzoApp>) -> Vec<String> {
     h.state().ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(str::to_owned)).collect()
 }
 
 /// OK on the alert, as `ui.dialog.confirm` presses it (this harness draws only the bar).
-pub(super) fn ok(h: &mut Harness<'static, PhotocraftApp>) {
+pub(super) fn ok(h: &mut Harness<'static, LienzoApp>) {
     let id = h.state().ui.dialogs.iter().find(|d| d.kind == DialogKind::Error).map(|d| d.id).expect("an alert");
     crate::dialogs::confirm(h.state_mut(), id).unwrap();
     h.run_steps(3);
 }
 
-fn brush(h: &Harness<'static, PhotocraftApp>) -> (f32, f32, f32) {
+fn brush(h: &Harness<'static, LienzoApp>) -> (f32, f32, f32) {
     let b = &h.state().session.tools.brush;
     ((b.opacity * 100.0).round(), (b.flow * 100.0).round(), (b.smoothing.amount * 100.0).round())
 }
@@ -132,7 +132,7 @@ fn a_typed_value_left_by_a_tool_switch_shows_the_stored_value() {
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
     h.event(egui::Event::Text("150".into()));
     h.run_steps(1);
-    let switch = |h: &mut Harness<'static, PhotocraftApp>, tool: Tool| {
+    let switch = |h: &mut Harness<'static, LienzoApp>, tool: Tool| {
         h.state_mut().ui.tool = tool;
         crate::paint_mouse::sync_tool_brush(h.state_mut());
     };
@@ -207,24 +207,24 @@ fn a_caption_scrub_past_100_does_not_alert() {
 /// stored value when it comes back.
 #[test]
 fn a_toolbar_click_after_a_typed_value_past_the_range_alerts_once() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = Tool::Eraser;
     let mut h = Harness::builder().with_size(vec2(1800.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             crate::panels::options_bar(app, ui);
             crate::panels::toolbar(app, ui);
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
-    let field = |h: &Harness<'static, PhotocraftApp>| {
+    let field = |h: &Harness<'static, LienzoApp>| {
         h.query_all_by_role(Role::SpinButton)
             .find(|n| n.accesskit_node().label().as_deref() == Some("Opacity:"))
             .map(|n| (n.rect(), n.accesskit_node().numeric_value()))
     };
-    let click = |h: &mut Harness<'static, PhotocraftApp>, at: egui::Pos2| {
+    let click = |h: &mut Harness<'static, LienzoApp>, at: egui::Pos2| {
         h.event(egui::Event::PointerMoved(at));
         h.run_steps(1);
         for pressed in [true, false] {
@@ -238,7 +238,7 @@ fn a_toolbar_click_after_a_typed_value_past_the_range_alerts_once() {
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
     h.event(egui::Event::Text("150".into()));
     h.run_steps(1);
-    let tool = |h: &Harness<'static, PhotocraftApp>, name: &str| {
+    let tool = |h: &Harness<'static, LienzoApp>, name: &str| {
         h.query_all_by_role(Role::Button).find(|n| n.accesskit_node().label().is_some_and(|l| l.starts_with(name))).map(|n| n.rect().center())
     };
     let at = tool(&h, "Brush Tool").expect("the toolbar's Brush Tool");

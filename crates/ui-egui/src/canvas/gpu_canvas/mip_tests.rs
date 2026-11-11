@@ -3,9 +3,9 @@
 //! test devices), and use synthetic pixels instead of event photographs.
 
 use super::*;
-use photocraft_compose::Buffer;
-use photocraft_doc::SampleType;
-use photocraft_geom::Rect;
+use lienzo_compose::Buffer;
+use lienzo_doc::SampleType;
+use lienzo_geom::Rect;
 
 fn read_mips(gpu: &GpuCanvas, key: u64) -> Vec<Vec<[f32; 4]>> {
     let renderer = gpu.rs.renderer.read();
@@ -51,7 +51,7 @@ fn read_mips(gpu: &GpuCanvas, key: u64) -> Vec<Vec<[f32; 4]>> {
 
 #[test]
 fn canvas_mips_preserve_opaque_pixels_and_partial_updates() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let rs = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| egui_kittest::wgpu::create_render_state(wgpu_setup(), Default::default())));
     let Ok(rs) = rs else {
         eprintln!("skipping mip readback: no GPU adapter");
@@ -166,7 +166,7 @@ fn check_mips(gpu: &GpuCanvas) {
 /// both depths and compares every level with a full rebuild of the same pixels.
 #[test]
 fn partial_updates_match_a_full_rebuild_at_every_mip_level() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = lienzo_testkit::gpu_lock();
     let rs = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| egui_kittest::wgpu::create_render_state(wgpu_setup(), Default::default())));
     let Ok(rs) = rs else {
         eprintln!("skipping mip rebuild comparison: no GPU adapter");
@@ -206,8 +206,8 @@ fn partial_updates_match_a_full_rebuild_at_every_mip_level() {
 
 /// A CPU-created texture stays valid when a newly built compositor updates only a damage rect.
 fn background_compositor_switch_preserves_pixels(gpu: &GpuCanvas) {
-    use photocraft_doc::{ColorMode, Document, Layer, LayerContent};
-    let mut doc = Document::new("background build", photocraft_geom::Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
+    use lienzo_doc::{ColorMode, Document, Layer, LayerContent};
+    let mut doc = Document::new("background build", lienzo_geom::Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
     let mut layer = Layer::raster("pixels", doc.pixel_format());
     if let LayerContent::Raster(surface) = &mut layer.content {
         surface.fill_rect(Rect::new(0, 0, 64, 64), &[0.2, 0.4, 0.6, 1.0]);
@@ -219,7 +219,7 @@ fn background_compositor_switch_preserves_pixels(gpu: &GpuCanvas) {
     assert_eq!(first.kind, "full");
     assert_eq!(first.fallback, Some(CpuReason::CompositorBuilding));
     assert!(gpu.compositor_failed().is_none());
-    let built = photocraft_gpu::Compositor::try_new_with_format(&gpu.rs.device, photocraft_gpu::Compositor::preferred_acc_format(&gpu.rs.adapter));
+    let built = lienzo_gpu::Compositor::try_new_with_format(&gpu.rs.device, lienzo_gpu::Compositor::preferred_acc_format(&gpu.rs.adapter));
     let Ok(comp) = built else { return };
     *gpu.compositor_build.lock().unwrap() = compositor_build::BuildState::Ready(Box::new(comp));
     let damage = Rect::new(8, 8, 16, 16);
@@ -229,7 +229,7 @@ fn background_compositor_switch_preserves_pixels(gpu: &GpuCanvas) {
     let second = gpu.refresh(key, &doc, Some(damage), None);
     assert_eq!(second.kind, "gpu-rect", "{:?}", second.fallback);
     let actual = read_mips(gpu, key).remove(0);
-    let expected = photocraft_compose::render(&doc, doc.bounds());
+    let expected = lienzo_compose::render(&doc, doc.bounds());
     for (got, want) in actual.iter().zip(expected.px.iter()) {
         for (g, w) in got.iter().zip(want.iter()) {
             assert!((g - w).abs() < 0.02, "{got:?} != {want:?}");

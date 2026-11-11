@@ -3,22 +3,22 @@
 //! [`crate::Services`], applying the interface theme, autosave and crash recovery, and the
 //! history log.
 //!
-//! The values live in the engine ([`photocraft_engine::prefs::Preferences`], so agents read and
+//! The values live in the engine ([`lienzo_engine::prefs::Preferences`], so agents read and
 //! change them with `prefs.get` / `prefs.set`); this module only edits a working copy in a dialog
 //! and commits it with those commands on Apply or OK.
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use egui::{Color32, RichText, Sense, vec2};
-use photocraft_doc::DocId;
-use photocraft_engine::jobs::{JobEvent, JobId, JobOutcome, Started};
+use lienzo_doc::DocId;
+use lienzo_engine::jobs::{JobEvent, JobId, JobOutcome, Started};
 #[cfg(test)]
-use photocraft_engine::prefs::Theme;
-use photocraft_engine::prefs::{self, AppearanceMode, DarkTheme, LightTheme, SECTIONS, Theme as SavedTheme};
-use photocraft_engine::snap::{SnapLine, SnapOptions, SnapTargets};
+use lienzo_engine::prefs::Theme;
+use lienzo_engine::prefs::{self, AppearanceMode, DarkTheme, LightTheme, SECTIONS, Theme as SavedTheme};
+use lienzo_engine::snap::{SnapLine, SnapOptions, SnapTargets};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 use crate::theme::{ThemeKind, Tokens};
 

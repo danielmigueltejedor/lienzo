@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_color::{BlendMode, Color, PixelFormat, SampleType};
-use photocraft_doc::{BlendIf, BlendRange, Effect, FxCommon, Size};
+use lienzo_color::{BlendMode, Color, PixelFormat, SampleType};
+use lienzo_doc::{BlendIf, BlendRange, Effect, FxCommon, Size};
 use serde_json::json;
 
 const KINDS: [&str; 14] = crate::adjust_editors::KINDS;
@@ -34,7 +34,7 @@ fn rnd(seed: u32, i: u32) -> f32 {
     (h & 0xffff) as f32 / 65535.0
 }
 
-fn fill_noise(s: &mut photocraft_raster::Surface, r: Rect, seed: u32, min_alpha: f32) {
+fn fill_noise(s: &mut lienzo_raster::Surface, r: Rect, seed: u32, min_alpha: f32) {
     let fmt = s.format();
     let ch = fmt.channels();
     let n = r.width() * r.height();
@@ -81,7 +81,7 @@ pub(crate) fn document(mode: ColorMode, depth: SampleType, selection: bool) -> (
     top.blend = BlendMode::Screen;
     doc.layers.extend([target, clip, top]);
     if selection {
-        let mut sel = photocraft_raster::Surface::new(PixelFormat::GRAY8);
+        let mut sel = lienzo_raster::Surface::new(PixelFormat::GRAY8);
         sel.fill_rect(Rect::from_xywh(8, 4, 24, 20), &[1.0]);
         sel.fill_rect(Rect::from_xywh(8, 4, 6, 20), &[0.5]);
         doc.selection = Some(sel);
@@ -138,7 +138,7 @@ pub(crate) fn clipped_document(mode: ColorMode, depth: SampleType, selection: bo
     top.blend = BlendMode::Screen;
     doc.layers.extend([outer, top]);
     if selection {
-        let mut sel = photocraft_raster::Surface::new(PixelFormat::GRAY8);
+        let mut sel = lienzo_raster::Surface::new(PixelFormat::GRAY8);
         sel.fill_rect(Rect::from_xywh(8, 4, 24, 20), &[1.0]);
         sel.fill_rect(Rect::from_xywh(8, 4, 6, 20), &[0.5]);
         doc.selection = Some(sel);
@@ -148,7 +148,7 @@ pub(crate) fn clipped_document(mode: ColorMode, depth: SampleType, selection: bo
 
 /// The document after running the real destructive command on `target`.
 pub(crate) fn destructive(doc: &Document, target: LayerId, kind: &str, params: &Value) -> Option<Document> {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc.clone(), None);
     s.select_layer(target).ok()?;
     s.execute(&format!("image.adjustments.{kind}"), params.clone()).ok()?;
@@ -157,7 +157,7 @@ pub(crate) fn destructive(doc: &Document, target: LayerId, kind: &str, params: &
 
 /// Largest premultiplied difference between two composites.
 pub(crate) fn max_diff(a: &Document, b: &Document) -> f32 {
-    let (ra, rb) = (photocraft_compose::render(a, a.bounds()), photocraft_compose::render(b, b.bounds()));
+    let (ra, rb) = (lienzo_compose::render(a, a.bounds()), lienzo_compose::render(b, b.bounds()));
     let pm = |p: &[f32; 4]| [p[0] * p[3], p[1] * p[3], p[2] * p[3], p[3]];
     ra.px.iter().zip(&rb.px).map(|(x, y)| (0..4).map(|c| (pm(x)[c] - pm(y)[c]).abs()).fold(0.0, f32::max)).fold(0.0, f32::max)
 }
@@ -300,10 +300,10 @@ fn a_clipped_target_preview_changes_nothing_outside_its_region() {
         let committed = doc.clone();
         let r = region(&doc, target);
         assert!(!r.is_empty(), "the target can change something");
-        let before = photocraft_compose::render(&doc, doc.bounds());
+        let before = lienzo_compose::render(&doc, doc.bounds());
         for kind in KINDS {
             let p = preview_document(&doc, target, kind, &sample(kind)).unwrap();
-            let after = photocraft_compose::render(&p, doc.bounds());
+            let after = lienzo_compose::render(&p, doc.bounds());
             for (i, (a, b)) in before.px.iter().zip(&after.px).enumerate() {
                 let (x, y) = ((i % 40) as i32, (i / 40) as i32);
                 if !r.contains(x, y) {
@@ -344,7 +344,7 @@ fn ineligible_targets_use_the_proxy_preview() {
     blend_doc.layer_mut(blend_target).unwrap().blend_if = blend_if;
     assert_eq!(unsupported(&blend_doc, blend_target), Some(tl!("Blend If")));
     assert_eq!(unsupported(&doc, LayerId(u64::MAX - 1)), Some("no target layer"));
-    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     let adj = doc.layers[4].id;
     assert_eq!(unsupported(&doc, adj), Some("not a pixel layer"));
     assert!(unsupported(&doc, target).is_none());
@@ -409,10 +409,10 @@ fn preview_changes_nothing_outside_its_region() {
     for selection in [false, true] {
         let (doc, target) = document(ColorMode::Rgb, SampleType::U8, selection);
         let r = region(&doc, target);
-        let before = photocraft_compose::render(&doc, doc.bounds());
+        let before = lienzo_compose::render(&doc, doc.bounds());
         for kind in KINDS {
             let p = preview_document(&doc, target, kind, &sample(kind)).unwrap();
-            let after = photocraft_compose::render(&p, doc.bounds());
+            let after = lienzo_compose::render(&p, doc.bounds());
             for (i, (a, b)) in before.px.iter().zip(&after.px).enumerate() {
                 let (x, y) = ((i % 40) as i32, (i / 40) as i32);
                 if !r.contains(x, y) {
@@ -423,11 +423,11 @@ fn preview_changes_nothing_outside_its_region() {
     }
 }
 
-fn app_with(doc: Document, target: LayerId) -> PhotocraftApp {
-    let mut s = photocraft_engine::Session::new();
+fn app_with(doc: Document, target: LayerId) -> LienzoApp {
+    let mut s = lienzo_engine::Session::new();
     s.add_document(doc, None);
     s.select_layer(target).unwrap();
-    PhotocraftApp::new(s, crate::Services::default())
+    LienzoApp::new(s, crate::Services::default())
 }
 
 /// The dialog previews through the layer (no CPU proxy run), each change only swaps the
@@ -439,7 +439,7 @@ fn dialog_previews_through_the_layer() {
         let (doc, target) = document(ColorMode::Rgb, SampleType::U16, true);
         let mut harness =
             Harness::builder().with_size(egui::vec2(1200.0, 900.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app_with(doc, target));
-        PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
         let id = crate::adjust_dialog::open(harness.state_mut(), "image.adjustments.levels").unwrap();
         harness.run_steps(2);
         let committed = harness.state().session.active().unwrap().doc.clone();
@@ -533,7 +533,7 @@ fn a_clipped_target_dialog_previews_through_the_layer() {
 fn ineligible_dialogs_keep_the_proxy_preview() {
     // An adjustment-layer target.
     let (mut doc, _) = document(ColorMode::Rgb, SampleType::U8, false);
-    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     let adj = doc.layers[4].id;
     let mut app = app_with(doc, adj);
     crate::adjust_dialog::open(&mut app, "image.adjustments.curves").unwrap();
@@ -544,7 +544,7 @@ fn ineligible_dialogs_keep_the_proxy_preview() {
     app.session.execute("select.all", json!({})).unwrap();
     app.session.execute("select.saveSelection", json!({})).unwrap();
     if let Some(st) = app.session.active_mut() {
-        st.channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::Alpha(0);
+        st.channel_view.target = lienzo_engine::channel_cmds::ChannelTarget::Alpha(0);
     }
     crate::adjust_dialog::open(&mut app, "image.adjustments.levels").unwrap();
     assert!(!on_layer(&mut app, 0));
@@ -555,7 +555,7 @@ fn ineligible_dialogs_keep_the_proxy_preview() {
 #[test]
 fn an_ineligible_adjustment_preview_records_why_it_uses_the_proxy() {
     let (mut doc, _) = document(ColorMode::Rgb, SampleType::U8, false);
-    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     let adj = doc.layers[4].id;
     let mut app = app_with(doc, adj);
     app.render_path.assume_gpu = true;
@@ -589,9 +589,9 @@ fn an_ineligible_adjustment_preview_records_why_it_uses_the_proxy() {
 fn an_adjustment_preview_keeps_the_canvas_reason() {
     use crate::render_path::{CpuReason, Path};
     let (mut doc, _) = document(ColorMode::Rgb, SampleType::U8, false);
-    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(photocraft_doc::Adjustment::Invert)));
+    doc.layers.push(Layer::new("adj", LayerContent::Adjustment(lienzo_doc::Adjustment::Invert)));
     let adj = doc.layers[4].id;
-    let canvas_back_on_gpu = |app: &crate::PhotocraftApp| app.render_path.history().any(|c| !c.preview && c.reason.is_none());
+    let canvas_back_on_gpu = |app: &crate::LienzoApp| app.render_path.history().any(|c| !c.preview && c.reason.is_none());
     let mut app = app_with(doc.clone(), adj);
     app.render_path.assume_gpu = true;
     let doc_id = app.session.active().unwrap().doc.id.0;
@@ -646,7 +646,7 @@ fn proxy_preview_has_its_own_ids() {
     assert!(proxy.walk().iter().all(|(_, _, l)| doc.layer(l.id).is_none() && l.id != PREVIEW_LAYER));
     let p = proxy_with_settings(&proxy, "curves", &sample("curves")).unwrap();
     let full = with_settings(&base, "curves", &sample("curves")).unwrap();
-    let (a, b) = (photocraft_compose::render(&p, p.bounds()), photocraft_compose::render(&full, full.bounds()));
+    let (a, b) = (lienzo_compose::render(&p, p.bounds()), lienzo_compose::render(&full, full.bounds()));
     // Nearest-neighbour proxy: pixel (x, y) shows the full composite at (2x, 2y).
     for y in 0..16 {
         for x in 0..20 {
@@ -701,7 +701,7 @@ fn a_live_adjust_drag_damages_only_the_visible_part_of_its_layer() {
 fn a_reveal_all_mask_does_not_empty_the_damage_region() {
     let (mut doc, target) = document(ColorMode::Rgb, SampleType::U8, false);
     let bounds = doc.bounds();
-    let mask = photocraft_doc::LayerMask::reveal_all();
+    let mask = lienzo_doc::LayerMask::reveal_all();
     assert!(mask.surface.content_bounds().is_empty(), "a reveal-all mask has no written content");
     doc.layer_mut(target).expect("target").mask = Some(mask);
     let id = doc.id;

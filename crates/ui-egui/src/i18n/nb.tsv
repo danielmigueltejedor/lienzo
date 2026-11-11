@@ -4094,7 +4094,7 @@ curves	Smooth	Jevn ut
 	Multiple Flames Path Directions	Flere flammer etter banens retning
 	Multiple Flames Various Length	Flere flammer med ulik lengde
 	My Brushes	Mine pensler
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Innebygd dra-og-slipp av filer støttes ikke på Wayland ennå. Bruk Fil › Åpne, eller kjør Lienzo under XWayland med `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Innebygd dra-og-slipp av filer støttes ikke på Wayland ennå. Bruk Fil › Åpne, eller kjør Lienzo under XWayland med `WAYLAND_DISPLAY= lienzo`.
 	Nearest	Nærmeste
 	Neon Glow	Neonglød
 	Neutralize	Nøytraliser

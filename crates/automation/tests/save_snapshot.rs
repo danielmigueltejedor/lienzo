@@ -2,7 +2,7 @@
 //! server: a save of the document to its own layered file adds a snapshot when the option is on;
 //! a flat export is a copy and adds none, and with the option off no save does.
 
-use photocraft_automation::Headless;
+use lienzo_automation::Headless;
 use serde_json::json;
 
 fn tmp() -> std::path::PathBuf {

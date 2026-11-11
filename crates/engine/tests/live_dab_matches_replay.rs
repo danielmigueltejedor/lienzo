@@ -1,5 +1,5 @@
-use photocraft_engine::{Session, retouch_cmds::LiveDab};
-use photocraft_paint::StrokePoint;
+use lienzo_engine::{Session, retouch_cmds::LiveDab};
+use lienzo_paint::StrokePoint;
 use serde_json::json;
 
 fn setup(depth: u32, mode: &str) -> Session {
@@ -13,7 +13,7 @@ fn setup(depth: u32, mode: &str) -> Session {
         let mut px = Vec::new();
         for y in 0..120 {
             for x in 0..200 {
-                px.extend(photocraft_raster::from_rgba(
+                px.extend(lienzo_raster::from_rgba(
                     &fmt,
                     [((x * 7 + y * 3) % 31) as f32 / 31.0, x as f32 / 200.0, y as f32 / 120.0, 0.4 + ((x + y) % 7) as f32 / 12.0],
                 ));
@@ -138,7 +138,7 @@ fn changed_document_refuses_live_pixels() {
 /// picked up by the initial small dab must not depend on the final stroke's bounding rectangle.
 #[test]
 fn smudge_pickup_matches_full_neighborhood_when_pressure_expands() {
-    use photocraft_paint::{
+    use lienzo_paint::{
         Stroke,
         retouch::{Smudge, apply_dab_stroke},
     };
@@ -153,7 +153,7 @@ fn smudge_pickup_matches_full_neighborhood_when_pressure_expands() {
             (st.doc.layer(id).unwrap().surface().unwrap().clone(), st.doc.effective_locks(id).transparency)
         };
         let stroke = Stroke {
-            brush: photocraft_engine::retouch_cmds::stroke_brush(&s.tools.brush, &params),
+            brush: lienzo_engine::retouch_cmds::stroke_brush(&s.tools.brush, &params),
             points: points.iter().map(|q| StrokePoint::new(q[0], q[1], q[2] as f32)).collect(),
         };
         let mut effect = Smudge::new(0.8, None, 40.0).with_alpha(Some(3));
@@ -172,11 +172,11 @@ fn smudge_pickup_matches_full_neighborhood_when_pressure_expands() {
 
 #[test]
 fn pressure_sized_live_dabs_commit_only_the_requested_mask_or_channel() {
-    use photocraft_raster::Surface;
+    use lienzo_raster::Surface;
 
     let fill = |surface: &mut Surface| {
         let values: Vec<f32> = (0..120).flat_map(|y| (0..200).map(move |x| ((x * 7 + y * 3) % 31) as f32 / 31.0)).collect();
-        surface.write_region(photocraft_geom::Rect::new(0, 0, 200, 120), &values);
+        surface.write_region(lienzo_geom::Rect::new(0, 0, 200, 120), &values);
     };
     for depth in [8, 16, 32] {
         let mut s = setup(depth, "rgb");

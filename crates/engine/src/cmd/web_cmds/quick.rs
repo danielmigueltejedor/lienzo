@@ -81,8 +81,8 @@ pub(super) fn quick_export(s: &mut Session, p: &Value) -> Result<Value> {
     if fmt == "exr" {
         // EXR keeps floating-point scene values. The ordinary exporter converts to linear
         // light; the web/sRGB pipeline would instead clamp HDR and negative values.
-        let opts = photocraft_io::ExportOptions { xmp: photocraft_io::XmpEmbed::None, ..Default::default() };
-        let out = photocraft_io::export(&doc, "exr", &opts).map_err(other)?;
+        let opts = lienzo_io::ExportOptions { xmp: lienzo_io::XmpEmbed::None, ..Default::default() };
+        let out = lienzo_io::export(&doc, "exr", &opts).map_err(other)?;
         write_file(&path, &out.bytes)?;
         crate::automate_cmds::fire_event(s, "export");
         return Ok(json!({"path": path, "format": fmt, "bytes": out.bytes.len(), "warnings": out.warnings}));
@@ -127,7 +127,7 @@ pub(super) fn quick_export(s: &mut Session, p: &Value) -> Result<Value> {
     let q = Value::Object(o);
     let st = WebSettings::from_params(&q, cmd)?;
     let (wdoc, _, _) = web_document(&doc, &json!({}), &st)?;
-    let buf = photocraft_compose::flatten(&wdoc);
+    let buf = lienzo_compose::flatten(&wdoc);
     let xmp = web_xmp(&doc, st.metadata);
     let exif = web_exif(&doc, st.metadata);
     let opt = optimize(

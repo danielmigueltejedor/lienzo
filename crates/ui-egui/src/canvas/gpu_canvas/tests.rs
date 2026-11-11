@@ -6,7 +6,7 @@ use super::*;
 /// this refresh's. Runs anywhere — the GPU timing tests need hardware and CI has none.
 #[test]
 fn a_gpu_measurement_stands_until_replaced_and_a_cpu_refresh_clears_it() {
-    let timing = |ms, px| photocraft_gpu::GpuTiming { ms, px, spans: 1 };
+    let timing = |ms, px| lienzo_gpu::GpuTiming { ms, px, spans: 1 };
     let refresh = |kind, gpu| Refresh { kind, gpu, ..Default::default() };
     let mut perf = Perf::default();
     assert_eq!(perf.gpu_ms, None, "nothing is reported before a measurement");
@@ -99,7 +99,7 @@ fn separate_mip_targets_only_for_intel_on_dx12() {
     assert!(!separate_mip_targets(Dx12, amd, None));
     assert!(!separate_mip_targets(Vulkan, intel, None));
     assert!(!separate_mip_targets(Metal, 0, None));
-    // PHOTOCRAFT_SEPARATE_MIPS forces either way; anything else leaves the default.
+    // LIENZO_SEPARATE_MIPS forces either way; anything else leaves the default.
     assert!(separate_mip_targets(Dx12, nvidia, Some("1")));
     assert!(!separate_mip_targets(Dx12, intel, Some(" 0 ")));
     assert!(separate_mip_targets(Dx12, intel, Some("yes")));
@@ -278,7 +278,7 @@ fn a_child_that_never_answers_gives_up_at_the_deadline() {
         std::process::Command::new("false")
     };
     assert_eq!(bounded_output(failing, std::time::Duration::from_secs(10)), None, "a failed run");
-    assert_eq!(bounded_output(std::process::Command::new("photocraft-no-such-tool"), std::time::Duration::from_secs(1)), None, "not installed");
+    assert_eq!(bounded_output(std::process::Command::new("lienzo-no-such-tool"), std::time::Duration::from_secs(1)), None, "not installed");
 }
 
 /// Only a discrete NVIDIA adapter asks `nvidia-smi`: nothing else spawns a process whose

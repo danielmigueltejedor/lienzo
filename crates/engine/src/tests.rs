@@ -163,11 +163,11 @@ fn file_new_tags_the_document_with_the_chosen_profile() {
     // #321: New Document › Color Profile, as in Photoshop: another profile than the working space.
     let desc = |s: &Session| {
         let bytes = s.active().unwrap().doc.icc_profile.clone();
-        bytes.map(|b| photocraft_cms::Profile::parse(&b).unwrap().description)
+        bytes.map(|b| lienzo_cms::Profile::parse(&b).unwrap().description)
     };
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 4, "height": 4, "profile": "adobe-rgb-compat"})).unwrap();
-    assert_eq!(desc(&s).as_deref(), Some(photocraft_cms::Builtin::AdobeRgbCompat.description()));
+    assert_eq!(desc(&s).as_deref(), Some(lienzo_cms::Builtin::AdobeRgbCompat.description()));
     s.execute("file.new", json!({"width": 4, "height": 4, "mode": "cmyk", "profile": "coated-cmyk"})).unwrap();
     assert!(desc(&s).is_some());
     // The working space (the default, or asked for) leaves it as before.
@@ -192,8 +192,8 @@ fn file_new_variants() {
     assert_eq!(s.active().unwrap().doc.layers[0].name, "Layer 1");
     s.execute("file.new", json!({"width": 10, "height": 5, "mode": "cmyk", "depth": 16})).unwrap();
     let d = &s.active().unwrap().doc;
-    assert_eq!(d.mode, photocraft_color::ColorMode::Cmyk);
-    assert_eq!(d.depth, photocraft_color::SampleType::U16);
+    assert_eq!(d.mode, lienzo_color::ColorMode::Cmyk);
+    assert_eq!(d.depth, lienzo_color::SampleType::U16);
     s.execute("file.new", json!({"background": "#ff0000", "width": 4, "height": 4})).unwrap();
     assert_eq!(px(&mut s, 1, 1), vec![1.0, 0.0, 0.0, 1.0]);
     assert_eq!(s.documents().len(), 3);
@@ -210,7 +210,7 @@ fn layer_lifecycle_with_undo() {
     s.execute("layer.setProps", json!({"name": "Ink", "opacity": 0.5, "blend": "multiply"})).unwrap();
     let doc = &s.active().unwrap().doc;
     let l = doc.layer(LayerId(id)).unwrap();
-    assert_eq!((l.name.as_str(), l.opacity, l.blend), ("Ink", 0.5, photocraft_color::BlendMode::Multiply));
+    assert_eq!((l.name.as_str(), l.opacity, l.blend), ("Ink", 0.5, lienzo_color::BlendMode::Multiply));
     s.execute("layer.duplicate", json!({})).unwrap();
     assert_eq!(s.active().unwrap().doc.layer_count(), 3);
     s.execute("layer.delete", json!({})).unwrap();
@@ -276,7 +276,7 @@ fn new_adjustment_and_fill_layers_are_masked_by_the_selection() {
             s.execute("edit.undo", json!({})).unwrap();
             assert!(s.active().unwrap().doc.layer(layer).is_none(), "{id}: undo keeps the layer");
             let sel = s.active().unwrap().doc.selection.as_ref().unwrap_or_else(|| panic!("{id}: undo does not bring the selection back"));
-            assert_eq!(sel.content_bounds(), photocraft_geom::Rect::new(8, 8, 24, 24), "{id}: undo restores the same selection");
+            assert_eq!(sel.content_bounds(), lienzo_geom::Rect::new(8, 8, 24, 24), "{id}: undo restores the same selection");
         }
     }
 }
@@ -460,10 +460,10 @@ fn marquee_dragged_past_the_canvas_stops_at_its_edge() {
 
 #[test]
 fn subtract_clears_selection_when_only_disjoint_off_canvas_pixels_remain() {
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
+    use lienzo_geom::Rect;
+    use lienzo_raster::Surface;
     let mut s = session_with_doc(); // 64 × 48
-    let mut selection = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut selection = Surface::new(lienzo_color::PixelFormat::GRAY8);
     // Simulate a moved sparse selection: one remnant on either side of the canvas and one
     // in-canvas region that the subtract marquee will remove. The off-canvas bounds straddle
     // the canvas, so testing only their bounding-box intersection would incorrectly keep it.
@@ -479,9 +479,9 @@ fn subtract_clears_selection_when_only_disjoint_off_canvas_pixels_remain() {
 
 #[test]
 fn subtract_clears_selection_with_nonzero_default_when_canvas_is_empty() {
-    use photocraft_raster::Surface;
+    use lienzo_raster::Surface;
     let mut s = session_with_doc();
-    Arc::make_mut(&mut s.active_mut().unwrap().doc).selection = Some(Surface::with_default(photocraft_color::PixelFormat::GRAY8, &[1.0]));
+    Arc::make_mut(&mut s.active_mut().unwrap().doc).selection = Some(Surface::with_default(lienzo_color::PixelFormat::GRAY8, &[1.0]));
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 64, "height": 48, "mode": "subtract"})).unwrap();
     assert!(s.active().unwrap().doc.selection.is_none());
 }
@@ -574,7 +574,7 @@ fn selection_inverse_preserves_coverage_history_and_empty_selection() {
         assert_eq!(inverted.to_interleaved(area), original.iter().map(|b| 255 - b).collect::<Vec<_>>());
         assert_eq!(inverted.sample_channel(530, 269, 0), 0.0);
         assert_eq!(inverted.sample_channel(529, 270, 0), 0.0);
-        assert_eq!(after.last_damage, Some(photocraft_geom::Rect::EMPTY));
+        assert_eq!(after.last_damage, Some(lienzo_geom::Rect::EMPTY));
         assert_eq!(before.selection.as_ref().unwrap().to_interleaved(area), original);
         assert!(s.undo());
         assert_eq!(s.active().unwrap().doc.selection.as_ref().unwrap().to_interleaved(area), original);
@@ -720,7 +720,7 @@ fn image_rotation_rotates_every_layer_not_just_the_active_one() {
     // A second (lower) layer with a red dot at the top-left; keep a third layer active.
     s.execute("layer.new.layer", json!({})).unwrap();
     s.edit("dot", |doc, a| {
-        doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(2, 2, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(2, 2, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -761,7 +761,7 @@ fn gradient_fill_layer_angles_are_finite_and_normalised() {
     let angle = |s: &Session| {
         let st = s.active().unwrap();
         match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
-            photocraft_doc::LayerContent::Fill(photocraft_doc::Fill::Gradient { angle, .. }) => *angle,
+            lienzo_doc::LayerContent::Fill(lienzo_doc::Fill::Gradient { angle, .. }) => *angle,
             _ => panic!("not a gradient fill"),
         }
     };
@@ -808,24 +808,24 @@ fn fill_layer_pixel_rewrites_refresh_the_effect_maps() {
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.newFillLayer.gradient", json!({"from": "#000000", "to": "#ffffff", "angle": 0})).unwrap();
     s.edit("shadow", |doc, active| {
-        doc.layer_mut(active.unwrap()).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(active.unwrap()).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
     let render = |s: &Session| {
         let d = &s.active().unwrap().doc;
-        photocraft_compose::render(d, d.bounds()).into_px()
+        lienzo_compose::render(d, d.bounds()).into_px()
     };
     // Give the layer the cached-pixels state a PSD import produces (the cache is what Image
     // › Transform & friends rewrite in place, without touching the Fill spec).
     s.edit("cache", |doc, active| {
         let fmt = doc.pixel_format();
         let l = doc.layer_mut(active.unwrap()).unwrap();
-        let photocraft_doc::LayerContent::Fill(f) = &l.content else { return Err(EngineError::Other("not a fill layer".into())) };
+        let lienzo_doc::LayerContent::Fill(f) = &l.content else { return Err(EngineError::Other("not a fill layer".into())) };
         let fill = f.clone();
-        let mut surface = photocraft_raster::Surface::new(fmt);
-        surface.fill_rect(photocraft_geom::Rect::new(8, 8, 30, 40), &[0.0, 0.0, 1.0, 1.0]);
-        l.fill_cache = Some(photocraft_doc::FillCache { fill, surface });
+        let mut surface = lienzo_raster::Surface::new(fmt);
+        surface.fill_rect(lienzo_geom::Rect::new(8, 8, 30, 40), &[0.0, 0.0, 1.0, 1.0]);
+        l.fill_cache = Some(lienzo_doc::FillCache { fill, surface });
         Ok(())
     })
     .unwrap();
@@ -836,14 +836,14 @@ fn fill_layer_pixel_rewrites_refresh_the_effect_maps() {
     s.edit("shift", |doc, active| {
         let l = doc.layer_mut(active.unwrap()).unwrap();
         let fc = l.fill_cache.as_mut().unwrap();
-        let moved = photocraft_algo::resample::translate_surface(&fc.surface, 12, 0);
+        let moved = lienzo_algo::resample::translate_surface(&fc.surface, 12, 0);
         fc.surface = moved;
         Ok(())
     })
     .unwrap();
     let after = render(&s);
     assert_ne!(after, warm, "the rewritten cache changes the composite");
-    photocraft_compose::purge_effect_cache();
+    lienzo_compose::purge_effect_cache();
     let fresh = render(&s);
     assert_eq!(after, fresh, "the effect maps track the cache surface, not the Fill spec alone");
 }
@@ -864,18 +864,18 @@ fn growing_the_canvas_re_renders_a_cached_fill_layer() {
         s.edit("cache", |doc, active| {
             let fmt = doc.pixel_format();
             let l = doc.layer_mut(active.unwrap()).unwrap();
-            let photocraft_doc::LayerContent::Fill(f) = &l.content else { return Err(EngineError::Other("not a fill layer".into())) };
+            let lienzo_doc::LayerContent::Fill(f) = &l.content else { return Err(EngineError::Other("not a fill layer".into())) };
             let fill = f.clone();
-            let mut surface = photocraft_raster::Surface::new(fmt);
-            surface.fill_rect(photocraft_geom::Rect::new(0, 0, 64, 48), &[1.0, 0.0, 0.0, 1.0]);
-            l.fill_cache = Some(photocraft_doc::FillCache { fill, surface });
+            let mut surface = lienzo_raster::Surface::new(fmt);
+            surface.fill_rect(lienzo_geom::Rect::new(0, 0, 64, 48), &[1.0, 0.0, 0.0, 1.0]);
+            l.fill_cache = Some(lienzo_doc::FillCache { fill, surface });
             Ok(())
         })
         .unwrap();
         s.execute(cmd, params).unwrap();
         let d = &s.active().unwrap().doc;
         assert_eq!(d.size.width, 100, "{cmd} grows the canvas");
-        let px = photocraft_compose::render(d, d.bounds()).get(90, 20);
+        let px = lienzo_compose::render(d, d.bounds()).get(90, 20);
         assert!(px[3] > 0.99 && px[0] > 0.99 && px[1] < 0.01, "{cmd}: the fill covers the added area, got {px:?}");
     }
 }
@@ -895,16 +895,16 @@ fn group_effect_maps_follow_child_visibility_and_opacity() {
         s.execute("layer.moveTo", json!({"layer": l, "target": g, "position": "into"})).unwrap();
     }
     s.edit("shadow", |doc, _| {
-        doc.layer_mut(LayerId(g)).unwrap().effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+        doc.layer_mut(LayerId(g)).unwrap().effects.items.push(lienzo_doc::Effect::default_drop_shadow());
         Ok(())
     })
     .unwrap();
     let render = |s: &Session| {
         let d = &s.active().unwrap().doc;
-        photocraft_compose::render(d, d.bounds()).into_px()
+        lienzo_compose::render(d, d.bounds()).into_px()
     };
     let mut prev = render(&s); // populate the effect-map cache
-    type Edit = (&'static str, fn(&mut photocraft_doc::Layer));
+    type Edit = (&'static str, fn(&mut lienzo_doc::Layer));
     let edits: [Edit; 2] = [("hide", |l| l.visible = false), ("opacity", |l| l.opacity = 0.3)];
     for ((name, edit), child) in edits.into_iter().zip([a, b]) {
         let child = LayerId(child);
@@ -915,7 +915,7 @@ fn group_effect_maps_follow_child_visibility_and_opacity() {
         .unwrap();
         let warm = render(&s);
         assert_ne!(warm, prev, "{name}: the composite changes");
-        photocraft_compose::purge_effect_cache();
+        lienzo_compose::purge_effect_cache();
         assert_eq!(warm, render(&s), "{name}: the group's maps follow its children");
         prev = warm;
     }
@@ -1046,7 +1046,7 @@ fn damage_is_reported_for_strokes_only() {
     let mut s = session_with_doc();
     s.execute("layer.new.layer", json!({})).unwrap();
     // A new empty layer changes no pixels (#1771).
-    assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
     s.execute("paint.stroke", json!({"points": [[10, 10], [20, 10]], "size": 4})).unwrap();
     let d = s.active().unwrap().last_damage.unwrap();
     assert!(d.contains(15, 10) && d.width() < 30);
@@ -1062,16 +1062,16 @@ fn edits_that_change_no_pixels_report_empty_damage() {
     let mut s = session_with_doc();
     let points = json!([[2, 2], [40, 3], [30, 30], [5, 25]]);
     s.execute("select.lasso", json!({"points": points, "mode": "replace"})).unwrap();
-    assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
     s.execute("select.inverse", json!({})).unwrap();
-    assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
     s.execute("select.deselect", json!({})).unwrap();
-    assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
     // A new empty layer draws nothing either (#1771); filling it does recomposite.
     s.execute("layer.new.layer", json!({})).unwrap();
-    assert_eq!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_eq!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
     s.execute("edit.fill", json!({"color": "#ff0000"})).unwrap();
-    assert_ne!(s.active().unwrap().last_damage, Some(photocraft_geom::Rect::EMPTY));
+    assert_ne!(s.active().unwrap().last_damage, Some(lienzo_geom::Rect::EMPTY));
 }
 
 #[test]
@@ -1085,9 +1085,9 @@ fn same_pixels_ignores_the_selection_but_not_layers() {
     assert!(!layer_multi_cmds::same_pixels(&b, &s.active().unwrap().doc));
     // A pathologically deep group nest is treated as changed (bounded walk), never a crash.
     let mut deep = (*b).clone();
-    let mut l = photocraft_doc::Layer::group("g", Vec::new());
+    let mut l = lienzo_doc::Layer::group("g", Vec::new());
     for _ in 0..300 {
-        l = photocraft_doc::Layer::group("g", vec![l]);
+        l = lienzo_doc::Layer::group("g", vec![l]);
     }
     deep.layers.push(l);
     assert!(!layer_multi_cmds::same_pixels(&deep, &deep.clone()));
@@ -1109,24 +1109,24 @@ fn integer_params_accept_json_floats() {
 fn move_to_refuses_to_nest_past_the_group_depth_cap() {
     let mut s = session_with_doc();
     let deep = s.execute("layer.new.layer", json!({"name": "Deep"})).unwrap()["layer"].as_u64().unwrap();
-    for _ in 0..photocraft_doc::MAX_GROUP_DEPTH - 1 {
+    for _ in 0..lienzo_doc::MAX_GROUP_DEPTH - 1 {
         s.execute("layer.groupLayers", json!({"layer": deep})).unwrap();
     }
     // `Deep` sits inside MAX - 1 groups. Moving a two-level group (G2 > G1 > Leaf) beside it
     // would put `Leaf` at MAX + 1.
-    let path = s.active().unwrap().doc.path_of(photocraft_doc::LayerId(deep)).unwrap();
-    assert_eq!(path.len() - 1, photocraft_doc::MAX_GROUP_DEPTH - 1);
+    let path = s.active().unwrap().doc.path_of(lienzo_doc::LayerId(deep)).unwrap();
+    assert_eq!(path.len() - 1, lienzo_doc::MAX_GROUP_DEPTH - 1);
     let leaf = s.execute("layer.new.layer", json!({"name": "Leaf"})).unwrap()["layer"].as_u64().unwrap();
     let g1 = s.execute("layer.groupLayers", json!({"layer": leaf})).unwrap()["layer"].as_u64().unwrap();
     let g = s.execute("layer.groupLayers", json!({"layer": g1})).unwrap()["layer"].as_u64().unwrap();
     let past = s.active().unwrap().history.past_len();
     let err = s.execute("layer.moveTo", json!({"layer": g, "target": deep, "position": "above"})).unwrap_err();
     assert!(err.to_string().contains("deeper than"), "{err}");
-    assert!(s.active().unwrap().doc.max_group_depth() <= photocraft_doc::MAX_GROUP_DEPTH);
+    assert!(s.active().unwrap().doc.max_group_depth() <= lienzo_doc::MAX_GROUP_DEPTH);
     assert_eq!(s.active().unwrap().history.past_len(), past, "no history step recorded");
     // A plain layer beside the deepest one still fits.
     s.execute("layer.moveTo", json!({"layer": leaf, "target": deep, "position": "above"})).unwrap();
-    assert_eq!(s.active().unwrap().doc.max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH - 1);
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH - 1);
 }
 
 #[test]
@@ -1134,15 +1134,15 @@ fn artboard_from_layers_refuses_to_nest_past_the_group_depth_cap() {
     let mut s = session_with_doc();
     let leaf = s.execute("layer.new.layer", json!({"name": "Leaf"})).unwrap()["layer"].as_u64().unwrap();
     let mut top = leaf;
-    for _ in 0..photocraft_doc::MAX_GROUP_DEPTH {
+    for _ in 0..lienzo_doc::MAX_GROUP_DEPTH {
         top = s.execute("layer.groupLayers", json!({"layer": top})).unwrap()["layer"].as_u64().unwrap();
     }
-    assert_eq!(s.active().unwrap().doc.max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH);
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH);
     s.execute("layer.select", json!({"layer": top})).unwrap();
     let past = s.active().unwrap().history.past_len();
     let err = s.execute("layer.new.artboardFromLayers", json!({})).unwrap_err();
     assert!(err.to_string().contains("deeper than"), "{err}");
-    assert_eq!(s.active().unwrap().doc.max_group_depth(), photocraft_doc::MAX_GROUP_DEPTH);
+    assert_eq!(s.active().unwrap().doc.max_group_depth(), lienzo_doc::MAX_GROUP_DEPTH);
     assert_eq!(s.active().unwrap().history.past_len(), past, "no history step recorded");
 }
 
@@ -1185,9 +1185,9 @@ fn move_to_copy_places_a_duplicate_in_one_step() {
     assert_eq!(names(&s), ["Background", "A", "B", "A copy", "G"]);
     assert_eq!(steps(&s), before + 1, "one history step");
     assert_eq!(s.active().unwrap().history.undo_label(), Some("Duplicate Layer"));
-    assert_eq!(s.active().unwrap().active_layer, Some(photocraft_doc::LayerId(copy)), "the copy is active");
+    assert_eq!(s.active().unwrap().active_layer, Some(lienzo_doc::LayerId(copy)), "the copy is active");
     let doc = &s.active().unwrap().doc;
-    let (orig, dup) = (doc.layer(photocraft_doc::LayerId(a)).unwrap(), doc.layer(photocraft_doc::LayerId(copy)).unwrap());
+    let (orig, dup) = (doc.layer(lienzo_doc::LayerId(a)).unwrap(), doc.layer(lienzo_doc::LayerId(copy)).unwrap());
     assert_eq!(orig.content, dup.content, "the pixels are copied");
     // Below and into a group.
     s.execute("layer.moveTo", json!({"layer": b, "target": a, "position": "below", "copy": true})).unwrap();
@@ -1453,17 +1453,17 @@ fn type_edit_rerenders_cache_to_new_text() {
     let id = r["layer"].as_u64().unwrap();
     let width = |s: &Session| {
         let st = s.active().unwrap();
-        st.doc.layer(photocraft_doc::LayerId(id)).unwrap().surface().unwrap().content_bounds().width()
+        st.doc.layer(lienzo_doc::LayerId(id)).unwrap().surface().unwrap().content_bounds().width()
     };
     let w0 = width(&s);
-    s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "Photocraft"}, "coalesce": "k"})).unwrap();
+    s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "Lienzo"}, "coalesce": "k"})).unwrap();
     let w1 = width(&s);
     assert!(w0 > 150 && w1 > 150, "cache widths {w0} → {w1}");
 }
 
 #[test]
 fn levels_and_curves_params_cover_output_and_channels() {
-    use photocraft_doc::Adjustment;
+    use lienzo_doc::Adjustment;
     let a = crate::commands::adjustment_from_params("levels", &json!({"inBlack": 10, "outWhite": 200, "green": {"gamma": 1.5}}));
     let Adjustment::Levels { master, per_channel, .. } = a else { panic!() };
     assert!((master.in_black - 10.0 / 255.0).abs() < 1e-6 && (master.out_white - 200.0 / 255.0).abs() < 1e-6);
@@ -1483,7 +1483,7 @@ fn painting_can_target_the_layer_mask() {
     s.execute("layer.newAdjustmentLayer.invert", json!({})).unwrap();
     let id = s.active().unwrap().active_layer.unwrap();
     s.edit("mask", |doc, _| {
-        doc.layer_mut(id).unwrap().mask = Some(photocraft_doc::LayerMask::reveal_all());
+        doc.layer_mut(id).unwrap().mask = Some(lienzo_doc::LayerMask::reveal_all());
         Ok(())
     })
     .unwrap();
@@ -1524,7 +1524,7 @@ fn all_lock_blocks_painting_a_mask_but_pixels_lock_does_not() {
     s.execute("layer.new.layer", json!({})).unwrap();
     let id = s.active().unwrap().active_layer.unwrap();
     s.edit("mask", |doc, _| {
-        doc.layer_mut(id).unwrap().mask = Some(photocraft_doc::LayerMask::reveal_all());
+        doc.layer_mut(id).unwrap().mask = Some(lienzo_doc::LayerMask::reveal_all());
         Ok(())
     })
     .unwrap();
@@ -1604,7 +1604,7 @@ fn duplicating_the_background_unlocks_the_copy() {
     let st = s.active().unwrap();
     let copy = st.doc.layer(st.active_layer.unwrap()).unwrap();
     assert_eq!(copy.name, "Background copy");
-    assert_eq!(copy.locks, photocraft_doc::Locks::default());
+    assert_eq!(copy.locks, lienzo_doc::Locks::default());
     assert!(st.doc.layers[0].locks.transparency);
 }
 
@@ -1749,8 +1749,8 @@ fn document_activate_opening_order_survives_close_and_reopen_with_persisted_ids(
     let mut s = Session::new();
     // Persisted IDs can be non-monotonic or duplicated: opening order cannot be sorted by ID.
     for (name, id) in [("a", 300), ("b", 100), ("c", 300)] {
-        let mut doc = Document::new(name, photocraft_geom::Size::new(2, 2), photocraft_doc::ColorMode::Rgb, photocraft_color::SampleType::U8);
-        doc.id = photocraft_doc::DocId(id);
+        let mut doc = Document::new(name, lienzo_geom::Size::new(2, 2), lienzo_doc::ColorMode::Rgb, lienzo_color::SampleType::U8);
+        doc.id = lienzo_doc::DocId(id);
         s.add_document(doc, None);
     }
     let a = s.documents()[0].doc.id;
@@ -1913,8 +1913,8 @@ fn merge_down_on_a_group_merges_the_group() {
     let st = s.active().unwrap();
     let merged = st.doc.layer(st.active_layer.unwrap()).unwrap().clone();
     assert_eq!(merged.name, "Badge");
-    assert!(matches!(merged.content, photocraft_doc::LayerContent::Raster(_)), "one pixel layer");
-    assert!(st.doc.layer(photocraft_doc::LayerId(below)).is_some(), "the layer below stays");
+    assert!(matches!(merged.content, lienzo_doc::LayerContent::Raster(_)), "one pixel layer");
+    assert!(st.doc.layer(lienzo_doc::LayerId(below)).is_some(), "the layer below stays");
     assert_eq!(st.doc.layer_count(), layers - 2, "group and its two layers became one");
     let after = [px(&mut s, 5, 5), px(&mut s, 25, 5), px(&mut s, 50, 5)];
     for (a, b) in before.iter().zip(&after) {
@@ -1922,7 +1922,7 @@ fn merge_down_on_a_group_merges_the_group() {
     }
     // Undo brings the group back.
     s.execute("edit.undo", json!({})).unwrap();
-    assert!(s.active().unwrap().doc.layer(photocraft_doc::LayerId(group)).is_some());
+    assert!(s.active().unwrap().doc.layer(lienzo_doc::LayerId(group)).is_some());
 }
 
 /// `restore_layer_selection` puts a multi-layer selection back, drops gone layers, keeps a clean
@@ -1957,7 +1957,7 @@ fn restore_layer_selection_puts_back_what_still_exists() {
 /// snapshot and the document, not copied per state.
 #[test]
 fn history_states_share_large_document_payloads() {
-    use photocraft_doc::{Adjustment, Duotone, DuotoneInk, Layer, LayerContent};
+    use lienzo_doc::{Adjustment, Duotone, DuotoneInk, Layer, LayerContent};
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
     let raw_id = {

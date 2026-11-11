@@ -1,5 +1,5 @@
 //! Public playback history semantics, independent of the Actions panel implementation.
-use photocraft_engine::{Session, actions_cmds::Action};
+use lienzo_engine::{Session, actions_cmds::Action};
 use serde_json::json;
 
 fn session() -> Session {
@@ -145,7 +145,7 @@ fn recorded_purge_histories_does_not_restore_discarded_states() {
 /// Dialog identity protection is independent of the optional history grouping.
 #[test]
 fn per_step_playback_also_binds_its_dialog_continuation() {
-    use photocraft_engine::actions_cmds;
+    use lienzo_engine::actions_cmds;
     let mut s = history_control_session(false);
     let action = s.actions.list[0].clone();
     let recording = actions_cmds::begin_playback(&mut s, &action).unwrap();
@@ -161,7 +161,7 @@ fn per_step_playback_also_binds_its_dialog_continuation() {
 /// Selecting another existing source snapshot invalidates a pause even when its pixels match.
 #[test]
 fn snapshot_source_identity_is_bound_to_the_dialog_continuation() {
-    use photocraft_engine::actions_cmds;
+    use lienzo_engine::actions_cmds;
     for single_state in [false, true] {
         let mut s = session();
         s.execute("actions.setHistory", json!({"singleState":single_state})).unwrap();
@@ -573,7 +573,7 @@ fn stop_message_retains_the_completed_prefix() {
 /// Resumed dialog edits and subsequent steps join the published prefix, without an active scope while paused.
 #[test]
 fn suspended_history_resumes_the_same_action() {
-    use photocraft_engine::actions_cmds;
+    use lienzo_engine::actions_cmds;
     let mut s = session();
     let action = s.actions.list[0].clone();
     let before = s.active().unwrap().doc.clone();
@@ -601,7 +601,7 @@ fn suspended_history_resumes_the_same_action() {
 /// An unrelated edit, history purge or document switch during a pause cannot be merged into the action.
 #[test]
 fn suspended_history_refuses_document_or_history_drift() {
-    use photocraft_engine::actions_cmds;
+    use lienzo_engine::actions_cmds;
     for drift in 0..3 {
         let mut s = session();
         let action = s.actions.list[0].clone();
@@ -689,7 +689,7 @@ fn grouping_preserves_nonlinear_history_and_a_one_state_limit() {
 }
 
 /// Check both removed ids and the labels attached to every surviving older row.
-fn assert_delete_rows(s: &Session, originals: &[(u64, String, std::sync::Arc<photocraft_doc::Document>)], removed: &[usize], case: &str, single_state: bool) {
+fn assert_delete_rows(s: &Session, originals: &[(u64, String, std::sync::Arc<lienzo_doc::Document>)], removed: &[usize], case: &str, single_state: bool) {
     for (i, (id, label, _)) in originals.iter().enumerate() {
         let row = s.active().unwrap().history.row_of(*id);
         if removed.contains(&i) {
@@ -709,8 +709,8 @@ fn assert_delete_boundary(
     case: &str,
     single_state: bool,
     prefix: bool,
-    before: &std::sync::Arc<photocraft_doc::Document>,
-    originals: &[(u64, String, std::sync::Arc<photocraft_doc::Document>)],
+    before: &std::sync::Arc<lienzo_doc::Document>,
+    originals: &[(u64, String, std::sync::Arc<lienzo_doc::Document>)],
 ) {
     let boundary = if case == "linear-past" {
         &originals[0].2

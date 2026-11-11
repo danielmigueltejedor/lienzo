@@ -87,7 +87,7 @@ fn location(d: &Descriptor, previous: &mut f64) -> Option<f64> {
 
 /// Decode every accepted setting; no source metadata is ever executed.
 fn params(d: &Descriptor) -> Option<Value> {
-    // Recordings use the event class; PhotoCraft's canonical exports use null.
+    // Recordings use the event class; Lienzo's canonical exports use null.
     let class = if d.class_id.is("Grdn") { "Grdn" } else { "null" };
     shape(d, class, &["From", "T   ", "Opct", "Md  ", "Type", "Rvrs", "Dthr", "UsMs", "gradientsInterpolationMethod", "Grad"])?;
     let style = enumeration(d.get("Type")?, "GrdT")?;

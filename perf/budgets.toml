@@ -29,13 +29,13 @@ enforce_margin = 0.6
 
 [[bench]]
 name = "perf_scenarios"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 quick_args = ["--quick"]
 note = "the #209/#210/#211 rows: layered 20 MP, 150 layers, 16/32-bit, open, retouch, selection"
 
 [[bench]]
 name = "perf_scenarios_cpu"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 example = "perf_scenarios"
 args = ["--cpu", "--group", "layered"]
 quick_args = ["--quick", "--cpu", "--group", "layered"]
@@ -43,50 +43,50 @@ note = "the layered #209 rows on the forced CPU compositor (#9330); run with per
 
 [[bench]]
 name = "flat_open_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 quick_args = ["--quick"]
 note = "opening ordinary JPEG/PNG files (24 and 36 MP, 8/16-bit, alpha, EXIF orientation) phase by phase, each case in its own process for its peak memory (#10259)"
 
 [[bench]]
 name = "interactive_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 args = ["--reps", "5"]
 note = "36 MP photo: dabs, filters, adjustment previews, saves"
 
 [[bench]]
 name = "fx_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 args = ["--no-cpu", "--reps", "5"]
 note = "36 MP document with layer effects, GPU compositor"
 
 [[bench]]
 name = "bevel_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 args = ["--reps", "9"]
 quick_args = ["--size", "1200x800", "--reps", "3"]
 note = "chisel bevel size change (a dragged slider) on a 12 MP ellipse and a text paragraph, GPU canvas and CPU"
 
 [[bench]]
 name = "camera_raw_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 quick_args = ["--quick"]
 note = "36 MP dense RGB layer: CPU develop, histogram, ICC vectorscope, clipping, nine Lab probes and egui tessellation; excludes GPU upload/presentation"
 
 [[bench]]
 name = "type_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 quick_args = ["--size", "2000x1500", "--layers", "20", "--steps", "15"]
 note = "font-size drag on 50 type layers"
 
 [[bench]]
 name = "large_image_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 args = ["--size", "14000x14000", "--op", "refresh"]
 note = "196 MP: open and full refresh"
 
 [[bench]]
 name = "large_file_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 args = ["--reps", "3"]
 note = "generated 2 GB PSD and 4.4 GB PSB (6.4 GB cached in <target>/fixtures): read + decode + open; needs ~30 GB of memory (the PSB)"
 
@@ -94,7 +94,7 @@ note = "generated 2 GB PSD and 4.4 GB PSB (6.4 GB cached in <target>/fixtures): 
 # rows are kept in results.json) as soon as the example exists; add scenarios for its rows then.
 [[bench]]
 name = "layout_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 requires = "crates/ui-egui/examples/layout_bench.rs"
 quick_args = []
 note = "layout PSDs with many styled layers (#125/#128)"
@@ -105,7 +105,7 @@ note = "layout PSDs with many styled layers (#125/#128)"
 # use the stand-alone example for the 4 x 24 MP stress test.
 [[bench]]
 name = "bench_multiband"
-package = "photocraft-algo"
+package = "lienzo-algo"
 args = ["4", "2", "--reps", "5"]
 quick_args = ["2", "0.25", "--reps", "3"]
 note = "synthetic Photomerge multi-band blend; resident-set peak includes input/output buffers"
@@ -113,7 +113,7 @@ note = "synthetic Photomerge multi-band blend; resident-set peak includes input/
 # Pen cursor native bitmap and warm cache benchmark (#9122)
 [[bench]]
 name = "cursor_bench"
-package = "photocraft-ui-egui"
+package = "lienzo-ui-egui"
 requires = "crates/ui-egui/examples/cursor_bench.rs"
 args = ["--moves", "1000", "--reps", "5"]
 quick_args = ["--moves", "200", "--reps", "2"]
@@ -303,7 +303,7 @@ bench = "perf_scenarios"
 row = "open 20 MP layered PSD (decode + first composite)"
 budget_ms = 3000
 
-# P20/P63: generated fixtures (`photocraft_psd::fixtures`, #5107); the row checks a pixel, so a
+# P20/P63: generated fixtures (`lienzo_psd::fixtures`, #5107); the row checks a pixel, so a
 # blank document fails it. No time budget yet: the target is the behaviour (progress, editable).
 [[scenario]]
 id = "P20"
@@ -621,7 +621,7 @@ row = "new 3 GP document + first reduced canvas refresh"
 
 [[bench]]
 name = "bench_filters2"
-package = "photocraft-algo"
+package = "lienzo-algo"
 args = ["--reps", "3"]
 quick_args = ["--quick", "--reps", "1"]
 note = "24 MP RGBA8: Oil Paint, Relight, Reduce Noise, Smart Blur, the blur gallery, Crystallize, Color Halftone"

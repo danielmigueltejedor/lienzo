@@ -32,7 +32,7 @@ pub(super) struct Solver<'a> {
     pub(super) smom: Vec<[f32; 2]>,
     pub(super) adapt: Adapt,
     /// Cancellation: checked per row band; a cancelled solve's output is discarded.
-    pub(super) ctl: photocraft_raster::Interrupt<'a>,
+    pub(super) ctl: lienzo_raster::Interrupt<'a>,
 }
 
 /// A channel deviation under which a patch counts as flat for [`fit`] (about 5 levels of 255).
@@ -521,7 +521,7 @@ impl Solver<'_> {
 
     /// Recompute every target's match cost (hole pixels change between iterations), and with
     /// colour adaptation the full target patches' own moments.
-    pub(super) fn costs(&mut self, nnf: &[(i32, i32)], cost: &mut [f32]) -> Result<(), photocraft_raster::Cancelled> {
+    pub(super) fn costs(&mut self, nnf: &[(i32, i32)], cost: &mut [f32]) -> Result<(), lienzo_raster::Cancelled> {
         let (w, ch, r, tb) = (self.w, self.ch, self.r as usize, self.tbox);
         let par = tb.area() >= PAR_MIN_PATCHES;
         self.ctl.check()?;

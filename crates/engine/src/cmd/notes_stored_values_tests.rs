@@ -14,7 +14,7 @@ fn session(w: u32, h: u32) -> Session {
     s
 }
 
-fn note(s: &Session, i: usize) -> photocraft_doc::Note {
+fn note(s: &Session, i: usize) -> lienzo_doc::Note {
     s.active().unwrap().doc.notes[i].clone()
 }
 
@@ -108,7 +108,7 @@ fn an_unset_popup_stays_unset_under_image_size() {
     // Size must not turn it into a 0 × 0 rectangle somewhere else.
     let mut s = session(600, 400);
     let doc = std::sync::Arc::make_mut(&mut s.active_mut().unwrap().doc);
-    doc.notes.push(photocraft_doc::Note { position: [100.0, 100.0], ..Default::default() });
+    doc.notes.push(lienzo_doc::Note { position: [100.0, 100.0], ..Default::default() });
     s.execute("image.imageSize", json!({"width": 300, "height": 200})).unwrap();
     let n = note(&s, 0);
     assert_eq!(n.position, [50.0, 50.0]);

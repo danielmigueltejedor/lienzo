@@ -2,17 +2,17 @@ use super::content::empty_in;
 use super::fx_cache::{effect_maps, fx_over_budget, layer_identity};
 use super::{Buffer, Document, Layer, LayerContent, Rect, adjust, advanced, effects, pattern};
 
-type VectorMaskSlot = std::sync::Arc<std::sync::OnceLock<photocraft_vector::CompiledVectorMask>>;
+type VectorMaskSlot = std::sync::Arc<std::sync::OnceLock<lienzo_vector::CompiledVectorMask>>;
 
 #[derive(Default)]
 pub(crate) struct RenderVectorMasks {
     /// Compiled masks by content. Callers pass temporary clones (see `advanced.rs`), so an
     /// address cannot identify a mask: a dropped clone's address is reused by the next one.
-    masks: std::sync::Mutex<Vec<(photocraft_doc::VectorMask, VectorMaskSlot)>>,
+    masks: std::sync::Mutex<Vec<(lienzo_doc::VectorMask, VectorMaskSlot)>>,
 }
 
 impl RenderVectorMasks {
-    pub(crate) fn values(&self, mask: &photocraft_doc::VectorMask, rect: Rect) -> Vec<f32> {
+    pub(crate) fn values(&self, mask: &lienzo_doc::VectorMask, rect: Rect) -> Vec<f32> {
         let slot = {
             let mut masks = self.masks.lock().unwrap_or_else(|e| e.into_inner());
             match masks.iter().find(|(m, _)| m == mask) {
@@ -26,7 +26,7 @@ impl RenderVectorMasks {
         };
         // Compilation is sequential. Rendering can enter Rayon and must happen after
         // initialization, so waiting tiles cannot re-enter a slot still being built.
-        let compiled = slot.get_or_init(|| photocraft_vector::CompiledVectorMask::new(mask));
+        let compiled = slot.get_or_init(|| lienzo_vector::CompiledVectorMask::new(mask));
         compiled.render(rect)
     }
 }
@@ -38,14 +38,14 @@ pub(crate) struct Ctx<'a> {
     /// Tone transfer used by adjustments that work in linear light.
     pub(crate) transfer: adjust::Transfer,
     /// Global light for layer effects.
-    pub(crate) light: photocraft_doc::GlobalLight,
+    pub(crate) light: lienzo_doc::GlobalLight,
     /// Prepared document patterns, shared across all tiles and bands of this render call.
     pub(crate) patterns: &'a pattern::PreparedPatterns<'a>,
     /// The document's colour mode (channel restrictions name its channels).
-    pub(crate) mode: photocraft_color::ColorMode,
-    pub(crate) depth: photocraft_color::SampleType,
+    pub(crate) mode: lienzo_color::ColorMode,
+    pub(crate) depth: lienzo_color::SampleType,
     /// At most 1 MiB of tone tables, initialized once and shared by this render's tiles and bands.
-    pub(crate) tone_luts: Vec<(&'a photocraft_doc::Adjustment, std::sync::OnceLock<[Vec<f32>; 4]>)>,
+    pub(crate) tone_luts: Vec<(&'a lienzo_doc::Adjustment, std::sync::OnceLock<[Vec<f32>; 4]>)>,
     pub(crate) vector_masks: RenderVectorMasks,
     /// Effect maps used by this render, by cache key: built before the parallel tiles (see
     /// [`prepare_effects`]) and held for the whole render (or band, for maps clipped to it: the
@@ -142,9 +142,9 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    pub(crate) fn apply_adjustment(&self, adj: &photocraft_doc::Adjustment, buf: &mut Buffer) {
-        if let photocraft_doc::Adjustment::Levels { space, .. } | photocraft_doc::Adjustment::Curves { space, .. } = adj
-            && !matches!(adj, photocraft_doc::Adjustment::Levels { space: photocraft_doc::adjust::ToneSpace::Rgb, .. } if self.depth == photocraft_color::SampleType::F32)
+    pub(crate) fn apply_adjustment(&self, adj: &lienzo_doc::Adjustment, buf: &mut Buffer) {
+        if let lienzo_doc::Adjustment::Levels { space, .. } | lienzo_doc::Adjustment::Curves { space, .. } = adj
+            && !matches!(adj, lienzo_doc::Adjustment::Levels { space: lienzo_doc::adjust::ToneSpace::Rgb, .. } if self.depth == lienzo_color::SampleType::F32)
             && let Some((_, luts)) = self.tone_luts.iter().find(|(a, _)| std::ptr::eq(*a, adj))
         {
             let identity = adjust::float_tone_identity(adj, Some(self.depth));
@@ -159,16 +159,14 @@ impl<'a> Ctx<'a> {
     }
 }
 
-pub(crate) fn prepare_tones(layers: &[Layer], depth: u32) -> Vec<(&photocraft_doc::Adjustment, std::sync::OnceLock<[Vec<f32>; 4]>)> {
+pub(crate) fn prepare_tones(layers: &[Layer], depth: u32) -> Vec<(&lienzo_doc::Adjustment, std::sync::OnceLock<[Vec<f32>; 4]>)> {
     let mut out = Vec::new();
     for layer in layers.iter().filter(|l| l.visible) {
         if out.len() == 16 {
             break;
         }
         match &layer.content {
-            LayerContent::Adjustment(a @ (photocraft_doc::Adjustment::Levels { .. } | photocraft_doc::Adjustment::Curves { .. })) => {
-                out.push((a, Default::default()))
-            }
+            LayerContent::Adjustment(a @ (lienzo_doc::Adjustment::Levels { .. } | lienzo_doc::Adjustment::Curves { .. })) => out.push((a, Default::default())),
             LayerContent::Group(g) if depth < PREPARE_DEPTH => out.extend(prepare_tones(&g.children, depth + 1).into_iter().take(16 - out.len())),
             _ => {}
         }

@@ -1,9 +1,9 @@
 //! Shared helpers for the second filter batch: colour-model access, window
 //! buffers, single-channel box/Gaussian blurs and jittered cell points.
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{from_rgba_into, to_rgba};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::{from_rgba_into, to_rgba};
 
 use crate::Ctx;
 use crate::image::Image;

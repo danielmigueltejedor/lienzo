@@ -1,6 +1,6 @@
 # Contributors in the About window
 
-**About ▸ Contributors** credits everyone who contributed to PhotoCraft, and **About ▸ Models** credits
+**About ▸ Contributors** credits everyone who contributed to Lienzo, and **About ▸ Models** credits
 the AI models named in `Co-Authored-By` trailers.
 
 ## Decision
@@ -20,9 +20,9 @@ the AI models named in `Co-Authored-By` trailers.
   first or last commit date. The name toggle cycles **Username → Display name → Real name**; a
   missing name falls back to `@username`. Alphabetical sorting is case-insensitive and ignores the `@`.
 
-## In PhotoCraft
+## In Lienzo
 
-- The About window is `DialogKind::About` in `crates/ui-egui/src/dialogs.rs` (Help ▸ About PhotoCraft).
+- The About window is `DialogKind::About` in `crates/ui-egui/src/dialogs.rs` (Help ▸ About Lienzo).
   Its tab is the dialog field `tab` (`about`, `contributors`, `models`), so agents can switch it with
   `ui.dialog.set`. Labels are translated like the rest of the shell (`tl!` + `crates/ui-egui/src/i18n/*.tsv`).
 

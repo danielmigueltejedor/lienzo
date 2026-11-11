@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 pub const APP_PAGE: &str = "https://getnodalia.com/lienzo";
 pub const TUTORIALS: &str = "https://getnodalia.com/lienzo";
@@ -18,7 +18,7 @@ pub fn url_for(id: &str) -> Option<&'static str> {
 
 /// Open `url` in the system browser (a new tab on the web) and note it in the status bar. Prefers
 /// the platform `open_url` service (reliable on Windows/macOS/Linux); falls back to `ctx.open_url`.
-pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context, url: &str) -> Value {
+pub fn open(app: &mut LienzoApp, ctx: &egui::Context, url: &str) -> Value {
     let opened = app.services.open_url.as_ref().map(|f| f(url).is_ok()).unwrap_or(false);
     if !opened {
         ctx.open_url(egui::OpenUrl::new_tab(url));
@@ -30,7 +30,7 @@ pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context, url: &str) -> Value {
 
 /// "Website · GitHub · Report an issue" as links, centred. Clicks route through [`open`] (the
 /// platform browser service) rather than `ui.hyperlink_to`, which uses the unreliable `ctx.open_url`.
-pub fn link_row(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn link_row(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let links = [(tl!("Website"), APP_PAGE), (tl!("GitHub"), GITHUB), (tl!("Report an issue"), ISSUES)];
     let font = egui::FontId::proportional(12.5);
@@ -73,7 +73,7 @@ mod tests {
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
         let ctx = egui::Context::default();
         // Every Help-menu link id reaches the service with its URL.
         for (id, url) in COMMANDS {
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn help_menu_lists_links_then_separator_then_system_info_and_about() {
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let help: Vec<String> = crate::menus::menu_items(&app).into_iter().filter(|i| i.path == ["Help"]).map(|i| i.id).collect();
         assert_eq!(help, ["help.website", "help.github", "help.reportIssue", "help.checkForUpdates", "---", "help.systemInfo", "help.about"]);
         for (id, _) in COMMANDS {
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn link_commands_open_their_urls() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let ctx = egui::Context::default();
         for (id, url) in [("help.website", "https://getnodalia.com/lienzo"), ("help.github", "https://github.com/danielmigueltejedor/lienzo")] {
             let r = crate::menus::invoke(&mut app, &ctx, id, serde_json::json!({})).unwrap();

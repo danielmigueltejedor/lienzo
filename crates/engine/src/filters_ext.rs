@@ -9,12 +9,12 @@
 
 use std::sync::Arc;
 
-use photocraft_algo::{
+use lienzo_algo::{
     self as algo, BlurPath, BlurQuality, BlurShape, DepthSource, DiffuseMode, Distribution, ExtrudeType, FieldPin, FilterParams, HsbModel, IrisPin, LensType,
     Light, LightKind, MezzotintType, SmartBlurMode, SpinPin, TextureChannel, TileFill, UndefinedAreas, WindMethod, ZigZagStyle,
 };
-use photocraft_doc::{Document, Layer};
-use photocraft_geom::Rect;
+use lienzo_doc::{Document, Layer};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -292,7 +292,7 @@ fn displace(p: &Value) -> FilterParams {
         stretch: s(p, "fit", "stretch") != "tile",
         undefined: undefined(p, "repeat"),
         // PSD imports carry the map, and `mapPath` or `mapDocument` resolve later.
-        map: photocraft_io::smart_map::displace_embedded_map(p),
+        map: lienzo_io::smart_map::displace_embedded_map(p),
     }
 }
 
@@ -504,9 +504,9 @@ pub(crate) fn resolve_shape_path(s: &Session, id: &str, p: &mut Value) -> Result
 
 /// A flattened document (or one of its layers) as an RGBA map image.
 fn map_from_document(doc: &Document, layer: Option<u64>) -> Option<algo::Image> {
-    let buf = match layer.and_then(|l| doc.layer(photocraft_doc::LayerId(l))) {
-        Some(l) => photocraft_compose::render_layer(l, l.surface().map(|s| s.content_bounds()).filter(|r| !r.is_empty()).unwrap_or_else(|| doc.bounds())),
-        None => photocraft_compose::flatten(doc),
+    let buf = match layer.and_then(|l| doc.layer(lienzo_doc::LayerId(l))) {
+        Some(l) => lienzo_compose::render_layer(l, l.surface().map(|s| s.content_bounds()).filter(|r| !r.is_empty()).unwrap_or_else(|| doc.bounds())),
+        None => lienzo_compose::flatten(doc),
     };
     if buf.rect.is_empty() {
         return None;
@@ -554,7 +554,7 @@ pub(crate) fn resolve(s: &Session, fp: &mut FilterParams, p: &Value) -> Result<(
 /// wins over the one already embedded, which is read only when none is named. Otherwise a dialog
 /// or agent passing the filter's stored params back with a new map got the old map again.
 pub(crate) fn displace_request(p: &Value) -> Value {
-    if map_path(p).is_some() || map_document(p).is_some() { photocraft_io::smart_map::displace_without_map(p) } else { p.clone() }
+    if map_path(p).is_some() || map_document(p).is_some() { lienzo_io::smart_map::displace_without_map(p) } else { p.clone() }
 }
 
 pub(crate) fn map_path(p: &Value) -> Option<&str> {
@@ -578,7 +578,7 @@ fn map_from_path(path: &str, layer: Option<u64>) -> Result<Option<algo::Image>> 
 /// the map, so their re-render reads the map again here; without it the filter passed the pixels
 /// through. The path is stored in the document, so it is followed only as
 /// [`crate::doc_path::resolve`] allows. `mapDocument` needs the session and is left unresolved.
-pub(crate) fn resolve_map_path(fp: &mut FilterParams, p: &Value, ctl: &photocraft_raster::Interrupt) -> Result<()> {
+pub(crate) fn resolve_map_path(fp: &mut FilterParams, p: &Value, ctl: &lienzo_raster::Interrupt) -> Result<()> {
     resolve_shape_kernel(fp, p, ctl)?;
     if let FilterParams::Displace { map, .. } = fp
         && map.is_none()
@@ -591,7 +591,7 @@ pub(crate) fn resolve_map_path(fp: &mut FilterParams, p: &Value, ctl: &photocraf
 }
 
 /// Rebuild a custom kernel from portable vector data for direct and Smart Filter rendering.
-pub(crate) fn resolve_shape_kernel(fp: &mut FilterParams, p: &Value, ctl: &photocraft_raster::Interrupt) -> Result<()> {
+pub(crate) fn resolve_shape_kernel(fp: &mut FilterParams, p: &Value, ctl: &lienzo_raster::Interrupt) -> Result<()> {
     let FilterParams::CustomShapeBlur { radius, kernel } = fp else { return Ok(()) };
     ctl.check().map_err(|_| EngineError::Cancelled)?;
     // Preserve Shape Blur's existing radius ceiling before rasterizing an O(r²) kernel.
@@ -618,8 +618,8 @@ pub(crate) fn resolve_shape_kernel(fp: &mut FilterParams, p: &Value, ctl: &photo
     let rect = Rect::new(0, 0, size, size);
     // The coverage buffer is size² floats (16 MB at radius 1000): admit it before allocating.
     let side = u64::try_from(size).unwrap_or(0);
-    let _working = photocraft_raster::memory::try_reserve_operation(side.saturating_mul(side).saturating_mul(4)).map_err(EngineError::Other)?;
-    let data = photocraft_vector::path_coverage_with(&fitted, rect, ctl).ok_or(EngineError::Cancelled)?;
+    let _working = lienzo_raster::memory::try_reserve_operation(side.saturating_mul(side).saturating_mul(4)).map_err(EngineError::Other)?;
+    let data = lienzo_vector::path_coverage_with(&fitted, rect, ctl).ok_or(EngineError::Cancelled)?;
     if data.len() != (size as usize).saturating_mul(size as usize) || !data.iter().any(|v| *v > 0.0) {
         return Err(EngineError::Other("Shape Blur's selected shape has no coverage".into()));
     }

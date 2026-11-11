@@ -27,9 +27,9 @@
 use std::collections::HashMap;
 use std::sync::PoisonError;
 
-use photocraft_doc::text::{Orientation, TextAlign, TextShape};
-use photocraft_doc::{Document, Fill, Layer, LayerContent, LayerId, LiveShape, Path, TextLayer};
-use photocraft_geom::{Point, Rect};
+use lienzo_doc::text::{Orientation, TextAlign, TextShape};
+use lienzo_doc::{Document, Fill, Layer, LayerContent, LayerId, LiveShape, Path, TextLayer};
+use lienzo_geom::{Point, Rect};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -123,7 +123,7 @@ fn image(l: &Layer) -> String {
     format!("url({})", quoted(&format!("{}.png", l.name)))
 }
 
-fn rgb(c: &photocraft_color::Color) -> String {
+fn rgb(c: &lienzo_color::Color) -> String {
     let [r, g, b] = c.to_rgb().map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
     format!("rgb({r}, {g}, {b})")
 }
@@ -134,7 +134,7 @@ fn rgb(c: &photocraft_color::Color) -> String {
 /// it was drawn with, now elliptical, so the two differ.
 fn draws(live: &LiveShape, path: &Path) -> bool {
     let anchors = |p: &Path| p.subpaths.iter().flat_map(|s| s.knots.iter().map(|k| k.anchor)).collect::<Vec<_>>();
-    let (have, want) = (anchors(path), anchors(&photocraft_vector::shapes::live_path(live)));
+    let (have, want) = (anchors(path), anchors(&lienzo_vector::shapes::live_path(live)));
     let among = |p: &Point, q: &[Point]| q.iter().any(|q| (p.x - q.x).abs() < 0.01 && (p.y - q.y).abs() < 0.01);
     have.iter().all(|p| among(p, &want)) && want.iter().all(|p| among(p, &have))
 }
@@ -170,12 +170,12 @@ fn point_text_origin(t: &TextLayer, pix: Rect, dpi: f32, family: &str, size_pt: 
     }
     let size_px = f64::from(size_pt) * f64::from(dpi) / 72.0;
     let cap_layer = TextLayer { text: "H".into(), font_family: family.into(), size_pt, ..Default::default() };
-    let mut eng = photocraft_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
+    let mut eng = lienzo_text::shared().lock().unwrap_or_else(PoisonError::into_inner);
     let layout = eng.layout(t, dpi);
-    let ink = photocraft_text::render::ink_bounds(&layout)?;
+    let ink = lienzo_text::render::ink_bounds(&layout)?;
     let baseline = f64::from(layout.lines.first()?.baseline);
     let cap_layout = eng.layout(&cap_layer, dpi);
-    let cap = f64::from(cap_layout.lines.first()?.baseline) - photocraft_text::render::ink_bounds(&cap_layout)?[1];
+    let cap = f64::from(cap_layout.lines.first()?.baseline) - lienzo_text::render::ink_bounds(&cap_layout)?[1];
     // Photoshop works with the line height it writes, three decimals of the size.
     let line_height_px = (line_height * 1000.0).round() / 1000.0 * size_px;
     let at = place_point_text(pix, ink, baseline, cap, size_px, line_height_px);
@@ -185,7 +185,7 @@ fn point_text_origin(t: &TextLayer, pix: Rect, dpi: f32, family: &str, size_pt: 
 /// The box of a group's rule: its artboard, else the canvas (measured: a group holding a 50 × 30
 /// layer writes the 400 × 300 canvas).
 fn group_bounds(doc: &Document, l: &Layer) -> Rect {
-    let r = photocraft_doc::comps::position_bounds(l);
+    let r = lienzo_doc::comps::position_bounds(l);
     if r.is_empty() { doc.bounds() } else { r }
 }
 
@@ -196,7 +196,7 @@ pub fn rule(doc: &Document, z: usize, l: &Layer) -> Option<String> {
     let px_per_pt = f64::from(doc.resolution_dpi.max(1.0)) / 72.0;
     let mut props: Vec<(&str, String)> = Vec::new();
     let mut sized = true;
-    let mut bounds = photocraft_doc::comps::position_bounds(l);
+    let mut bounds = lienzo_doc::comps::position_bounds(l);
     // Where the rule starts when it isn't where the layer's pixels start.
     let mut origin: Option<Point> = None;
     if !has_css(l) {

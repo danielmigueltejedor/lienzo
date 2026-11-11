@@ -1,6 +1,6 @@
 use super::services::{ExportSettings, FormatChoices, SAVE_OPTIONS_OPEN, SaveKind, Services, plain_raster, saved_revision_after_write};
 use super::{
-    ControlRequest, DocId, Document, HashMap, PhotocraftApp, Receiver, Session, SyntheticTarget, Tool, UiState, Value, actions, analysis_ui, brush_panel,
+    ControlRequest, DocId, Document, HashMap, LienzoApp, Receiver, Session, SyntheticTarget, Tool, UiState, Value, actions, analysis_ui, brush_panel,
     brush_picker, camera_raw_ui, canvas, dds_options_ui, delete_layer_prompt, dialogs, discard_ui, distort_ui, dock, field_wheel, file_open, gpu_canvas,
     gpu_status, gradient_ui, histogram_panel, i18n, jobs_ui, jpeg_options_ui, json, kys_import, last_brush, layers_panel_ui, mask_thumbs_ui, mask_trash_prompt,
     monitor_status, native_menu, notices, open_prompt, paint_mouse, palette, panel_docking, panels, prefs_ui, preset_files_ui, preset_panels, rasterize_prompt,
@@ -32,7 +32,7 @@ pub(crate) use targets::adjustment_layer_active;
 pub(crate) use thumbs::layer_thumb_frame;
 pub use thumbs::surface_fingerprint;
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Creates a new application state managing the engine session and UI services.
     pub fn new(mut session: Session, mut services: Services) -> Self {
         session.updates.check = services.check_updates.take();
@@ -236,12 +236,12 @@ impl PhotocraftApp {
         // After the saved preferences, which say whether the set was already offered.
         kys_import::offer_import(&mut app);
         // File › Scripts › Script Events Manager: "Start Application".
-        photocraft_engine::automate_cmds::fire_event(&mut app.session, "startApplication");
+        lienzo_engine::automate_cmds::fire_event(&mut app.session, "startApplication");
         app
     }
 }
 
-impl eframe::App for PhotocraftApp {
+impl eframe::App for LienzoApp {
     fn on_exit(&mut self) {
         if let Err(err) = tool_memory::save_on_exit(self) {
             log::warn!("Preferences: could not save the final tool state: {err}");
@@ -299,11 +299,11 @@ impl eframe::App for PhotocraftApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        photocraft_compose::discard_unreadable_pixel_caches();
-        if let Err(error) = photocraft_raster::spill::check_integrity() {
+        lienzo_compose::discard_unreadable_pixel_caches();
+        if let Err(error) = lienzo_raster::spill::check_integrity() {
             self.ui.status = error;
             self.ui.status_error = true;
-        } else if let Some(error) = photocraft_raster::spill::last_error() {
+        } else if let Some(error) = lienzo_raster::spill::last_error() {
             self.ui.status = error;
             self.ui.status_error = true;
         }
@@ -321,7 +321,7 @@ mod clipboard_tests;
 /// look has its own tests (`theme::tests`, `panels::nodalia_tests`).
 #[cfg(test)]
 fn classic_look_for_tests(session: &mut Session) {
-    use photocraft_engine::prefs::{AppearanceMode, DarkTheme, LightTheme, Theme, WindowControls};
+    use lienzo_engine::prefs::{AppearanceMode, DarkTheme, LightTheme, Theme, WindowControls};
     let i = &session.prefs().interface;
     let default = i.theme == Theme::Nodalia
         && i.appearance_mode == AppearanceMode::Auto

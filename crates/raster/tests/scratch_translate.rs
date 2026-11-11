@@ -1,12 +1,12 @@
 //! Upstream's shared fills and pixel translations must also work with paged tile bytes.
 
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, spill};
+use lienzo_color::{PixelFormat, SampleType};
+use lienzo_geom::{Rect, TILE_SIZE, TileCoord};
+use lienzo_raster::{Surface, spill};
 
 #[test]
 fn translations_and_shared_fills_preserve_spilled_pixels_at_every_depth() {
-    let dir = std::env::temp_dir().join(format!("photocraft-translate-spill-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-translate-spill-{}", std::process::id()));
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let format = PixelFormat::RGBA8.with_sample(depth);
         let tile_bytes = (TILE_SIZE * TILE_SIZE) as usize * format.bytes_per_pixel();

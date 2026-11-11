@@ -1,13 +1,13 @@
 use super::*;
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_geom::Size;
+use lienzo_color::{Color, ColorMode, SampleType};
+use lienzo_geom::Size;
 
 #[test]
 fn nested_pass_through_groups_with_clipped_layers_are_not_planned_exponentially() {
-    let mut layers = vec![Layer::raster("leaf", photocraft_color::PixelFormat::RGBA8)];
+    let mut layers = vec![Layer::raster("leaf", lienzo_color::PixelFormat::RGBA8)];
     for _ in 0..30 {
         let group = Layer::group("g", layers);
-        let mut clipped = Layer::raster("c", photocraft_color::PixelFormat::RGBA8);
+        let mut clipped = Layer::raster("c", lienzo_color::PixelFormat::RGBA8);
         clipped.clipped = true;
         layers = vec![group, clipped];
     }
@@ -44,7 +44,7 @@ fn lab_channel_adjustments_defer_to_the_cpu_in_lab_documents() {
         assert_eq!(adjustment_on_gpu(adj, ColorMode::Cmyk), !inks, "{adj:?} in CMYK");
     }
     // CMYK Hue/Saturation works on the inks (on the CPU); Colorize stays on the screen colour.
-    let ranges = photocraft_doc::adjust::HueRange::defaults();
+    let ranges = lienzo_doc::adjust::HueRange::defaults();
     let hue = |colorize| Adjustment::HueSaturation { hue: 30.0, saturation: 10.0, lightness: 0.0, colorize, ranges: ranges.clone() };
     assert!(!adjustment_on_gpu(&hue(false), ColorMode::Cmyk) && adjustment_on_gpu(&hue(true), ColorMode::Cmyk));
     assert!(adjustment_on_gpu(&hue(false), ColorMode::Rgb));
@@ -54,27 +54,27 @@ fn lab_channel_adjustments_defer_to_the_cpu_in_lab_documents() {
 
 #[test]
 fn native_cmyk_fills_fall_back_only_without_a_valid_cache() {
-    use photocraft_doc::{FillCache, GradientStyle};
-    for depth in photocraft_color::SampleType::ALL {
+    use lienzo_doc::{FillCache, GradientStyle};
+    for depth in lienzo_color::SampleType::ALL {
         for fill in [Fill::Solid(Color::WHITE), Fill::gradient(vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], 0.0, 1.0, GradientStyle::Linear, false)] {
-            let mut doc = Document::new("CMYK", photocraft_geom::Size::new(3, 2), photocraft_color::ColorMode::Cmyk, depth);
+            let mut doc = Document::new("CMYK", lienzo_geom::Size::new(3, 2), lienzo_color::ColorMode::Cmyk, depth);
             doc.layers.push(Layer::new("Fill", LayerContent::Fill(fill.clone())));
             assert!(plan(&doc).unwrap_err().0.contains("native CMYK fill"));
             doc.layers[0].visible = false;
             assert!(plan(&doc).is_ok());
             doc.layers[0].visible = true;
-            doc.layers[0].fill_cache = Some(FillCache { fill, surface: photocraft_raster::Surface::new(doc.pixel_format()) });
+            doc.layers[0].fill_cache = Some(FillCache { fill, surface: lienzo_raster::Surface::new(doc.pixel_format()) });
             assert!(plan(&doc).is_ok());
             doc.layers[0].fill_cache.as_mut().unwrap().fill = Fill::Solid(Color::TRANSPARENT);
             assert!(plan(&doc).is_err());
-            doc.mode = photocraft_color::ColorMode::Rgb;
+            doc.mode = lienzo_color::ColorMode::Rgb;
             assert!(plan(&doc).is_ok());
         }
     }
 }
 #[test]
 fn outer_glow_plan_knocks_out_see_through_fill() {
-    use photocraft_doc::{Contour, FxCommon, GlowSource, GlowTechnique};
+    use lienzo_doc::{Contour, FxCommon, GlowSource, GlowTechnique};
 
     for fill in [0.0, 0.4, 1.0] {
         let mut d = Document::with_background("glow", Size::new(64, 64), ColorMode::Rgb, SampleType::U8, Color::WHITE);
@@ -110,7 +110,7 @@ fn color_lookup_with_an_overflowing_stored_size_uploads_no_table() {
     for size in [1 << 22, u32::MAX] {
         let a =
             Adjustment::ColorLookup { name: "x".into(), lut: Some(std::sync::Arc::new(vec![0.5; 24])), size, tetrahedral: false, dither: false, source: None };
-        let (kind, _, rows) = adjustment_program(&a, Transfer::Srgb, SampleType::U8, photocraft_color::ColorMode::Rgb);
+        let (kind, _, rows) = adjustment_program(&a, Transfer::Srgb, SampleType::U8, lienzo_color::ColorMode::Rgb);
         assert_eq!((kind, rows.is_none()), (0, true), "size {size}");
     }
 }
@@ -187,7 +187,7 @@ fn small_layers_composite_only_over_their_bounds() {
 /// document using it is composited on the CPU, so both show the same pixels.
 #[test]
 fn stroke_emboss_defers_to_the_cpu() {
-    use photocraft_doc::{Bevel, BevelStyle, BevelTechnique, Contour, FxCommon};
+    use lienzo_doc::{Bevel, BevelStyle, BevelTechnique, Contour, FxCommon};
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let mut l = Layer::raster("embossed", d.pixel_format());
     l.surface_mut().unwrap().fill_rect(Rect::new(2, 2, 5, 5), &[1.0, 0.0, 0.0, 1.0]);
@@ -211,14 +211,14 @@ fn stroke_emboss_defers_to_the_cpu() {
         contour: None,
         texture: None,
     };
-    l.effects.items.push(photocraft_doc::Effect::BevelEmboss(bevel(BevelStyle::InnerBevel)));
+    l.effects.items.push(lienzo_doc::Effect::BevelEmboss(bevel(BevelStyle::InnerBevel)));
     d.layers.push(l);
     assert!(plan(&d).is_ok(), "other bevel styles stay on the GPU");
-    d.layers[1].effects.items[0] = photocraft_doc::Effect::BevelEmboss(bevel(BevelStyle::StrokeEmboss));
+    d.layers[1].effects.items[0] = lienzo_doc::Effect::BevelEmboss(bevel(BevelStyle::StrokeEmboss));
     let err = plan(&d).unwrap_err();
     assert!(err.0.contains("Stroke Emboss"), "{err}");
     // Turned off, it no longer matters.
-    if let photocraft_doc::Effect::BevelEmboss(b) = &mut d.layers[1].effects.items[0] {
+    if let lienzo_doc::Effect::BevelEmboss(b) = &mut d.layers[1].effects.items[0] {
         b.enabled = false;
     }
     assert!(plan(&d).is_ok());
@@ -229,12 +229,12 @@ fn effects_are_planned_in_place() {
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let mut l = Layer::raster("fx", d.pixel_format());
     l.surface_mut().unwrap().fill_rect(Rect::new(2, 2, 5, 5), &[1.0, 0.0, 0.0, 1.0]);
-    l.effects.items.push(photocraft_doc::Effect::ColorOverlay { common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0), color: Color::WHITE });
-    l.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+    l.effects.items.push(lienzo_doc::Effect::ColorOverlay { common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0), color: Color::WHITE });
+    l.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
     d.layers.push(l);
     let p = plan(&d).unwrap();
     assert_eq!(p.fx.len(), 1);
-    let m = photocraft_compose::effects::margin(&d.layers[1]);
+    let m = lienzo_compose::effects::margin(&d.layers[1]);
     assert_eq!(p.fx[0].region, Rect::new(2, 2, 5, 5).inflate(m).intersect(&d.bounds().inflate(m)));
     // The effect region covers the whole canvas: the merged result is the backdrop, no copy.
     assert!(p.fx[0].region.contains_rect(&d.bounds()));
@@ -259,7 +259,7 @@ fn exterior_effects_merge_from_the_shape() {
     let mut l = Layer::raster("fx", d.pixel_format());
     l.surface_mut().unwrap().fill_rect(Rect::new(0, 0, 8, 8), &[1.0, 0.0, 0.0, 0.5]);
     l.fill_opacity = 0.7;
-    l.effects.items.push(photocraft_doc::Effect::default_drop_shadow());
+    l.effects.items.push(lienzo_doc::Effect::default_drop_shadow());
     d.layers.push(l);
     let p = plan(&d).unwrap();
     let fx: Vec<Kernel> = p.passes.iter().skip(2).map(|p| p.kernel).collect();
@@ -267,7 +267,7 @@ fn exterior_effects_merge_from_the_shape() {
     let merge = p.passes.last().unwrap();
     assert!(merge.flags & F_LAYER_SHAPE != 0);
     assert_eq!(merge.params[0][0], 0.7);
-    d.layers[1].effects.items.push(photocraft_doc::Effect::ColorOverlay { common: photocraft_doc::FxCommon::new(BlendMode::Normal, 1.0), color: Color::WHITE });
+    d.layers[1].effects.items.push(lienzo_doc::Effect::ColorOverlay { common: lienzo_doc::FxCommon::new(BlendMode::Normal, 1.0), color: Color::WHITE });
     let p = plan(&d).unwrap();
     assert!(p.passes.iter().all(|p| p.flags & F_LAYER_SHAPE == 0));
     assert!(p.passes.iter().any(|p| p.kernel == Kernel::FxInit));
@@ -275,7 +275,7 @@ fn exterior_effects_merge_from_the_shape() {
 
 #[test]
 fn opaque_fill_layers_skip_what_they_cover() {
-    let opaque = || Fill::gradient(vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], 30.0, 1.0, photocraft_doc::GradientStyle::Linear, false);
+    let opaque = || Fill::gradient(vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], 30.0, 1.0, lienzo_doc::GradientStyle::Linear, false);
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     for i in 0..4 {
         // Small painted layers (empty ones plan no passes at all).
@@ -309,20 +309,20 @@ fn opaque_fill_layers_skip_what_they_cover() {
         let mut d2 = d.clone();
         f(&mut d2.layers[5]);
         assert!(plan(&d2).unwrap().passes.len() > skipped, "case {k}: the layers below are planned");
-        assert!(!photocraft_compose::occludes_below(&d2.layers[5], ColorMode::Rgb), "case {k}");
+        assert!(!lienzo_compose::occludes_below(&d2.layers[5], ColorMode::Rgb), "case {k}");
     }
     let mut translucent = d.clone();
     translucent.layers[5].content = LayerContent::Fill(Fill::Solid(Color::rgba(1.0, 0.0, 0.0, 0.5)));
-    assert!(!photocraft_compose::occludes_below(&translucent.layers[5], ColorMode::Rgb));
-    assert!(photocraft_compose::occludes_below(&d.layers[5], ColorMode::Rgb));
+    assert!(!lienzo_compose::occludes_below(&translucent.layers[5], ColorMode::Rgb));
+    assert!(lienzo_compose::occludes_below(&d.layers[5], ColorMode::Rgb));
 }
 
 #[test]
 fn blend_if_plans_on_the_gpu() {
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let mut l = Layer::raster("bi", d.pixel_format());
-    l.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
-    l.blend_if.set(0, [photocraft_doc::BlendRange { black: [40, 40], white: [255, 255] }, photocraft_doc::BlendRange::FULL]);
+    l.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 0, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
+    l.blend_if.set(0, [lienzo_doc::BlendRange { black: [40, 40], white: [255, 255] }, lienzo_doc::BlendRange::FULL]);
     d.layers.push(l.clone());
     let blend_if = |d: &Document| plan(d).unwrap().passes.iter().filter(|p| p.flags & F_BLEND_IF != 0).count();
     assert_eq!(blend_if(&d), 1);
@@ -338,8 +338,8 @@ fn blend_if_plans_on_the_gpu() {
 
 #[test]
 fn blend_if_params_pack_every_range_exactly() {
-    let mut bi = photocraft_doc::BlendIf::default();
-    bi.set(3, [photocraft_doc::BlendRange { black: [255, 255], white: [0, 1] }, photocraft_doc::BlendRange { black: [12, 200], white: [201, 254] }]);
+    let mut bi = lienzo_doc::BlendIf::default();
+    bi.set(3, [lienzo_doc::BlendRange { black: [255, 255], white: [0, 1] }, lienzo_doc::BlendRange { black: [12, 200], white: [201, 254] }]);
     let f: Vec<f32> = blend_if_params(&bi).iter().flatten().copied().collect();
     // Entry 3 (B), this layer then underlying; unset entries are full ranges.
     assert_eq!(&f[12..16], &[255.0 * 256.0 + 255.0, 1.0, 12.0 * 256.0 + 200.0, 201.0 * 256.0 + 254.0]);
@@ -348,10 +348,10 @@ fn blend_if_params_pack_every_range_exactly() {
 
 #[test]
 fn advanced_blending_falls_back_to_the_cpu() {
-    use photocraft_doc::Knockout;
+    use lienzo_doc::Knockout;
     let mut d = Document::with_background("t", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let mut l = Layer::raster("ko", d.pixel_format());
-    l.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
+    l.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 0, 4, 4), &[1.0, 0.0, 0.0, 1.0]);
     d.layers.push(l.clone());
     assert!(plan(&d).is_ok(), "defaults stay on the GPU");
     // Switches with nothing to act on (no effects, no clipped layers) stay on the GPU too.
@@ -379,7 +379,7 @@ fn advanced_blending_falls_back_to_the_cpu() {
 
 /// Adjustments whose LUT rows the planner caches (#11498), with settings away from identity.
 fn row_cached_adjustments() -> Vec<Adjustment> {
-    use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
+    use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
     let ch = |g: f32| LevelsChannel { in_black: 0.05, in_white: 0.9, gamma: g, out_black: 0.02, out_white: 0.97 };
     let mut ranges = HueRange::defaults();
     ranges[1].hue = 20.0;
@@ -423,7 +423,7 @@ fn cached_adjustment_rows_match_freshly_built_tables() {
 
 #[test]
 fn row_keys_cover_exactly_what_the_rows_are_built_from() {
-    use photocraft_doc::adjust::LevelsChannel;
+    use lienzo_doc::adjust::LevelsChannel;
     let key = |a: &Adjustment, depth| lower::row_key(a, depth).expect("a row-cached adjustment");
     let [levels, curves, hue_sat, balance] = <[Adjustment; 4]>::try_from(row_cached_adjustments()).expect("four adjustments");
     // The same settings give the same key on every plan, so later plans read the stored rows.
@@ -470,8 +470,8 @@ fn row_keys_cover_exactly_what_the_rows_are_built_from() {
 
 #[test]
 fn planning_reads_cached_rows_instead_of_rebuilding_them() {
-    use photocraft_compose::lut_rows;
-    use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
+    use lienzo_compose::lut_rows;
+    use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel};
     // Settings no other test plans, so the planted rows are this test's own; the few keys this
     // test binary adds can't evict them from the shared cache.
     let mut ranges = HueRange::defaults();

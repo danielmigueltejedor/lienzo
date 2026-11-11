@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Overrides for the setup wizard's WixUI strings, so its pages name the version being installed
+  ([LienzoVersion] is the full version, pre-release tag included, set in lienzo.wxs).
+-->
+<WixLocalization Culture="en-US" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}Welcome to the [ProductName] [LienzoVersion] Setup Wizard" />
+  <String Id="WelcomeDlgDescription" Value="The Setup Wizard will install [ProductName] version [LienzoVersion] on your computer. Click Next to continue or Cancel to exit the Setup Wizard." />
+  <String Id="VerifyReadyDlgInstallTitle" Value="{\WixUI_Font_Title}Ready to install [ProductName] [LienzoVersion]" />
+  <String Id="ExitDialogTitle" Value="{\WixUI_Font_Bigger}Completed the [ProductName] [LienzoVersion] Setup Wizard" />
+  <String Id="LienzoInstallDirNote" Value="Lienzo installs for your user account only, into your own Programs folder, without asking an administrator for permission." />
+  <String Id="LienzoAllUsers" Value="Install for all users of this computer (asks an administrator)" />
+</WixLocalization>

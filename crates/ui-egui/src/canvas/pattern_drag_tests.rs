@@ -2,11 +2,11 @@
 //! frame, previews and the commit they match.
 
 use egui::{Event, Modifiers, PointerButton, Pos2, Rect, pos2, vec2};
-use photocraft_doc::{Document, Fill, LayerContent, LayerId, Pattern};
+use lienzo_doc::{Document, Fill, LayerContent, LayerId, Pattern};
 use serde_json::json;
 
 use super::{DialogCanvasInput, ViewXform, handle_dialog_canvas_input};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, View};
 
 /// What else holds the pointer in a test frame.
@@ -18,7 +18,7 @@ struct FrameOpts {
 }
 
 /// One canvas's dialog input for the frame `ctx` is running, showing document `idx`.
-fn canvas_input(ctx: &egui::Context, app: &mut PhotocraftApp, view: &mut View, xf: &ViewXform, (idx, primary): (usize, bool), opts: FrameOpts) {
+fn canvas_input(ctx: &egui::Context, app: &mut LienzoApp, view: &mut View, xf: &ViewXform, (idx, primary): (usize, bool), opts: FrameOpts) {
     let rect = xf.rect;
     let painter = egui::Painter::new(ctx.clone(), egui::LayerId::background(), rect);
     let free_hover = crate::dialogs::free_pointer_over(ctx, rect).is_some();
@@ -44,7 +44,7 @@ fn canvas_input(ctx: &egui::Context, app: &mut PhotocraftApp, view: &mut View, x
 }
 
 /// One frame of the active document's canvas receiving `events`.
-fn step(ctx: &egui::Context, app: &mut PhotocraftApp, view: &mut View, xf: ViewXform, primary: bool, events: Vec<Event>, opts: FrameOpts) {
+fn step(ctx: &egui::Context, app: &mut LienzoApp, view: &mut View, xf: ViewXform, primary: bool, events: Vec<Event>, opts: FrameOpts) {
     ctx.begin_pass(egui::RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(1000.0, 800.0))), focused: true, events, ..Default::default() });
     if opts.popup {
         egui::Popup::open_id(ctx, egui::Id::unique("pattern-drag-popup"));
@@ -56,14 +56,7 @@ fn step(ctx: &egui::Context, app: &mut PhotocraftApp, view: &mut View, xf: ViewX
 
 /// An active canvas and an inactive one in the same frame, as Window › Arrange lays them out: the
 /// inactive cell shows the other of two documents.
-fn step_two(
-    ctx: &egui::Context,
-    app: &mut PhotocraftApp,
-    active: (&mut View, ViewXform),
-    inactive: (&mut View, ViewXform),
-    events: Vec<Event>,
-    opts: FrameOpts,
-) {
+fn step_two(ctx: &egui::Context, app: &mut LienzoApp, active: (&mut View, ViewXform), inactive: (&mut View, ViewXform), events: Vec<Event>, opts: FrameOpts) {
     ctx.begin_pass(egui::RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(1000.0, 800.0))), focused: true, events, ..Default::default() });
     let active_idx = app.session.active_index().unwrap_or(0);
     let (view, xf) = active;
@@ -91,14 +84,14 @@ fn moved(p: Pos2) -> Event {
 /// The event sequences a drag repeats, on one canvas the test owns.
 struct Drag<'a> {
     ctx: egui::Context,
-    app: &'a mut PhotocraftApp,
+    app: &'a mut LienzoApp,
     view: &'a mut View,
     xf: ViewXform,
     dialog: u64,
 }
 
 impl<'a> Drag<'a> {
-    fn new(ctx: &egui::Context, app: &'a mut PhotocraftApp, view: &'a mut View, xf: ViewXform, dialog: u64) -> Self {
+    fn new(ctx: &egui::Context, app: &'a mut LienzoApp, view: &'a mut View, xf: ViewXform, dialog: u64) -> Self {
         Self { ctx: ctx.clone(), app, view, xf, dialog }
     }
 
@@ -129,7 +122,7 @@ impl<'a> Drag<'a> {
 }
 
 /// The phase the dialog shows.
-fn dialog_phase(app: &PhotocraftApp, dialog: u64) -> [f64; 2] {
+fn dialog_phase(app: &LienzoApp, dialog: u64) -> [f64; 2] {
     let a = app.ui.dialogs.iter().find(|d| d.id == dialog).expect("dialog").fields["phase"].as_array().expect("phase");
     [a[0].as_f64().expect("x"), a[1].as_f64().expect("y")]
 }
@@ -140,7 +133,7 @@ fn assert_phase(got: [f64; 2], want: [f64; 2], why: &str) {
 }
 
 /// Whether the dialog still holds a private gesture waiting for its release.
-fn drag_stored(app: &PhotocraftApp, dialog: u64) -> bool {
+fn drag_stored(app: &LienzoApp, dialog: u64) -> bool {
     let f = &app.ui.dialogs.iter().find(|d| d.id == dialog).expect("dialog").fields;
     // The test canvas: the root viewport showing the active document, outside any document window.
     let owner = super::pattern_drag_owner(egui::ViewportId::ROOT, app.session.active_index().unwrap_or(0), None);
@@ -148,14 +141,14 @@ fn drag_stored(app: &PhotocraftApp, dialog: u64) -> bool {
 }
 
 /// A document with a Pattern Fill dialog open: editing an existing linked fill, or creating one.
-fn pattern_drag_app(depth: u64, create: bool) -> (PhotocraftApp, u64, Option<u64>) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn pattern_drag_app(depth: u64, create: bool) -> (LienzoApp, u64, Option<u64>) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30, "depth": depth})).unwrap();
     let layer = if create {
         None
     } else {
         let id = app
-            .run(photocraft_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25], "scale": 137.5, "angle": 45}))
+            .run(lienzo_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25], "scale": 137.5, "angle": 45}))
             .unwrap()["layer"]
             .as_u64()
             .unwrap();
@@ -380,10 +373,10 @@ fn a_pattern_drag_ends_on_a_popup_nested_dialog_or_unlink_and_pan_wins() {
 
 #[test]
 fn a_pattern_drag_previews_without_editing_masks_selection_or_the_tool() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30, "depth": 16})).unwrap();
     app.run("select.rect", json!({"x": 2, "y": 2, "width": 20, "height": 10})).unwrap();
-    let id = app.run(photocraft_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard"})).unwrap()["layer"].as_u64().unwrap();
+    let id = app.run(lienzo_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard"})).unwrap()["layer"].as_u64().unwrap();
     // A mask on the non-active Background must not change.
     let background = app.session.active().unwrap().doc.layers[0].id;
     app.run("layer.select", json!({"layer": background.0})).unwrap();
@@ -533,10 +526,9 @@ fn atomic_press_release_sequences_keep_their_own_travel() {
 
 #[test]
 fn a_secondary_canvas_cannot_move_or_cancel_the_active_pattern_drag() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30})).unwrap();
-    let id =
-        app.run(photocraft_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25]})).unwrap()["layer"].as_u64().unwrap();
+    let id = app.run(lienzo_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25]})).unwrap()["layer"].as_u64().unwrap();
     let dialog = crate::pattern_fill_ui::open(&mut app).unwrap();
     // Window › Arrange: a second document in its own cell, the fill's document active.
     app.run("file.new", json!({"width": 30, "height": 20})).unwrap();
@@ -589,18 +581,18 @@ fn a_secondary_canvas_cannot_move_or_cancel_the_active_pattern_drag() {
 
 #[test]
 fn a_drag_moves_the_visible_pattern_not_only_its_phase() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 2, "depth": 8})).unwrap();
     // Our own 8 × 2 tile: a solid red 2 × 2 left edge, transparent elsewhere.
-    let mut surface = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
-    surface.fill_rect(photocraft_geom::Rect::new(0, 0, 2, 2), &[1.0, 0.0, 0.0, 1.0]);
+    let mut surface = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
+    surface.fill_rect(lienzo_geom::Rect::new(0, 0, 2, 2), &[1.0, 0.0, 0.0, 1.0]);
     let tile = Pattern::new("Shift tile", surface, 8, 2);
     let pattern = tile.id.clone();
     app.session.patterns.items.push(tile);
-    app.run(photocraft_engine::pattern_fill_cmds::CREATE, json!({"pattern": pattern, "phase": [0.0, 0.0], "scale": 100, "angle": 0, "link": true})).unwrap();
+    app.run(lienzo_engine::pattern_fill_cmds::CREATE, json!({"pattern": pattern, "phase": [0.0, 0.0], "scale": 100, "angle": 0, "link": true})).unwrap();
     let dialog = crate::pattern_fill_ui::open(&mut app).unwrap();
     let band = |doc: &Document| {
-        let buf = photocraft_compose::render(doc, photocraft_geom::Rect::new(0, 0, 8, 1));
+        let buf = lienzo_compose::render(doc, lienzo_geom::Rect::new(0, 0, 8, 1));
         (0..8).filter(|x| buf.px[*x as usize][0] > 0.5 && buf.px[*x as usize][1] < 0.5).collect::<Vec<i32>>()
     };
     let before = band(&app.session.active().unwrap().doc);
@@ -630,7 +622,7 @@ fn a_drag_moves_the_visible_pattern_not_only_its_phase() {
 /// A frame in which the main window's canvas and a Window › New Window view of the same document
 /// both run as primary views. Each OS window has its own pointer, so each gets its own context and
 /// events; the document window is drawn after the main one, as `extra_windows` does.
-fn step_windows(app: &mut PhotocraftApp, main: (&egui::Context, &mut View, ViewXform, Vec<Event>), window: (&egui::Context, &mut View, ViewXform, Vec<Event>)) {
+fn step_windows(app: &mut LienzoApp, main: (&egui::Context, &mut View, ViewXform, Vec<Event>), window: (&egui::Context, &mut View, ViewXform, Vec<Event>)) {
     let idx = app.session.active_index().unwrap_or(0);
     let screen = Some(Rect::from_min_size(Pos2::ZERO, vec2(1000.0, 800.0)));
     let (ctx, view, xf, events) = main;
@@ -654,7 +646,7 @@ fn a_new_window_view_keeps_its_drag_while_the_main_canvas_is_idle() {
     let mut main_view = View { zoom: 1.0, center: [20.0, 15.0], ..Default::default() };
     let mut window_view = main_view.clone();
     let start = xf.to_screen(20.0, 15.0);
-    let mut frame = |app: &mut PhotocraftApp, main: Vec<Event>, window: Vec<Event>| {
+    let mut frame = |app: &mut LienzoApp, main: Vec<Event>, window: Vec<Event>| {
         step_windows(app, (&main_ctx, &mut main_view, xf, main), (&window_ctx, &mut window_view, xf, window));
     };
     frame(&mut app, vec![], vec![moved(start)]);

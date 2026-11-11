@@ -17,7 +17,7 @@
 //! each lens is measured at several brightnesses; between two the flare blends them. The light is
 //! screened onto the pixels.
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 
 use crate::LensType;
 use crate::fxutil::{rgba, set_rgba, smoothstep};

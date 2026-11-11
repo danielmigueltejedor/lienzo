@@ -86,14 +86,14 @@ the walk itself:
 
 ```sh
 # base tree
-git worktree add --detach ../photocraft-oil-base origin/main
+git worktree add --detach ../lienzo-oil-base origin/main
 
 # same example, both trees
-(cd ../photocraft-oil-base && cargo build --release -p photocraft-algo --example bench_filters2)
-cargo build --release -p photocraft-algo --example bench_filters2
+(cd ../lienzo-oil-base && cargo build --release -p lienzo-algo --example bench_filters2)
+cargo build --release -p lienzo-algo --example bench_filters2
 
 # 24 MP Oil Paint, no other builds or benchmarks running
-../photocraft-oil-base/target/release/examples/bench_filters2.exe oil
+../lienzo-oil-base/target/release/examples/bench_filters2.exe oil
 target/release/examples/bench_filters2.exe oil
 ```
 
@@ -104,9 +104,9 @@ for the fixtures in the table, write `v.to_bits().to_le_bytes()` in order and `c
 
 ## Checks
 
-- `cargo fmt --all --check`, `cargo clippy -p photocraft-algo --all-targets -- -D warnings`
-- `cargo check -p photocraft-algo --target wasm32-unknown-unknown` still builds.
-- `cargo test --release -p photocraft-algo`: 605 passed, 1 failed. The failure is
+- `cargo fmt --all --check`, `cargo clippy -p lienzo-algo --all-targets -- -D warnings`
+- `cargo check -p lienzo-algo --target wasm32-unknown-unknown` still builds.
+- `cargo test --release -p lienzo-algo`: 605 passed, 1 failed. The failure is
   `pixelate::tests::facet_reuse_matches_scalar_in_every_model`, which reports
   `sample 56: NaN != NaN` (0x7FC00000 against 0xFFC00000) and fails in exactly the same way on
   the unmodified base commit on this machine, so this change did not cause it.

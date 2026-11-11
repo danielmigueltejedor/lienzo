@@ -1,10 +1,10 @@
 # GIMP XCF documents
 
-PhotoCraft opens GIMP's native `.xcf` files (and `.xcf.gz`) with their layers, read only. File ›
+Lienzo opens GIMP's native `.xcf` files (and `.xcf.gz`) with their layers, read only. File ›
 Open, recent files, drops, the CLI (`convert`, `info`, `batch`) and automation (`doc.open`, MCP)
-use the same reader in `photocraft-io` (`crates/io/src/xcf.rs`). A file is recognised by its
+use the same reader in `lienzo-io` (`crates/io/src/xcf.rs`). A file is recognised by its
 `gimp xcf ` signature, so an XCF with another extension still opens as one. Save suggests
-`.pcraft`, which keeps everything PhotoCraft holds; exporting as `.xcf` fails with a message.
+`.pcraft`, which keeps everything Lienzo holds; exporting as `.xcf` fails with a message.
 
 ## What is kept
 
@@ -31,7 +31,7 @@ not representable without GEGL's operations; paths could follow later.
 
 ## Blend modes
 
-| GIMP | PhotoCraft |
+| GIMP | Lienzo |
 |---|---|
 | Normal, Dissolve, Multiply, Screen, Overlay, Difference, Darken only, Lighten only, Divide, Hard light, Vivid light, Pin light, Linear light, Hard mix, Exclusion, Linear burn, Subtract | the same |
 | Addition | Linear Dodge (Add) |
@@ -44,18 +44,18 @@ not representable without GEGL's operations; paths could follow later.
 
 ## How the composite differs from GIMP
 
-Three of GIMP's defaults have no Photoshop counterpart, so a file opened in PhotoCraft can render
+Three of GIMP's defaults have no Photoshop counterpart, so a file opened in Lienzo can render
 a little differently from GIMP; the first two are noted on open when they apply:
 
 - **Linear light.** Since 2.10 GIMP blends most modes and composites every layer (alpha blending
-  too) in linear light by default. PhotoCraft, like Photoshop, composes in the document's own
+  too) in linear light by default. Lienzo, like Photoshop, composes in the document's own
   encoding. Semi-transparent edges, masks and most blend modes therefore render slightly
   differently: in the test files, a Multiply layer at 60% differs by up to 38/255 in one channel,
   anti-aliased text edges by up to 73/255 at the edge pixels. A layer whose blend and composite
-  spaces GIMP set to *RGB (perceptual)* matches PhotoCraft within 2.5/255 (the `-perceptual` test
+  spaces GIMP set to *RGB (perceptual)* matches Lienzo within 2.5/255 (the `-perceptual` test
   files).
 - **Clip to backdrop.** GIMP composites every mode but Normal with *Clip to backdrop*: the layer
-  shows nothing where the layers beneath it are transparent. PhotoCraft shows it there. The
+  shows nothing where the layers beneath it are transparent. Lienzo shows it there. The
   difference only appears over transparent areas of the stack.
 
 - **Clamping after alpha.** For modes whose result can leave 0..1 (Addition, Subtract, Divide,

@@ -5,21 +5,21 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Dialog, DialogKind};
 
-/// Marks the alert; its value is the dialog preference ([`photocraft_engine::prefs::Preferences::dialogs`])
+/// Marks the alert; its value is the dialog preference ([`lienzo_engine::prefs::Preferences::dialogs`])
 /// the box sets.
 const PREF: &str = "__dontShowAgain";
 
 /// Whether "Don't show again" was ticked on the alert remembered as `pref`.
-pub fn dismissed(app: &PhotocraftApp, pref: &str) -> bool {
+pub fn dismissed(app: &LienzoApp, pref: &str) -> bool {
     app.session.prefs().dialogs.get(pref).and_then(|v| v.get("skip")).and_then(Value::as_bool) == Some(true)
 }
 
 /// Show `message` with OK and "Don't show again": not once that was ticked, and not a second one
 /// while it is already open.
-pub fn alert(app: &mut PhotocraftApp, message: &str, pref: &str) {
+pub fn alert(app: &mut LienzoApp, message: &str, pref: &str) {
     if dismissed(app, pref) || app.ui.dialogs.iter().any(|d| d.kind == DialogKind::Error && d.fields.get(PREF).and_then(Value::as_str) == Some(pref)) {
         return;
     }
@@ -42,7 +42,7 @@ pub fn body(ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
 }
 
 /// The alert `d` closed (OK, Esc or its close box): keep a ticked "Don't show again".
-pub fn closed(app: &mut PhotocraftApp, d: &Dialog) {
+pub fn closed(app: &mut LienzoApp, d: &Dialog) {
     let Some(pref) = d.fields.get(PREF).and_then(Value::as_str).filter(|_| d.kind == DialogKind::Error) else { return };
     if d.fields.get("skip").and_then(Value::as_bool) != Some(true) {
         return;

@@ -71,7 +71,7 @@ fn descriptor(id: &str, p: &Value) -> Option<Descriptor> {
 fn from(id: &str, d: &Descriptor) -> Mapped {
     let Some(mut p) = parameters(id, d) else { return Mapped::Unsupported { harmless: false } };
     if descriptor(id, &p).as_ref() != Some(d) {
-        p[SOURCE] = photocraft_paint::tile::b64_encode(&d.to_bytes()).into();
+        p[SOURCE] = lienzo_paint::tile::b64_encode(&d.to_bytes()).into();
     }
     step(id, p)
 }
@@ -124,7 +124,7 @@ pub(super) fn style_to(id: &str, p: &Value) -> Option<Descriptor> {
     if p.get(SOURCE).is_none() {
         return Some(canonical);
     }
-    let source = Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
+    let source = Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
     let original = descriptor(id, &parameters(id, &source)?)?;
     Some(if original == canonical { source } else { canonical })
 }

@@ -16,10 +16,10 @@
 //!   resolution; Clear empties them; ⇄ and X swap W and H.
 
 use egui::{Stroke, StrokeKind, vec2};
-use photocraft_engine::prefs::Unit;
+use lienzo_engine::prefs::Unit;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::{Tool, ToolOptions};
 use crate::theme::Tokens;
 
@@ -189,7 +189,7 @@ pub fn set_custom_ratio_fields(o: &mut ToolOptions, width: f32, height: f32) {
 /// `image.crop`'s target params for the pending crop: `targetWidth`/`targetHeight` (whole px) when
 /// W and H are set, and `resolution` (ppi) when the resolution is; the Image Interpolation
 /// preference resamples.
-pub fn commit_params(app: &PhotocraftApp, p: &mut Value) {
+pub fn commit_params(app: &LienzoApp, p: &mut Value) {
     let o = &app.ui.tool_options;
     if o.crop_ratio != WHR {
         return;
@@ -208,7 +208,7 @@ pub fn commit_params(app: &PhotocraftApp, p: &mut Value) {
 }
 
 /// Fills W, H (px) and the resolution from the active document, in W x H x Resolution mode.
-pub fn front_image(app: &mut PhotocraftApp) {
+pub fn front_image(app: &mut LienzoApp) {
     let Some(d) = app.session.active().map(|st| (st.doc.size, f64::from(st.doc.resolution_dpi))) else { return };
     let (size, dpi) = d;
     let o = &mut app.ui.tool_options;
@@ -254,7 +254,7 @@ fn swap_fields(o: &mut ToolOptions) {
 
 /// After the preset dropdown chose `crop_ratio`: a size preset fills the fields and Front Image
 /// reads the document, both leaving W x H x Resolution mode on.
-pub fn chosen(app: &mut PhotocraftApp) {
+pub fn chosen(app: &mut LienzoApp) {
     let key = app.ui.tool_options.crop_ratio.clone();
     if key == FRONT {
         app.ui.tool_options.crop_ratio = WHR.into();
@@ -272,7 +272,7 @@ pub fn chosen(app: &mut PhotocraftApp) {
 
 /// I with the Crop tool (no text field focused, which the caller checks): Front Image. Returns
 /// true when the key was used; otherwise I (and always ⇧I) stays the Eyedropper tool key.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if app.ui.tool != Tool::Crop || app.crop.drag.is_some() || app.session.active().is_none() {
         return false;
     }
@@ -342,7 +342,7 @@ pub fn fields(o: &mut ToolOptions, ui: &mut egui::Ui) -> bool {
 mod tests {
     use super::*;
     use egui::Modifiers;
-    use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+    use lienzo_doc::{Color, ColorMode, Document, SampleType, Size};
 
     #[test]
     fn normalize_length_keeps_previous_when_rounding_gives_zero() {
@@ -353,12 +353,12 @@ mod tests {
         }
     }
 
-    fn app(depth: SampleType) -> PhotocraftApp {
+    fn app(depth: SampleType) -> LienzoApp {
         let mut doc = Document::with_background("crop", Size::new(400, 300), ColorMode::Rgb, depth, Color::WHITE);
         doc.resolution_dpi = 72.0;
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = LienzoApp::new(s, crate::Services::default());
         app.ui.tool = Tool::Crop;
         app.ui.extras.snap = false;
         app.ui.view.show.smart_guides = false;
@@ -640,13 +640,13 @@ mod tests {
     fn points_and_picas_follow_the_point_size_preference() {
         let mut app = app(SampleType::U8);
         app.ui.tool_options = whr("72 pt", "1 in", "300", PX_PER_IN);
-        let target_size = |app: &PhotocraftApp| {
+        let target_size = |app: &LienzoApp| {
             let mut p = json!({});
             commit_params(app, &mut p);
             (p["targetWidth"].as_u64(), p["targetHeight"].as_u64())
         };
         assert_eq!(target_size(&app), (Some(300), Some(300)), "PostScript: 72 pt is an inch");
-        app.session.edit_prefs(|p| p.units_and_rulers.point_size = photocraft_engine::prefs::PointSize::Traditional);
+        app.session.edit_prefs(|p| p.units_and_rulers.point_size = lienzo_engine::prefs::PointSize::Traditional);
         assert_eq!(target_size(&app), (Some(299), Some(300)), "Traditional: 72.27 pt per inch");
         let (w, h, _) = target(&app.ui.tool_options, 72.0, 72.27).unwrap();
         assert!((w - 300.0 * 72.0 / 72.27).abs() < 1e-9 && (h - 300.0).abs() < 1e-9, "{w} {h}");
@@ -664,10 +664,10 @@ mod tests {
     #[test]
     fn perspective_crop_points_follow_the_point_size_preference() {
         let doc = Document::with_background("p", Size::new(200, 150), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
-        app.session.edit_prefs(|p| p.units_and_rulers.point_size = photocraft_engine::prefs::PointSize::Traditional);
+        let mut app = LienzoApp::new(s, crate::Services::default());
+        app.session.edit_prefs(|p| p.units_and_rulers.point_size = lienzo_engine::prefs::PointSize::Traditional);
         let o = &mut app.ui.tool_options;
         (o.crop_width, o.crop_height, o.crop_resolution) = ("7227 pt".into(), "100 px".into(), "72".into());
         o.crop_resolution_unit = PX_PER_IN.into();

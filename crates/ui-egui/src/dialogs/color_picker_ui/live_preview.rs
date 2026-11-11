@@ -15,7 +15,7 @@
 use serde_json::{Map, Value, json};
 
 use super::{hex, parse_hex, set_field};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::crop_shield::ShieldColor;
 
 /// A live target as it was when its picker opened.
@@ -35,14 +35,14 @@ pub(crate) struct Live {
 }
 
 /// Preview picker `picker` in `field` of dialog `parent` (a key or a JSON pointer).
-pub(super) fn begin_field(app: &mut PhotocraftApp, picker: u64, parent: u64, field: &str) {
+pub(super) fn begin_field(app: &mut LienzoApp, picker: u64, parent: u64, field: &str) {
     let Some(d) = app.ui.dialogs.iter().find(|d| d.id == parent) else { return };
     let before = Before::Field { parent, field: field.into(), fields: d.fields.clone() };
     app.color_picker_live.push(Live { picker, before, shown: None });
 }
 
 /// Preview picker `picker` in the Crop shield's custom colour.
-pub(super) fn begin_crop_shield(app: &mut PhotocraftApp, picker: u64) {
+pub(super) fn begin_crop_shield(app: &mut LienzoApp, picker: u64) {
     let s = &app.ui.tool_options.crop_shield;
     let before = Before::CropShield { color: s.color, custom: s.custom_color };
     app.color_picker_live.push(Live { picker, before, shown: None });
@@ -50,7 +50,7 @@ pub(super) fn begin_crop_shield(app: &mut PhotocraftApp, picker: u64) {
 
 /// The dialogs whose fields an open picker is previewing in: they record no ⌘Z step meanwhile
 /// (`edit_history`), so a Cancel leaves no trace and an OK is one step.
-pub(crate) fn previewed_dialogs(app: &PhotocraftApp) -> Vec<u64> {
+pub(crate) fn previewed_dialogs(app: &LienzoApp) -> Vec<u64> {
     app.color_picker_live
         .iter()
         .filter_map(|l| match l.before {
@@ -61,19 +61,19 @@ pub(crate) fn previewed_dialogs(app: &PhotocraftApp) -> Vec<u64> {
 }
 
 /// The field pickers previewing in dialog `parent`: they close with it.
-pub(crate) fn pickers_of(app: &PhotocraftApp, parent: u64) -> Vec<u64> {
+pub(crate) fn pickers_of(app: &LienzoApp, parent: u64) -> Vec<u64> {
     app.color_picker_live.iter().filter(|l| matches!(l.before, Before::Field { parent: p, .. } if p == parent)).map(|l| l.picker).collect()
 }
 
 /// Whether picker `picker` has a live target: then its parent is the one recorded here, not its
 /// `__dialog` field, which automation could have rewritten.
-pub(crate) fn previews(app: &PhotocraftApp, picker: u64) -> bool {
+pub(crate) fn previews(app: &LienzoApp, picker: u64) -> bool {
     app.color_picker_live.iter().any(|l| l.picker == picker)
 }
 
 /// The colour picker `picker` shows: `Some(None)` while it is the one it opened on (or not
 /// a colour), `None` once the picker is closed.
-fn picked(app: &PhotocraftApp, picker: u64) -> Option<Option<String>> {
+fn picked(app: &LienzoApp, picker: u64) -> Option<Option<String>> {
     let d = app.ui.dialogs.iter().find(|d| d.id == picker)?;
     let colour = |key: &str| d.fields.get(key).and_then(Value::as_str).and_then(parse_hex).map(hex);
     let (color, orig) = (colour("color"), colour("__orig"));
@@ -87,7 +87,7 @@ fn shield_rgb(color: &str) -> Option<[u8; 3]> {
 
 /// Show `color` in the target, or what it was (`None`), where it shows `shown` now. `Err` when
 /// the target is gone.
-fn show(app: &mut PhotocraftApp, before: &mut Before, shown: Option<&str>, color: Option<&str>) -> Result<(), String> {
+fn show(app: &mut LienzoApp, before: &mut Before, shown: Option<&str>, color: Option<&str>) -> Result<(), String> {
     match before {
         Before::Field { parent, field, fields } => {
             let mut next = fields.clone();
@@ -121,7 +121,7 @@ fn show(app: &mut PhotocraftApp, before: &mut Before, shown: Option<&str>, color
 
 /// Show each open picker's colour in its target, and put back the target of a picker that closed
 /// without [`end`]. True when a target changed (the caller repaints, so the parent redraws).
-pub(crate) fn sync(app: &mut PhotocraftApp) -> bool {
+pub(crate) fn sync(app: &mut LienzoApp) -> bool {
     if app.color_picker_live.is_empty() {
         return false;
     }
@@ -152,7 +152,7 @@ pub(crate) fn sync(app: &mut PhotocraftApp) -> bool {
 
 /// Picker `picker` is closing (OK or Cancel): put its target back as it was when it opened and
 /// stop previewing. OK then sets the target as it always has.
-pub(crate) fn end(app: &mut PhotocraftApp, picker: u64) {
+pub(crate) fn end(app: &mut LienzoApp, picker: u64) {
     let Some(i) = app.color_picker_live.iter().position(|l| l.picker == picker) else { return };
     let mut l = app.color_picker_live.remove(i);
     if l.shown.is_some() {

@@ -1,7 +1,7 @@
 use super::*;
-use photocraft_doc::text::TextShape;
-use photocraft_doc::vector::{Path, PathOp, Subpath};
-use photocraft_doc::{LayerContent, LayerId, TextLayer};
+use lienzo_doc::text::TextShape;
+use lienzo_doc::vector::{Path, PathOp, Subpath};
+use lienzo_doc::{LayerContent, LayerId, TextLayer};
 use serde_json::json;
 
 fn session(depth: u32) -> Session {
@@ -159,9 +159,9 @@ fn area_type_saves_to_psd_as_paragraph_text_with_a_warning() {
     set_work_path(&mut s, Path::new(vec![Subpath::polygon(&[(100.0, 100.0), (300.0, 100.0), (300.0, 250.0), (100.0, 250.0)])]));
     s.execute("type.fillPath", json!({})).unwrap();
     let doc = s.active().unwrap().doc.clone();
-    let r = photocraft_io::export(&doc, "x.psd", &photocraft_io::ExportOptions::default()).unwrap();
+    let r = lienzo_io::export(&doc, "x.psd", &lienzo_io::ExportOptions::default()).unwrap();
     assert!(r.warnings.iter().any(|w| w.contains("area type")), "{:?}", r.warnings);
-    let back = photocraft_io::import("x.psd", &r.bytes).unwrap().document;
+    let back = lienzo_io::import("x.psd", &r.bytes).unwrap().document;
     let t = back.walk().into_iter().find_map(|(_, _, l)| match &l.content {
         LayerContent::Text(t) => Some(t.clone()),
         _ => None,
@@ -175,15 +175,15 @@ fn area_type_saves_to_psd_as_paragraph_text_with_a_warning() {
 fn too_many_anchors_is_its_own_error() {
     // A ring of `n` smooth (curved) anchors around (200, 150).
     let ring = |n: usize| {
-        let p = |a: f64, r: f64| photocraft_geom::Point::new(200.0 + r * a.cos(), 150.0 + r * a.sin());
+        let p = |a: f64, r: f64| lienzo_geom::Point::new(200.0 + r * a.cos(), 150.0 + r * a.sin());
         let step = std::f64::consts::TAU / n as f64;
         let knots = (0..n)
             .map(|i| {
                 let a = i as f64 * step;
                 let (anchor, d) = (p(a, 100.0), 100.0 * step / 3.0);
                 let (tx, ty) = (-a.sin() * d, a.cos() * d);
-                let at = |k: f64| photocraft_geom::Point::new(anchor.x + k * tx, anchor.y + k * ty);
-                photocraft_doc::vector::Knot::smooth(anchor, at(-1.0), at(1.0))
+                let at = |k: f64| lienzo_geom::Point::new(anchor.x + k * tx, anchor.y + k * ty);
+                lienzo_doc::vector::Knot::smooth(anchor, at(-1.0), at(1.0))
             })
             .collect();
         Path::new(vec![Subpath { closed: true, knots, op: PathOp::Combine }])
@@ -213,7 +213,7 @@ fn a_resolution_change_keeps_area_type_wrapping_where_it_was() {
         s.execute("type.fillPath", json!({})).unwrap();
         let lines = |s: &Session| {
             let d = &s.active().unwrap().doc;
-            let mut eng = photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner());
+            let mut eng = lienzo_text::shared().lock().unwrap_or_else(|e| e.into_inner());
             eng.layout(text(s, id), d.resolution_dpi).lines.iter().map(|l| l.range.clone()).collect::<Vec<_>>()
         };
         let size = |s: &Session| {

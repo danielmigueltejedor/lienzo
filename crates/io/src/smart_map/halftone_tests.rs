@@ -192,8 +192,8 @@ fn halftone_pattern_invalid_export_settings_are_reported() {
 /// Checks complete PSD/PSB round trips for every pattern at 8-, 16-, and 32-bit depth.
 #[test]
 fn halftone_pattern_survives_complete_psd_and_psb_export() {
-    use photocraft_doc::{Document, Layer, LayerContent, SmartObject, SmartSource};
-    use photocraft_geom::Size;
+    use lienzo_doc::{Document, Layer, LayerContent, SmartObject, SmartSource};
+    use lienzo_geom::Size;
     use std::sync::Arc;
 
     for sample in [SampleType::U8, SampleType::U16, SampleType::F32] {
@@ -202,7 +202,7 @@ fn halftone_pattern_survives_complete_psd_and_psb_export() {
             let mut pixels = Surface::new(source.pixel_format());
             pixels.fill_rect(source.bounds(), &[0.5, 0.5, 0.5, 1.0]);
             source.layers.push(Layer::new("pixels", LayerContent::Raster(pixels.clone())));
-            let bytes = photocraft_format::save_to_bytes(&source, &Default::default()).unwrap();
+            let bytes = lienzo_format::save_to_bytes(&source, &Default::default()).unwrap();
             let mut smart =
                 SmartObject::new(SmartSource::Embedded { file_name: "contents.pcraft".into(), bytes: Arc::new(bytes) }, Affine::IDENTITY, Some(pixels));
             smart.smart_filters.push(filter(pattern, 2, 5));

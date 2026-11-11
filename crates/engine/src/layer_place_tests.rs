@@ -1,4 +1,4 @@
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, MAX_GROUP_DEPTH};
+use lienzo_doc::{Document, Layer, LayerContent, LayerId, MAX_GROUP_DEPTH};
 use serde_json::{Value, json};
 
 use super::*;
@@ -179,7 +179,7 @@ fn later_layers_of_a_batch_go_above_the_first() {
 
 #[test]
 fn nesting_stops_at_the_group_depth_limit() {
-    let mut doc = Document::new("deep", photocraft_doc::Size::new(8, 8), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut doc = Document::new("deep", lienzo_doc::Size::new(8, 8), lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::U8);
     // A chain of open groups as deep as allowed, with a layer at the bottom.
     let mut inner = Layer::raster("deep", doc.pixel_format());
     let deep_id = inner.id;
@@ -302,15 +302,15 @@ fn an_artboard_takes_only_content_that_is_on_it() {
     let (mut s, _, _) = session();
     let board = id(s.execute("layer.new.artboard", json!({"rect": [0, 0, 8, 8]})).unwrap());
     let mut d = doc(&s).clone();
-    let raster = |d: &Document, r: photocraft_geom::Rect| {
+    let raster = |d: &Document, r: lienzo_geom::Rect| {
         let mut l = Layer::raster("content", d.pixel_format());
         l.surface_mut().unwrap().fill_rect(r, &[1.0, 0.0, 0.0, 1.0]);
         l
     };
-    let on = raster(&d, photocraft_geom::Rect::new(1, 1, 5, 5));
+    let on = raster(&d, lienzo_geom::Rect::new(1, 1, 5, 5));
     let on = insert_new(&mut d, Some(board), on, Place::Auto);
     assert_eq!(d.artboard_of(on), Some(board));
-    let off = raster(&d, photocraft_geom::Rect::new(10, 10, 16, 16));
+    let off = raster(&d, lienzo_geom::Rect::new(10, 10, 16, 16));
     let off = insert_new(&mut d, Some(board), off, Place::Auto);
     assert_eq!(d.artboard_of(off), None);
     let root: Vec<LayerId> = d.layers.iter().map(|l| l.id).collect();
@@ -364,10 +364,10 @@ fn a_clipped_paste_off_the_board_lands_above_it_unclipped() {
     let board = id(s.execute("layer.new.artboard", json!({"rect": [0, 0, 8, 8]})).unwrap());
     let mut d = doc(&s).clone();
     let mut on = Layer::raster("on", d.pixel_format());
-    on.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(1, 1, 5, 5), &[1.0, 0.0, 0.0, 1.0]);
+    on.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(1, 1, 5, 5), &[1.0, 0.0, 0.0, 1.0]);
     let on = insert_new(&mut d, Some(board), on, Place::Auto);
     let mut off = Layer::raster("was clipped", d.pixel_format());
-    off.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(10, 10, 16, 16), &[1.0, 0.0, 0.0, 1.0]);
+    off.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(10, 10, 16, 16), &[1.0, 0.0, 0.0, 1.0]);
     off.clipped = true;
     let off = insert_new(&mut d, Some(on), off, Place::AutoEditable);
     assert_eq!(d.artboard_of(off), None);

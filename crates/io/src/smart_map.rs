@@ -14,7 +14,7 @@
 //! ```
 //!
 //! The list is in application order (first = bottom, applied first), like
-//! [`SmartObject::smart_filters`](photocraft_doc::SmartObject). Filters PhotoCraft implements map
+//! [`SmartObject::smart_filters`](lienzo_doc::SmartObject). Filters Lienzo implements map
 //! to their command id and dialog parameters; any other filter becomes a
 //! [`UNSUPPORTED_FILTER`] entry that keeps its descriptor verbatim (hex in `params.psd`), so it is
 //! listed, can be hidden, reordered or deleted, and is written back unchanged.
@@ -24,15 +24,15 @@
 //! Warp (`perspective_warp_map.rs`), whose quads become the planes of its command. Hue/Saturation
 //! (`HStr`) maps to its adjustment command in `hue_sat_filter_map.rs`.
 
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{LayerMask, SmartFilter, SmartObject};
-use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
-use photocraft_geom::{Affine, Rect as GeomRect};
-use photocraft_psd::Compression;
-use photocraft_psd::Rect as PsdRect;
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ObjectArray, ReferenceItem, UnicodeString, Value, VersionedDescriptor};
-use photocraft_psd::filter_effects::{EffectsPlane, FilterEffectsItem};
-use photocraft_raster::Surface;
+use lienzo_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{LayerMask, SmartFilter, SmartObject};
+use lienzo_geom::warp::{BezierMesh, Warp, WarpStyle};
+use lienzo_geom::{Affine, Rect as GeomRect};
+use lienzo_psd::Compression;
+use lienzo_psd::Rect as PsdRect;
+use lienzo_psd::descriptor::{Class, Descriptor, Id, ObjectArray, ReferenceItem, UnicodeString, Value, VersionedDescriptor};
+use lienzo_psd::filter_effects::{EffectsPlane, FilterEffectsItem};
+use lienzo_raster::Surface;
 use serde_json::{Map, Value as J, json};
 
 use crate::blocks::{enum_of, get_desc, num};
@@ -72,7 +72,7 @@ pub use placed::{PlacedSpec, plld_bytes, sold_bytes, stored_size};
 #[cfg(test)]
 use placed::{quad_moved, warp_desc};
 
-/// Command id of a Photoshop smart filter PhotoCraft does not implement. Its params hold the
+/// Command id of a Photoshop smart filter Lienzo does not implement. Its params hold the
 /// filter's name, Photoshop filter id and descriptor (`psd`, hex); it renders as a pass-through.
 pub const UNSUPPORTED_FILTER: &str = "psd.unsupportedFilter";
 
@@ -212,7 +212,7 @@ pub fn mask_from_item(item: &FilterEffectsItem, sample: SampleType, stack: &Filt
     let n = w.checked_mul(h).ok_or("the smart filter mask is too large")?;
     let bytes = crate::pixels::interleave(&[Some(&plane)], &[crate::pixels::zero_sample(sample)], n, sample, &[false]);
     surface.write_interleaved(GeomRect::new(rect.left, rect.top, rect.right, rect.bottom), &bytes);
-    photocraft_raster::scratch::give(bytes);
+    lienzo_raster::scratch::give(bytes);
     surface.prune();
     if surface.content_bounds().is_empty() {
         return Ok(None);
@@ -255,7 +255,7 @@ pub fn unfiltered_from_item(item: &FilterEffectsItem, fmt: PixelFormat) -> Optio
     }
     let mut surface = Surface::new(fmt);
     surface.write_interleaved(GeomRect::new(item.rect.left, item.rect.top, item.rect.right, item.rect.bottom), &bytes);
-    photocraft_raster::scratch::give(bytes);
+    lienzo_raster::scratch::give(bytes);
     surface.prune();
     Some(surface)
 }
@@ -288,7 +288,7 @@ pub fn feid_item(placed: &str, unfiltered: &Surface, mask: Option<&LayerMask>, b
     // Fully transparent pixels carry white, as in Photoshop's own cache: filters that look at
     // colour regardless of alpha (Shadows/Highlights) read it.
     let mut vals = px.read_region(r);
-    let white = photocraft_raster::from_rgba(&doc_fmt, [1.0, 1.0, 1.0, 1.0]);
+    let white = lienzo_raster::from_rgba(&doc_fmt, [1.0, 1.0, 1.0, 1.0]);
     for p in vals.chunks_exact_mut(cc + 1) {
         if p[cc] <= 0.0 {
             p[..cc].copy_from_slice(&white[..cc]);

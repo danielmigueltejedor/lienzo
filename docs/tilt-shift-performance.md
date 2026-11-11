@@ -2,7 +2,7 @@
 
 Starting base: `a28d786638ffbb84c5fb7d5d30ea1c3d594cd3bc`, freshly fetched
 `origin/main`. Branch: `codex/tilt-shift-performance-20261010`. Worktree:
-`C:\Users\Colum\.codex\worktrees\6c32\photocraft`. At investigation time,
+`C:\Users\Colum\.codex\worktrees\6c32\lienzo`. At investigation time,
 `upstream/main` was `5963e5b7f0aefa0d94b5cf67ef3c1c9b6d3399dd`, two commits ahead:
 [Recent entries](https://github.com/storytold/photocraft/commit/b773a39efa4a65888fcce4a5d8dffcf4fa45700a)
 and [temporary Move](https://github.com/storytold/photocraft/commit/5963e5b7f0aefa0d94b5cf67ef3c1c9b6d3399dd).
@@ -110,10 +110,10 @@ latency. The implementation does not alter the preview factor or kernel.
 ```powershell
 $env:CARGO_TARGET_DIR = 'target/agent-tilt-shift'
 $env:RAYON_NUM_THREADS = '8'
-cargo run --release -p photocraft-algo --example bench_tilt_shift -- 6000 4000 5 1
-cargo run --release -p photocraft-algo --example bench_tilt_shift -- 6000 6000 5 1
-cargo run --release -p photocraft-algo --example bench_tilt_shift -- 1500 1000 7 4
-cargo run --release -p photocraft-algo --example bench_tilt_shift -- 128 96 7 1
+cargo run --release -p lienzo-algo --example bench_tilt_shift -- 6000 4000 5 1
+cargo run --release -p lienzo-algo --example bench_tilt_shift -- 6000 6000 5 1
+cargo run --release -p lienzo-algo --example bench_tilt_shift -- 1500 1000 7 4
+cargo run --release -p lienzo-algo --example bench_tilt_shift -- 128 96 7 1
 ```
 
 ## Results
@@ -221,7 +221,7 @@ regression intentionally differs from the starting kernel by returning identity.
 
 ## Validation and remaining limits
 
-The full `photocraft-algo` suite passes: 425 tests, 18 ignored, no failures.
+The full `lienzo-algo` suite passes: 425 tests, 18 ignored, no failures.
 All six Tilt-Shift differential/regression tests also pass in release. Strict
 all-targets Clippy passes for the algorithm crate. The existing engine filter
 integration group passes all 16 tests, including selection, repeat, undo and
@@ -246,7 +246,7 @@ limited to this Windows x86_64 machine. `cargo xtask test-corpus --changed`
 correctly skips its suites because no format, IO, compositor, GPU or text crate
 changed. Command registrations and UI code are unchanged.
 
-The measurements establish equivalence to the starting PhotoCraft kernel, not a
+The measurements establish equivalence to the starting Lienzo kernel, not a
 new Photoshop oracle or broader parity increase. Cold startup, actual GUI
 input/frame latency, allocation counts and other platforms' native performance
 remain unmeasured. No performance budget, scorecard checklist or parity floor is

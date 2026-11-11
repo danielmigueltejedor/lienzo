@@ -3,9 +3,9 @@
 
 use std::path::Path;
 
-use photocraft_doc::Document;
-use photocraft_format::{PcraftWriter, SaveOptions};
-use photocraft_io::{BandRenderer, ExportOptions};
+use lienzo_doc::Document;
+use lienzo_format::{PcraftWriter, SaveOptions};
+use lienzo_io::{BandRenderer, ExportOptions};
 
 use crate::AutomationError;
 
@@ -18,52 +18,52 @@ pub struct Opened {
 
 /// Decode a document that was read through a filesystem capability.
 pub fn open_bytes(name: &str, bytes: &[u8]) -> Result<Opened, AutomationError> {
-    open_bytes_with_options(name, bytes, &photocraft_io::ImportOptions::default())
+    open_bytes_with_options(name, bytes, &lienzo_io::ImportOptions::default())
 }
 
 /// Decode a document that was read through a filesystem capability with custom import options.
-pub fn open_bytes_with_options(name: &str, bytes: &[u8], opts: &photocraft_io::ImportOptions) -> Result<Opened, AutomationError> {
-    if Path::new(name).extension().is_some_and(|extension| extension.eq_ignore_ascii_case(photocraft_format::EXTENSION)) {
-        let document = photocraft_format::load_from_bytes(bytes)?;
-        return Ok(Opened { warnings: photocraft_io::open_warnings(&document), document, source_read_only: false });
+pub fn open_bytes_with_options(name: &str, bytes: &[u8], opts: &lienzo_io::ImportOptions) -> Result<Opened, AutomationError> {
+    if Path::new(name).extension().is_some_and(|extension| extension.eq_ignore_ascii_case(lienzo_format::EXTENSION)) {
+        let document = lienzo_format::load_from_bytes(bytes)?;
+        return Ok(Opened { warnings: lienzo_io::open_warnings(&document), document, source_read_only: false });
     }
-    let r = photocraft_io::import_with_options(name, bytes, opts)?;
+    let r = lienzo_io::import_with_options(name, bytes, opts)?;
     Ok(Opened { document: r.document, warnings: r.warnings, source_read_only: r.source_read_only })
 }
 
 /// Open a document from disk. Directory bundles and `.pcraft` ZIPs load
-/// natively; everything else goes through `photocraft-io` (PSD, PNG, …).
+/// natively; everything else goes through `lienzo-io` (PSD, PNG, …).
 pub fn open(path: &Path) -> Result<Opened, AutomationError> {
-    open_with_options(path, &photocraft_io::ImportOptions::default())
+    open_with_options(path, &lienzo_io::ImportOptions::default())
 }
 
 /// Open a document from disk with custom import options.
-pub fn open_with_options(path: &Path, opts: &photocraft_io::ImportOptions) -> Result<Opened, AutomationError> {
+pub fn open_with_options(path: &Path, opts: &lienzo_io::ImportOptions) -> Result<Opened, AutomationError> {
     if path.is_dir() {
-        let document = photocraft_format::load_path(path)?;
-        return Ok(Opened { warnings: photocraft_io::open_warnings(&document), document, source_read_only: false });
+        let document = lienzo_format::load_path(path)?;
+        return Ok(Opened { warnings: lienzo_io::open_warnings(&document), document, source_read_only: false });
     }
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     // A PSD/PSB is parsed from the open file (channel data read as it is decoded), so a CLI
     // convert or info of a 2 GB file does not hold the file in memory next to the document.
     #[cfg(any(unix, windows))]
     {
-        let r = photocraft_io::import_file(&name, path, opts, &photocraft_raster::Interrupt::NONE).map_err(|e| match e {
-            photocraft_io::IoError::Read(msg) => AutomationError::Io(msg),
+        let r = lienzo_io::import_file(&name, path, opts, &lienzo_raster::Interrupt::NONE).map_err(|e| match e {
+            lienzo_io::IoError::Read(msg) => AutomationError::Io(msg),
             e => e.into(),
         })?;
         Ok(Opened { document: r.document, warnings: r.warnings, source_read_only: r.source_read_only })
     }
     #[cfg(not(any(unix, windows)))]
     {
-        let bytes = photocraft_format::read_file(path).map_err(|e| AutomationError::Io(format!("{}: {e}", path.display())))?;
+        let bytes = lienzo_format::read_file(path).map_err(|e| AutomationError::Io(format!("{}: {e}", path.display())))?;
         open_bytes_with_options(&name, &bytes, opts)
     }
 }
 
 /// Previews for a `.pcraft` bundle.
 pub fn previews(doc: &Document) -> SaveOptions {
-    SaveOptions { thumbnail: Some(photocraft_compose::thumbnail(doc, 256)), composite: Some(photocraft_compose::thumbnail(doc, 1024)), ..Default::default() }
+    SaveOptions { thumbnail: Some(lienzo_compose::thumbnail(doc, 256)), composite: Some(lienzo_compose::thumbnail(doc, 1024)), ..Default::default() }
 }
 
 /// [`previews`], plus the full-size composite when `opts` asks for it and it can be rendered
@@ -72,13 +72,13 @@ pub fn previews(doc: &Document) -> SaveOptions {
 /// bundle's own scratch checks only cover reads made after it starts.
 fn native_options(doc: &Document, opts: &ExportOptions) -> Result<SaveOptions, AutomationError> {
     doc.scratch_health().map_err(AutomationError::Io)?;
-    let generation = photocraft_raster::spill::read_error_generation();
+    let generation = lienzo_raster::spill::read_error_generation();
     let mut out = previews(doc);
     if opts.pcraft_full_composite {
-        out.full_composite = photocraft_io::pcraft_full_composite(doc);
-        out.full_composite_icc = out.full_composite.as_ref().map(|_| photocraft_io::pcraft_full_composite_icc(doc));
+        out.full_composite = lienzo_io::pcraft_full_composite(doc);
+        out.full_composite_icc = out.full_composite.as_ref().map(|_| lienzo_io::pcraft_full_composite_icc(doc));
     }
-    photocraft_raster::spill::check_since(generation).map_err(AutomationError::Io)?;
+    lienzo_raster::spill::check_since(generation).map_err(AutomationError::Io)?;
     doc.scratch_health().map_err(AutomationError::Io)?;
     Ok(out)
 }
@@ -145,7 +145,7 @@ pub fn save_with_renderer_keeping(
         .map(|f| f.trim_start_matches('.').to_ascii_lowercase())
         .or_else(|| path.extension().map(|e| e.to_string_lossy().to_ascii_lowercase()))
         .ok_or_else(|| AutomationError::BadRequest(format!("cannot tell the format of `{}`; pass a format", path.display())))?;
-    if ext == photocraft_format::EXTENSION {
+    if ext == lienzo_format::EXTENSION {
         let named = named_for_output(doc, &path.to_string_lossy());
         let mut local = PcraftWriter::new();
         let w = writer.unwrap_or(&mut local);
@@ -158,13 +158,13 @@ pub fn save_with_renderer_keeping(
         return Ok(warnings);
     }
     let Some(renderer) = renderer else {
-        let r = photocraft_io::export_with_renderer(doc, &ext, opts, &photocraft_raster::Interrupt::NONE, None)?;
+        let r = lienzo_io::export_with_renderer(doc, &ext, opts, &lienzo_raster::Interrupt::NONE, None)?;
         // Crash-safe: a failed write never destroys the previous file.
-        photocraft_format::atomic_write(path, &r.bytes).map_err(|e| AutomationError::Io(e.to_string()))?;
+        lienzo_format::atomic_write(path, &r.bytes).map_err(|e| AutomationError::Io(e.to_string()))?;
         return Ok(r.warnings);
     };
-    let r = photocraft_io::export_with_renderer(doc, &ext, opts, &photocraft_raster::Interrupt::NONE, Some(&mut *renderer))?;
-    if let Err(e) = photocraft_format::atomic_write(path, &r.bytes) {
+    let r = lienzo_io::export_with_renderer(doc, &ext, opts, &lienzo_raster::Interrupt::NONE, Some(&mut *renderer))?;
+    if let Err(e) = lienzo_format::atomic_write(path, &r.bytes) {
         // Encoding drained the renderer's diagnostics into `r.warnings`; hand them to the
         // caller so it can still report the adapter or fallback reason alongside the write error.
         kept.extend(r.warnings);
@@ -191,11 +191,11 @@ pub fn save_bytes_with_renderer(
         .map(|format| format.trim_start_matches('.').to_ascii_lowercase())
         .or_else(|| Path::new(name).extension().map(|extension| extension.to_string_lossy().to_ascii_lowercase()))
         .ok_or_else(|| AutomationError::BadRequest(format!("cannot tell the format of `{name}`; pass a format")))?;
-    if ext == photocraft_format::EXTENSION {
+    if ext == lienzo_format::EXTENSION {
         let named = named_for_output(doc, name);
         // Encode before draining: if the options check or the encode fails, the queued
         // diagnostics stay with the renderer for the caller to report alongside the error.
-        let bytes = photocraft_format::save_to_bytes(&named, &native_options(&named, opts)?)?;
+        let bytes = lienzo_format::save_to_bytes(&named, &native_options(&named, opts)?)?;
         let mut warnings = Vec::new();
         if let Some(r) = renderer {
             warnings.push("native .pcraft format uses CPU compositor for previews".into());
@@ -203,7 +203,7 @@ pub fn save_bytes_with_renderer(
         }
         return Ok((bytes, warnings));
     }
-    let result = photocraft_io::export_with_renderer(doc, &ext, opts, &photocraft_raster::Interrupt::NONE, renderer)?;
+    let result = lienzo_io::export_with_renderer(doc, &ext, opts, &lienzo_raster::Interrupt::NONE, renderer)?;
     Ok((result.bytes, result.warnings))
 }
 
@@ -227,7 +227,7 @@ pub fn render_png_with_renderer(doc: &Document, max_side: u32, mut renderer: Opt
 /// [`render_png_with_renderer`] that returns the preview fallback warnings with the bytes.
 pub fn render_png_with_warnings(doc: &Document, max_side: u32, mut renderer: Option<&mut dyn BandRenderer>) -> Result<(Vec<u8>, Vec<String>), AutomationError> {
     let side = if max_side == 0 { doc.size.width.max(doc.size.height) } else { max_side };
-    let (target_w, target_h) = photocraft_compose::thumbnail_size(doc, side.max(1));
+    let (target_w, target_h) = lienzo_compose::thumbnail_size(doc, side.max(1));
     let mut warnings = Vec::new();
 
     if let Some(r) = renderer.as_mut()
@@ -235,10 +235,10 @@ pub fn render_png_with_warnings(doc: &Document, max_side: u32, mut renderer: Opt
     {
         // 8-bit RGBA whatever the document's depth, like the CPU preview path: a 16-bit
         // document's preview must not be twice as large as the one it previews.
-        let res = photocraft_io::export_preview_png_with_renderer(doc, Some(&mut **r));
+        let res = lienzo_io::export_preview_png_with_renderer(doc, Some(&mut **r));
         match res {
             Ok(res) => return Ok((res.bytes, res.warnings)),
-            Err(photocraft_io::IoError::Cancelled) => return Err(AutomationError::Other("rendering was cancelled".into())),
+            Err(lienzo_io::IoError::Cancelled) => return Err(AutomationError::Other("rendering was cancelled".into())),
             Err(e) => return Err(e.into()),
         }
     }
@@ -247,9 +247,9 @@ pub fn render_png_with_warnings(doc: &Document, max_side: u32, mut renderer: Opt
         warnings.push("scaled previews and thumbnails use CPU compositor; GPU rendering applies to full-size previews".into());
     }
 
-    let img = photocraft_compose::thumbnail(doc, side.max(1));
-    let image = photocraft_codecs::Image::from_u8(img.width, img.height, photocraft_codecs::ChannelLayout::Rgba, img.pixels)
+    let img = lienzo_compose::thumbnail(doc, side.max(1));
+    let image = lienzo_codecs::Image::from_u8(img.width, img.height, lienzo_codecs::ChannelLayout::Rgba, img.pixels)
         .map_err(|e| AutomationError::Other(e.to_string()))?;
-    let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).map_err(|e| AutomationError::Other(e.to_string()))?;
+    let png = lienzo_codecs::encode(&image, lienzo_codecs::Format::Png, &Default::default()).map_err(|e| AutomationError::Other(e.to_string()))?;
     Ok((png, warnings))
 }

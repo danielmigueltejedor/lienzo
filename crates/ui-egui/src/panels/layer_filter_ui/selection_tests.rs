@@ -3,29 +3,29 @@
 
 use egui::vec2;
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
+use lienzo_doc::LayerId;
 use serde_json::json;
 
 use super::FilterBy;
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// "Red" and "Deep Pixel" (pixel layers) and "Hello" (type) over the Background, in the panel.
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut s = photocraft_engine::Session::new();
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Red"})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Deep Pixel"})).unwrap();
     let text = s.execute("type.create", json!({"text": "Hello", "x": 4, "y": 20, "size": 12})).unwrap()["layer"].as_u64().unwrap();
     s.execute("layer.setProps", json!({"layer": text, "name": "Hello"})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(8);
     h
 }
 
-fn id(h: &Harness<'_, PhotocraftApp>, name: &str) -> LayerId {
+fn id(h: &Harness<'_, LienzoApp>, name: &str) -> LayerId {
     h.state()
         .session
         .active()
@@ -38,7 +38,7 @@ fn id(h: &Harness<'_, PhotocraftApp>, name: &str) -> LayerId {
         .unwrap_or_else(|| panic!("no layer {name}"))
 }
 
-fn select(h: &mut Harness<'_, PhotocraftApp>, names: &[&str]) {
+fn select(h: &mut Harness<'_, LienzoApp>, names: &[&str]) {
     for (i, name) in names.iter().enumerate() {
         let layer = id(h, name).0;
         h.state_mut().session.execute("layer.select", json!({"layer": layer, "mode": if i == 0 { "replace" } else { "add" }})).unwrap();
@@ -47,7 +47,7 @@ fn select(h: &mut Harness<'_, PhotocraftApp>, names: &[&str]) {
 }
 
 /// The selected layers' names, bottom to top, and the active layer's.
-fn selection(h: &Harness<'_, PhotocraftApp>) -> (Vec<String>, Option<String>) {
+fn selection(h: &Harness<'_, LienzoApp>) -> (Vec<String>, Option<String>) {
     let st = h.state().session.active().unwrap();
     let name = |id: LayerId| st.doc.layer(id).unwrap().name.clone();
     (st.selected_layers().into_iter().map(name).collect(), st.active_layer.map(name))
@@ -73,15 +73,15 @@ fn a_filter_that_hides_the_selected_layer_deselects_it_and_turning_it_off_keeps_
 /// as `ui.set {layerFilter}` can) deselects the layers it hides too.
 #[test]
 fn a_filter_on_before_the_rows_first_draw_deselects_the_hidden_layers() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Red"})).unwrap();
     s.execute("type.create", json!({"text": "Hello", "x": 4, "y": 20, "size": 12})).unwrap();
     let red = s.active().unwrap().doc.walk().into_iter().find(|(_, _, l)| l.name == "Red").map(|(_, _, l)| l.id).unwrap();
     s.execute("layer.select", json!({"layer": red.0})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = LienzoApp::new(s, crate::Services::default());
         app.ui.layer_filter = vec!["type".into()];
         app
     });

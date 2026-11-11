@@ -1,8 +1,8 @@
-# PhotoCraft vs Adobe Photoshop: target-app parity
+# Lienzo vs Adobe Photoshop: target-app parity
 
 > **Last reviewed:** 2026-10-12 · **Last updated:** 2026-11-07 · **Change:** minor (Fujifilm compressed RAF decodes, #7377; Average executes through shared filters on Smart Objects and imported PSD records; Average preserves per-pixel alpha and includes hidden RGB in its mean; RGB8 observations against Photoshop 26.6.1, see average-filter.md; RGB and CMYK documents preview their spot inks as an overprint, FILE-215-17 narrows to PDF Separation, #10249; tile-sparse Select and Mask outputs and preview coverage, #8822; classical Select › Sky can seed substantial high-confidence components beneath an obstructed top band; learned segmentation remains open; Art History Brush Opacity on the options bar, #10263; no estimate changed; Automation Batch Esc Continue/Stop and read-only input previews now follow the measured cancellation flow; full live tabs remain partial, AUTO-219-5, #4579; Automation recording folds Move-tool nudge runs, records keyboard document switches by opening-order offset and scales point text placement; paragraph boxes remain open, #4514; Automation Batch output naming and UTF-16 logs now follow measured Photoshop behavior; progress and cancel prompt remain partial, AUTO-219-5, #4579; 11 of 183 preferences do nothing: startup reads Graphics Adapter through the typed Performance section, so the scorecard audit sees it; selected colour sets edit drawing, tone and supported filters; geometry remains open; Smooth and Feather command masks cropped to selection bounds plus blur reach; Equalize with a selection asks Selected Area Only or Entire Image Based On Selected Area; cropped selection morphology and command mask conversion performance evidence added; the Camera Raw row names per-camera colour for non-DNG cameras as missing, not the Calibration panel, which landed 2026-10-13; Content-Aware Scale measurements added, #5236; Help › Check for Updates and an opt-out check once per launch, DIST-220-1 partial, #5485; area type, TYPE-218-10 partial, Type scorecard 5 / 5 / 0; compound layer properties export as separate Photoshop Set events, #8304; JPEG Options dialog landed, FILE-215-19 partial; Print › Functions › Bleed through `file.print`; Content-Aware Move live preview for every selection size, TOOL-213-4 done, #6680; retouching evidence: Pattern Stamp and Background Eraser draw live, only the Mixer Brush is left of TOOL-213-7; fill and adjustment layers copy and paste whole, UI-217-23 partial, #2344; shape layers take Density and Feather, TOOL-214-12 done, #5846; on-canvas corner radius widgets, TOOL-214-12; `.atn` import maps 112 events; Free Transform H/V skew fields; stale rows corrected against `main` and the scorecard, estimates unchanged; Photoshop Actions `.atn` load and save; 2026-10-10: Tilt-Shift measurements added; earlier the same day: major, full re-measure against Photoshop 2026 27.11.0; merged `parity-estimate.md` and the roadmap's honest assessment; stale missing-tool rows corrected: Color Replacement and Red Eye are live toolbar tools, Frame landed; percentages unchanged; PSD spot plates in Photoshop's polarity, #7415 split; TIFF spot plates, FILE-215-17's TIFF part, #7415) · **Target:** Adobe Photoshop 2026; Print: Japanese paper sizes — はがき, 往復はがき, JIS B5/B4, A6, L判, 2L判, KG判, 六切, 四切;
 
-The authoritative answer to "how close is PhotoCraft to Photoshop, and how much work is left". The
+The authoritative answer to "how close is Lienzo to Photoshop, and how much work is left". The
 one-page summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is [`gaps.md`](gaps.md);
 the measured checklists are [`scorecard.md`](scorecard.md) (`cargo xtask scorecard`) and
 [`parity-checklist.md`](parity-checklist.md) (`cargo xtask parity`). Detail by dimension:
@@ -10,7 +10,7 @@ the measured checklists are [`scorecard.md`](scorecard.md) (`cargo xtask scoreca
 [file formats](file-format-parity.md), [hardware](hardware-parity.md),
 [localization](localization-parity.md).
 
-## Headline (2026-10-10, PhotoCraft 0.6.0, `main` at 3e000bc1)
+## Headline (2026-10-10, Lienzo 0.6.0, `main` at 3e000bc1)
 
 | Number | Value | Kind |
 |---|---|---|
@@ -50,7 +50,7 @@ architecture and the PSD writer are the serial parts.
   `Locales/` language packs, `Default Keyboard Shortcuts.kys` (67 toolbox tools, 107 menu commands
   with default shortcuts), `Required/` plug-ins (85 filter entries, 12 format plug-ins), presets,
   and strings in the main binary (81 "… Tool" titles; HDR/EDR, Metal, Touch Bar, pen features).
-- PhotoCraft's own Photoshop menu tree (`crates/ui-egui/src/menu_catalog.rs`, 628 items on 2026-10-10, 631 on 2026-10-12) was
+- Lienzo's own Photoshop menu tree (`crates/ui-egui/src/menu_catalog.rs`, 628 items on 2026-10-10, 631 on 2026-10-12) was
   written from Photoshop's menus; it is the denominator of the menu number. Photoshop's binary
   `Default Menus.mnu` was not parsed, so items added in 27.x that the catalog lacks would not show
   (Generative and cloud items are the likely ones).
@@ -257,7 +257,7 @@ evidence that later numbers build on.
 
 ## Feature-parity estimate of 2026-10-03 (from the former `docs/parity-estimate.md`)
 
-How close PhotoCraft is to Adobe Photoshop 2026, and how much Opus 5.5 work remains. Generated by
+How close Lienzo is to Adobe Photoshop 2026, and how much Opus 5.5 work remains. Generated by
 assessment, not a tool; revisit when a major arc lands. Menu coverage is from `cargo xtask parity`;
 fidelity is from the PSD oracle (`cargo xtask corpus` / `oracle_diff`).
 
@@ -334,7 +334,7 @@ in a handful of wall-clock hours using 8 parallel agents, so wall-clock ≈ agen
   caveat that pixel-for-pixel Firefly/Sensei parity is not achievable clean-room without trained
   models; we target functional equivalents.
 
-**Best single number:** PhotoCraft is **~82% of the way** to full Photoshop parity, and reaching a
+**Best single number:** Lienzo is **~82% of the way** to full Photoshop parity, and reaching a
 **95%, ships-for-most-users** state is roughly **25–40 wall-clock hours** of parallel Opus 5.5 work.
 Closing the last 5% (video + AI) is the long, uncertain tail.
 
@@ -586,7 +586,7 @@ See [method, raw measurements and reproduction](five-algorithm-performance.md).
    Content-Aware Move's Transform On Drop and live result preview are done (2026-10-16).
    Pencil, Mixer Brush, Patch, Vertical Type, Pattern Stamp and Rotate View are already available on the toolbar.
 5. **Complex-document performance** (#125/#128) and GPU tiling beyond the texture limit (#49).
-6. **Recurring visual QA** (`cargo run -p photocraft-engine --example designer_psd`) and fast
+6. **Recurring visual QA** (`cargo run -p lienzo-engine --example designer_psd`) and fast
    turnaround on user reports (OS, document size, layer count, screenshot).
 7. Later / needs decisions: generative AI backend (#41), scripting compatibility (ExtendScript /
    UXP / .atn), Flathub (#173), Wayland pen pressure (#79).
@@ -610,7 +610,7 @@ See [method, raw measurements and reproduction](five-algorithm-performance.md).
 | 2026-10-23 | minor | Select and Mask is Photoshop's workspace with its own tools (#7069, #8148); TOOL-214-1 stays partial (Refine Hair, Object Aware, Presets); percentages and estimates unchanged |
 | 2026-10-26 | minor | Selections: classical Select › Sky can seed substantial high-confidence components beneath an obstructed top band; learned segmentation remains open; percentages and estimates unchanged |
 | 2026-10-25 | minor | UI / UX and Workspace rows: 12 of 178 preferences do nothing, the scorecard's count. Camera Raw row: the Calibration panel landed on 2026-10-13 (#5128); what is missing is per-camera colour for non-DNG cameras ([gaps.md](gaps.md) G14). Percentages and estimates unchanged |
-| 2026-10-23 | minor | Colour management and modes: PSD spot plates are stored as Photoshop stores them (ink 0 = solid), and PSDs from earlier PhotoCraft versions keep their ink (#7415 split, part 4); estimates unchanged |
+| 2026-10-23 | minor | Colour management and modes: PSD spot plates are stored as Photoshop stores them (ink 0 = solid), and PSDs from earlier Lienzo versions keep their ink (#7415 split, part 4); estimates unchanged |
 | 2026-10-23 | minor | Colour management and modes: spot plates now save and open in TIFF (#7415); estimates unchanged |
 | 2026-10-23 | minor | Average runs on Smart Objects and imported `Avrg` records; synthetic depth tests and an opt-in cold Photoshop PSD re-render are documented in [average-filter.md](average-filter.md). Corpus floors and percentages unchanged. |
 | 2026-10-23 | minor | Average preserves transparency; synthetic Photoshop 26.6.1 RGB8 observations and 8/16/32-bit engine regressions in [average-filter.md](average-filter.md). Broader colour-model and feathering parity remains unmeasured; percentages and corpus floors unchanged. |

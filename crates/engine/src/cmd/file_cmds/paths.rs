@@ -14,9 +14,9 @@ pub(super) fn is_file(_path: &str) -> bool {
 
 #[cfg(not(target_arch = "wasm32"))]
 /// Every file the engine opens is read here: in bounded reads, with a clear error when it does
-/// not fit in memory (see [`photocraft_format::read`]).
+/// not fit in memory (see [`lienzo_format::read`]).
 pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
-    photocraft_format::read_file(std::path::Path::new(path)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
+    lienzo_format::read_file(std::path::Path::new(path)).map_err(|e| EngineError::Other(format!("{path}: {e}")))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -30,7 +30,7 @@ pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
 /// returned as is, so the caller can tell a file over its limit (`FileTooLarge`, `OutOfMemory`)
 /// from one it could not open or read.
 pub(crate) fn read_file_limited(path: &str, max: u64) -> std::io::Result<Vec<u8>> {
-    photocraft_format::read_file_limited(std::path::Path::new(path), max)
+    lienzo_format::read_file_limited(std::path::Path::new(path), max)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -40,9 +40,9 @@ pub(crate) fn read_file_limited(path: &str, _max: u64) -> std::io::Result<Vec<u8
 
 #[cfg(not(target_arch = "wasm32"))]
 /// Every file the engine writes goes through here: crash-safe (temp file + fsync + rename, see
-/// [`photocraft_format::atomic`]), so a failed save never destroys the previous file.
+/// [`lienzo_format::atomic`]), so a failed save never destroys the previous file.
 pub(crate) fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
-    photocraft_format::atomic_write(std::path::Path::new(path), bytes).map_err(|e| EngineError::Other(e.to_string()))
+    lienzo_format::atomic_write(std::path::Path::new(path), bytes).map_err(|e| EngineError::Other(e.to_string()))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -82,18 +82,18 @@ pub(super) fn list_files(dir: &str, _include_non_images: bool) -> Result<Vec<Str
 }
 
 /// Whether a folder entry is one the batch commands open: an `OPENABLE` extension, an extension
-/// of a format `photocraft-codecs` reads in this build, or GIMP's gzipped `.xcf.gz`, whose last
+/// of a format `lienzo-codecs` reads in this build, or GIMP's gzipped `.xcf.gz`, whose last
 /// extension alone says nothing.
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn openable_name(path: &str) -> bool {
     let lower = file_name(path).to_ascii_lowercase();
     lower.ends_with(".xcf.gz")
-        || lower.rsplit_once('.').is_some_and(|(_, ext)| OPENABLE.contains(&ext) || photocraft_codecs::from_extension(ext).is_some_and(|f| f.caps().read))
+        || lower.rsplit_once('.').is_some_and(|(_, ext)| OPENABLE.contains(&ext) || lienzo_codecs::from_extension(ext).is_some_and(|f| f.caps().read))
 }
 
 /// Extensions the batch commands pick up from a folder besides the codec formats: the document
-/// and vector formats `photocraft_io::import` reads outside `photocraft-codecs`, and the camera
-/// raws whose usual files `photocraft_raw::decode` develops. Not CR3, ORF, RAF, RW2, SRF or SR2:
+/// and vector formats `lienzo_io::import` reads outside `lienzo-codecs`, and the camera
+/// raws whose usual files `lienzo_raw::decode` develops. Not CR3, ORF, RAF, RW2, SRF or SR2:
 /// CR3, compressed ORF and RAF and RW2 raw formats other than 3, 4 and 5 aren't decoded yet, and
 /// import falls back to the embedded JPEG preview with only a warning, which a batch must not
 /// process silently.
@@ -128,27 +128,27 @@ pub fn layered_extension(ext: &str) -> bool {
 
 /// Whether a file in format `ext` (lower-case) holds the whole of `doc`, so it can be the
 /// document's own file: PSD, PSB and .pcraft always; OpenRaster only when it drops nothing (no
-/// adjustment layers, styles, masks…, [`photocraft_io::ora_losses`]). A save to a format that
+/// adjustment layers, styles, masks…, [`lienzo_io::ora_losses`]). A save to a format that
 /// doesn't hold the document is a copy, and File › Save goes through Save As, so an editable
 /// original is never overwritten with less than it had (#3806).
-pub fn holds(doc: &photocraft_doc::Document, ext: &str) -> bool {
+pub fn holds(doc: &lienzo_doc::Document, ext: &str) -> bool {
     match ext {
         "psd" | "psb" | "pcraft" => true,
-        "ora" => photocraft_io::ora_losses(doc).is_empty(),
+        "ora" => lienzo_io::ora_losses(doc).is_empty(),
         _ => false,
     }
 }
 
 /// [`holds`] for the file at `path`.
-pub fn holds_at(doc: &photocraft_doc::Document, path: &str) -> bool {
+pub fn holds_at(doc: &lienzo_doc::Document, path: &str) -> bool {
     extension(path).is_some_and(|ext| holds(doc, &ext))
 }
 
 /// What a save of `doc` to `path` would leave out when its format can't hold it: OpenRaster's
-/// [`photocraft_io::ora_losses`]; empty for other formats.
-pub fn losses_at(doc: &photocraft_doc::Document, path: &str) -> Vec<String> {
+/// [`lienzo_io::ora_losses`]; empty for other formats.
+pub fn losses_at(doc: &lienzo_doc::Document, path: &str) -> Vec<String> {
     match extension(path).as_deref() {
-        Some("ora") => photocraft_io::ora_losses(doc),
+        Some("ora") => lienzo_io::ora_losses(doc),
         _ => Vec::new(),
     }
 }
@@ -240,9 +240,9 @@ pub fn destination_identity(path: &std::path::Path) -> Option<std::path::PathBuf
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) fn case_sensitive_destination(path: &std::path::Path) -> Option<bool> {
     let parent = path.ancestors().skip(1).find(|ancestor| ancestor.is_dir())?;
-    let probe = tempfile::Builder::new().prefix(".PhotoCraftCaseProbe-").tempfile_in(parent).ok()?;
+    let probe = tempfile::Builder::new().prefix(".LienzoCaseProbe-").tempfile_in(parent).ok()?;
     let name = probe.path().file_name()?.to_str()?;
-    let alternate = parent.join(name.replacen("PhotoCraft", "photocraft", 1));
+    let alternate = parent.join(name.replacen("Lienzo", "lienzo", 1));
     match std::fs::metadata(&alternate) {
         Ok(_) => Some(!same_file(probe.path(), &alternate)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Some(true),

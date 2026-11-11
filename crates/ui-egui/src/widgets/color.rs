@@ -1,7 +1,7 @@
 use super::{Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Tokens, Ui, Vec2, pos2};
 
 /// Cached RGB data; drawing work is bounded by the 256 display bins, never the image size.
-pub fn rgb_histogram(ui: &mut Ui, histogram: &photocraft_algo::histogram::RgbHistogram, height: f32) -> egui::Response {
+pub fn rgb_histogram(ui: &mut Ui, histogram: &lienzo_algo::histogram::RgbHistogram, height: f32) -> egui::Response {
     let t = Tokens::get(ui.ctx());
     let (rect, response) = ui.allocate_exact_size(egui::vec2(ui.available_width().max(1.0), height.max(1.0)), egui::Sense::hover());
     ui.painter().rect_filled(rect, t.radius_sm, t.histogram_background());
@@ -14,7 +14,7 @@ pub fn rgb_histogram(ui: &mut Ui, histogram: &photocraft_algo::histogram::RgbHis
 /// The fully saturated colour at hue `deg` (degrees), built on sRGB values as Photoshop's hue
 /// tracks are: 0 is (255,0,0), 60 is (255,255,0), 120 is (0,255,0) and so on (#6540).
 pub fn hue_color(deg: f32) -> Color32 {
-    let [r, g, b] = photocraft_color::convert::hsb_to_rgb([deg, 1.0, 1.0]);
+    let [r, g, b] = lienzo_color::convert::hsb_to_rgb([deg, 1.0, 1.0]);
     let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
     Color32::from_rgb(q(r), q(g), q(b))
 }
@@ -76,7 +76,7 @@ fn checker_tile(ctx: &egui::Context) -> egui::TextureHandle {
     tile
 }
 
-/// A colour swatch that opens PhotoCraft's Color Picker dialog (HSB, RGB, Lab, CMYK, hex and the
+/// A colour swatch that opens Lienzo's Color Picker dialog (HSB, RGB, Lab, CMYK, hex and the
 /// eyedropper), titled `title` as Photoshop's "Color Picker (…)", on its colour. While it is open
 /// the swatch previews the colour it shows; OK keeps the colour (the alpha stays), Cancel restores
 /// the exact colour the swatch had. The response is `changed` in every frame the colour changes;
@@ -108,7 +108,7 @@ pub fn pick_pos(resp: &Response) -> Option<Pos2> {
     if held || resp.clicked() { resp.interact_pointer_pos() } else { None }
 }
 
-/// A colour swatch that only reports clicks (no popup): for colours edited in PhotoCraft's own
+/// A colour swatch that only reports clicks (no popup): for colours edited in Lienzo's own
 /// Color Picker dialog. `label` names it for hover text and accessibility.
 pub fn color_swatch_button(ui: &mut Ui, color: Color32, label: &str) -> Response {
     let t = Tokens::get(ui.ctx());

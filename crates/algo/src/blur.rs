@@ -1,7 +1,7 @@
 //! Blurs: Gaussian, box, motion, radial, surface.
 
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, scratch};
+use lienzo_geom::Rect;
+use lienzo_raster::{Interrupt, scratch};
 
 use crate::image::{Edge, Image, premultiply, unpremultiply};
 use crate::photo_util::{par_map, par_rows};
@@ -373,7 +373,7 @@ fn strips(out: Rect) -> impl Iterator<Item = Rect> {
         .step_by(STRIP as usize)
         .map(move |x| Rect::new(x.max(out.x0), out.y0, x.saturating_add(STRIP).min(out.x1), out.y1))
 }
-const _: () = assert!(photocraft_geom::TILE_SIZE % STRIP == 0);
+const _: () = assert!(lienzo_geom::TILE_SIZE % STRIP == 0);
 
 /// [`box_blur`] of an image (edges repeated) into one interleaved buffer for `out`.
 fn box_passes(src: &Image, out: Rect, alpha: bool, boxes: &[usize]) -> Vec<f32> {

@@ -4,10 +4,10 @@
 
 use egui::Modifiers;
 use egui_kittest::Harness;
-use photocraft_raster::Surface;
+use lienzo_raster::Surface;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
@@ -15,8 +15,8 @@ const COMBOS: [Modifiers; 4] = [Modifiers::NONE, Modifiers::SHIFT, Modifiers::AL
 
 /// A document with a selection away from the text, so Add, Subtract and Intersect would each
 /// leave something other than the text outline.
-pub(super) fn new_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn new_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 400})).unwrap();
     app.run("select.rect", json!({"x": 600, "y": 250, "width": 100, "height": 100})).unwrap();
     app.sync_views();
@@ -26,28 +26,28 @@ pub(super) fn new_app() -> PhotocraftApp {
     app
 }
 
-pub(super) fn click(app: &mut PhotocraftApp, x: f64, y: f64, mods: Modifiers) {
+pub(super) fn click(app: &mut LienzoApp, x: f64, y: f64, mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x, y }, mods);
 }
 
 /// Start a mask with a click at `at` and type `s`.
-fn mask(app: &mut PhotocraftApp, at: (f64, f64), s: &str) {
+fn mask(app: &mut LienzoApp, at: (f64, f64), s: &str) {
     mask_with(app, at, s, Modifiers::NONE);
 }
 
 /// [`mask`] started by a click holding `mods`.
-fn mask_with(app: &mut PhotocraftApp, at: (f64, f64), s: &str, mods: Modifiers) {
+fn mask_with(app: &mut LienzoApp, at: (f64, f64), s: &str, mods: Modifiers) {
     click(app, at.0, at.1, mods);
     assert!(app.ui.text_edit.as_ref().is_some_and(|ed| ed.mask), "typing a mask");
     super::insert(app, s);
 }
 
-pub(super) fn selection(app: &PhotocraftApp) -> Option<Surface> {
+pub(super) fn selection(app: &LienzoApp) -> Option<Surface> {
     app.session.active().unwrap().doc.selection.clone()
 }
 
-pub(super) fn bounds(s: &Option<Surface>) -> Option<photocraft_geom::Rect> {
+pub(super) fn bounds(s: &Option<Surface>) -> Option<lienzo_geom::Rect> {
     s.as_ref().map(Surface::content_bounds)
 }
 
@@ -91,7 +91,7 @@ fn shift_command_return_replaces_the_selection() {
     let mut app = new_app();
     mask(&mut app, (100.0, 200.0), "AB");
     let mut h = Harness::builder().build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             // As `canvas_tests`' harness: the shortcuts wait for the app's fonts.
             if ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
@@ -100,7 +100,7 @@ fn shift_command_return_replaces_the_selection() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h.event(egui::Event::Key { key: egui::Key::Enter, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::COMMAND | Modifiers::SHIFT });
     h.run_steps(1);

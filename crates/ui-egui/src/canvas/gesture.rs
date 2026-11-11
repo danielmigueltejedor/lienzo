@@ -4,22 +4,22 @@ use super::strokes::{
     EngineStroke, commit_brush_stroke, feed_live_stroke, live_retouch_command, offer_live_retouch, paint_target, snap_aliased_tip, stroke_params,
 };
 use super::textures::shown_as_document;
-use super::{PhotocraftApp, Tool, json};
+use super::{LienzoApp, Tool, json};
 
-pub(crate) fn finish_gesture(app: &mut PhotocraftApp, d: Drag) {
+pub(crate) fn finish_gesture(app: &mut LienzoApp, d: Drag) {
     finish(app, d, None);
 }
 
 /// [`finish_gesture`] for a pointer release. `click`: the release, before snapping, came back
 /// within half a pixel of the press (`tool_input`). A selection drag that snapping pulled back onto
 /// its press point is not one (#11392).
-pub(crate) fn finish_release(app: &mut PhotocraftApp, d: Drag, click: bool) {
+pub(crate) fn finish_release(app: &mut LienzoApp, d: Drag, click: bool) {
     finish(app, d, Some(click));
 }
 
 /// `click`: whether the gesture was a click, when the caller saw the release before snapping;
 /// otherwise the end point decides.
-fn finish(app: &mut PhotocraftApp, mut d: Drag, click: Option<bool>) {
+fn finish(app: &mut LienzoApp, mut d: Drag, click: Option<bool>) {
     // Control can select a different tool and release before the next frame cancels the drag.
     // Cancel before even recording a Shift-stroke anchor, including the preview fallback paths.
     if d.tool == Tool::MixerBrush && app.ui.tool != Tool::MixerBrush {
@@ -186,7 +186,7 @@ fn finish(app: &mut PhotocraftApp, mut d: Drag, click: Option<bool>) {
 /// the tool's own release to go on with. `None`: the release is done. A click ends here unsnapped
 /// (`tool_input`), so it is never a move; the line snaps as a click outside the selection does (its
 /// press began as a move, which keeps the press point).
-fn finish_selection_release(app: &mut PhotocraftApp, d: &mut Drag, end: [f64; 3], click: Option<bool>) -> Option<[f64; 3]> {
+fn finish_selection_release(app: &mut LienzoApp, d: &mut Drag, end: [f64; 3], click: Option<bool>) -> Option<[f64; 3]> {
     let floating = d.sel_move?;
     let unmoved = (end[0] - d.start[0]).round() == 0.0 && (end[1] - d.start[1]).round() == 0.0;
     let click = click.unwrap_or(unmoved);
@@ -203,7 +203,7 @@ fn finish_selection_release(app: &mut PhotocraftApp, d: &mut Drag, end: [f64; 3]
     }
     // The piece drops where it is first, as a press off it drops it (`tool_input`).
     if floating
-        && app.session.active().and_then(photocraft_engine::float_cmds::floating).is_some()
+        && app.session.active().and_then(lienzo_engine::float_cmds::floating).is_some()
         && let Err(e) = app.run("select.drop", json!({}))
     {
         app.ui.status = e;
@@ -217,7 +217,7 @@ fn finish_selection_release(app: &mut PhotocraftApp, d: &mut Drag, end: [f64; 3]
 
 /// Selection mode from the options bar, overridden by modifier keys (⇧ add, ⌥ subtract, ⇧⌥ intersect).
 /// The cursor badge announces the same mode (`tool_feedback`).
-pub(crate) fn selection_mode(app: &PhotocraftApp, m: egui::Modifiers) -> &'static str {
+pub(crate) fn selection_mode(app: &LienzoApp, m: egui::Modifiers) -> &'static str {
     crate::tool_feedback::document_selection_mode(app, Tool::Lasso, m)
 }
 
@@ -281,7 +281,7 @@ pub(crate) fn polygon_close_reach(points: impl IntoIterator<Item = [f64; 2]>, po
 /// A polygonal lasso click adds a vertex; clicking near the first vertex closes the polygon. The
 /// first click fixes the selection mode; a new-selection polygon hides the old outline while it is
 /// drawn, and replaces it in one history step when it closes.
-pub(super) fn polygon_click(app: &mut PhotocraftApp, x: f64, y: f64, mods: egui::Modifiers) {
+pub(super) fn polygon_click(app: &mut LienzoApp, x: f64, y: f64, mods: egui::Modifiers) {
     polygon_cancel_stale(app);
     let close =
         app.ui.polygon.first().is_some_and(|p0| {
@@ -306,7 +306,7 @@ pub(super) fn polygon_click(app: &mut PhotocraftApp, x: f64, y: f64, mods: egui:
 
 /// Remove the Polygonal Lasso's last vertex (⌫, Delete or a right-click while drawing, #1229);
 /// removing the only one cancels the polygon. False when no polygon is being drawn.
-pub fn polygon_retract(app: &mut PhotocraftApp) -> bool {
+pub fn polygon_retract(app: &mut LienzoApp) -> bool {
     if app.ui.polygon.pop().is_none() {
         return false;
     }
@@ -320,9 +320,9 @@ pub fn polygon_retract(app: &mut PhotocraftApp) -> bool {
 /// The polygon in progress belongs to the document it was started on (`UiState::polygon_doc`):
 /// once another document becomes active it is dropped, so its outline doesn't show on (or get
 /// committed to) the other document, and the selection it would have replaced is shown again.
-/// Runs before canvas input and shortcuts as well as in `PhotocraftApp::sync_views`. Like the Lasso's
+/// Runs before canvas input and shortcuts as well as in `LienzoApp::sync_views`. Like the Lasso's
 /// ([`crate::lasso_ui::cancel_stale`]) and the Magnetic Lasso's ([`crate::magnetic_lasso_ui::frame`]).
-pub fn polygon_cancel_stale(app: &mut PhotocraftApp) {
+pub fn polygon_cancel_stale(app: &mut LienzoApp) {
     let active = app.session.active().map(|st| st.doc.id);
     if app.ui.polygon.is_empty() {
         app.ui.polygon_doc = None;
@@ -335,12 +335,12 @@ pub fn polygon_cancel_stale(app: &mut PhotocraftApp) {
 
 /// A new-selection polygonal (or magnetic) lasso is being drawn, so the selection it will replace
 /// is hidden.
-pub fn polygon_replaces_selection(app: &PhotocraftApp) -> bool {
+pub fn polygon_replaces_selection(app: &LienzoApp) -> bool {
     (!app.ui.polygon.is_empty() && app.ui.polygon_mode == "replace") || crate::magnetic_lasso_ui::replaces_selection(app)
 }
 
 /// Close the polygonal lasso and make the selection in the mode it started in.
-pub fn commit_polygon(app: &mut PhotocraftApp) {
+pub fn commit_polygon(app: &mut LienzoApp) {
     polygon_cancel_stale(app);
     let pts = std::mem::take(&mut app.ui.polygon);
     let mode = std::mem::take(&mut app.ui.polygon_mode);
@@ -354,7 +354,7 @@ pub fn commit_polygon(app: &mut PhotocraftApp) {
 
 /// Apply the crop tool's rectangle. When `image.crop` refuses it (the error is in the status bar),
 /// the frame, its turn and its box Undo stay for fixing.
-pub fn commit_crop(app: &mut PhotocraftApp) {
+pub fn commit_crop(app: &mut LienzoApp) {
     // Never another document's frame (#1918).
     crate::crop_ui::cancel_stale(app);
     let kept = crate::crop_ui::keep(app);

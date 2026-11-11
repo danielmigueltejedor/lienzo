@@ -175,7 +175,7 @@ fn thin_holes_are_filled_the_same_on_any_number_of_threads() {
     let px = roles(w, h, &hole);
     let run = |threads: usize| {
         let pool = rayon::ThreadPoolBuilder::new().num_threads(threads).build().unwrap();
-        pool.install(|| complete_masked(w, h, 3, &img, &px, &CompleteParams::default(), &photocraft_raster::Interrupt::NONE)).unwrap().unwrap()
+        pool.install(|| complete_masked(w, h, 3, &img, &px, &CompleteParams::default(), &lienzo_raster::Interrupt::NONE)).unwrap().unwrap()
     };
     let one = run(1);
     assert_eq!(bits(&one), bits(&run(7)));
@@ -196,7 +196,7 @@ fn results_do_not_depend_on_the_thread_count() {
         let p = CompleteParams { adapt, ..Default::default() };
         let run = |threads: usize| {
             let pool = rayon::ThreadPoolBuilder::new().num_threads(threads).build().unwrap();
-            bits(&pool.install(|| complete_masked(w, h, ch, &img, &px, &p, &photocraft_raster::Interrupt::NONE)).unwrap().unwrap())
+            bits(&pool.install(|| complete_masked(w, h, ch, &img, &px, &p, &lienzo_raster::Interrupt::NONE)).unwrap().unwrap())
         };
         let one = run(1);
         assert_eq!(one, run(3), "{ch} channels, 3 threads");
@@ -273,7 +273,7 @@ fn onion_peel_picks_exactly_what_the_plain_scan_picks() {
             }
         }
     }
-    let none = photocraft_raster::Interrupt::NONE;
+    let none = lienzo_raster::Interrupt::NONE;
     for hole in [disc(w, h, 20.0, 18.0, 7.5), disc(w, h, 34.0, 22.0, 5.0)] {
         let px: Vec<Px> = hole.iter().map(|h| if *h { Px::Hole } else { Px::Source }).collect();
         let near = integral(w, h, &hole);
@@ -291,7 +291,7 @@ fn onion_peel_picks_exactly_what_the_plain_scan_picks() {
 
 #[test]
 fn onion_peel_takes_the_plain_scans_sources() {
-    let none = photocraft_raster::Interrupt::NONE;
+    let none = lienzo_raster::Interrupt::NONE;
     for (w, h, ch, seed) in [(44, 36, 1, 1), (50, 40, 3, 2), (40, 40, 4, 3)] {
         let mut img = busy(w, h, ch, seed);
         // Also an image of a few exact values, where many sources tie.
@@ -341,7 +341,7 @@ fn valid_sources_are_the_wholly_copyable_patches() {
             _ => Px::Source,
         })
         .collect();
-    let valid = valid_sources(w, h, r, &px, &photocraft_raster::Interrupt::NONE).unwrap();
+    let valid = valid_sources(w, h, r, &px, &lienzo_raster::Interrupt::NONE).unwrap();
     let source: Vec<bool> = px.iter().map(|k| *k == Px::Source).collect();
     let ss = integral(w, h, &source);
     let (ri, full) = (r as i32, ((2 * r + 1) * (2 * r + 1)) as u32);
@@ -375,7 +375,7 @@ fn full_patches_measure_as_clipped_ones() {
     let mut img = busy(w, h, ch, 4);
     let hole = disc(w, h, 20.0, 18.0, 6.0);
     let px = roles(w, h, &hole);
-    let none = photocraft_raster::Interrupt::NONE;
+    let none = lienzo_raster::Interrupt::NONE;
     let hb = hole_bounds(w, h, &px).unwrap();
     let tb = hb.grow(r, w, h);
     let valid = valid_sources(w, h, r, &px, &none).unwrap();
@@ -440,7 +440,7 @@ fn owned_completion_fills_in_place_or_gives_the_pixels_back() {
     let img = busy(w, h, ch, 6);
     let hole = disc(w, h, 30.0, 26.0, 8.0);
     let px = roles(w, h, &hole);
-    let (p, none) = (CompleteParams::default(), photocraft_raster::Interrupt::NONE);
+    let (p, none) = (CompleteParams::default(), lienzo_raster::Interrupt::NONE);
     let borrowed = complete_masked(w, h, ch, &img, &px, &p, &none).unwrap().unwrap();
     let owned = complete_masked_owned(w, h, ch, img.clone(), &px, &p, &none).unwrap().unwrap();
     assert_eq!(bits(&owned), bits(&borrowed));
@@ -451,7 +451,7 @@ fn owned_completion_fills_in_place_or_gives_the_pixels_back() {
     assert_eq!(bits(&back), bits(&img));
     // Cancelled, it stops.
     let yes = || true;
-    assert!(complete_masked_owned(w, h, ch, img, &px, &p, &photocraft_raster::Interrupt::cancel_only(&yes)).is_err());
+    assert!(complete_masked_owned(w, h, ch, img, &px, &p, &lienzo_raster::Interrupt::cancel_only(&yes)).is_err());
 }
 
 #[test]

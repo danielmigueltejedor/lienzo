@@ -1,7 +1,7 @@
 use super::*;
 
-fn app_with_docs(n: usize) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_docs(n: usize) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     for _ in 0..n {
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     }
@@ -9,23 +9,23 @@ fn app_with_docs(n: usize) -> PhotocraftApp {
     app
 }
 
-fn make_dirty(app: &mut PhotocraftApp, doc: usize) {
+fn make_dirty(app: &mut LienzoApp, doc: usize) {
     app.session.set_active(doc);
     app.run("layer.new.layer", json!({})).unwrap();
 }
 
-fn doc_id(app: &PhotocraftApp, i: usize) -> DocId {
+fn doc_id(app: &LienzoApp, i: usize) -> DocId {
     app.session.documents()[i].doc.id
 }
 
 #[test]
 fn a_save_document_script_that_edits_the_document_keeps_the_prompt_up() {
-    use photocraft_engine::automate_cmds::ScriptBinding;
+    use lienzo_engine::automate_cmds::ScriptBinding;
     let mut app = app_with_docs(1);
     let ctx = egui::Context::default();
     make_dirty(&mut app, 0);
     app.session.active_mut().unwrap().path = Some("/pics/kept.psd".into());
-    app.services.export = Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
+    app.services.export = Some(Box::new(|_: &lienzo_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
     app.services.write = Some(Box::new(|_: &str, _: &[u8]| Ok(())));
     app.session.edit_prefs(|prefs| {
         prefs.script_events.enabled = true;
@@ -199,11 +199,11 @@ fn azerbaijani_dialog_button_mnemonics_use_locale_casing() {
     });
 }
 
-type Prompted = egui_kittest::Harness<'static, PhotocraftApp>;
+type Prompted = egui_kittest::Harness<'static, LienzoApp>;
 
 /// The unsaved-changes prompt for `command` over `app`'s dirty documents, as `os` draws it (with
 /// the file dialogs shown and answered at the end of each frame, as the app does).
-fn prompt_for(app: PhotocraftApp, command: &str, os: egui::os::OperatingSystem) -> Prompted {
+fn prompt_for(app: LienzoApp, command: &str, os: egui::os::OperatingSystem) -> Prompted {
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(800.0, 600.0)).build_ui_state(
         |ui, app| {
             show(app, ui.ctx());
@@ -211,7 +211,7 @@ fn prompt_for(app: PhotocraftApp, command: &str, os: egui::os::OperatingSystem) 
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.ctx.set_os(os);
     assert!(intercept(h.state_mut(), command, &Value::Null));
     h.run_steps(2);
@@ -551,7 +551,7 @@ fn saving_from_the_prompt_waits_for_the_save_dialog_then_closes() {
     let held = waiting.clone();
     let mut app = app_with_docs(1);
     make_dirty(&mut app, 0);
-    app.services.export = Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
+    app.services.export = Some(Box::new(|_: &lienzo_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
     app.services.write = Some(Box::new(move |p: &str, _: &[u8]| {
         w.borrow_mut().push(p.to_string());
         Ok(())
@@ -594,7 +594,7 @@ fn saving_from_the_prompt_waits_for_the_question_whether_to_replace() {
     let held = waiting.clone();
     let mut app = app_with_docs(1);
     make_dirty(&mut app, 0);
-    app.services.export = Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
+    app.services.export = Some(Box::new(|_: &lienzo_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
     app.services.write = Some(Box::new(move |p: &str, _: &[u8]| {
         w.borrow_mut().push(p.to_string());
         Ok(())
@@ -654,7 +654,7 @@ fn saving_from_the_prompt_waits_for_a_background_save_then_closes() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.ctx.set_os(egui::os::OperatingSystem::Windows);
     assert!(intercept(h.state_mut(), "file.close", &Value::Null));
     h.run_steps(2);
@@ -685,7 +685,7 @@ fn saving_from_the_prompt_closes_after_an_unconfirmed_write() {
     make_dirty(&mut app, 0);
     app.session.active_mut().unwrap().path = Some("/pics/kept.psd".into());
     app.services.write_unconfirmed = true;
-    app.services.export = Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
+    app.services.export = Some(Box::new(|_: &lienzo_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new()))));
     app.services.write = Some(Box::new(move |p: &str, _: &[u8]| {
         w.borrow_mut().push(p.to_string());
         Ok(())
@@ -714,7 +714,7 @@ mod dds_tests;
 mod jpeg_tests;
 
 /// One frame with the window's close button pressed; the commands the guard sent.
-fn window_close_commands(app: &mut PhotocraftApp) -> Vec<egui::ViewportCommand> {
+fn window_close_commands(app: &mut LienzoApp) -> Vec<egui::ViewportCommand> {
     let mut info = egui::ViewportInfo::default();
     info.events.push(egui::ViewportEvent::Close);
     let mut input = egui::RawInput::default();
@@ -725,7 +725,7 @@ fn window_close_commands(app: &mut PhotocraftApp) -> Vec<egui::ViewportCommand> 
 }
 
 /// One frame with the window's close button pressed; whether the guard cancelled the close.
-fn press_window_close(app: &mut PhotocraftApp) -> bool {
+fn press_window_close(app: &mut LienzoApp) -> bool {
     let commands = &window_close_commands(app);
     let cancelled = commands.iter().any(|c| matches!(c, egui::ViewportCommand::CancelClose));
     assert_eq!(commands.iter().any(|c| matches!(c, egui::ViewportCommand::Focus)), cancelled);
@@ -757,7 +757,7 @@ fn window_close_goes_through_once_the_window_device_is_lost() {
 /// lost they must close instead.
 #[test]
 fn file_exit_quits_without_a_prompt_once_the_window_device_is_lost() {
-    let exit = |app: &mut PhotocraftApp| {
+    let exit = |app: &mut LienzoApp| {
         let mut out = egui::Context::default().run_ui(egui::RawInput::default(), |ui| {
             let _ = crate::menus::invoke(app, ui.ctx(), EXIT, json!({}));
         });

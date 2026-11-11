@@ -1,9 +1,9 @@
 //! Native Fill rotation enables quarter-turn candidates without changing ordinary Fill or Crop.
 
-use photocraft_algo::content_aware::{FillOptions, color_level, fill, rotation_level};
-use photocraft_doc::{LayerId, Rect};
-use photocraft_engine::Session;
-use photocraft_raster::Surface;
+use lienzo_algo::content_aware::{FillOptions, color_level, fill, rotation_level};
+use lienzo_doc::{LayerId, Rect};
+use lienzo_engine::Session;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 const W: usize = 64;

@@ -3,7 +3,7 @@
 //! Same contract as the other acceptance files: only MCP tools (`doc_*`, `command_run`), checked
 //! through `doc_inspect`, `document.pixel` and exported/saved files.
 
-use photocraft_automation::{AuthorizedWorkspace, PhotocraftMcp};
+use lienzo_automation::{AuthorizedWorkspace, LienzoMcp};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};
@@ -24,7 +24,7 @@ async fn connect(root: &std::path::Path) -> (Conn, Server) {
     let (s, c) = tokio::io::duplex(1 << 20);
     let workspace = AuthorizedWorkspace::new(Some(root), Some(root)).expect("test workspace");
     let server = tokio::spawn(async move {
-        if let Ok(running) = PhotocraftMcp::headless_with_workspace(workspace).serve(s).await {
+        if let Ok(running) = LienzoMcp::headless_with_workspace(workspace).serve(s).await {
             let _ = running.waiting().await;
         }
     });
@@ -132,7 +132,7 @@ async fn agent_completes_six_rounding_out_tasks() {
     let g = pixel(&c, 5, 12).await;
     assert!((g[0] - g[1]).abs() < 1e-4 && (g[1] - g[2]).abs() < 1e-4, "task 33: the channels agree {g:?}");
     tool(&c, "doc_export", json!({"path": "bars.png"})).await;
-    let img = photocraft_codecs::decode(&std::fs::read(dir.join("bars.png")).unwrap()).unwrap();
+    let img = lienzo_codecs::decode(&std::fs::read(dir.join("bars.png")).unwrap()).unwrap();
     let px = img.to_rgba8();
     let at = |x: usize, y: usize| px[(y * img.width() as usize + x) * 4];
     assert!(at(5, 12) < 8 && at(9, 12) > 247, "task 33: the grayscale export matches the canvas");

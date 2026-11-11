@@ -5,13 +5,13 @@ use egui_kittest::{Harness, kittest::Queryable};
 #[path = "zoom_menu_anchor_tests.rs"]
 mod zoom_menu_anchor_tests;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app
 }
 
-fn work_path(app: &mut PhotocraftApp) {
+fn work_path(app: &mut LienzoApp) {
     app.run(
         "path.set",
         json!({"name": "work", "path": {"subpaths": [{"closed": true, "knots": [
@@ -23,15 +23,15 @@ fn work_path(app: &mut PhotocraftApp) {
     .unwrap();
 }
 
-fn choose_open(app: &mut PhotocraftApp, command: &str) {
+fn choose_open(app: &mut LienzoApp, command: &str) {
     assert!(open(app, &Context::default(), Tool::Pen, [10.0, 10.0]));
     choose(app, &Context::default(), command);
 }
 
-fn harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(mut app: LienzoApp) -> Harness<'static, LienzoApp> {
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -40,12 +40,12 @@ fn harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     h
 }
 
-fn right_click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2, modifiers: Modifiers) {
+fn right_click(h: &mut Harness<'static, LienzoApp>, p: Pos2, modifiers: Modifiers) {
     h.event(egui::Event::ModifiersChanged(modifiers));
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -75,15 +75,15 @@ fn canvas_gesture_preserves_selection_and_command_override() {
 }
 
 /// A type layer reading "Hello", being edited with every character selected.
-fn editing_type(app: &mut PhotocraftApp) -> u64 {
+fn editing_type(app: &mut LienzoApp) -> u64 {
     app.ui.tool = Tool::Type;
     let id = app.run("type.create", json!({"text": "Hello", "size": 12, "x": 4, "y": 20})).unwrap()["layer"].as_u64().unwrap();
     crate::menus::invoke(app, &Context::default(), "type.editText", json!({})).unwrap();
     id
 }
 
-fn text_of(app: &PhotocraftApp, id: u64) -> Option<photocraft_doc::TextLayer> {
-    match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
+fn text_of(app: &LienzoApp, id: u64) -> Option<lienzo_doc::TextLayer> {
+    match &app.session.active().unwrap().doc.layer(lienzo_doc::LayerId(id)).unwrap().content {
         LayerContent::Text(t) => Some(t.clone()),
         _ => None,
     }
@@ -95,7 +95,7 @@ fn right_click_while_typing_opens_the_type_edit_menu_and_esc_keeps_the_edit() {
     editing_type(&mut app);
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -106,7 +106,7 @@ fn right_click_while_typing_opens_the_type_edit_menu_and_esc_keeps_the_edit() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     let center = h.state().last_canvas_rect.center();
     right_click(&mut h, center, Modifiers::NONE);
@@ -126,7 +126,7 @@ fn type_edit_menu_rows_act_on_the_text_and_the_layer() {
     let mut app = app();
     let id = editing_type(&mut app);
     let ctx = Context::default();
-    let reopen = |app: &mut PhotocraftApp| assert!(open(app, &Context::default(), Tool::Type, [10.0, 10.0]));
+    let reopen = |app: &mut LienzoApp| assert!(open(app, &Context::default(), Tool::Type, [10.0, 10.0]));
     // Faux Bold toggles the style of the selected characters, and shows checked.
     reopen(&mut app);
     let menu = app.ui.canvas_tool_menu.clone().unwrap();
@@ -161,7 +161,7 @@ fn type_edit_menu_rows_act_on_the_text_and_the_layer() {
 }
 
 /// A committed type layer reading "Hello" over the middle of the canvas, no edit running.
-fn committed_type(app: &mut PhotocraftApp) -> u64 {
+fn committed_type(app: &mut LienzoApp) -> u64 {
     app.ui.tool = Tool::Type;
     let id = app.run("type.create", json!({"text": "Hello", "size": 14, "x": 1, "y": 22})).unwrap()["layer"].as_u64().unwrap();
     assert!(app.ui.text_edit.is_none());
@@ -170,7 +170,7 @@ fn committed_type(app: &mut PhotocraftApp) -> u64 {
 
 #[test]
 fn right_click_on_committed_type_opens_the_type_layer_menu() {
-    use photocraft_doc::text::Orientation;
+    use lienzo_doc::text::Orientation;
     let mut app = app();
     let id = committed_type(&mut app);
     assert_eq!(crate::type_tool::hit_layer(&mut app, 16.0, 16.0).map(|l| l.0), Some(id), "the canvas centre is on the type");
@@ -202,7 +202,7 @@ fn type_layer_menu_targets_the_type_under_the_pointer() {
     let id = committed_type(&mut app);
     app.run("layer.new.layer", json!({})).unwrap();
     let ctx = Context::default();
-    let active = |app: &PhotocraftApp| app.session.active().unwrap().active_layer.map(|l| l.0);
+    let active = |app: &LienzoApp| app.session.active().unwrap().active_layer.map(|l| l.0);
     assert_ne!(active(&app), Some(id));
     // Away from the type, or with a Type Mask tool, nothing opens and nothing is selected.
     assert!(!open_at(&mut app, &ctx, Tool::Type, [10.0, 10.0], Some([30.0, 2.0])));
@@ -225,7 +225,7 @@ fn type_layer_menu_targets_the_type_under_the_pointer() {
 /// Two selected type layers: the one right-clicked becomes active, and the selection stays.
 #[test]
 fn type_layer_menu_in_a_multiselection_acts_on_the_clicked_type() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.ui.tool = Tool::Type;
     let top = app.run("type.create", json!({"text": "Top", "size": 30, "x": 10, "y": 40})).unwrap()["layer"].as_u64().unwrap();
@@ -426,7 +426,7 @@ fn selection_menus_follow_photoshop_order() {
     let app = app();
     let items = crate::menus::menu_items(&app);
     for (label, id) in [SELECTION_MENU, NO_SELECTION_MENU, PEN_MENU, TRANSFORM_MENU].into_iter().flatten().flatten() {
-        assert!(items.iter().any(|i| i.id == *id) || photocraft_engine::commands::find(id).is_some(), "{label}: unknown command {id}");
+        assert!(items.iter().any(|i| i.id == *id) || lienzo_engine::commands::find(id).is_some(), "{label}: unknown command {id}");
     }
 }
 
@@ -518,13 +518,13 @@ fn view_menu_follows_photoshop_order() {
     }
 }
 
-fn zoom_app(w: u32, h: u32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn zoom_app(w: u32, h: u32) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": w, "height": h})).unwrap();
     app
 }
 
-fn screen_of(app: &PhotocraftApp, doc: [f32; 2]) -> Pos2 {
+fn screen_of(app: &LienzoApp, doc: [f32; 2]) -> Pos2 {
     crate::canvas::ViewXform::active(app).unwrap().to_screen(doc[0], doc[1])
 }
 
@@ -553,14 +553,14 @@ fn zoom_and_hand_right_click_opens_the_view_menu() {
 /// A zoom harness with a fixed camera: zoom 1.0 centred on the 400×300 document. `animated` is
 /// Preferences › General › Animated Zoom; each step is 0.1 s of egui time, so a hold can pass
 /// `zoom_hold::DELAY` within a few steps.
-fn zoom_harness(animated: bool) -> Harness<'static, PhotocraftApp> {
+fn zoom_harness(animated: bool) -> Harness<'static, LienzoApp> {
     let mut app = zoom_app(400, 300);
     app.ui.tool = Tool::Zoom;
     app.run("prefs.set", json!({"values": {"general.animatedZoom": animated, "tools.zoomClickedPointToCenter": false, "tools.overscroll": true}})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_step_dt(0.1).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -568,7 +568,7 @@ fn zoom_harness(animated: bool) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     let view = &mut h.state_mut().ui.views[0];
     view.zoom = 1.0;
@@ -581,7 +581,7 @@ fn zoom_harness(animated: bool) -> Harness<'static, PhotocraftApp> {
 
 /// The menu opens at `[300, 100]` (doc points); this press lands 250 doc px to its left: outside
 /// the 200 px-wide menu, on the canvas.
-fn dismissal_point(h: &Harness<'static, PhotocraftApp>) -> Pos2 {
+fn dismissal_point(h: &Harness<'static, LienzoApp>) -> Pos2 {
     screen_of(h.state(), [50.0, 250.0])
 }
 
@@ -648,7 +648,7 @@ fn a_held_menu_dismissal_press_never_arms_the_zoom_hold() {
 /// pans read `response.dragged()` directly, so they need the gate up front.
 #[test]
 fn a_held_menu_dismissal_press_cannot_pan_the_view() {
-    fn key(h: &mut Harness<'static, PhotocraftApp>, k: egui::Key, pressed: bool) {
+    fn key(h: &mut Harness<'static, LienzoApp>, k: egui::Key, pressed: bool) {
         h.event(egui::Event::Key { key: k, physical_key: None, pressed, repeat: false, modifiers: Modifiers::NONE });
         h.run_steps(1);
     }
@@ -785,7 +785,7 @@ fn view_menu_fits_fills_and_sets_fixed_zooms() {
     let p = screen_of(h.state(), [200.0, 150.0]);
     let area = crate::rulers::content_rect(h.state(), h.state().last_canvas_rect).size();
     let ppp = h.state().canvas_ppp();
-    let pick = |h: &mut Harness<'static, PhotocraftApp>, label: &str| {
+    let pick = |h: &mut Harness<'static, LienzoApp>, label: &str| {
         right_click(h, p, Modifiers::NONE);
         h.get_by_label(label).click();
         h.run_steps(3);
@@ -814,7 +814,7 @@ fn view_menu_needs_finite_points_and_a_view_tool() {
     choose(&mut app, &Context::default(), "select.all");
     assert_eq!(app.session.journal.len(), before, "the view menu cannot run another menu's row");
     // With no document every row is greyed out and choosing one does nothing.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert!(open_view(&mut app, &Context::default(), Tool::Hand, [1.0, 1.0], [1.0, 1.0]));
     let menu = app.ui.canvas_tool_menu.clone().unwrap();
     for (_, id) in VIEW_MENU.iter().flatten() {
@@ -1054,7 +1054,7 @@ fn pen_menu_saved_path_clipping_and_numeric_transform() {
 /// A document with the Pen tool picked and a Work Path. Every route to the Stroke Path dialog (the
 /// Pen canvas menu, the Paths panel context menu, Alt-click on its Stroke button) ends in the same
 /// `pen_dialog`, so driving the menu route covers the other two.
-fn stroke_app() -> PhotocraftApp {
+fn stroke_app() -> LienzoApp {
     let mut app = app();
     app.ui.tool = Tool::Pen;
     work_path(&mut app);
@@ -1063,7 +1063,7 @@ fn stroke_app() -> PhotocraftApp {
 }
 
 /// Open the Stroke Path dialog through the Pen canvas menu and return its id.
-fn open_stroke(app: &mut PhotocraftApp) -> u64 {
+fn open_stroke(app: &mut LienzoApp) -> u64 {
     choose_open(app, "path.stroke");
     let d = app.ui.dialogs.last().expect("Stroke Path… opens a dialog");
     assert_eq!(d.fields.get("__command").and_then(Value::as_str), Some("path.stroke"));
@@ -1075,7 +1075,7 @@ fn open_stroke(app: &mut PhotocraftApp) -> u64 {
 /// The spec body draws a missing field as the schema default (off), so `None` and `Some(false)` look
 /// the same on screen; asserting a seeded `Some(bool)` pins the defensive read, which must never
 /// trust a saved value into a non-bool.
-fn pressure_on_open(app: &mut PhotocraftApp) -> Option<bool> {
+fn pressure_on_open(app: &mut LienzoApp) -> Option<bool> {
     let id = open_stroke(app);
     let on = app.ui.dialog_mut(id).unwrap().fields.get("simulatePressure").and_then(Value::as_bool);
     app.ui.close_dialog(id);
@@ -1083,7 +1083,7 @@ fn pressure_on_open(app: &mut PhotocraftApp) -> Option<bool> {
 }
 
 /// Tick or untick Simulate Pressure in the open dialog.
-fn set_pressure(app: &mut PhotocraftApp, id: u64, on: bool) {
+fn set_pressure(app: &mut LienzoApp, id: u64, on: bool) {
     app.ui.dialog_mut(id).unwrap().fields.insert("simulatePressure".into(), json!(on));
 }
 
@@ -1237,7 +1237,7 @@ fn unfinished_shape_path_disables_actions_that_would_target_the_previous_layer()
 
 /// A 32 × 32 document with the Crop tool picked (Classic Mode, so the view stays put) and its
 /// untouched default frame.
-fn crop_app() -> PhotocraftApp {
+fn crop_app() -> LienzoApp {
     let mut app = app();
     app.ui.tool = Tool::Crop;
     app.ui.tool_options.crop_shield.classic_mode = true;
@@ -1247,7 +1247,7 @@ fn crop_app() -> PhotocraftApp {
 }
 
 /// Draws a crop frame from (4, 4) to (28, 28): a pending crop. Returns the frame.
-fn draw_crop(app: &mut PhotocraftApp) -> [f64; 4] {
+fn draw_crop(app: &mut LienzoApp) -> [f64; 4] {
     use crate::canvas::{ToolEvent, tool_event};
     tool_event(app, ToolEvent::Down { x: 4.0, y: 4.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Move { x: 16.0, y: 16.0, pressure: 1.0 }, Modifiers::NONE);
@@ -1332,10 +1332,10 @@ fn untouched_crop_frame_has_no_menu_and_a_pending_one_wins_over_the_pasteboard()
 }
 
 /// A harness in the app's order: shortcuts (the crop's Esc and ↵ among them), then the canvas.
-fn shortcut_harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn shortcut_harness(mut app: LienzoApp) -> Harness<'static, LienzoApp> {
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -1345,7 +1345,7 @@ fn shortcut_harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     h
 }
@@ -1487,7 +1487,7 @@ fn crop_menu_rows_act_like_the_options_bar() {
     draw_crop(&mut app);
     // Space's Hand held over the Crop tool keeps its own right-click.
     assert!(!open_crop(&mut app, &ctx, Tool::Hand, [10.0, 10.0]));
-    let reopen = |app: &mut PhotocraftApp| {
+    let reopen = |app: &mut LienzoApp| {
         assert!(open_crop(app, &Context::default(), Tool::Crop, [10.0, 10.0]));
         app.ui.canvas_tool_menu.clone().unwrap()
     };

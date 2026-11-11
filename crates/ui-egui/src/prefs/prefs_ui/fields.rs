@@ -2,12 +2,12 @@ use super::appearance::{AppearanceRows, appearance_rows, system_theme};
 use super::dialogs::{mismatch_body, presets_body, presets_io_body, settings_height};
 use super::graphics::{gpu_memory_lines, gpu_status_rows, memory_usage_row, read_at_launch, rendering_mode_row};
 use super::shortcuts::shortcuts_body;
-use super::{Color32, Map, PhotocraftApp, RichText, SECTIONS, Sense, Tokens, Value, json, prefs, vec2};
+use super::{Color32, LienzoApp, Map, RichText, SECTIONS, Sense, Tokens, Value, json, prefs, vec2};
 
 // ------------------------------------------------------------------ bodies
 
 /// Render one of our dialogs' bodies.
-pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     match f.get("__prefsui").and_then(Value::as_str).unwrap_or("") {
         "prefs" => {
             let mut info = app.perf.gpu_info.lines();
@@ -506,7 +506,7 @@ fn field_rows(ui: &mut egui::Ui, section: &str, obj: &mut Map<String, Value>, ke
                 let c = prefs::parse_hex(s).unwrap_or([128, 128, 128]);
                 let mut rgb = c;
                 ui.horizontal(|ui| {
-                    // PhotoCraft's Color Picker, as everywhere else (#2144).
+                    // Lienzo's Color Picker, as everywhere else (#2144).
                     if crate::widgets::color_swatch_button(ui, egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2]), &label).clicked() {
                         ui.ctx().data_mut(|d| d.insert_temp(egui::Id::unique(PICK_ID), (path.clone(), label.clone())));
                     }
@@ -563,7 +563,7 @@ fn field_rows(ui: &mut egui::Ui, section: &str, obj: &mut Map<String, Value>, ke
                     if ui.small_button(tl!("Add disk")).clicked() {
                         items.push(json!({"enabled": true, "path": ""}));
                     }
-                    let scratch = photocraft_raster::spill::stats();
+                    let scratch = lienzo_raster::spill::stats();
                     if scratch.free_space_unmeasured {
                         let dir = scratch.dir.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| tl!("Unknown").into());
                         let warning = crate::i18n::fmt(

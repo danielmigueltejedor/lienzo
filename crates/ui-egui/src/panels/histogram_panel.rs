@@ -10,13 +10,13 @@
 use std::sync::Arc;
 
 use egui::{Color32, Rect, Sense, pos2, vec2};
-use photocraft_color::ColorMode;
-use photocraft_doc::adjust::ToneSpace;
-use photocraft_doc::{DocId, Document, LayerContent};
+use lienzo_color::ColorMode;
+use lienzo_doc::adjust::ToneSpace;
+use lienzo_doc::{DocId, Document, LayerContent};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 use crate::tone::{self, HistSource, Histograms};
 
@@ -99,7 +99,7 @@ impl Default for HistogramPanelState {
 }
 
 /// Saves the panel options with the preferences.
-pub fn persist_options(app: &mut PhotocraftApp) {
+pub fn persist_options(app: &mut LienzoApp) {
     if let Ok(value) = serde_json::to_value(app.ui.histogram_panel) {
         app.session.prefs.edit(|p| {
             p.dialogs.insert(OPTIONS_PREF.into(), value);
@@ -108,7 +108,7 @@ pub fn persist_options(app: &mut PhotocraftApp) {
 }
 
 /// Restores the saved panel options; unreadable ones keep the defaults.
-pub fn restore_options(app: &mut PhotocraftApp) {
+pub fn restore_options(app: &mut LienzoApp) {
     if let Some(v) = app.session.prefs().dialogs.get(OPTIONS_PREF)
         && let Ok(state) = serde_json::from_value(v.clone())
     {
@@ -144,7 +144,7 @@ fn gray(mode: ColorMode) -> bool {
 
 /// The space the panel counts a document of `mode` in.
 pub fn tone_space(mode: ColorMode) -> ToneSpace {
-    photocraft_engine::adjust_params::default_space(mode)
+    lienzo_engine::adjust_params::default_space(mode)
 }
 
 /// `want`, or the composite when a document of `mode` doesn't have it.
@@ -218,7 +218,7 @@ pub fn channel_level(mode: ColorMode, channel: HistChannel, rgba: [f32; 4]) -> u
         (ToneSpace::Rgb, Blue) => q(rgb[2]),
         (ToneSpace::Rgb, _) => ((u16::from(q(rgb[0])) + u16::from(q(rgb[1])) + u16::from(q(rgb[2]))) / 3) as u8,
         (ToneSpace::Cmyk, c) => {
-            let ink = photocraft_color::convert::rgb_to_cmyk(rgb);
+            let ink = lienzo_color::convert::rgb_to_cmyk(rgb);
             let v = match c {
                 Cyan => ink[0],
                 Magenta => ink[1],
@@ -229,7 +229,7 @@ pub fn channel_level(mode: ColorMode, channel: HistChannel, rgba: [f32; 4]) -> u
             q(1.0 - v)
         }
         (ToneSpace::Lab, c) => {
-            let l = photocraft_color::convert::srgb_to_lab(rgb);
+            let l = lienzo_color::convert::srgb_to_lab(rgb);
             match c {
                 A => q((l[1] + 128.0) / 255.0),
                 B => q((l[2] + 128.0) / 255.0),
@@ -318,7 +318,7 @@ pub(crate) type HistJob = (HistKey, std::sync::mpsc::Receiver<(HistKey, f64, Arc
 /// The source the panel counts for `choice` in `st`: Entire Image whenever the choice doesn't
 /// apply (a single layer, no selected layer, or Adjustment Composite without an adjustment layer
 /// selected).
-pub fn resolve_source(st: &photocraft_engine::DocState, choice: HistSourceChoice) -> (HistSourceChoice, HistSource) {
+pub fn resolve_source(st: &lienzo_engine::DocState, choice: HistSourceChoice) -> (HistSourceChoice, HistSource) {
     if st.doc.layer_count() < 2 {
         return (HistSourceChoice::EntireImage, tone::IMAGE);
     }
@@ -331,12 +331,12 @@ pub fn resolve_source(st: &photocraft_engine::DocState, choice: HistSourceChoice
 }
 
 /// Whether Adjustment Composite applies to `st` (an adjustment layer is selected).
-fn adjustment_selected(st: &photocraft_engine::DocState) -> bool {
+fn adjustment_selected(st: &lienzo_engine::DocState) -> bool {
     st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| matches!(l.content, LayerContent::Adjustment(_)))
 }
 
 /// Preferences › Performance › Cache Levels: the highest level the panel counts at by default.
-fn max_cache_level(app: &PhotocraftApp) -> u32 {
+fn max_cache_level(app: &LienzoApp) -> u32 {
     app.session.prefs().performance.cache_levels.clamp(1, tone::MAX_CACHE_LEVEL)
 }
 
@@ -346,7 +346,7 @@ fn source_choice(opts: &HistogramPanelState) -> HistSourceChoice {
 }
 
 /// The key of the document's histogram the panel wants now, with the space and source it counts.
-fn committed_key(app: &PhotocraftApp) -> Option<(HistKey, ToneSpace, HistSource)> {
+fn committed_key(app: &LienzoApp) -> Option<(HistKey, ToneSpace, HistSource)> {
     let st = app.session.active()?;
     let (doc, revision) = (st.doc.id, st.revision);
     let space = tone_space(st.doc.mode);
@@ -357,7 +357,7 @@ fn committed_key(app: &PhotocraftApp) -> Option<(HistKey, ToneSpace, HistSource)
 
 /// The document an open adjustment previews on the canvas (an Image › Adjustments dialog through
 /// its preview layer, or an adjustment layer's Properties drag) and its display key.
-fn adjustment_preview(app: &mut PhotocraftApp) -> Option<(Arc<Document>, u64)> {
+fn adjustment_preview(app: &mut LienzoApp) -> Option<(Arc<Document>, u64)> {
     let idx = app.session.active_index()?;
     if let Some(shown) = crate::adjust_preview::display_doc(app, idx) {
         return Some(shown);
@@ -376,7 +376,7 @@ struct Want {
     source: HistSource,
 }
 
-fn want(app: &mut PhotocraftApp) -> Option<Want> {
+fn want(app: &mut LienzoApp) -> Option<Want> {
     let preview = adjustment_preview(app);
     let (committed, space, source) = committed_key(app)?;
     let preview = preview.map(|(d, k)| (d, HistKey { preview: k | 1, ..committed }));
@@ -386,7 +386,7 @@ fn want(app: &mut PhotocraftApp) -> Option<Want> {
 /// Brings the panel's histograms up to date as far as one frame should: lands a finished count,
 /// keeps entries a view-only revision didn't invalidate, and starts the next count (at most one at
 /// a time, at most every 250 ms per entry). `ctx` repaints when a worker delivers.
-pub fn update(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn update(app: &mut LienzoApp, ctx: &egui::Context) {
     // A finished worker lands its histogram in the slot its key names. A worker that died
     // without sending clears the job so the next frame schedules a new one.
     if let Some((_, rx)) = &app.hist_job {
@@ -458,7 +458,7 @@ pub fn update(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Counts `doc` for `key` on a worker thread (inline on the web, where there are none, or when a
 /// spawn fails), delivered through `app.hist_job`.
-fn spawn(app: &mut PhotocraftApp, ctx: &egui::Context, doc: Arc<Document>, key: HistKey, source: HistSource, space: ToneSpace) {
+fn spawn(app: &mut LienzoApp, ctx: &egui::Context, doc: Arc<Document>, key: HistKey, source: HistSource, space: ToneSpace) {
     let (tx, rx) = std::sync::mpsc::channel();
     #[cfg(not(target_arch = "wasm32"))]
     let spawned = {
@@ -489,7 +489,7 @@ fn spawn(app: &mut PhotocraftApp, ctx: &egui::Context, doc: Arc<Document>, key: 
 }
 
 /// Uncached Refresh: recount the active document's current state at cache level 1 (every pixel).
-pub fn uncached_refresh(app: &mut PhotocraftApp) {
+pub fn uncached_refresh(app: &mut LienzoApp) {
     if let Some(st) = app.session.active() {
         app.hist_uncached = Some((st.doc.id, st.revision));
     }
@@ -506,7 +506,7 @@ struct Shown {
     adjustment: bool,
 }
 
-fn shown(app: &mut PhotocraftApp) -> Option<Shown> {
+fn shown(app: &mut LienzoApp) -> Option<Shown> {
     let want = want(app)?;
     let st = app.session.active()?;
     let (mode, layers, adjustment) = (st.doc.mode, st.doc.layer_count(), adjustment_selected(st));
@@ -634,7 +634,7 @@ fn draw_channel(p: &egui::Painter, r: Rect, h: &Histograms, mode: ColorMode, cha
 
 /// The histogram graph with its marks and pointer interaction. Returns the levels under the
 /// pointer (hover) for the statistics.
-fn graph(app: &mut PhotocraftApp, ui: &mut egui::Ui, s: &Shown, channel: HistChannel, colored: bool, height: f32) -> Option<u8> {
+fn graph(app: &mut LienzoApp, ui: &mut egui::Ui, s: &Shown, channel: HistChannel, colored: bool, height: f32) -> Option<u8> {
     let t = Tokens::get(ui.ctx());
     let w = ui.available_width();
     let (r, resp) = ui.allocate_exact_size(vec2(w, height), Sense::click_and_drag());
@@ -733,7 +733,7 @@ fn statistics(ui: &mut egui::Ui, h: &Histograms, mode: ColorMode, channel: HistC
 }
 
 /// Histogram panel (Window › Histogram).
-pub fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn show(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     if app.session.active().is_none() {
         ui.label(egui::RichText::new(tl!("No document")).color(t.text_faint));
@@ -807,7 +807,7 @@ pub fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// The Histogram items of the panel menu.
-pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     if ui.add_enabled(app.session.active().is_some(), egui::Button::new(tl!("Uncached Refresh"))).clicked() {
         uncached_refresh(app);
         ui.close();
@@ -840,7 +840,7 @@ pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// The panel's state for `ui.inspect` (`histogram`): its options as they apply to the active
 /// document, and the shown histogram's statistics for the selected range.
-pub fn inspect(app: &PhotocraftApp) -> Value {
+pub fn inspect(app: &LienzoApp) -> Value {
     let opts = app.ui.histogram_panel;
     let Some(st) = app.session.active() else { return json!({"options": opts}) };
     let mode = st.doc.mode;

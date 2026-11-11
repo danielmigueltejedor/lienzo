@@ -1,14 +1,14 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Layer};
-use photocraft_geom::{Size, TileCoord};
-use photocraft_raster::spill;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Document, Layer};
+use lienzo_geom::{Size, TileCoord};
+use lienzo_raster::spill;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[test]
 fn retry_after_failed_hashing_never_reuses_placeholder_hashes() {
-    let dir = std::env::temp_dir().join(format!("photocraft-format-scratch-retry-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lienzo-format-scratch-retry-{}", std::process::id()));
     spill::configure(Some(&dir), 1).unwrap();
     let mut doc = Document::new("Retry", Size::new(512, 256), ColorMode::Rgb, SampleType::U8);
     let mut layer = Layer::raster("Pixels", PixelFormat::RGBA8);
@@ -29,7 +29,7 @@ fn retry_after_failed_hashing_never_reuses_placeholder_hashes() {
     file.write_all(&vec![0; good.len()]).unwrap();
     file.sync_all().unwrap();
 
-    let mut writer = photocraft_format::PcraftWriter::new();
+    let mut writer = lienzo_format::PcraftWriter::new();
     // This save discovers the failure itself, after entering the hash collection stage.
     assert!(writer.save_zip(&doc, &Default::default()).is_err());
     file.seek(SeekFrom::Start(0)).unwrap();
@@ -40,7 +40,7 @@ fn retry_after_failed_hashing_never_reuses_placeholder_hashes() {
     }
     assert!(spill::check_integrity().is_ok());
     let (saved, _) = writer.save_zip(&doc, &Default::default()).unwrap();
-    let loaded = photocraft_format::load_from_bytes(&saved).unwrap();
+    let loaded = lienzo_format::load_from_bytes(&saved).unwrap();
     assert_eq!(loaded.layers, doc.layers);
     drop((doc, loaded, writer, file));
     spill::configure(None, 0).unwrap();

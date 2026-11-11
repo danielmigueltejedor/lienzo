@@ -1,302 +1,302 @@
 {
-  "id": "photocraft",
-  "name": "PhotoCraft",
-  "upgradeCode": "D9660F32-2D0A-4ABE-B73D-17BE25F1542C",
+  "id": "lienzo",
+  "name": "Lienzo",
+  "upgradeCode": "9FCCBAB3-88D1-42AD-936C-04ABB215AE82",
   "sources": [
-    "photocraft.wxs"
+    "lienzo.wxs"
   ],
-  "icon": "assets/app-icon/photocraft.ico",
+  "icon": "assets/app-icon/lienzo.ico",
   "localization": [
-    "photocraft.en-us.wxl"
+    "lienzo.en-us.wxl"
   ],
   "extensions": [
     "UI",
     "Util"
   ],
   "payloads": [
-    "photocraft-cli.exe",
-    "photocraft.exe"
+    "lienzo-cli.exe",
+    "lienzo.exe"
   ],
   "registry": [
     [
       "-1",
-      "Software\\Classes\\Photocraft.PhotoshopDocument\\shell\\open\\command",
+      "Software\\Classes\\Lienzo.PhotoshopDocument\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#LienzoExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\Photocraft.Image\\shell\\open\\command",
+      "Software\\Classes\\Lienzo.Image\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#LienzoExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.psd\\OpenWithProgids",
-      "Photocraft.PhotoshopDocument",
+      "Lienzo.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.psb\\OpenWithProgids",
-      "Photocraft.PhotoshopDocument",
+      "Lienzo.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.pdn\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ora\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.kra\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.krz\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.png\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpg\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpeg\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tiff\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.webp\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.gif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.bmp\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tga\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.exr\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.hdr\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.avif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.qoi\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ico\\OpenWithProgids",
-      "Photocraft.Image",
+      "Lienzo.Image",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe",
+      "Software\\Classes\\Applications\\lienzo.exe",
       "FriendlyAppName",
-      "PhotoCraft"
+      "Lienzo"
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\shell\\open\\command",
+      "Software\\Classes\\Applications\\lienzo.exe\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#LienzoExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".pcraft",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".psd",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".psb",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".pdn",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".ora",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".kra",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".krz",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".png",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".jpg",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".jpeg",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".tif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".tiff",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".webp",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".gif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".bmp",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".tga",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".exr",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".hdr",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".avif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".qoi",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".ico",
       ""
     ],
     [
       "-1",
-      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\photocraft.exe",
+      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\lienzo.exe",
       "",
-      "[#PhotocraftExe]"
+      "[#LienzoExe]"
     ],
     [
       "-1",
-      "Software\\PhotoCraft",
+      "Software\\Lienzo",
       "InstallDir",
       "[INSTALLFOLDER]"
     ]

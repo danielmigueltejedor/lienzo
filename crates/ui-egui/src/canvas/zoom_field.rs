@@ -513,7 +513,7 @@ pub(crate) fn track_pasteboard(ctx: &Context, pressed: bool) {
 
 /// Once per frame, before the panels: shows a requested "Invalid numeric entry" message, plays a
 /// requested alert and follows a press on the pasteboard.
-pub fn tick(app: &mut crate::PhotocraftApp, ctx: &Context) {
+pub fn tick(app: &mut crate::LienzoApp, ctx: &Context) {
     if let Some(range) = ctx.data_mut(|d| d.remove_temp::<(f32, f32)>(invalid_entry_id())) {
         let message = invalid_entry_message(range);
         // One commit can be read in more than one pass of a frame: one message, not a stack of them.
@@ -552,7 +552,7 @@ fn on_menu_bar(ctx: &Context, pos: egui::Pos2) -> bool {
 }
 
 /// Is screen point `pos` on the main canvas, outside the image, and not under a window or menu?
-fn on_pasteboard(app: &crate::PhotocraftApp, ctx: &Context, pos: egui::Pos2) -> bool {
+fn on_pasteboard(app: &crate::LienzoApp, ctx: &Context, pos: egui::Pos2) -> bool {
     let (Some(xf), Some(st)) = (crate::canvas::ViewXform::active(app), app.session.active()) else { return false };
     let doc = xf.to_doc(pos);
     let (w, h) = (f64::from(st.doc.size.width), f64::from(st.doc.size.height));

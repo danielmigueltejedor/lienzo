@@ -1,4 +1,4 @@
-//! # photocraft-format
+//! # lienzo-format
 //!
 //! The native, lossless `.pcraft` document bundle (architecture §9).
 //!
@@ -22,7 +22,7 @@
 //! processes) saving one bundle take turns instead of removing each other's objects.
 //!
 //! This crate sits at L3 next to the compositor, so it does not render.
-//! Callers pass previews in [`SaveOptions`]; `photocraft-io` does that.
+//! Callers pass previews in [`SaveOptions`]; `lienzo-io` does that.
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
@@ -38,8 +38,8 @@ pub mod zip;
 
 use std::path::Path;
 
-use photocraft_doc::Document;
-use photocraft_raster::Rgba8Image;
+use lienzo_doc::Document;
+use lienzo_raster::Rgba8Image;
 
 pub use atomic::{atomic_write, atomic_write_progress, atomic_write_stream, atomic_write_stream_progress};
 #[cfg(not(target_arch = "wasm32"))]

@@ -14,10 +14,10 @@
 
 use std::time::Instant;
 
-use photocraft_color::{BlendMode, Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, Size};
-use photocraft_geom::Rect;
-use photocraft_gpu::{Compositor, DeviceHealth, GpuTiming, timing};
+use lienzo_color::{BlendMode, Color, ColorMode, SampleType};
+use lienzo_doc::{Document, Layer, Size};
+use lienzo_geom::Rect;
+use lienzo_gpu::{Compositor, DeviceHealth, GpuTiming, timing};
 
 /// Pixels in `r`, as the compositor counts them.
 fn area(r: Rect) -> u64 {

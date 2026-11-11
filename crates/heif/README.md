@@ -1,14 +1,14 @@
-# photocraft-heif
+# lienzo-heif
 
-The optional HEIF/HEIC decoder of PhotoCraft: iPhone and Mac photos. A thin, panic-guarded wrapper
+The optional HEIF/HEIC decoder of Lienzo: iPhone and Mac photos. A thin, panic-guarded wrapper
 around [`heic-rs`](https://github.com/tbraun96/heic-rs), a pure-Rust HEVC still-picture decoder
 (no `unsafe`, MIT OR Apache-2.0): single pictures and grid-tiled photos, 8- and 10-bit (10-bit
 decodes to 16-bit), alpha auxiliary images, the container's rotation/mirror/crop, ICC, EXIF and XMP.
 Read-only: writing would need an HEVC encoder.
 
 ```rust
-let info = photocraft_heif::probe(&bytes)?;             // size, depth, alpha: check limits first
-let img = photocraft_heif::decode(&bytes, &photocraft_heif::Options::default())?;
+let info = lienzo_heif::probe(&bytes)?;             // size, depth, alpha: check limits first
+let img = lienzo_heif::decode(&bytes, &lienzo_heif::Options::default())?;
 // img.width, img.height, img.has_alpha, img.sixteen_bit, img.data (RGB/RGBA), img.icc, img.exif, img.xmp
 ```
 
@@ -22,13 +22,13 @@ inside it (fuzzing found two in 0.1.1) becomes `Error::Malformed`.
   (`=0.1.1`); moving the pin is a reviewed change (re-run `cargo fuzz run decode_heif` in
   `crates/codecs` and `cargo xtask test-corpus`).
 - **HEVC patents are a distributor's call.** HEVC is patent-encumbered in some jurisdictions, so
-  whether a build includes an HEVC decoder is a build-time choice. `photocraft-codecs` uses this
+  whether a build includes an HEVC decoder is a build-time choice. `lienzo-codecs` uses this
   crate only behind its non-default `heif` feature; the apps forward it
-  (`cargo build -p photocraft --features heif`). Official PhotoCraft builds and CI enable it.
+  (`cargo build -p lienzo --features heif`). Official Lienzo builds and CI enable it.
   Without it, HEIC files are still recognised and opening one is a clear "HEIC/HEIF support isn't
   included in this build" error.
 
-The crate depends on no other PhotoCraft crate and knows nothing of `photocraft-codecs`' types;
+The crate depends on no other Lienzo crate and knows nothing of `lienzo-codecs`' types;
 `codecs` → `heif` is the one allowed dependency between standalone crates (`cargo xtask layers`).
-Tests on real files live in `photocraft-codecs` (`tests/it/heif.rs`, features `corpus,heif`, files
+Tests on real files live in `lienzo-codecs` (`tests/it/heif.rs`, features `corpus,heif`, files
 fetched by `cargo xtask corpus --heif`).

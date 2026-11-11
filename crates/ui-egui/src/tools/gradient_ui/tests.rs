@@ -1,7 +1,7 @@
 use super::*;
 
-fn app_with_gradient(style: &str) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_gradient(style: &str) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
     app.ui.tool = Tool::Gradient;
     app.ui.tool_options.gradient_style = style.into();
@@ -12,20 +12,20 @@ fn mods() -> egui::Modifiers {
     egui::Modifiers::NONE
 }
 
-fn drag(app: &mut PhotocraftApp, a: [f64; 2], b: [f64; 2]) {
+fn drag(app: &mut LienzoApp, a: [f64; 2], b: [f64; 2]) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: a[0], y: a[1], pressure: 1.0 }, mods());
     crate::canvas::tool_event(app, ToolEvent::Move { x: (a[0] + b[0]) / 2.0, y: (a[1] + b[1]) / 2.0, pressure: 1.0 }, mods());
     crate::canvas::tool_event(app, ToolEvent::Move { x: b[0], y: b[1], pressure: 1.0 }, mods());
     crate::canvas::tool_event(app, ToolEvent::Up { x: b[0], y: b[1] }, mods());
 }
 
-fn get(app: &mut PhotocraftApp) -> Value {
+fn get(app: &mut LienzoApp) -> Value {
     app.run(cmds::GET, json!({})).unwrap()
 }
 
 #[test]
 fn thumbnails_show_the_gradient() {
-    use photocraft_color::Color;
+    use lienzo_color::Color;
     // Black to white, left to right: the left edge is dark, the right light, top = bottom.
     let f = Fill::gradient(vec![(0.0, Color::BLACK), (1.0, Color::WHITE)], 0.0, 1.0, GradientStyle::Linear, false);
     let img = thumbnail_image(&f).unwrap();
@@ -54,7 +54,7 @@ fn options_bar_swatch_opens_the_editor_and_reaches_the_gradients_panel() {
     use egui_kittest::{Harness, kittest::Queryable};
     let app = app_with_gradient("linear");
     let mut h = Harness::builder().with_size(vec2(440.0, 560.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if preset_swatch(app, ui) {
                 app.ui.panels.gradient_editor = true;
             }
@@ -63,7 +63,7 @@ fn options_bar_swatch_opens_the_editor_and_reaches_the_gradients_panel() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(2);
     // The swatch opens the Gradient Editor window (Photoshop's behaviour), not a popup.
     h.get_by_label("Gradient picker").click();
@@ -146,7 +146,7 @@ fn classic_mode_paints_pixels() {
 fn classic_drag_preserves_preset_transparency_at_all_depths() {
     for depth in [8, 16, 32] {
         for reverse in [false, true] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 200, "height": 120, "depth": depth, "background": "transparent"})).unwrap();
             app.ui.tool = Tool::Gradient;
             app.ui.tool_options.gradient_classic = true;
@@ -203,7 +203,7 @@ fn sidebar_transparent_preset_reaches_classic_canvas_over_existing_art() {
 
 #[test]
 fn gradient_blend_mode_reaches_classic_drags_not_the_live_fill_layer() {
-    use photocraft_color::BlendMode;
+    use lienzo_color::BlendMode;
     for mode in [BlendMode::Difference, BlendMode::Multiply, BlendMode::Screen, BlendMode::Exclusion] {
         let mut live = app_with_gradient("linear");
         live.ui.tool_options.gradient_blend_mode = mode;
@@ -256,14 +256,14 @@ fn the_options_bar_swatch_opens_the_gradient_editor_in_both_modes() {
         let mut app = app_with_gradient("linear");
         app.ui.tool_options.gradient_classic = classic;
         let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 crate::panels::options_bar(app, ui);
                 let ctx = ui.ctx().clone();
                 editor_window(app, &ctx);
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         h.run_steps(4);
         assert!(!h.state().ui.panels.gradient_editor, "classic={classic}: starts closed");
         h.get_by_label("Gradient picker").click();
@@ -278,15 +278,15 @@ fn the_options_bar_swatch_opens_the_gradient_editor_in_both_modes() {
 #[test]
 fn the_editor_window_renders_with_and_without_a_gradient_layer() {
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     // `run_ui` hands back a `FullOutput` whose texture deltas the caller has to consume.
-    let run = |app: &mut PhotocraftApp| {
+    let run = |app: &mut LienzoApp| {
         let mut out = ctx.run_ui(egui::RawInput::default(), |ui| editor_window(app, ui.ctx()));
         out.textures_delta.clear();
     };
 
     // Nothing selected.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.panels.gradient_editor = true;
     run(&mut app);
     assert!(app.ui.panels.gradient_editor, "the window stays open");
@@ -316,13 +316,13 @@ fn the_editor_edits_the_current_gradient_without_a_layer() {
     let app = app_with_gradient("linear");
     let before = app.session.presets.gradient.stops.len();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             editor_window(app, &ctx);
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     // Open the window once the fonts are bound (the build's first frame runs without them).
     h.run_steps(2);
     h.state_mut().ui.panels.gradient_editor = true;
@@ -339,15 +339,15 @@ fn the_editor_saves_the_current_gradient_as_a_preset() {
     use egui_kittest::kittest::Queryable;
 
     let app = app_with_gradient("linear");
-    let has_custom = |s: &PhotocraftApp| s.session.presets.gradients.iter().any(|g| g.items.iter().any(|p| p.name == "Custom"));
+    let has_custom = |s: &LienzoApp| s.session.presets.gradients.iter().any(|g| g.items.iter().any(|p| p.name == "Custom"));
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 900.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             editor_window(app, &ctx);
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(2);
     h.state_mut().ui.panels.gradient_editor = true;
     h.run_steps(4);

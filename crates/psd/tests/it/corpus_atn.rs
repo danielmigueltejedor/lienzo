@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use photocraft_psd::atn;
+use lienzo_psd::atn;
 
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
     // An unreadable folder fails the test rather than shrinking the corpus.

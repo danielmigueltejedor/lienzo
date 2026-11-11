@@ -22,8 +22,8 @@ pub(super) fn onion_peel(
     px: &[Px],
     hb: Bounds,
     sources: &[(i32, i32)],
-    ctl: &photocraft_raster::Interrupt,
-) -> Result<(), photocraft_raster::Cancelled> {
+    ctl: &lienzo_raster::Interrupt,
+) -> Result<(), lienzo_raster::Cancelled> {
     const NONE: u32 = u32::MAX;
     let mut known: Vec<bool> = px.iter().map(|k| matches!(k, Px::Known | Px::Source)).collect();
     // Each source centre's place in `sources`, and the source each filled pixel took.

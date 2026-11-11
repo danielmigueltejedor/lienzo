@@ -1,5 +1,5 @@
-use photocraft_doc::adjust::{CurvePoint, HueRange, LevelsChannel, LutFormat, LutSource, ToneSpace, curve_map_outputs};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value, VersionedDescriptor};
+use lienzo_doc::adjust::{CurvePoint, HueRange, LevelsChannel, LutFormat, LutSource, ToneSpace, curve_map_outputs};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value, VersionedDescriptor};
 
 use super::{BW_KEYS, BW_TINT, clamp_i16, cube_file_name, levels_write, lut_source_for, psd_lut_format, put16, q255, rgb_desc};
 
@@ -126,20 +126,20 @@ pub(super) fn color_lookup(name: &str, lut: Option<&[f32]>, size: u32, dither: b
     // A lookup without a usable table (none chosen yet, or a bad size) renders as the
     // identity, so it is written as a 2³ identity cube rather than dropped.
     let n = size as usize;
-    let cube = lut.zip(photocraft_doc::adjust::lut3d_len(size)).and_then(|(table, len)| table.get(..len)).filter(|_| n <= 256);
+    let cube = lut.zip(lienzo_doc::adjust::lut3d_len(size)).and_then(|(table, len)| table.get(..len)).filter(|_| n <= 256);
     // Like Photoshop, embed the LUT file as loaded, in its own format; a table made or
-    // changed in PhotoCraft is written as `.cube`, named to match.
+    // changed in Lienzo is written as `.cube`, named to match.
     let (format, data, name, dither) = match cube {
         Some(cube) => match lut_source_for(source, cube, n) {
             Some(src) => (src.format, src.bytes.to_vec(), name.to_string(), dither),
             None => {
-                let file = photocraft_cms::lutfile::LutFile { title: String::new(), size: n, data: cube.to_vec(), domain_min: [0.0; 3], domain_max: [1.0; 3] };
-                (LutFormat::Cube, photocraft_cms::lutfile::write_cube(&file).into_bytes(), cube_file_name(name), dither)
+                let file = lienzo_cms::lutfile::LutFile { title: String::new(), size: n, data: cube.to_vec(), domain_min: [0.0; 3], domain_max: [1.0; 3] };
+                (LutFormat::Cube, lienzo_cms::lutfile::write_cube(&file).into_bytes(), cube_file_name(name), dither)
             }
         },
         _ => {
-            let file = photocraft_cms::lutfile::LutFile { title: String::new(), ..photocraft_cms::lutfile::LutFile::identity(2) };
-            (LutFormat::Cube, photocraft_cms::lutfile::write_cube(&file).into_bytes(), cube_file_name(name), false)
+            let file = lienzo_cms::lutfile::LutFile { title: String::new(), ..lienzo_cms::lutfile::LutFile::identity(2) };
+            (LutFormat::Cube, lienzo_cms::lutfile::write_cube(&file).into_bytes(), cube_file_name(name), false)
         }
     };
     let en = |t: &str, val: &str| Value::Enumerated { type_id: Id::new(t), value: Id::new(val) };

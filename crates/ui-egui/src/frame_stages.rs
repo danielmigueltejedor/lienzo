@@ -306,13 +306,13 @@ mod tests {
 mod app_tests {
     use serde_json::json;
 
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
 
     /// One frame of `passes` egui passes of `pass_ms` each, through the app's hooks: the raw input
     /// hook starts the record once, and each pass's UI build ends in `finish_frame`. Every pass but
     /// the last asks egui for another, as a sizing pass does. `stroke`: each pass renders stroke
     /// points for 1 ms.
-    fn frame(app: &mut PhotocraftApp, ctx: &egui::Context, passes: usize, pass_ms: u64, stroke: bool) {
+    fn frame(app: &mut LienzoApp, ctx: &egui::Context, passes: usize, pass_ms: u64, stroke: bool) {
         app.perf.stage.start(crate::gpu_canvas::now_ms(), 1);
         ctx.run_ui(egui::RawInput::default(), |ui| {
             let ctx = ui.ctx().clone();
@@ -332,7 +332,7 @@ mod app_tests {
 
     #[test]
     fn two_30_ms_passes_of_one_frame_are_one_60_ms_slow_frame() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
         frame(&mut app, &ctx, 2, 30, false);
         let frames: Vec<_> = app.slow_frames.frames().cloned().collect();
@@ -345,7 +345,7 @@ mod app_tests {
 
     #[test]
     fn the_stroke_trace_gets_one_row_per_frame_not_per_pass() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.stroke_trace.output = crate::stroke_trace::Output::Stderr;
         let ctx = egui::Context::default();
         for _ in 0..3 {
@@ -360,7 +360,7 @@ mod app_tests {
 
     #[test]
     fn a_stroke_live_only_in_a_discarded_pass_still_gets_its_frame_traced() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.stroke_trace.output = crate::stroke_trace::Output::Stderr;
         let ctx = egui::Context::default();
         app.perf.stage.start(crate::gpu_canvas::now_ms(), 1);
@@ -385,12 +385,12 @@ mod app_tests {
     #[test]
     fn an_app_frame_with_a_full_refresh_records_its_stages() {
         let (w, h) = (4000u64, 3000u64);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": w, "height": h, "background": "white"})).unwrap();
         let layer = s.active().and_then(|d| d.active_layer).expect("the background").0;
         let mut harness = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(4).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            PhotocraftApp::new(s, crate::Services::default())
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            LienzoApp::new(s, crate::Services::default())
         });
         harness.run_steps(6);
         // Every frame counts as slow, so the test doesn't depend on the machine's speed.

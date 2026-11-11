@@ -1,7 +1,7 @@
 //! Closed-path regression fixtures use the same four cubic knots as the shape ellipse.
 use super::*;
-use photocraft_doc::Knot;
-use photocraft_geom::Point;
+use lienzo_doc::Knot;
+use lienzo_geom::Point;
 
 fn ellipse() -> Subpath {
     let k = 0.552_284_749_830_793_4;

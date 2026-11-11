@@ -3,36 +3,36 @@
 //! shape path from its endpoint.
 
 use egui::Key;
-use photocraft_doc::vector::PathOp;
-use photocraft_doc::{LayerContent, LayerId, Path};
+use lienzo_doc::vector::PathOp;
+use lienzo_doc::{LayerContent, LayerId, Path};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::direct_select::PathRef;
 use crate::state::Tool;
 use crate::vector_ui::{pen_commit, pen_down, pen_up};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = Tool::Pen;
     app.ui.tool_options.vector_mode = "shape".into();
     app
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn click(app: &mut LienzoApp, x: f64, y: f64) {
     pen_down(app, x, y, false);
     pen_up(app);
 }
 
 /// Clicks a closed square with the Pen, from `(x, y)` with side `side`.
-fn square(app: &mut PhotocraftApp, x: f64, y: f64, side: f64) {
+fn square(app: &mut LienzoApp, x: f64, y: f64, side: f64) {
     for (dx, dy) in [(0.0, 0.0), (side, 0.0), (side, side), (0.0, side), (0.5, 0.5)] {
         click(app, x + dx, y + dy);
     }
 }
 
-fn shape(app: &PhotocraftApp) -> (LayerId, photocraft_doc::ShapeLayer) {
+fn shape(app: &LienzoApp) -> (LayerId, lienzo_doc::ShapeLayer) {
     let st = app.session.active().unwrap();
     let id = st.active_layer.unwrap();
     match &st.doc.layer(id).unwrap().content {
@@ -46,15 +46,15 @@ fn ops(path: &Path) -> Vec<PathOp> {
 }
 
 fn covered(path: &Path, x: i32, y: i32) -> f32 {
-    photocraft_vector::fill_rasterizer(path, photocraft_vector::DEFAULT_TOLERANCE).render(photocraft_geom::Rect::from_xywh(x, y, 1, 1))[0]
+    lienzo_vector::fill_rasterizer(path, lienzo_vector::DEFAULT_TOLERANCE).render(lienzo_geom::Rect::from_xywh(x, y, 1, 1))[0]
 }
 
-fn history(app: &PhotocraftApp) -> usize {
+fn history(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
 /// Feeds one key press through the app's shortcut handling.
-fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: egui::Modifiers) {
+fn key(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: egui::Modifiers) {
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
         ..Default::default()
@@ -119,7 +119,7 @@ fn plus_and_minus_pick_combine_and_subtract() {
     key(&mut app, &ctx, Key::Minus, egui::Modifiers::NONE);
     assert_eq!(app.ui.tool_options.pen_path_op, "subtract");
     // The blend mode is the Move tool's to step.
-    let blend = |app: &PhotocraftApp| app.session.active().unwrap().doc.layer(shape(app).0).unwrap().blend;
+    let blend = |app: &LienzoApp| app.session.active().unwrap().doc.layer(shape(app).0).unwrap().blend;
     let before = blend(&app);
     key(&mut app, &ctx, Key::Equals, egui::Modifiers::SHIFT);
     assert_eq!(blend(&app), before, "the Pen picks Combine, not a blend mode");
@@ -140,7 +140,7 @@ fn path_selection_selects_and_moves_components() {
     square(&mut app, 100.0, 10.0, 40.0);
     square(&mut app, 100.0, 100.0, 40.0);
     app.ui.tool = Tool::PathSelection;
-    let heads = |app: &PhotocraftApp| super::selected(app).map(|(.., h)| h).unwrap_or_default();
+    let heads = |app: &LienzoApp| super::selected(app).map(|(.., h)| h).unwrap_or_default();
     super::press(&mut app, [30.0, 30.0], false);
     super::press(&mut app, [120.0, 120.0], true);
     assert_eq!(heads(&app), [0, 2]);
@@ -241,7 +241,7 @@ fn dragging_a_live_shape_keeps_it_live() {
         let (x0, y0, ..) = sh.path.control_bounds().unwrap();
         assert_eq!((x0.round(), y0.round()), (30.0, 25.0), "{kind}: moved");
         match sh.live {
-            Some(photocraft_doc::vector::LiveShape::Rect { rect, .. } | photocraft_doc::vector::LiveShape::Ellipse { rect }) => {
+            Some(lienzo_doc::vector::LiveShape::Rect { rect, .. } | lienzo_doc::vector::LiveShape::Ellipse { rect }) => {
                 assert_eq!(rect, [30.0, 25.0, 60.0, 40.0], "{kind}")
             }
             other => panic!("{kind}: still live, got {other:?}"),

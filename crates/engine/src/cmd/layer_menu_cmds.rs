@@ -3,11 +3,11 @@
 //! Options / Global Light / Create Layer / Scale Effects, Layer Content Options, and exporting
 //! just the active layer (Quick Export as PNG, Export As).
 
-use photocraft_algo::selection::Region;
-use photocraft_color::{BlendMode, ColorMode};
-use photocraft_doc::{BlendIf, BlendRange, Document, Effect, Effects, Knockout, Layer, LayerContent, LayerId, LayerMask, SmartSource, StackMode};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into, to_rgba};
+use lienzo_algo::selection::Region;
+use lienzo_color::{BlendMode, ColorMode};
+use lienzo_doc::{BlendIf, BlendRange, Document, Effect, Effects, Knockout, Layer, LayerContent, LayerId, LayerMask, SmartSource, StackMode};
+use lienzo_geom::Rect;
+use lienzo_raster::{Surface, from_rgba_into, to_rgba};
 use serde_json::{Value, json};
 
 use crate::commands::{CommandSpec, layer_param};
@@ -131,14 +131,14 @@ fn apply_mask(s: &mut Session, p: &Value) -> Result<Value> {
         // displays. LayerMask::values_into accounts for density but not feather (#3044).
         let feathered = {
             let layer = doc.layer(id).ok_or(EngineError::NoLayer(id))?;
-            if layer.mask.as_ref().is_some_and(|m| m.enabled && photocraft_compose::masks::feather_sigma(m.feather) > 0.0) {
+            if layer.mask.as_ref().is_some_and(|m| m.enabled && lienzo_compose::masks::feather_sigma(m.feather) > 0.0) {
                 // Do not bake an independent vector mask that remains attached after Apply.
                 let mut mask_only = layer.clone();
                 mask_only.vector_mask = None;
                 // Cover off-canvas pixels too: outside its area the combined mask is only the
                 // mask's default value, which would hide moved-off content (#3043).
                 let area = layer.surface().map_or(doc.bounds(), |surf| doc.bounds().union(&surf.content_bounds()));
-                photocraft_compose::masks::combined_mask(&mask_only, area)
+                lienzo_compose::masks::combined_mask(&mask_only, area)
             } else {
                 None
             }
@@ -224,16 +224,16 @@ fn mask_all_objects(s: &mut Session, p: &Value) -> Result<Value> {
     let layer = doc.layer(id).ok_or(EngineError::NoLayer(id))?;
     let region: Option<Region> = match layer.surface() {
         Some(surf) if matches!(layer.content, LayerContent::Raster(_)) => {
-            photocraft_algo::segment::subject::select_subject(&photocraft_algo::segment::SurfaceSampler(surf), doc.bounds())
+            lienzo_algo::segment::subject::select_subject(&lienzo_algo::segment::SurfaceSampler(surf), doc.bounds())
         }
         _ => {
             struct Composite<'a>(&'a Document);
-            impl photocraft_algo::segment::Sampler for Composite<'_> {
+            impl lienzo_algo::segment::Sampler for Composite<'_> {
                 fn rgba(&self, r: Rect) -> Vec<[f32; 4]> {
-                    photocraft_compose::render(self.0, r).into_px()
+                    lienzo_compose::render(self.0, r).into_px()
                 }
             }
-            photocraft_algo::segment::subject::select_subject(&Composite(&doc), doc.bounds())
+            lienzo_algo::segment::subject::select_subject(&Composite(&doc), doc.bounds())
         }
     };
     let region = region.ok_or_else(|| other("no objects were found"))?;
@@ -259,7 +259,7 @@ pub fn defringe(px: &mut [[f32; 4]], w: usize, h: usize, width: usize) {
     if !outside.iter().any(|o| *o) {
         return;
     }
-    let dist = photocraft_algo::selection::edt(&outside, w, h);
+    let dist = lienzo_algo::selection::edt(&outside, w, h);
     let mut known: Vec<bool> = (0..px.len()).map(|i| !outside[i] && dist[i] > width as f32).collect();
     let mut todo: Vec<usize> = (0..px.len()).filter(|&i| !outside[i] && !known[i]).collect();
     while !todo.is_empty() {
@@ -319,7 +319,7 @@ fn remove_matte(s: &mut Session, white: bool) -> Result<Value> {
 /// Extracts the alpha channel of `surf` within bounds `r` into a GRAY8 surface,
 /// preserving default alpha for unallocated tiles intersecting `r`.
 fn decontamination_alpha(surf: &Surface, r: Rect) -> Surface {
-    let mut alpha = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut alpha = Surface::new(lienzo_color::PixelFormat::GRAY8);
     let default_alpha = to_rgba(&surf.format(), &surf.default_pixel())[3].clamp(0.0, 1.0);
     if default_alpha > 0.0 {
         let shared = alpha.solid_tile(&[default_alpha]);
@@ -372,7 +372,7 @@ fn color_decontaminate(s: &mut Session, p: &Value) -> Result<Value> {
             return Ok(());
         }
         let alpha = decontamination_alpha(surf, r);
-        *surf = photocraft_algo::matting::decontaminate_surface(surf, &alpha, radius, amount);
+        *surf = lienzo_algo::matting::decontaminate_surface(surf, &alpha, radius, amount);
         Ok(())
     })?;
     Ok(Value::Null)
@@ -459,7 +459,7 @@ pub fn reveal_command(path: &str) -> Result<(String, Vec<String>)> {
 }
 
 /// Windows tools run by full path: by bare name, Windows first looks in the app's own folder, so
-/// an `explorer.exe` lying next to a portable PhotoCraft would start instead (#9666).
+/// an `explorer.exe` lying next to a portable Lienzo would start instead (#9666).
 #[cfg(windows)]
 fn system_program(program: &str) -> String {
     windows_root(std::env::var_os("SystemRoot")).join(format!("{program}.exe")).to_string_lossy().into_owned()
@@ -801,15 +801,15 @@ fn transfer_effects(s: &mut Session, p: &Value) -> Result<Value> {
 fn is_below(e: &Effect) -> bool {
     match e {
         Effect::DropShadow(_) | Effect::OuterGlow(_) => true,
-        Effect::Stroke(st) => st.position == photocraft_doc::StrokePosition::Outside,
+        Effect::Stroke(st) => st.position == lienzo_doc::StrokePosition::Outside,
         Effect::BevelEmboss(b) => {
-            matches!(b.style, photocraft_doc::BevelStyle::OuterBevel | photocraft_doc::BevelStyle::Emboss | photocraft_doc::BevelStyle::PillowEmboss)
+            matches!(b.style, lienzo_doc::BevelStyle::OuterBevel | lienzo_doc::BevelStyle::Emboss | lienzo_doc::BevelStyle::PillowEmboss)
         }
         _ => false,
     }
 }
 
-fn effect_common_mut(e: &mut Effect) -> Option<&mut photocraft_doc::FxCommon> {
+fn effect_common_mut(e: &mut Effect) -> Option<&mut lienzo_doc::FxCommon> {
     match e {
         Effect::DropShadow(s) | Effect::InnerShadow(s) => Some(&mut s.common),
         Effect::OuterGlow(g) | Effect::InnerGlow(g) => Some(&mut g.common),
@@ -863,9 +863,9 @@ fn create_layer(s: &mut Session, p: &Value) -> Result<Value> {
             tmp.global_light = light;
             tmp.patterns = doc.patterns.clone();
             tmp.layers = vec![alone];
-            let buf = photocraft_compose::render(&tmp, area);
+            let buf = lienzo_compose::render(&tmp, area);
             let mut surf = Surface::new(fmt);
-            let data: Vec<f32> = buf.px.iter().flat_map(|q| photocraft_raster::from_rgba(&fmt, *q)).collect();
+            let data: Vec<f32> = buf.px.iter().flat_map(|q| lienzo_raster::from_rgba(&fmt, *q)).collect();
             surf.write_region(area, &data);
             surf.prune();
             let mut nl = Layer::new(format!("{}'s {}", l.name, e.label()), LayerContent::Raster(surf));
@@ -931,7 +931,7 @@ pub fn layer_document(doc: &Document, id: LayerId) -> Result<Document> {
     tmp.layers = vec![alone];
     tmp.selection = None;
     let area = doc.bounds();
-    let buf = photocraft_compose::render(&tmp, area);
+    let buf = lienzo_compose::render(&tmp, area);
     let w = area.width() as usize;
     let mut b = Rect::EMPTY;
     for (i, q) in buf.px.iter().enumerate() {
@@ -944,7 +944,7 @@ pub fn layer_document(doc: &Document, id: LayerId) -> Result<Document> {
         return Err(other("the layer is empty"));
     }
     let fmt = doc.pixel_format();
-    let mut out = Document::new(l.name.clone(), photocraft_doc::Size::new(b.width(), b.height()), doc.mode, doc.depth);
+    let mut out = Document::new(l.name.clone(), lienzo_doc::Size::new(b.width(), b.height()), doc.mode, doc.depth);
     out.resolution_dpi = doc.resolution_dpi;
     out.icc_profile = doc.icc_profile.clone();
     let mut surf = Surface::new(fmt);
@@ -952,7 +952,7 @@ pub fn layer_document(doc: &Document, id: LayerId) -> Result<Document> {
         .flat_map(|y| {
             let row = (y - area.y0) as usize * w;
             let px = &buf.px;
-            (b.x0..b.x1).flat_map(move |x| photocraft_raster::from_rgba(&fmt, px[row + (x - area.x0) as usize]))
+            (b.x0..b.x1).flat_map(move |x| lienzo_raster::from_rgba(&fmt, px[row + (x - area.x0) as usize]))
         })
         .collect();
     surf.write_region(Rect::from_xywh(0, 0, b.width(), b.height()), &rows);
@@ -982,7 +982,7 @@ fn export_layer(s: &mut Session, p: &Value, cmd: &str, png_only: bool) -> Result
         tmp.execute("image.imageSize", json!({"width": w, "resample": resample}))?;
         ldoc = (*tmp.active().ok_or(EngineError::NoDocument)?.doc).clone();
     }
-    let out = photocraft_io::export(&ldoc, path, &Default::default()).map_err(|e| other(e.to_string()))?;
+    let out = lienzo_io::export(&ldoc, path, &Default::default()).map_err(|e| other(e.to_string()))?;
     write_file(path, &out.bytes)?;
     Ok(json!({"path": path, "bytes": out.bytes.len(), "width": ldoc.size.width, "height": ldoc.size.height, "warnings": out.warnings}))
 }

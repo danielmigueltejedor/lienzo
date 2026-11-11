@@ -6,11 +6,11 @@ use serde_json::{Value, json};
 
 use crate::canvas_tool_menu::{SAMPLER_DELETE, SAMPLER_MENU};
 use crate::control::{ControlRequest, Outcome, handle};
-use crate::{PhotocraftApp, Tool};
+use crate::{LienzoApp, Tool};
 
 /// A 200 x 100 document with the Color Sampler and samplers at (20, 20) and (120, 60).
-fn app() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (LienzoApp, egui::Context) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.run("view.colorSamplers.add", json!({"x": 20, "y": 20})).unwrap();
     app.run("view.colorSamplers.add", json!({"x": 120, "y": 60})).unwrap();
@@ -18,24 +18,24 @@ fn app() -> (PhotocraftApp, egui::Context) {
     (app, egui::Context::default())
 }
 
-fn control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn control(app: &mut LienzoApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (req, _rx) = ControlRequest::new(method, params);
     let Outcome::Done(v) = handle(app, ctx, &req) else { panic!("{method} replies at once") };
     v
 }
 
 /// An agent's right-click at document point (x, y), as `ui.pointer` sends it.
-fn right_click(app: &mut PhotocraftApp, ctx: &egui::Context, x: f64, y: f64) {
+fn right_click(app: &mut LienzoApp, ctx: &egui::Context, x: f64, y: f64) {
     let r = control(app, ctx, "ui.pointer", json!({"button": "secondary", "events": [{"kind": "down", "x": x, "y": y}, {"kind": "up", "x": x, "y": y}]}));
     assert_eq!(r["ok"], json!(true), "{r}");
 }
 
-fn entries(app: &mut PhotocraftApp, ctx: &egui::Context) -> Vec<Value> {
+fn entries(app: &mut LienzoApp, ctx: &egui::Context) -> Vec<Value> {
     let r = control(app, ctx, "ui.inspect", json!({}));
     r["result"]["canvasToolMenu"]["entries"].as_array().cloned().unwrap_or_else(|| panic!("no canvasToolMenu: {r}"))
 }
 
-fn samplers(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn samplers(app: &LienzoApp) -> Vec<[f64; 2]> {
     app.session.active().unwrap().color_samplers.clone()
 }
 
@@ -171,7 +171,7 @@ fn a_stale_sampler_or_odd_point_fails_gracefully() {
         assert_eq!(super::sampler_at(&app, p), None);
     }
     // No document: the menu opens greyed, nothing panics.
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     empty.ui.tool = Tool::ColorSampler;
     assert_eq!(super::sampler_at(&empty, [1.0, 1.0]), None);
     if crate::canvas_tool_menu::open_at(&mut empty, &ctx, Tool::ColorSampler, [10.0, 10.0], Some([1.0, 1.0])) {
@@ -204,7 +204,7 @@ fn other_tools_keep_their_menus() {
 #[test]
 fn canvas_right_click_opens_the_menu_on_the_sampler() {
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app().0
     });
     h.run_steps(5);

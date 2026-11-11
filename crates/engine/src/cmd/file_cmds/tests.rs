@@ -196,7 +196,7 @@ fn batch_save_and_close_preserves_caller_and_failed_sources() {
                     "id":st.doc.id,"path":st.path,"revision":st.revision,"saved":st.saved_revision,
                     "activeLayer":st.active_layer,"selected":st.selected_layers,"channels":format!("{:?}",st.channel_view),
                     "history":st.history.past_len(),"undo":st.history.undo_label(),"redo":st.history.can_redo(),
-                    "bytes":photocraft_format::save_to_bytes(&st.doc,&Default::default()).unwrap()
+                    "bytes":lienzo_format::save_to_bytes(&st.doc,&Default::default()).unwrap()
                 })
             })
             .collect();
@@ -220,8 +220,8 @@ fn batch_save_and_close_preserves_caller_and_failed_sources() {
     assert!(result.get("failed").is_none(), "{result}");
     for (path, original) in inputs.iter().zip(&originals) {
         assert_ne!(std::fs::read(path).unwrap(), *original);
-        let loaded = photocraft_io::import("saved.png", &std::fs::read(path).unwrap()).unwrap().document;
-        assert_eq!(photocraft_compose::render(&loaded, Rect::new(1, 0, 2, 1)).px[0], [0.0, 1.0, 1.0, 1.0]);
+        let loaded = lienzo_io::import("saved.png", &std::fs::read(path).unwrap()).unwrap().document;
+        assert_eq!(lienzo_compose::render(&loaded, Rect::new(1, 0, 2, 1)).px[0], [0.0, 1.0, 1.0, 1.0]);
     }
     assert_eq!(caller_state(&s), before);
 
@@ -288,8 +288,8 @@ fn batch_save_and_close_keeps_tiff_layers() {
     let result = s.execute("file.automate.batch", json!({"input":[path],"destination":"saveAndClose","steps":[]})).unwrap();
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
     let bytes = std::fs::read(&path).unwrap();
-    assert!(photocraft_codecs::tiff_photoshop_tags(&bytes).1.is_some());
-    let back = photocraft_io::import("layered.tif", &bytes).unwrap().document;
+    assert!(lienzo_codecs::tiff_photoshop_tags(&bytes).1.is_some());
+    let back = lienzo_io::import("layered.tif", &bytes).unwrap().document;
     assert_eq!(back.layers.iter().map(|layer| layer.name.clone()).collect::<Vec<_>>(), names);
     let result = s.execute("file.automate.batch", json!({"input":[path],"destination":"saveAndClose","tiffLayers":false,"steps":[]})).unwrap();
     assert!(result["files"].as_array().unwrap().is_empty(), "{result}");
@@ -302,7 +302,7 @@ fn batch_save_and_close_keeps_tiff_layers() {
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
     let flat = result["files"][0].as_str().unwrap();
     let flat_bytes = std::fs::read(flat).unwrap();
-    assert!(photocraft_codecs::tiff_photoshop_tags(&flat_bytes).1.is_none());
+    assert!(lienzo_codecs::tiff_photoshop_tags(&flat_bytes).1.is_none());
     let result = s.execute("file.automate.batch", json!({"input":[flat],"destination":"saveAndClose","tiffLayers":false,"steps":[]})).unwrap();
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
     assert_eq!(result["files"], json!([flat]));
@@ -310,8 +310,8 @@ fn batch_save_and_close_keeps_tiff_layers() {
 
 /// Read a small saved Batch result with the same import/compositor oracle as the existing fixtures.
 fn batch_open_pixel(path: &str) -> [f32; 4] {
-    let loaded = photocraft_io::import("result.png", &std::fs::read(path).unwrap()).unwrap().document;
-    photocraft_compose::render(&loaded, Rect::new(0, 0, 1, 1)).px[0]
+    let loaded = lienzo_io::import("result.png", &std::fs::read(path).unwrap()).unwrap().document;
+    lienzo_compose::render(&loaded, Rect::new(0, 0, 1, 1)).px[0]
 }
 
 /// Called and conditional actions and scripts retain Open settings and use each selected input.
@@ -322,7 +322,7 @@ fn batch_override_open_follows_called_conditional_and_script_steps() {
     let second = png(&dir, "b.png", 3, 2, "#0000ff");
     let recorded = png(&dir, "recorded.png", 3, 2, "#00ff00");
     let mut s = session(7, 9, 8);
-    let caller = photocraft_format::save_to_bytes(doc(&s), &Default::default()).unwrap();
+    let caller = lienzo_format::save_to_bytes(doc(&s), &Default::default()).unwrap();
     let prefs = serde_json::to_value(s.prefs()).unwrap();
     s.actions.list.push(crate::actions_cmds::Action::new("Open", vec![("file.openAs".into(), json!({"path":recorded,"as":"png"}))]));
     let actions = serde_json::to_value(&s.actions.list).unwrap();
@@ -356,7 +356,7 @@ fn batch_override_open_follows_called_conditional_and_script_steps() {
     assert!(!std::path::Path::new(&invalid).exists());
     assert_eq!(serde_json::to_value(&s.actions.list).unwrap(), actions);
     assert_eq!(serde_json::to_value(s.prefs()).unwrap(), prefs);
-    assert_eq!(photocraft_format::save_to_bytes(doc(&s), &Default::default()).unwrap(), caller);
+    assert_eq!(lienzo_format::save_to_bytes(doc(&s), &Default::default()).unwrap(), caller);
     assert!(s.batch_open.is_none());
 }
 
@@ -480,9 +480,9 @@ fn batch_quiet_profile_open_uses_caller_policy_and_retains_diagnostics() {
     assert_eq!(result["errors"].as_array().unwrap().len(), 1, "{result}");
     assert_eq!(result["notices"][0]["color"]["action"], "converted");
     assert_eq!(result["notices"][0]["color"]["ask"], false);
-    let saved = photocraft_io::import("a.png", &std::fs::read(join(&output, "a.png")).unwrap()).unwrap().document;
-    let profile = photocraft_cms::Profile::parse(saved.icc_profile.as_ref().unwrap()).unwrap();
-    assert!(profile.same_colors(photocraft_cms::Builtin::Srgb.profile()));
+    let saved = lienzo_io::import("a.png", &std::fs::read(join(&output, "a.png")).unwrap()).unwrap().document;
+    let profile = lienzo_cms::Profile::parse(saved.icc_profile.as_ref().unwrap()).unwrap();
+    assert!(profile.same_colors(lienzo_cms::Builtin::Srgb.profile()));
     // A script calling an action with a failing inner Batch still retains both import reports.
     let inner = join(&dir, "inner");
     s.actions.list.push(crate::actions_cmds::Action::new(
@@ -589,9 +589,9 @@ fn named_open_document_batch_uses_effective_recorded_parameters() {
             let result = s.execute("actions.play", json!({"action":"Recorded"})).unwrap();
             assert_eq!(result["ran"], 2, "{result}");
         }
-        assert!(!doc(&s).layer(photocraft_doc::LayerId(a)).unwrap().visible);
-        assert!(doc(&s).layer(photocraft_doc::LayerId(b)).unwrap().visible);
-        assert_eq!(doc(&s).walk().iter().filter(|(_, _, layer)| matches!(layer.content, photocraft_doc::LayerContent::Text(_))).count(), 1);
+        assert!(!doc(&s).layer(lienzo_doc::LayerId(a)).unwrap().visible);
+        assert!(doc(&s).layer(lienzo_doc::LayerId(b)).unwrap().visible);
+        assert_eq!(doc(&s).walk().iter().filter(|(_, _, layer)| matches!(layer.content, lienzo_doc::LayerContent::Text(_))).count(), 1);
     }
 }
 
@@ -615,15 +615,15 @@ fn structured_open_document_batch_guards_destinations_before_editing() {
             p["naming"] = json!("same.png");
         }
         let result = s.execute("file.automate.batch", p).unwrap();
-        let saved = photocraft_io::import("same.png", &std::fs::read(join(&output, "same.png")).unwrap()).unwrap().document;
-        let pixel = photocraft_compose::render(&saved, Rect::new(0, 0, 1, 1)).px[0];
+        let saved = lienzo_io::import("same.png", &std::fs::read(join(&output, "same.png")).unwrap()).unwrap().document;
+        let pixel = lienzo_compose::render(&saved, Rect::new(0, 0, 1, 1)).px[0];
         if structured {
             assert_eq!(result["files"].as_array().unwrap().len(), 1, "{result}");
             assert_eq!(result["errors"].as_array().unwrap().len(), 1, "{result}");
             assert!(result["errors"][0]["error"].as_str().unwrap().contains("not written"));
             assert_eq!(pixel, [0.0, 1.0, 1.0, 1.0], "the first result remains intact");
             assert_eq!(s.documents()[1].history.past_len(), before);
-            assert_eq!(photocraft_compose::render(&s.documents()[1].doc, Rect::new(0, 0, 1, 1)).px[0], [0.0, 0.0, 1.0, 1.0]);
+            assert_eq!(lienzo_compose::render(&s.documents()[1].doc, Rect::new(0, 0, 1, 1)).px[0], [0.0, 0.0, 1.0, 1.0]);
         } else {
             assert_eq!(result["files"].as_array().unwrap().len(), 2, "{result}");
             assert_eq!(result["errors"], json!([]), "{result}");
@@ -677,9 +677,9 @@ fn background_recorded_batch_keeps_opening_and_destination_policies() {
     assert_eq!(result["notices"][0]["color"]["ask"], false);
     let bytes = std::fs::read(saved_path).unwrap();
     assert!(bytes.starts_with(b"\x89PNG\r\n\x1a\n"), "the structured suffix does not choose the encoder");
-    let saved = photocraft_io::import("result.png", &bytes).unwrap().document;
-    let profile = photocraft_cms::Profile::parse(saved.icc_profile.as_ref().unwrap()).unwrap();
-    assert!(profile.same_colors(photocraft_cms::Builtin::Srgb.profile()));
+    let saved = lienzo_io::import("result.png", &bytes).unwrap().document;
+    let profile = lienzo_cms::Profile::parse(saved.icc_profile.as_ref().unwrap()).unwrap();
+    assert!(profile.same_colors(lienzo_cms::Builtin::Srgb.profile()));
     assert_eq!(std::fs::read(source).unwrap(), original);
     assert_eq!(serde_json::to_value(s.prefs()).unwrap(), prefs);
     assert_eq!(s.color.settings, settings);
@@ -689,15 +689,15 @@ fn background_recorded_batch_keeps_opening_and_destination_policies() {
 /// Quiet RAW opening applies supported prior XMP and refuses settings or reads it cannot honor.
 #[test]
 fn batch_quiet_raw_applies_prior_settings_and_workflow_without_touching_inputs() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let dir = tmp("batch-quiet-raw");
     let path = join(&dir, "raw.dng");
     let (w, h) = (24, 16);
     let bytes = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535)).build();
     std::fs::write(&path, &bytes).unwrap();
     let sidecar = join(&dir, "raw.xmp");
-    let settings = photocraft_algo::camera_raw::CameraRaw { exposure: 1.0, ..Default::default() };
-    let xmp = photocraft_io::camera_raw_xmp::save(&settings);
+    let settings = lienzo_algo::camera_raw::CameraRaw { exposure: 1.0, ..Default::default() };
+    let xmp = lienzo_io::camera_raw_xmp::save(&settings);
     std::fs::write(&sidecar, &xmp).unwrap();
     let mut s = Session::new();
     s.execute("prefs.set", json!({"path":"rawDefaults.resolution","value":240})).unwrap();
@@ -706,16 +706,15 @@ fn batch_quiet_raw_applies_prior_settings_and_workflow_without_touching_inputs()
     let p = json!({"input":[path],"output":output,"format":"psd","suppressOpenOptions":true,"suppressWarnings":true,"steps":[]});
     let result = s.execute("file.automate.batch", p.clone()).unwrap();
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
-    let actual = photocraft_io::import("raw.psd", &std::fs::read(join(&output, "raw.psd")).unwrap()).unwrap().document;
+    let actual = lienzo_io::import("raw.psd", &std::fs::read(join(&output, "raw.psd")).unwrap()).unwrap().document;
     assert_eq!(actual.resolution_dpi, 240.0);
-    let (expected, _) =
-        photocraft_io::raw::import_raw_tuned("raw.dng", &bytes, &photocraft_io::raw::RawTuning { exposure: 1.0, ..Default::default() }).unwrap();
+    let (expected, _) = lienzo_io::raw::import_raw_tuned("raw.dng", &bytes, &lienzo_io::raw::RawTuning { exposure: 1.0, ..Default::default() }).unwrap();
     let mut oracle = Session::new();
     oracle.add_document(expected.document, None);
     oracle.execute("edit.convertToProfile", json!({"profile":s.prefs().raw_defaults.color_space.profile_id(),"intent":"relative"})).unwrap();
     let area = Rect::new(0, 0, w as i32, h as i32);
-    let got = photocraft_compose::render(&actual, area);
-    let want = photocraft_compose::render(doc(&oracle), area);
+    let got = lienzo_compose::render(&actual, area);
+    let want = lienzo_compose::render(doc(&oracle), area);
     assert!(got.px.iter().zip(&want.px).all(|(got, want)| got.iter().zip(want).all(|(a, b)| (a - b).abs() < 1.0 / 65535.0)));
     let saved = std::fs::read(join(&output, "raw.psd")).unwrap();
     std::fs::write(&sidecar, xmp.replace("crs:Exposure2012=", "crs:Temperature=")).unwrap();
@@ -737,28 +736,28 @@ fn batch_quiet_raw_applies_prior_settings_and_workflow_without_touching_inputs()
 /// #9985: quiet RAW opening crops to the sidecar's crop, as the interactive open does.
 #[test]
 fn batch_quiet_raw_applies_the_sidecar_crop() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let dir = tmp("batch-quiet-raw-crop");
     let path = join(&dir, "raw.dng");
     let (w, h) = (24, 16);
     let bytes = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535)).build();
     std::fs::write(&path, &bytes).unwrap();
-    let crop = photocraft_io::camera_raw_xmp::Crop { top: 0.25, left: 0.125, bottom: 0.75, right: 0.625 };
-    let xmp = photocraft_io::camera_raw_xmp::save_with_crop(&photocraft_algo::camera_raw::CameraRaw::default(), Some(crop));
+    let crop = lienzo_io::camera_raw_xmp::Crop { top: 0.25, left: 0.125, bottom: 0.75, right: 0.625 };
+    let xmp = lienzo_io::camera_raw_xmp::save_with_crop(&lienzo_algo::camera_raw::CameraRaw::default(), Some(crop));
     std::fs::write(join(&dir, "raw.xmp"), &xmp).unwrap();
     let mut s = Session::new();
     let output = join(&dir, "out");
     let p = json!({"input":[path],"output":output,"format":"psd","suppressOpenOptions":true,"suppressWarnings":true,"steps":[]});
     let result = s.execute("file.automate.batch", p).unwrap();
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
-    let actual = photocraft_io::import("raw.psd", &std::fs::read(join(&output, "raw.psd")).unwrap()).unwrap().document;
+    let actual = lienzo_io::import("raw.psd", &std::fs::read(join(&output, "raw.psd")).unwrap()).unwrap().document;
     assert_eq!((actual.size.width, actual.size.height), (12, 8), "the 24x16 frame cropped to x 3..15, y 4..12");
 }
 
 fn tmp(name: &str) -> String {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let d = std::env::temp_dir().join(format!("photocraft-file-cmds-{}-{name}-{id}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("lienzo-file-cmds-{}-{name}-{id}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     d.to_string_lossy().into_owned()
@@ -796,7 +795,7 @@ fn png(dir: &str, name: &str, w: u32, h: u32, color: &str) -> String {
 }
 
 fn composite(s: &Session, x: i32, y: i32) -> [f32; 4] {
-    let b = photocraft_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1));
+    let b = lienzo_compose::render(doc(s), Rect::new(x, y, x + 1, y + 1));
     b.px[0]
 }
 
@@ -1435,7 +1434,7 @@ fn close_all_and_close_others() {
 
 #[test]
 fn camera_raw_opens_as_16_bit_with_notes() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let (w, h) = (24, 16);
     let mut spec = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535));
     spec.as_shot_neutral = Some([0.5, 1.0, 0.7]);
@@ -1443,7 +1442,7 @@ fn camera_raw_opens_as_16_bit_with_notes() {
     let r = open_bytes_as(&mut s, "IMG_0001.dng", &spec.build(), None, None).unwrap();
     assert!(r["warnings"].as_array().is_some_and(|w| w.iter().any(|m| m.as_str().is_some_and(|m| m.contains("DNG")))), "{r}");
     assert_eq!((doc(&s).size.width, doc(&s).size.height), (24, 16));
-    assert_eq!(doc(&s).depth, photocraft_color::SampleType::U16);
+    assert_eq!(doc(&s).depth, lienzo_color::SampleType::U16);
     // Damaged raw data is an error, not a crash.
     let mut bad = spec.build();
     bad.truncate(bad.len() / 2);
@@ -1451,10 +1450,10 @@ fn camera_raw_opens_as_16_bit_with_notes() {
 }
 
 /// #5799: Batch with Format "Same" over a folder of camera raws saved nothing (every output was
-/// a raw PhotoCraft can't write). Raws are saved as PSD; other inputs keep their format.
+/// a raw Lienzo can't write). Raws are saved as PSD; other inputs keep their format.
 #[test]
 fn batch_same_format_saves_camera_raws_as_psd() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let dir = tmp("batch-same-raw");
     let (w, h) = (24, 16);
     std::fs::write(join(&dir, "IMG_0001.dng"), DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535)).build()).unwrap();
@@ -1473,7 +1472,7 @@ fn batch_same_format_saves_camera_raws_as_psd() {
         assert_eq!(files.len(), 2, "{r}");
         let suffixes = if naming.is_some() { ("_001", "_002") } else { (".psd", ".png") };
         assert!(files[0].contains("/IMG_0001") && files[0].ends_with(suffixes.0) && files[1].contains("/b") && files[1].ends_with(suffixes.1), "{files:?}");
-        let psd = photocraft_io::import("IMG_0001.psd", &std::fs::read(&files[0]).unwrap()).unwrap().document;
+        let psd = lienzo_io::import("IMG_0001.psd", &std::fs::read(&files[0]).unwrap()).unwrap().document;
         assert_eq!((psd.size.width, psd.size.height), (w as u32, h as u32));
     }
 }
@@ -1482,7 +1481,7 @@ fn batch_same_format_saves_camera_raws_as_psd() {
 /// File › Open (the background open job) and through opening bytes; other files keep their own.
 #[test]
 fn a_developed_raw_opens_at_the_raw_defaults_resolution() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let (w, h) = (24, 16);
     let raw = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 65535)).build();
     let dir = tmp("raw-defaults");
@@ -1511,7 +1510,7 @@ fn a_developed_raw_opens_at_the_raw_defaults_resolution() {
 /// File › Revert, Batch and Load Files into Stack (all of them opened a raw at 72 ppi).
 #[test]
 fn revert_batch_and_stack_open_a_raw_at_the_raw_defaults_resolution() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use lienzo_raw::testgen::{DngSpec, mosaic, scene};
     let (w, h) = (24, 16);
     let dir = tmp("raw-defaults-siblings");
     let path = join(&dir, "IMG_0003.dng");
@@ -1527,7 +1526,7 @@ fn revert_batch_and_stack_open_a_raw_at_the_raw_defaults_resolution() {
     let r = s.execute("file.automate.batch", json!({"steps": [], "input": [path.clone()], "output": out, "format": "psd"})).unwrap();
     let files = r["files"].as_array().unwrap();
     assert_eq!(files.len(), 1, "{r}");
-    let psd = photocraft_io::import("IMG_0003.psd", &std::fs::read(files[0].as_str().unwrap()).unwrap()).unwrap().document;
+    let psd = lienzo_io::import("IMG_0003.psd", &std::fs::read(files[0].as_str().unwrap()).unwrap()).unwrap().document;
     assert_eq!(psd.resolution_dpi, 240.0, "Batch");
     // A nested Override Open inherits the outer input's resolution, not scratch defaults.
     let nested = join(&dir, "nested");
@@ -1541,16 +1540,13 @@ fn revert_batch_and_stack_open_a_raw_at_the_raw_defaults_resolution() {
         )
         .unwrap();
     assert!(r["errors"].as_array().unwrap().is_empty(), "{r}");
-    let nested = photocraft_io::import("IMG_0003.psd", &std::fs::read(join(&nested, "IMG_0003.psd")).unwrap()).unwrap().document;
+    let nested = lienzo_io::import("IMG_0003.psd", &std::fs::read(join(&nested, "IMG_0003.psd")).unwrap()).unwrap().document;
     assert_eq!(nested.resolution_dpi, 240.0, "nested Override Open keeps the caller's RAW resolution");
     let quiet = join(&dir, "quiet-raw");
     let r = s.execute("file.automate.batch", json!({"input":[path],"output":quiet,"format":"psd","suppressWarnings":true,"steps":[]})).unwrap();
     assert!(r["errors"].as_array().unwrap().is_empty(), "{r}");
-    assert!(
-        r["notices"][0]["warnings"].as_array().unwrap().iter().any(|warning| warning.as_str().unwrap().contains(photocraft_io::raw::DEVELOPED_NOTE)),
-        "{r}"
-    );
-    let quiet = photocraft_io::import("IMG_0003.psd", &std::fs::read(join(&quiet, "IMG_0003.psd")).unwrap()).unwrap().document;
+    assert!(r["notices"][0]["warnings"].as_array().unwrap().iter().any(|warning| warning.as_str().unwrap().contains(lienzo_io::raw::DEVELOPED_NOTE)), "{r}");
+    let quiet = lienzo_io::import("IMG_0003.psd", &std::fs::read(join(&quiet, "IMG_0003.psd")).unwrap()).unwrap().document;
     assert_eq!(quiet.resolution_dpi, 240.0);
     s.execute("file.scripts.loadFilesIntoStack", json!({"paths": [path]})).unwrap();
     assert_eq!(doc(&s).resolution_dpi, 240.0, "Load Files into Stack");
@@ -1616,13 +1612,13 @@ fn save_a_copy_keeps_path_and_dirty_state() {
     assert_eq!(s.active().unwrap().path, None);
     assert_eq!(s.active().unwrap().revision, rev);
     assert!(s.active().unwrap().is_dirty());
-    let back = photocraft_io::import("copy.psd", &std::fs::read(&out).unwrap()).unwrap().document;
+    let back = lienzo_io::import("copy.psd", &std::fs::read(&out).unwrap()).unwrap().document;
     assert_eq!(back.layers.len(), 2);
-    assert_eq!(back.depth, photocraft_color::SampleType::U16);
+    assert_eq!(back.depth, lienzo_color::SampleType::U16);
     // Flattened copy.
     let flat = join(&dir, "flat.psd");
     s.execute("file.saveACopy", json!({"path": flat, "layers": false})).unwrap();
-    assert_eq!(photocraft_io::import("flat.psd", &std::fs::read(&flat).unwrap()).unwrap().document.layers.len(), 1);
+    assert_eq!(lienzo_io::import("flat.psd", &std::fs::read(&flat).unwrap()).unwrap().document.layers.len(), 1);
     assert!(s.execute("file.saveACopy", json!({})).is_err());
 }
 
@@ -1679,7 +1675,7 @@ fn save_a_copy_writes_the_targa_bits_asked_for() {
         s.execute("file.saveACopy", p).unwrap();
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!(bytes[16], bpp, "{params}");
-        let back = photocraft_io::import("a.tga", &bytes).unwrap().document;
+        let back = lienzo_io::import("a.tga", &bytes).unwrap().document;
         assert_eq!(back.channels.len(), usize::from(bpp == 32), "{params}: the selection reopens as Alpha 1");
     }
 }
@@ -1699,7 +1695,7 @@ fn save_a_copy_writes_the_dpx_bits_asked_for() {
         s.execute("file.saveACopy", p).unwrap();
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!((&bytes[..4], bytes[803]), (&b"SDPX"[..], bits), "{depth}-bit {params}");
-        assert_eq!(photocraft_io::import("a.dpx", &bytes).unwrap().document.size, photocraft_geom::Size::new(12, 6));
+        assert_eq!(lienzo_io::import("a.dpx", &bytes).unwrap().document.size, lienzo_geom::Size::new(12, 6));
     }
     let mut s = session(8, 8, 8);
     for bad in [json!(24), json!(0), json!("10"), json!(10.5)] {
@@ -1732,7 +1728,7 @@ fn save_a_copy_writes_the_dds_options_asked_for() {
         s.execute("file.saveACopy", p).unwrap();
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!((&bytes[..4], &bytes[84..88], le32(&bytes, 28)), (&b"DDS "[..], &fourcc[..], mips), "{params}");
-        assert_eq!(photocraft_io::import("a.dds", &bytes).unwrap().document.size, photocraft_geom::Size::new(16, 12), "{params}");
+        assert_eq!(lienzo_io::import("a.dds", &bytes).unwrap().document.size, lienzo_geom::Size::new(16, 12), "{params}");
     }
     let mut s = session(8, 8, 8);
     let state = |s: &Session| s.active().map(|st| (st.revision, st.path.clone(), st.is_dirty()));
@@ -1750,7 +1746,7 @@ fn save_a_copy_writes_the_dds_options_asked_for() {
 
 #[test]
 fn dds_params_are_none_until_one_is_given() {
-    use photocraft_io::{DdsCompression, DdsOptions};
+    use lienzo_io::{DdsCompression, DdsOptions};
     assert_eq!(dds_param(&json!({}), "file.saveAs").unwrap(), None);
     assert_eq!(dds_param(&json!({"ddsCompression": null}), "file.saveAs").unwrap(), None);
     assert_eq!(dds_param(&json!({"ddsMipmaps": true}), "file.saveAs").unwrap(), Some(DdsOptions { compression: DdsCompression::None, mipmaps: true }));
@@ -1794,7 +1790,7 @@ fn save_a_copy_writes_the_jpeg_format_asked_for() {
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!(marker(&bytes, 0xC2), progressive, "{params}");
         assert_eq!(marker(&bytes, 0xC0), !progressive, "{params}");
-        assert_eq!(photocraft_io::import("a.jpg", &bytes).unwrap().document.size.width, 40, "{params}");
+        assert_eq!(lienzo_io::import("a.jpg", &bytes).unwrap().document.size.width, 40, "{params}");
     }
     // Layers to Files takes it too.
     s.execute("file.export.layersToFiles", json!({"dir": dir, "format": "jpg", "jpegFormat": "progressive"})).unwrap();
@@ -1832,8 +1828,8 @@ fn image_previews_preference_controls_the_psd_thumbnail() {
     let dir = tmp("previews");
     let mut s = session(300, 200, 16);
     let has_thumbnail = |path: &str| {
-        let file = photocraft_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap();
-        file.resources.iter().any(|r| r.id == photocraft_psd::resources::ids::THUMBNAIL)
+        let file = lienzo_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap();
+        file.resources.iter().any(|r| r.id == lienzo_psd::resources::ids::THUMBNAIL)
     };
     for (ask, expect) in [(Ask::Always, true), (Ask::Never, false), (Ask::Ask, true)] {
         s.edit_prefs(|p| p.file_handling.image_previews = ask);
@@ -1854,7 +1850,7 @@ fn maximize_compatibility_preference_controls_the_psd_merged_image() {
     let dir = tmp("maximize");
     let mut s = session(300, 200, 16);
     s.execute("layer.new.layer", json!({})).unwrap();
-    let real_merged = |path: &str| photocraft_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap().has_real_merged_data();
+    let real_merged = |path: &str| lienzo_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap().has_real_merged_data();
     for (ask, expect) in [(Ask::Always, true), (Ask::Never, false), (Ask::Ask, true)] {
         s.edit_prefs(|p| p.file_handling.maximize_psd_compatibility = ask);
         for ext in ["psd", "psb"] {
@@ -1872,7 +1868,7 @@ fn maximize_compatibility_preference_controls_the_psd_merged_image() {
 fn full_composite_preference_controls_the_pcraft_full_size_composite() {
     let dir = tmp("full-composite");
     let mut s = session(300, 200, 16);
-    let full = |path: &str| photocraft_format::read_full_composite(&std::fs::read(path).unwrap()).unwrap().is_some();
+    let full = |path: &str| lienzo_format::read_full_composite(&std::fs::read(path).unwrap()).unwrap().is_some();
     let out = join(&dir, "default.pcraft");
     s.execute("file.saveACopy", json!({"path": out})).unwrap();
     assert!(!full(&out), "off by default");
@@ -1905,7 +1901,7 @@ fn maximize_compatibility_param_overrides_the_preference_for_one_save() {
     let dir = tmp("maximize-param");
     let mut s = session(300, 200, 16);
     s.execute("layer.new.layer", json!({})).unwrap();
-    let real_merged = |path: &str| photocraft_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap().has_real_merged_data();
+    let real_merged = |path: &str| lienzo_psd::PsdFile::from_bytes(&std::fs::read(path).unwrap()).unwrap().has_real_merged_data();
     for (ask, param, expect) in [
         (Ask::Always, json!(false), false),
         (Ask::Never, json!(true), true),
@@ -2019,8 +2015,8 @@ fn resize_image_during_place_preference_controls_the_fit() {
 /// is 20×40, red on top.
 fn rotated_jpeg(dir: &str) -> String {
     let px: Vec<u8> = (0..20).flat_map(|_| (0..40).flat_map(|x| if x < 20 { [230, 20, 20] } else { [20, 20, 230] })).collect();
-    let img = photocraft_codecs::Image::from_u8(40, 20, photocraft_codecs::ChannelLayout::Rgb, px).unwrap();
-    let jpeg = photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &Default::default()).unwrap();
+    let img = lienzo_codecs::Image::from_u8(40, 20, lienzo_codecs::ChannelLayout::Rgb, px).unwrap();
+    let jpeg = lienzo_codecs::encode(&img, lienzo_codecs::Format::Jpeg, &Default::default()).unwrap();
     let mut seg = b"Exif\0\0II*\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0".to_vec();
     let mut file = vec![0xFF, 0xD8, 0xFF, 0xE1];
     file.extend_from_slice(&((seg.len() + 2) as u16).to_be_bytes());
@@ -2066,7 +2062,7 @@ fn file_info_round_trips_through_xmp_and_psd() {
     assert_eq!(read_file_info(Some(&xmp))["author"], "V. van Gogh");
     // PSD round trip.
     let (bytes, _) = encode(doc(&s), "x.psd", None).unwrap();
-    let back = photocraft_io::import("x.psd", &bytes).unwrap().document;
+    let back = lienzo_io::import("x.psd", &bytes).unwrap().document;
     let info = read_file_info(back.metadata.xmp.as_deref());
     assert_eq!(info["title"], "The Starry Night");
     assert_eq!(info["keywords"], json!(["stars", "night"]));
@@ -2079,7 +2075,7 @@ fn file_info_round_trips_through_xmp_and_psd() {
 }
 
 fn camera_exif() -> Vec<u8> {
-    photocraft_algo::exif::build(&photocraft_algo::exif::CameraInfo {
+    lienzo_algo::exif::build(&lienzo_algo::exif::CameraInfo {
         make: Some("SONY".into()),
         model: Some("ILCE-7RM5".into()),
         lens: Some("24-70mm F2.8".into()),
@@ -2107,7 +2103,7 @@ fn file_info_reads_camera_data_from_jpeg_and_psd_exif() {
     });
     for name in ["x.jpg", "x.psd"] {
         let (bytes, _) = encode(doc(&s), name, None).unwrap();
-        let back = photocraft_io::import(name, &bytes).unwrap().document;
+        let back = lienzo_io::import(name, &bytes).unwrap().document;
         let mut t = Session::new();
         t.add_document(back, None);
         assert_eq!(t.execute("file.fileInfo", json!({})).unwrap()["camera"], want, "{name}");
@@ -2120,7 +2116,7 @@ fn file_info_reads_camera_data_from_jpeg_and_psd_exif() {
 #[test]
 fn camera_data_formats_like_photoshop_and_falls_back_to_xmp() {
     let info = |t: Option<f64>, n: Option<f64>, f: Option<f64>| {
-        let exif = photocraft_algo::exif::build(&photocraft_algo::exif::CameraInfo { exposure_time: t, f_number: n, focal_length: f, ..Default::default() });
+        let exif = lienzo_algo::exif::build(&lienzo_algo::exif::CameraInfo { exposure_time: t, f_number: n, focal_length: f, ..Default::default() });
         camera_data(Some(&exif), None)
     };
     assert_eq!(info(Some(2.0), Some(2.8), Some(35.0)), json!({"exposure": "2 s", "fNumber": "f/2.8", "focalLength": "35 mm"}));
@@ -2147,7 +2143,7 @@ fn camera_data_formats_like_photoshop_and_falls_back_to_xmp() {
     });
     assert_eq!(camera_data(None, Some(xmp)), want);
     // EXIF wins; XMP only fills what EXIF lacks.
-    let exif = photocraft_algo::exif::build(&photocraft_algo::exif::CameraInfo { make: Some("Other".into()), ..Default::default() });
+    let exif = lienzo_algo::exif::build(&lienzo_algo::exif::CameraInfo { make: Some("Other".into()), ..Default::default() });
     let both = camera_data(Some(&exif), Some(xmp));
     assert_eq!(both["make"], "Other");
     assert_eq!(both["exposure"], "1/250 s");
@@ -2194,7 +2190,7 @@ fn camera_data_prints_a_slow_exposure_as_the_fraction_a_camera_writes() {
     assert_ne!(exposure_text(f64::MAX), None);
     // The same through a real EXIF block, so the round trip to File Info is covered too.
     let camera = |t: f64| {
-        let exif = photocraft_algo::exif::build(&photocraft_algo::exif::CameraInfo { exposure_time: Some(t), ..Default::default() });
+        let exif = lienzo_algo::exif::build(&lienzo_algo::exif::CameraInfo { exposure_time: Some(t), ..Default::default() });
         camera_data(Some(&exif), None)["exposure"].as_str().map(str::to_owned)
     };
     assert_eq!(camera(0.031_714), Some("1/32 s".to_owned()));
@@ -2264,7 +2260,7 @@ fn file_info_translations_survive_undo_and_psd_round_trip() {
         assert!(s.redo());
         assert_eq!(doc(&s).metadata.xmp.as_deref(), Some(&*edited));
         let (bytes, _) = encode(doc(&s), "x.psd", None).unwrap();
-        let back = photocraft_io::import("x.psd", &bytes).unwrap().document;
+        let back = lienzo_io::import("x.psd", &bytes).unwrap().document;
         assert_translations_kept(back.metadata.xmp.as_deref().unwrap());
         assert_eq!(read_file_info(back.metadata.xmp.as_deref())["keywords"], json!(["sunrise"]));
     }
@@ -2352,9 +2348,9 @@ fn flatten_all_layer_effects_and_masks() {
         s.edit("fx", |doc, _| {
             let l = doc.layer_mut(id).unwrap();
             l.effects.enabled = true;
-            l.effects.items.push(photocraft_doc::Effect::ColorOverlay {
-                common: photocraft_doc::effects::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
-                color: photocraft_color::Color::rgb(0.0, 1.0, 0.0),
+            l.effects.items.push(lienzo_doc::Effect::ColorOverlay {
+                common: lienzo_doc::effects::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
+                color: lienzo_color::Color::rgb(0.0, 1.0, 0.0),
             });
             Ok(())
         })
@@ -2401,11 +2397,11 @@ fn flatten_all_layer_effects_keeps_masks() {
         s.edit("fx", |doc, _| {
             let l = doc.layer_mut(id1).unwrap();
             l.effects.enabled = true;
-            l.effects.items.push(photocraft_doc::Effect::ColorOverlay {
-                common: photocraft_doc::effects::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
-                color: photocraft_color::Color::rgb(0.0, 1.0, 0.0),
+            l.effects.items.push(lienzo_doc::Effect::ColorOverlay {
+                common: lienzo_doc::effects::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
+                color: lienzo_color::Color::rgb(0.0, 1.0, 0.0),
             });
-            l.vector_mask = Some(photocraft_doc::VectorMask::new(photocraft_doc::Path::new(vec![photocraft_doc::Subpath::polygon(&[
+            l.vector_mask = Some(lienzo_doc::VectorMask::new(lienzo_doc::Path::new(vec![lienzo_doc::Subpath::polygon(&[
                 (15.0, 15.0),
                 (30.0, 15.0),
                 (30.0, 30.0),
@@ -2425,9 +2421,9 @@ fn flatten_all_layer_effects_keeps_masks() {
         s.edit("fx", |doc, _| {
             let l = doc.layer_mut(id2).unwrap();
             l.effects.enabled = true;
-            l.effects.items.push(photocraft_doc::Effect::ColorOverlay {
-                common: photocraft_doc::effects::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
-                color: photocraft_color::Color::rgb(0.0, 1.0, 0.0),
+            l.effects.items.push(lienzo_doc::Effect::ColorOverlay {
+                common: lienzo_doc::effects::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
+                color: lienzo_color::Color::rgb(0.0, 1.0, 0.0),
             });
             Ok(())
         })
@@ -2495,7 +2491,7 @@ fn flatten_all_layer_effects_keeps_masks() {
 
 /// Flattens all layer effects on a red square carrying `fx` (in a document prepared by `setup`)
 /// and asserts the composite did not change: the bake uses the document's own context (#5719).
-fn assert_flatten_effects_is_a_no_op(depth: u32, setup: impl FnOnce(&mut Document), fx: photocraft_doc::Effect) {
+fn assert_flatten_effects_is_a_no_op(depth: u32, setup: impl FnOnce(&mut Document), fx: lienzo_doc::Effect) {
     let mut s = session(40, 40, depth);
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("select.rect", json!({"x": 14, "y": 14, "width": 12, "height": 12})).unwrap();
@@ -2510,9 +2506,9 @@ fn assert_flatten_effects_is_a_no_op(depth: u32, setup: impl FnOnce(&mut Documen
         Ok(())
     })
     .unwrap();
-    let before = photocraft_compose::flatten(doc(&s));
+    let before = lienzo_compose::flatten(doc(&s));
     assert_eq!(s.execute("file.scripts.flattenAllLayerEffects", json!({})).unwrap()["flattened"], 1);
-    let after = photocraft_compose::flatten(doc(&s));
+    let after = lienzo_compose::flatten(doc(&s));
     for (i, (a, b)) in after.px.iter().zip(&before.px).enumerate() {
         for k in 0..4 {
             assert!((a[k] - b[k]).abs() < 0.02, "depth {depth}: pixel ({}, {}) changed: {b:?} -> {a:?}", i % 40, i / 40);
@@ -2524,15 +2520,15 @@ fn assert_flatten_effects_is_a_no_op(depth: u32, setup: impl FnOnce(&mut Documen
 #[test]
 fn flatten_all_layer_effects_uses_the_documents_global_light() {
     for depth in [8, 16, 32] {
-        let shadow = photocraft_doc::Effect::DropShadow(photocraft_doc::effects::Shadow {
-            common: photocraft_doc::effects::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
-            color: photocraft_color::Color::rgb(0.0, 0.0, 1.0),
+        let shadow = lienzo_doc::Effect::DropShadow(lienzo_doc::effects::Shadow {
+            common: lienzo_doc::effects::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
+            color: lienzo_color::Color::rgb(0.0, 0.0, 1.0),
             angle: 120.0,
             use_global_light: true,
             distance: 10.0,
             spread: 0.0,
             size: 0.0,
-            contour: photocraft_doc::effects::Contour::Linear,
+            contour: lienzo_doc::effects::Contour::Linear,
             anti_alias: false,
             noise: 0.0,
             knocks_out: true,
@@ -2545,11 +2541,11 @@ fn flatten_all_layer_effects_uses_the_documents_global_light() {
 #[test]
 fn flatten_all_layer_effects_keeps_a_pattern_overlay() {
     for depth in [8, 16, 32] {
-        let mut tile = photocraft_raster::Surface::new(PixelFormat::new(ColorMode::Rgb, photocraft_color::SampleType::U8, true));
+        let mut tile = lienzo_raster::Surface::new(PixelFormat::new(ColorMode::Rgb, lienzo_color::SampleType::U8, true));
         tile.fill_rect(Rect::new(0, 0, 2, 2), &[0.0, 1.0, 0.0, 1.0]);
-        let pat = photocraft_doc::Pattern::new("green", tile, 2, 2);
-        let overlay = photocraft_doc::Effect::PatternOverlay {
-            common: photocraft_doc::effects::FxCommon::new(photocraft_color::BlendMode::Normal, 1.0),
+        let pat = lienzo_doc::Pattern::new("green", tile, 2, 2);
+        let overlay = lienzo_doc::Effect::PatternOverlay {
+            common: lienzo_doc::effects::FxCommon::new(lienzo_color::BlendMode::Normal, 1.0),
             name: pat.name.clone(),
             id: pat.id.clone(),
             scale: 1.0,
@@ -2653,14 +2649,14 @@ fn layers_to_files_can_trim_transparent_margins_without_changing_the_document() 
         let before = doc(&s).clone();
         let regular = s.execute("file.export.layersToFiles", json!({"dir": dir, "prefix": format!("full-{depth}"), "format": "png"})).unwrap();
         let full = std::fs::read(regular["files"][0].as_str().unwrap()).unwrap();
-        let full = photocraft_io::import("full.png", &full).unwrap().document;
+        let full = lienzo_io::import("full.png", &full).unwrap().document;
         assert_eq!((full.size.width, full.size.height), (12, 11), "default is unchanged");
 
         let trimmed = s.execute("file.export.layersToFiles", json!({"dir": dir, "prefix": format!("trim-{depth}"), "format": "png", "trim": true})).unwrap();
         let image = std::fs::read(trimmed["files"][0].as_str().unwrap()).unwrap();
-        let cropped = photocraft_io::import("trim.png", &image).unwrap().document;
+        let cropped = lienzo_io::import("trim.png", &image).unwrap().document;
         assert_eq!((cropped.size.width, cropped.size.height), (4, 5), "depth {depth}");
-        let px = photocraft_compose::render(&cropped, Rect::new(0, 0, 1, 1)).px[0];
+        let px = lienzo_compose::render(&cropped, Rect::new(0, 0, 1, 1)).px[0];
         assert!(px[0] > 0.95 && px[1] < 0.05 && px[2] < 0.05, "depth {depth}: {px:?}");
         assert_eq!(*doc(&s), before, "export must not crop the original document");
     }
@@ -2680,7 +2676,7 @@ fn streamed_layer_export_respects_trim() {
     })
     .unwrap();
     assert_eq!(names.len(), encoded.len());
-    let cropped = photocraft_io::import(&encoded[0].0, &encoded[0].1).unwrap().document;
+    let cropped = lienzo_io::import(&encoded[0].0, &encoded[0].1).unwrap().document;
     assert_eq!((cropped.size.width, cropped.size.height), (4, 5));
 }
 
@@ -2691,7 +2687,7 @@ fn trimming_an_empty_layer_keeps_a_valid_nonzero_canvas() {
     s.execute("layer.new.layer", json!({"name": "Empty"})).unwrap();
     let result = s.execute("file.export.layersToFiles", json!({"dir": dir, "format": "png", "trim": true})).unwrap();
     let bytes = std::fs::read(result["files"][0].as_str().unwrap()).unwrap();
-    let back = photocraft_io::import("empty.png", &bytes).unwrap().document;
+    let back = lienzo_io::import("empty.png", &bytes).unwrap().document;
     assert_eq!((back.size.width, back.size.height), (6, 7));
 }
 
@@ -2713,15 +2709,15 @@ fn load_files_into_stack_and_image_processor_and_batch() {
     let r = s.execute("file.scripts.imageProcessor", json!({"input": input, "output": out, "format": "jpg", "width": 20, "height": 20})).unwrap();
     let files = r["files"].as_array().unwrap();
     assert_eq!(files.len(), 2, "{r}");
-    let back = photocraft_io::import("a.jpg", &std::fs::read(files[0].as_str().unwrap()).unwrap()).unwrap().document;
+    let back = lienzo_io::import("a.jpg", &std::fs::read(files[0].as_str().unwrap()).unwrap()).unwrap().document;
     assert_eq!((back.size.width, back.size.height), (20, 10));
     // Batch: run an action (invert) over the folder, save PNGs.
     let out = join(&dir, "png");
     let r = s.execute("file.automate.batch", json!({"steps": [["image.adjustments.invert", {}]], "input": input, "output": out, "format": "png"})).unwrap();
     assert_eq!(r["files"].as_array().unwrap().len(), 2, "{r}");
     assert!(r["errors"].as_array().unwrap().is_empty());
-    let inv = photocraft_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
-    let px = photocraft_compose::render(&inv, Rect::new(1, 1, 2, 2)).px[0];
+    let inv = lienzo_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
+    let px = lienzo_compose::render(&inv, Rect::new(1, 1, 2, 2)).px[0];
     assert!(px[0] < 0.01 && px[1] > 0.99 && px[2] > 0.99, "red inverted to cyan: {px:?}");
     // A recorded Quick Export writes to the current document path, but Batch owns
     // the destination. Replaying it would fail for scratch documents with no save path.
@@ -2893,8 +2889,8 @@ fn named_batch_allows_nested_work_and_preserves_authorization() {
             assert!(!std::path::Path::new(&inner).exists());
         } else {
             assert_eq!(result["errors"], json!([]), "{result}");
-            let saved = photocraft_io::import("red.png", &std::fs::read(join(&inner, "red.png")).unwrap()).unwrap().document;
-            assert_eq!(photocraft_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
+            let saved = lienzo_io::import("red.png", &std::fs::read(join(&inner, "red.png")).unwrap()).unwrap().document;
+            assert_eq!(lienzo_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
         }
         assert_eq!(s.actions, before);
     }
@@ -2923,7 +2919,7 @@ fn nested_batch_errors_stop_actions_but_direct_scripts_keep_results_and_continue
     assert_eq!(result["results"].as_array().unwrap().len(), 2);
     assert_eq!(result["results"][0]["result"]["errors"].as_array().unwrap().len(), 1);
     assert_eq!(s.documents().len(), 1, "the direct script reaches file.new");
-    assert_eq!(s.active().unwrap().doc.size, photocraft_doc::Size::new(2, 2));
+    assert_eq!(s.active().unwrap().doc.size, lienzo_doc::Size::new(2, 2));
     assert!(!std::path::Path::new(&output).exists());
     assert_eq!(crate::actions_cmds::nested_failure("file.automate.batch", &json!({"files": ["ok.png"], "errors": []})), None);
     assert_eq!(crate::actions_cmds::nested_failure("file.automate.batch", &json!({"errors": "invalid"})), None);
@@ -2967,7 +2963,7 @@ fn nested_batch_partial_failures_keep_outputs_and_stop_only_action_parents() {
         assert!(std::path::Path::new(&saved).exists(), "{caller}: partial success remains saved");
         if caller == "script" {
             assert_eq!(s.documents().len(), 1, "the direct script reaches file.new");
-            assert_eq!(s.active().unwrap().doc.size, photocraft_doc::Size::new(2, 2));
+            assert_eq!(s.active().unwrap().doc.size, lienzo_doc::Size::new(2, 2));
         } else {
             assert!(s.documents().is_empty(), "{caller}: failed action parents stop");
         }
@@ -3074,14 +3070,14 @@ fn cube_export_uses_only_selected_adjustments_in_document_order() {
     let first = s.execute("layer.newAdjustmentLayer.invert", json!({})).unwrap()["layer"].as_u64().unwrap();
     let second = s.execute("layer.newAdjustmentLayer.invert", json!({})).unwrap()["layer"].as_u64().unwrap();
     let both = s.execute("file.export.colorLookupTables", json!({"size": 3})).unwrap();
-    let all = photocraft_cms::lutfile::parse_cube(both["cube"].as_str().unwrap()).unwrap();
+    let all = lienzo_cms::lutfile::parse_cube(both["cube"].as_str().unwrap()).unwrap();
     assert_eq!(both["layerCount"], 2);
     assert!(all.data[0] < 0.001, "two Invert adjustments produce identity");
 
     // Selection comes from the Layers panel rather than the active layer alone.
     s.execute("layer.select", json!({"layer": first})).unwrap();
     let selected = s.execute("file.export.colorLookupTables", json!({"size": 3, "scope": "selected"})).unwrap();
-    let one = photocraft_cms::lutfile::parse_cube(selected["cube"].as_str().unwrap()).unwrap();
+    let one = lienzo_cms::lutfile::parse_cube(selected["cube"].as_str().unwrap()).unwrap();
     assert_eq!(selected["layerCount"], 1);
     assert!(one.data[0] > 0.999, "one invert maps black to white");
     assert_eq!(all.size, one.size);
@@ -3140,7 +3136,7 @@ fn exported_selected_cube_round_trips_through_lookup_importer() {
     assert_eq!(r["size"], 17);
     assert_eq!(r["layerCount"], 1);
     let text = std::fs::read_to_string(&path).unwrap();
-    let parsed = photocraft_cms::lutfile::parse_cube(&text).unwrap();
+    let parsed = lienzo_cms::lutfile::parse_cube(&text).unwrap();
     assert_eq!(parsed.size, 17);
     assert_eq!(parsed.data.len(), 17 * 17 * 17 * 3);
     assert!(parsed.data[..3].iter().all(|v| *v > 0.999));
@@ -3287,8 +3283,8 @@ fn batch_naming_serial_keeps_same_named_inputs_and_their_pixels() {
     assert_eq!(result["errors"], json!([]), "{result}");
     assert_eq!(result["files"], json!([join(&out, "photo_007"), join(&out, "photo_008")]));
     for (name, expected) in [("photo_007", [1.0, 0.0, 0.0, 1.0]), ("photo_008", [0.0, 0.0, 1.0, 1.0])] {
-        let saved = photocraft_io::import("photo.png", &std::fs::read(join(&out, name)).unwrap()).unwrap().document;
-        let pixel = photocraft_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0];
+        let saved = lienzo_io::import("photo.png", &std::fs::read(join(&out, name)).unwrap()).unwrap().document;
+        let pixel = lienzo_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0];
         assert_eq!(pixel, expected, "{name}");
     }
 }
@@ -3338,12 +3334,12 @@ fn batch_reports_inputs_that_share_an_output_name() {
     std::fs::create_dir_all(&other).unwrap();
     png(&other, "a.png", 8, 8, "#ffffff");
     let droplet = join(&dir, "d.pcdroplet");
-    std::fs::write(&droplet, json!({"photocraftDroplet": 1, "name": "d", "action": {"steps": []}, "options": {"format": "png"}}).to_string()).unwrap();
+    std::fs::write(&droplet, json!({"lienzoDroplet": 1, "name": "d", "action": {"steps": []}, "options": {"format": "png"}}).to_string()).unwrap();
     let out = join(&dir, "droplet");
     let r = s.execute("file.automate.runDroplet", json!({"droplet": droplet, "input": [join(&input, "a.png"), other], "output": out})).unwrap();
     assert_eq!((r["files"].as_array().unwrap().len(), r["errors"].as_array().unwrap().len()), (2, 0), "{r}");
-    let kept = photocraft_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
-    let px = photocraft_compose::render(&kept, Rect::new(1, 1, 2, 2)).px[0];
+    let kept = lienzo_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
+    let px = lienzo_compose::render(&kept, Rect::new(1, 1, 2, 2)).px[0];
     assert!(px[0] > 0.99 && px[1] > 0.99, "the later input's result replaces the first: {px:?}");
 }
 
@@ -3430,8 +3426,8 @@ fn batch_include_all_subfolders() {
     let files: Vec<String> = r["files"].as_array().unwrap().iter().map(|f| f.as_str().unwrap().replace('\\', "/")).collect();
     let o = out.replace('\\', "/");
     assert_eq!(files, vec![format!("{o}/a.png"), format!("{o}/b.png"), format!("{o}/a.png"), format!("{o}/a.png")]);
-    let last = photocraft_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
-    let px = photocraft_compose::render(&last, Rect::new(1, 1, 2, 2)).px[0];
+    let last = lienzo_io::import("a.png", &std::fs::read(join(&out, "a.png")).unwrap()).unwrap().document;
+    let px = lienzo_compose::render(&last, Rect::new(1, 1, 2, 2)).px[0];
     assert!(px[0] < 0.01 && px[1] < 0.01 && px[2] < 0.01, "the last white input is inverted to black: {px:?}");
     std::fs::remove_dir_all(&out).unwrap();
     // A naming template applies across all inputs, with serials distinguishing the flat outputs.
@@ -3577,8 +3573,8 @@ fn batch_naming_later_result_replaces_the_earlier_one() {
         .unwrap();
     assert_eq!(result["files"], json!([join(&out, "constant"), join(&out, "constant")]));
     assert_eq!(result["errors"], json!([]), "{result}");
-    let saved = photocraft_io::import("constant.png", &std::fs::read(join(&out, "constant")).unwrap()).unwrap().document;
-    assert_eq!(photocraft_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 0.0, 1.0, 1.0]);
+    let saved = lienzo_io::import("constant.png", &std::fs::read(join(&out, "constant")).unwrap()).unwrap().document;
+    assert_eq!(lienzo_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 0.0, 1.0, 1.0]);
 }
 #[test]
 fn batch_naming_rejects_outputs_that_replace_inputs_before_processing() {
@@ -3610,14 +3606,14 @@ fn batch_naming_rejects_outputs_that_replace_inputs_before_processing() {
 fn batch_saves_at_the_recorded_save_so_a_close_after_it_keeps_the_result() {
     let dir = tmp("batch-save-close");
     let red = png(&dir, "red.png", 8, 8, "#ff0000");
-    let saved = |out: &str| photocraft_io::import("red.png", &std::fs::read(join(out, "red.png")).unwrap()).unwrap().document;
+    let saved = |out: &str| lienzo_io::import("red.png", &std::fs::read(join(out, "red.png")).unwrap()).unwrap().document;
     let mut s = Session::new();
     let out = join(&dir, "close");
     let steps = json!([["image.adjustments.invert", {}], ["file.saveAs", {}], ["file.close", {}]]);
     let r = s.execute("file.automate.batch", json!({"input": [red], "output": out, "format": "png", "steps": steps})).unwrap();
     assert_eq!(r["errors"], json!([]), "{r}");
     assert_eq!(r["files"], json!([join(&out, "red.png")]));
-    assert_eq!(photocraft_compose::render(&saved(&out), Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0], "the inverted red");
+    assert_eq!(lienzo_compose::render(&saved(&out), Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0], "the inverted red");
 
     // Save a Copy marks the result the same way, and its recorded path is never written.
     let out = join(&dir, "copy");
@@ -3625,7 +3621,7 @@ fn batch_saves_at_the_recorded_save_so_a_close_after_it_keeps_the_result() {
     let steps = json!([["image.adjustments.invert", {}], ["file.saveACopy", {"path": elsewhere}], ["file.close", {}]]);
     let r = s.execute("file.automate.batch", json!({"input": [red], "output": out, "format": "png", "steps": steps})).unwrap();
     assert_eq!(r["errors"], json!([]), "{r}");
-    assert_eq!(photocraft_compose::render(&saved(&out), Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
+    assert_eq!(lienzo_compose::render(&saved(&out), Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
     assert!(!std::path::Path::new(&elsewhere).exists());
 
     // With no Save step the result is still saved after the action; with nothing left open then,
@@ -3648,8 +3644,8 @@ fn batch_save_as_then_close_that_asks_processes_every_file() {
     let r = Session::new().execute("file.automate.batch", json!({"input": input, "output": out, "format": "png", "steps": steps})).unwrap();
     assert_eq!(r["errors"], json!([]), "{r}");
     assert_eq!(r["files"].as_array().unwrap().len(), 2, "{r}");
-    let red = photocraft_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
-    assert_eq!(photocraft_compose::render(&red, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0], "the inverted red");
+    let red = lienzo_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
+    assert_eq!(lienzo_compose::render(&red, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0], "the inverted red");
     // A Save a Copy doesn't save the document itself: the Close that asks still refuses it.
     let out = join(&dir, "copy");
     let steps = json!([["image.adjustments.invert", {}], ["file.saveACopy", {}], ["file.close", {"save": "ask"}]]);
@@ -3674,9 +3670,9 @@ fn batch_saves_the_document_active_at_the_save_not_the_one_left_after_it() {
     ]);
     let r = Session::new().execute("file.automate.batch", json!({"input": [red], "output": out, "format": "png", "steps": steps})).unwrap();
     assert_eq!(r["errors"], json!([]), "{r}");
-    let saved = photocraft_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
+    let saved = lienzo_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
     assert_eq!((saved.size.width, saved.size.height), (4, 4));
-    assert_eq!(photocraft_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 0.0, 1.0]);
+    assert_eq!(lienzo_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 0.0, 1.0]);
 }
 
 /// While the saved document is open, the steps after its save still reach the result (#3058: a
@@ -3691,8 +3687,8 @@ fn batch_applies_the_steps_after_a_save_while_its_document_is_open() {
     let steps = json!([["file.saveAs", {}], ["image.adjustments.invert", {}]]);
     let r = s.execute("file.automate.batch", json!({"input": [red], "output": out, "format": "png", "steps": steps})).unwrap();
     assert_eq!(r["errors"], json!([]), "{r}");
-    let saved = photocraft_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
-    assert_eq!(photocraft_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
+    let saved = lienzo_io::import("red.png", &std::fs::read(join(&out, "red.png")).unwrap()).unwrap().document;
+    assert_eq!(lienzo_compose::render(&saved, Rect::new(1, 1, 2, 2)).px[0], [0.0, 1.0, 1.0, 1.0]);
 
     let out = join(&dir, "failed");
     let steps = json!([["image.adjustments.invert", {}], ["file.saveAs", {}], ["layer.select", {"layer": "missing"}]]);
@@ -3726,13 +3722,13 @@ fn folder_listing_recognises_gzipped_xcf_by_its_double_extension() {
 /// 5): a batch would process the thumbnail without a word.
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
-fn folder_listing_takes_every_format_photocraft_opens() {
+fn folder_listing_takes_every_format_lienzo_opens() {
     let codecs = ["a.cin", "a.dcm", "a.dicom", "a.dc3", "a.iff", "a.lbm", "a.ilbm", "a.pcx", "a.xpm", "a.dds", "a.pbm", "a.pam", "a.pfm", "a.psdt", "A.PCX"];
     let raws = ["a.dng", "IMG_0001.CR2", "a.nef", "a.nrw", "a.arw", "a.pef"];
     for name in codecs.into_iter().chain(raws) {
         assert!(super::openable_name(name), "{name}");
     }
-    for f in photocraft_codecs::Format::ALL.into_iter().filter(|f| f.caps().read) {
+    for f in lienzo_codecs::Format::ALL.into_iter().filter(|f| f.caps().read) {
         for ext in f.extensions() {
             assert!(super::openable_name(&format!("a.{ext}")), "{f:?} .{ext}");
         }
@@ -3740,7 +3736,7 @@ fn folder_listing_takes_every_format_photocraft_opens() {
     for name in ["a.cr3", "IMG_0001.CR3", "a.orf", "a.raf", "a.rw2", "a.srf", "a.sr2"] {
         assert!(!super::openable_name(name), "{name}");
     }
-    // PhotoCraft does not read AVIF.
+    // Lienzo does not read AVIF.
     assert!(!super::openable_name("a.avif"));
 }
 
@@ -3811,7 +3807,7 @@ fn save_a_copy_writes_the_tiff_compression_asked_for() {
         s.execute("file.saveACopy", p).unwrap();
         let bytes = std::fs::read(&out).unwrap();
         assert_eq!(tiff_compression_tag(&bytes), Some(tag), "{params}");
-        assert_eq!(photocraft_io::import("a.tif", &bytes).unwrap().document.size, photocraft_geom::Size::new(12, 6));
+        assert_eq!(lienzo_io::import("a.tif", &bytes).unwrap().document.size, lienzo_geom::Size::new(12, 6));
     }
     let mut s = session(8, 8, 8);
     let state = |s: &Session| s.active().map(|st| (st.revision, st.path.clone(), st.is_dirty()));
@@ -3836,7 +3832,7 @@ fn save_a_copy_writes_the_tiff_pyramid_and_transparency_asked_for() {
     let out = join(&dir, "p.tif");
     s.execute("file.saveACopy", json!({"path": out, "tiffPyramid": true})).unwrap();
     let bytes = std::fs::read(&out).unwrap();
-    let sizes: Vec<(u32, u32)> = photocraft_codecs::tiff_info(&bytes).unwrap().pages.iter().map(|p| (p.width, p.height)).collect();
+    let sizes: Vec<(u32, u32)> = lienzo_codecs::tiff_info(&bytes).unwrap().pages.iter().map(|p| (p.width, p.height)).collect();
     assert_eq!(sizes, [(200, 100), (100, 50), (50, 25)]);
     for (t, alpha) in [(None, true), (Some(true), true), (Some(false), false)] {
         let mut p = json!({"path": out});
@@ -3844,7 +3840,7 @@ fn save_a_copy_writes_the_tiff_pyramid_and_transparency_asked_for() {
             p["tiffTransparency"] = json!(t);
         }
         s.execute("file.saveACopy", p).unwrap();
-        let img = photocraft_codecs::decode(&std::fs::read(&out).unwrap()).unwrap();
+        let img = lienzo_codecs::decode(&std::fs::read(&out).unwrap()).unwrap();
         assert_eq!(img.layout().has_alpha(), alpha, "{t:?}");
     }
     for (key, bad) in [("tiffPyramid", json!("yes")), ("tiffPyramid", json!(1)), ("tiffTransparency", json!("off")), ("tiffTransparency", json!([]))] {
@@ -3981,8 +3977,8 @@ fn approve_memory_refuses_when_available_ram_decreases() {
         .unwrap();
 
     // Memory drops: only 6 GiB available -> H = 4.5 GiB < 8 GiB
-    let snap_low = photocraft_io::memory::MemorySnapshot { available_ram: Some(6 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::memory::with_mock_memory(snap_low, || {
+    let snap_low = lienzo_io::memory::MemorySnapshot { available_ram: Some(6 * gb), swap_free: None, commit_headroom: None };
+    lienzo_io::memory::with_mock_memory(snap_low, || {
         let res = s.execute("file.approveMemory", json!({"id": id, "approve": true}));
         assert!(res.is_err(), "decreased memory must refuse");
     });
@@ -4142,9 +4138,9 @@ fn approve_memory_releases_the_preflight_when_the_hard_limit_refuses_it() {
         ..memory_preflight("ram_drop.psd", crate::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0u8; 16])))
     };
     let id = s.store_pending_preflight(preflight).unwrap();
-    let snap_low = photocraft_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
-    let expected_limit = photocraft_io::memory::resolve_budget(snap_low, None).hard_limit;
-    photocraft_io::memory::with_mock_memory(snap_low, || {
+    let snap_low = lienzo_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
+    let expected_limit = lienzo_io::memory::resolve_budget(snap_low, None).hard_limit;
+    lienzo_io::memory::with_mock_memory(snap_low, || {
         let err = s.execute("file.approveMemory", json!({"id": id, "approve": true, "background": false})).unwrap_err();
         match &err {
             EngineError::PsdHardBudget { name, required, limit, .. } => {
@@ -4165,14 +4161,14 @@ fn open_as_and_place_keep_the_typed_hard_budget_fields() {
     let path = join(&dir, "big.psd");
     let mut src = Session::new();
     src.execute("file.new", json!({"width": 4, "height": 4, "depth": 8})).unwrap();
-    std::fs::write(&path, photocraft_io::export(&src.active().unwrap().doc, "x.psd", &Default::default()).unwrap().bytes).unwrap();
+    std::fs::write(&path, lienzo_io::export(&src.active().unwrap().doc, "x.psd", &Default::default()).unwrap().bytes).unwrap();
     // An estimate over the resolved hard ceiling is refused, and no approval raises the ceiling.
     // The estimate charge is a test seam so the fixture stays tiny.
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
-    let hard = photocraft_io::memory::resolve_budget(snap, None).hard_limit;
+    let snap = lienzo_io::memory::MemorySnapshot { available_ram: Some(4 * gb), swap_free: None, commit_headroom: None };
+    let hard = lienzo_io::memory::resolve_budget(snap, None).hard_limit;
     assert!(hard < u64::MAX);
-    photocraft_io::memory::with_mock_memory(snap, || {
-        photocraft_io::psd_budget::with_test_estimate_charge(hard + 1, || {
+    lienzo_io::memory::with_mock_memory(snap, || {
+        lienzo_io::psd_budget::with_test_estimate_charge(hard + 1, || {
             let mut s = Session::new();
             let err = s.execute("file.openAs", json!({"path": path.clone(), "approveHighMemory": true})).unwrap_err();
             match &err {
@@ -4362,13 +4358,13 @@ fn save_and_close_refuses_a_read_only_source() {
     let dir = tmp("batch-save-close-read-only");
     let maindoc = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DOC xmlns=\"http://www.calligra.org/DTD/krita\" syntaxVersion=\"2.0\">\
         <IMAGE name=\"img\" width=\"4\" height=\"4\" colorspacename=\"RGBA\" x-res=\"72\" y-res=\"72\"><layers></layers></IMAGE></DOC>";
-    let mut zip = photocraft_format::zip::ZipWriter::new();
+    let mut zip = lienzo_format::zip::ZipWriter::new();
     zip.add("mimetype", b"application/x-krita").unwrap();
     zip.add("maindoc.xml", maindoc.as_bytes()).unwrap();
     let bytes = zip.finish().unwrap();
     let source = join(&dir, "source.png");
     std::fs::write(&source, &bytes).unwrap();
-    assert!(photocraft_io::import("source.png", &bytes).unwrap().source_read_only, "the fixture opens read-only");
+    assert!(lienzo_io::import("source.png", &bytes).unwrap().source_read_only, "the fixture opens read-only");
     for override_open in [false, true] {
         let mut p = json!({"input": [source], "destination": "saveAndClose", "steps": []});
         if override_open {

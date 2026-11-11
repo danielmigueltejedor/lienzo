@@ -8,15 +8,15 @@
 //! `layer.layerStyle.gradientOverlay` receives.
 
 use egui::{Color32, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_color::Color;
-use photocraft_compose::gradient_fill as gf;
-use photocraft_doc::{Fill, GradientStyle};
-use photocraft_engine::gradient_fill_cmds as cmds;
+use lienzo_color::Color;
+use lienzo_compose::gradient_fill as gf;
+use lienzo_doc::{Fill, GradientStyle};
+use lienzo_engine::gradient_fill_cmds as cmds;
 use serde_json::{Map, Value, json};
 
 use super::{color_picker, set_param};
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, color_picker_ui, widgets};
+use crate::{LienzoApp, color_picker_ui, widgets};
 
 /// The dialog field holding the colour stops.
 pub(super) const KEY: &str = "stops";
@@ -133,7 +133,7 @@ fn commit(f: &mut Map<String, Value>, effect: &str, disp: &mut Value, fill: &Fil
 
 /// Apply one stop edit (`cmds::apply_stop`'s grammar) to the page's gradient; the new index of
 /// the edited stop, for the selection.
-fn edit(app: &PhotocraftApp, f: &mut Map<String, Value>, effect: &str, disp: &mut Value, p: Value) -> Option<usize> {
+fn edit(app: &LienzoApp, f: &mut Map<String, Value>, effect: &str, disp: &mut Value, p: Value) -> Option<usize> {
     let (fg, bg) = (app.session.tools.foreground, app.session.tools.background);
     let fill = fill_of(disp);
     let new = cmds::apply_stop(&fill, &p, fg, bg).ok()?;
@@ -151,7 +151,7 @@ fn edit(app: &PhotocraftApp, f: &mut Map<String, Value>, effect: &str, disp: &mu
 }
 
 /// Use `preset` (the Gradients panel's) as the page's gradient, resolved with the tool colours.
-pub(super) fn apply_preset(app: &PhotocraftApp, f: &mut Map<String, Value>, effect: &str, disp: &mut Value, name: &str) -> bool {
+pub(super) fn apply_preset(app: &LienzoApp, f: &mut Map<String, Value>, effect: &str, disp: &mut Value, name: &str) -> bool {
     let Some(preset) = app.session.presets.gradients.iter().flat_map(|g| g.items.iter()).find(|p| p.name == name) else { return false };
     let (fg, bg) = (app.session.tools.foreground, app.session.tools.background);
     let (stops, os) = preset.fill_stops(fg, bg);
@@ -168,7 +168,7 @@ pub(super) fn apply_preset(app: &PhotocraftApp, f: &mut Map<String, Value>, effe
 
 /// The page's row: the preset dropdown, the ramp with its stop markers, the selected stop's
 /// Color, Location and Delete.
-pub(super) fn row(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, effect: &str, label: &str, disp: &mut Value) {
+pub(super) fn row(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, effect: &str, label: &str, disp: &mut Value) {
     let t = Tokens::get(ui.ctx());
     let sel_key = egui::Id::unique(("fx-gradient-selection", effect.to_string()));
     let drag_key = egui::Id::unique(("fx-gradient-drag", effect.to_string()));
@@ -333,17 +333,17 @@ mod tests {
     use super::*;
     use egui_kittest::kittest::Queryable;
 
-    fn dialog_app() -> (PhotocraftApp, u64) {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn dialog_app() -> (LienzoApp, u64) {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
         let parent = crate::layer_style::open(&mut app, Some("gradientOverlay")).unwrap();
         (app, parent)
     }
 
     /// The dialog body drawn from the real dialog's fields, edits written back to it.
-    fn harness(app: PhotocraftApp, parent: u64) -> egui_kittest::Harness<'static, PhotocraftApp> {
+    fn harness(app: LienzoApp, parent: u64) -> egui_kittest::Harness<'static, LienzoApp> {
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 700.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-            move |ui, app: &mut PhotocraftApp| {
+            move |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -355,23 +355,23 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.run_steps(3);
         h
     }
 
-    fn stops_in(app: &PhotocraftApp, parent: u64) -> Vec<(f32, Color)> {
+    fn stops_in(app: &LienzoApp, parent: u64) -> Vec<(f32, Color)> {
         let f = &app.ui.dialogs.iter().find(|d| d.id == parent).unwrap().fields;
         let e = crate::layer_style::effects_of(f).iter().find(|e| e["kind"] == "gradientOverlay").unwrap();
         stops_of(e["params"].get(KEY)).unwrap()
     }
 
-    fn press(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+    fn press(h: &mut egui_kittest::Harness<'static, LienzoApp>, p: egui::Pos2) {
         h.event(egui::Event::PointerMoved(p));
         h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
         h.run_steps(1);
     }
-    fn release(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+    fn release(h: &mut egui_kittest::Harness<'static, LienzoApp>, p: egui::Pos2) {
         h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: false, modifiers: Default::default() });
         h.run_steps(2);
     }

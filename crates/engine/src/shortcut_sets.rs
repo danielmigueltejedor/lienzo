@@ -20,7 +20,7 @@ use crate::prefs::{Preferences, alternate_keys, normalize_shortcut};
 /// The built-in set's name: the default bindings.
 pub const DEFAULTS_NAME: &str = "Lienzo Defaults";
 /// The built-in set's name before the app was called Lienzo; calls and scripts may still use it.
-const LEGACY_DEFAULTS_NAME: &str = "PhotoCraft Defaults";
+const LEGACY_DEFAULTS_NAME: &str = "PhotoCraft Defaults"; // rebrand: keep
 /// Saved sets are small; the cap keeps a hostile settings file or call bounded.
 pub const MAX_SETS: usize = 64;
 /// Longest set name, in characters.
@@ -333,17 +333,17 @@ mod tests {
     fn the_former_defaults_name_still_means_the_defaults_unless_a_set_has_it() {
         let mut p = prefs();
         store(&mut p, &json!({"saveSet": "Mine"})).unwrap();
-        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap();
+        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap(); // rebrand: keep
         assert!(p.shortcut_set.is_empty(), "the former built-in name loads the defaults");
         store(&mut p, &json!({"activeSet": "Mine"})).unwrap();
-        store(&mut p, &json!({"activeSet": "photocraft defaults"})).unwrap();
+        store(&mut p, &json!({"activeSet": "lienzo defaults"})).unwrap();
         assert!(p.shortcut_set.is_empty());
         // A set saved under that name keeps loading as itself.
         p.shortcuts.insert("edit.copy".into(), "F9".into());
-        store(&mut p, &json!({"saveSet": "PhotoCraft Defaults"})).unwrap();
+        store(&mut p, &json!({"saveSet": "PhotoCraft Defaults"})).unwrap(); // rebrand: keep
         load(&mut p, &json!({"useSet": ""})).unwrap();
-        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap();
-        assert_eq!((p.shortcut_set.as_str(), p.shortcuts.get("edit.copy").map(String::as_str)), ("PhotoCraft Defaults", Some("F9")));
+        load(&mut p, &json!({"useSet": "PhotoCraft Defaults"})).unwrap(); // rebrand: keep
+        assert_eq!((p.shortcut_set.as_str(), p.shortcuts.get("edit.copy").map(String::as_str)), ("PhotoCraft Defaults", Some("F9"))); // rebrand: keep
     }
 
     #[test]

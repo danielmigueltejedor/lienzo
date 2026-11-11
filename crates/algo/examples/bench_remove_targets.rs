@@ -2,7 +2,7 @@
 //! radius, once per pyramid level) and of the whole fill, on a 24 or 36 MP RGBA f32 image. One
 //! JSON line per repetition. Uses only APIs that exist before and after the change, so the same
 //! file builds in a base checkout.
-//! `cargo run --release -p photocraft-algo --example bench_remove_targets -- --mode phase --mp 24 --hole small --reps 20`
+//! `cargo run --release -p lienzo-algo --example bench_remove_targets -- --mode phase --mp 24 --hole small --reps 20`
 //!
 //! * `--mode phase|e2e`: `phase` times the masks alone (`old_loop`, a verbatim copy of the loop
 //!   the completion used to run, against `remove_dilate`); `e2e` times `remove_with`.
@@ -11,8 +11,8 @@
 //!   square (`phase` only).
 use std::time::Instant;
 
-use photocraft_algo::remove::{dilate, hole_radius, remove_with};
-use photocraft_raster::Interrupt;
+use lienzo_algo::remove::{dilate, hole_radius, remove_with};
+use lienzo_raster::Interrupt;
 
 /// The patch radius of the completion's default parameters.
 const R: usize = 3;

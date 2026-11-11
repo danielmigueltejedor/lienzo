@@ -1,8 +1,8 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use photocraft_compose::effects::{self as fx, BevelGeom, BevelPaint, FieldKind};
-use photocraft_doc::{Bevel, BevelTechnique, BevelTexture, GlobalLight, Glow, GlowSource, GlowTechnique, Pattern, Satin, Shadow, StrokeFx};
+use lienzo_compose::effects::{self as fx, BevelGeom, BevelPaint, FieldKind};
+use lienzo_doc::{Bevel, BevelTechnique, BevelTexture, GlobalLight, Glow, GlowSource, GlowTechnique, Pattern, Satin, Shadow, StrokeFx};
 
 use super::{B, In, contour_lut, offset, stage};
 use crate::plan::{Kernel, stroke_widths};
@@ -86,7 +86,7 @@ impl B {
             h = self.push(st);
         }
         if let Some(t) = &bv.texture
-            && let Some(pat) = photocraft_doc::pattern::find(patterns, &t.id, &t.name).filter(|p| p.is_paintable())
+            && let Some(pat) = lienzo_doc::pattern::find(patterns, &t.id, &t.name).filter(|p| p.is_paintable())
         {
             let unit = if bv.depth.abs() > 1e-6 { (g.depth / bv.depth).abs().max(1e-3) } else { g.width.max(1.0) };
             h = self.bevel_texture(h, t, pat, unit, anchor);
@@ -118,7 +118,7 @@ impl B {
     /// `h` with the Texture element's pattern luminance added.
     fn bevel_texture(&mut self, h: In, t: &BevelTexture, pat: &Pattern, unit: f32, anchor: (f64, f64)) -> In {
         // Texture element: adds luminance × depth / unit to the height.
-        let pl = photocraft_compose::pattern::Placement::anchored(anchor, t.link, t.phase, t.scale, 0.0);
+        let pl = lienzo_compose::pattern::Placement::anchored(anchor, t.link, t.phase, t.scale, 0.0);
         let (origin, cs, inv) = pl.parts();
         let mut st = stage(Kernel::MBevelTex, Some(h), None, [t.depth / unit, flag(t.invert), 0.0, 0.0], 0);
         st.p3 = [origin.0 as f32, origin.1 as f32, cs.0 as f32, cs.1 as f32];

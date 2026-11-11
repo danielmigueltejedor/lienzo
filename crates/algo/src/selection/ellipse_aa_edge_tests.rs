@@ -3,8 +3,8 @@
 //! of its top-left edge. Grids hold what a black fill of the selection reads there (255 outside,
 //! 0 fully selected), as the issue's tables do.
 
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 
 use super::ellipse_surface;
 
@@ -22,7 +22,7 @@ const SOFT: [[u8; 6]; 6] = [
     [0, 0, 0, 0, 0, 0],
 ];
 
-/// Anti-alias off: the reference and PhotoCraft before #11391 agree.
+/// Anti-alias off: the reference and Lienzo before #11391 agree.
 const HARD: [[u8; 6]; 6] =
     [[255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 0, 0], [255, 255, 255, 0, 0, 0], [255, 255, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
 

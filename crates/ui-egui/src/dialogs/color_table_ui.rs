@@ -9,7 +9,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 pub fn owns(fields: &Map<String, Value>) -> bool {
     fields.get("__command").and_then(Value::as_str) == Some("image.mode.colorTable")
@@ -35,17 +35,17 @@ fn drop_loaded_unless_custom(fields: &mut Map<String, Value>) {
 
 /// The pending table: the dialog's loaded colors (while the Table menu is on Custom), else its
 /// preset, else the document's table.
-fn pending(app: &PhotocraftApp, fields: &Map<String, Value>) -> Option<(Vec<[u8; 3]>, Option<u16>)> {
+fn pending(app: &LienzoApp, fields: &Map<String, Value>) -> Option<(Vec<[u8; 3]>, Option<u16>)> {
     if custom(fields)
         && let Some(a) = fields.get("colors").and_then(Value::as_array)
     {
         let colors: Option<Vec<[u8; 3]>> = a.iter().filter_map(Value::as_str).map(unhex).collect();
-        let colors = colors.filter(|c| !c.is_empty() && c.len() <= photocraft_engine::swatch_cmds::ACT_COLORS)?;
+        let colors = colors.filter(|c| !c.is_empty() && c.len() <= lienzo_engine::swatch_cmds::ACT_COLORS)?;
         let transparent = fields.get("transparent").and_then(Value::as_u64).and_then(|i| u16::try_from(i).ok());
         return Some((colors, transparent));
     }
     if let Some(name) = fields.get("table").and_then(Value::as_str)
-        && let Some(colors) = photocraft_engine::mode_cmds::preset_table(name)
+        && let Some(colors) = lienzo_engine::mode_cmds::preset_table(name)
     {
         return Some((colors, None));
     }
@@ -55,7 +55,7 @@ fn pending(app: &PhotocraftApp, fields: &Map<String, Value>) -> Option<(Vec<[u8;
 
 /// Load…/Save… row for the Color Table dialog (`id` finds its fields after the file picker
 /// answers, as the picker is asynchronous).
-pub fn buttons(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: u64, fields: &mut Map<String, Value>) {
+pub fn buttons(app: &mut LienzoApp, ui: &mut egui::Ui, id: u64, fields: &mut Map<String, Value>) {
     // `fields` is the frame's copy that the dialog writes back and OK sends: drop the loaded
     // table there once a preset is picked, so OK applies what the Table menu shows.
     drop_loaded_unless_custom(fields);
@@ -64,7 +64,7 @@ pub fn buttons(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: u64, fields: &mut
         if ui.button(tl!("Load…")).clicked()
             && let Err(e) = app.pick_file_bytes_filtered(&["act"], move |app, name, bytes| {
                 let (colors, transparent) =
-                    photocraft_engine::swatch_cmds::act_table(&bytes).map_err(|e| format!("{}: {e}", crate::file_open::display_name(&name)))?;
+                    lienzo_engine::swatch_cmds::act_table(&bytes).map_err(|e| format!("{}: {e}", crate::file_open::display_name(&name)))?;
                 // The dialog may close while the picker is open; then there is nothing to fill.
                 let Some(d) = app.ui.dialogs.iter_mut().find(|d| d.id == id) else { return Ok(Value::Null) };
                 d.fields.insert("table".into(), json!("custom"));
@@ -83,7 +83,7 @@ pub fn buttons(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: u64, fields: &mut
                 app.ui.status_error = true;
                 return;
             };
-            let bytes = match photocraft_engine::swatch_cmds::act_bytes(&colors, transparent) {
+            let bytes = match lienzo_engine::swatch_cmds::act_bytes(&colors, transparent) {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     app.ui.status = e;
@@ -114,8 +114,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn app() -> PhotocraftApp {
-        PhotocraftApp::new(photocraft_engine::Session::new(), Default::default())
+    fn app() -> LienzoApp {
+        LienzoApp::new(lienzo_engine::Session::new(), Default::default())
     }
 
     #[test]
@@ -169,8 +169,8 @@ mod tests {
     #[test]
     fn loaded_act_bytes_fill_the_dialog_fields() {
         let table: Vec<[u8; 3]> = (0..256).map(|i| [i as u8, 0, 255]).collect();
-        let bytes = photocraft_engine::swatch_cmds::act_bytes(&table, Some(3)).unwrap();
-        let (colors, transparent) = photocraft_engine::swatch_cmds::act_table(&bytes).unwrap();
+        let bytes = lienzo_engine::swatch_cmds::act_bytes(&table, Some(3)).unwrap();
+        let (colors, transparent) = lienzo_engine::swatch_cmds::act_table(&bytes).unwrap();
         assert_eq!((colors.len(), transparent), (256, Some(3)));
         // What OK would apply: the table's colors and transparent entry.
         let fields = Map::from_iter([

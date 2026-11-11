@@ -1,6 +1,6 @@
 > HISTORICAL 108-PR BUILD: this record describes the earlier source and artifact. The current branch has 21 requested PRs removed. See [trimmed integration](trimmed-integration-2026-10-29.md) for current scope and validation. Do not use the old portable artifact to validate these removals.
 
-# PhotoCraft integration test plan
+# Lienzo integration test plan
 
 Status: TEST BUILD PREPARED; automated validation passed. Every manual case is NOT RUN.
 This plan supplements the existing gates. It does not claim Photoshop parity or authorize disabling checks.
@@ -24,9 +24,9 @@ check with preservation of its behavior: rerun the regressions after conflict re
 These commands require a source checkout, Rust and the repository's documented dependencies. They are separate from testing the portable ZIP. Use a dedicated PowerShell session in the checkout:
 
 ```powershell
-$env:PHOTOCRAFT_NO_PRINT = '1'
-$env:LPDEST = 'photocraft-no-such-printer'
-$env:PHOTOCRAFT_FULL_SWEEP = '1'
+$env:LIENZO_NO_PRINT = '1'
+$env:LPDEST = 'lienzo-no-such-printer'
+$env:LIENZO_FULL_SWEEP = '1'
 # Optional isolated build output (can require rebuilding dependencies):
 $env:CARGO_TARGET_DIR = Join-Path $PWD 'target\integration-approved'
 cargo test --workspace --locked
@@ -36,18 +36,18 @@ Only the Windows Intel/DX12 case (#9110) requests `$env:WGPU_BACKEND = 'dx12'`; 
 
 ## Automated execution
 
-Set `PHOTOCRAFT_NO_PRINT=1` and `LPDEST=photocraft-no-such-printer` before tests.
+Set `LIENZO_NO_PRINT=1` and `LPDEST=lienzo-no-such-printer` before tests.
 Use `CARGO_TARGET_DIR=target/integration-approved` for local work. Keep the checked-in lockfile and
 repository Cargo configuration; no source substitutions or dependency pin changes to bypass failures.
 
 1. `cargo fmt --all -- --check`; `cargo metadata --locked --format-version 1`.
 2. `cargo xtask ci` (the checked-in gate: formatting, strict clippy, layers, scorecard, tests,
    command panic hunt, doctests, wasm and i18n reporting). Capture each constituent stage.
-3. Set `PHOTOCRAFT_FULL_SWEEP=1`; run `cargo test --workspace --locked`. Daily quarter sweeps
+3. Set `LIENZO_FULL_SWEEP=1`; run `cargo test --workspace --locked`. Daily quarter sweeps
    are insufficient for the final gate. Repeat affected crates after each substantive resolution.
 4. `cargo xtask test-corpus`: fetch pinned SHA256-verified corpora and execute opt-in corpus tests.
    Plain workspace tests omit these. Record pin revisions and corpus floors, never lower them.
-5. `cargo test -p photocraft-engine --test panic_hunt -- --ignored` for command changes;
+5. `cargo test -p lienzo-engine --test panic_hunt -- --ignored` for command changes;
    `cargo xtask layers`; `cargo xtask wasm`; command additions require `cargo xtask parity`.
 6. Run CPU and GPU parity regressions with an actual adapter. Record backend/adapter and tests that
    return early without one. Include 8/16/32f, RGB/Gray/CMYK where supported, masks, clipping,
@@ -63,11 +63,11 @@ repository Cargo configuration; no source substitutions or dependency pin change
 ## Manual matrix — all NOT RUN
 
 For each case save inputs, steps, screenshots/output files, expected versus actual, application versions,
-exact PhotoCraft SHA, tester and date. Use public-domain or synthetic images and licensed fonts.
+exact Lienzo SHA, tester and date. Use public-domain or synthetic images and licensed fonts.
 
 | Case | Steps | Expected result | Status |
 |---|---|---|---|
-| M01 File exchange | Open Photoshop-authored layered PSD/PSB; edit type, masks, Blend If and smart filters; save native and PSD; reopen each in PhotoCraft and PSD in Photoshop. | Structure, editable properties and appearance survive; Photoshop accepts the exported file. PhotoCraft round-trip alone does not satisfy this oracle. | NOT RUN |
+| M01 File exchange | Open Photoshop-authored layered PSD/PSB; edit type, masks, Blend If and smart filters; save native and PSD; reopen each in Lienzo and PSD in Photoshop. | Structure, editable properties and appearance survive; Photoshop accepts the exported file. Lienzo round-trip alone does not satisfy this oracle. | NOT RUN |
 | M02 Effective profile | Untagged RGB with sRGB, Display P3 and Adobe RGB working spaces; export sRGB at 8/16/32f, with embedding on/off; repeat tagged-source precedence, Gray and CMYK; inspect preview and actual ICC/pixels. | Real conversion uses captured source profile, tagged sources win, preview invalidates on working-space change; embedding off writes none; sources unchanged. | NOT RUN |
 | M03 Combined adjustment regressions | Constant bounded lookup over huge positive/negative 32f backdrop at full coverage; then each special-eight mode at reduced Fill, Opacity and mask, unclipped and clipped; compare CPU/GPU and Photoshop reference. | #9509 exact full-coverage result remains; #9512 Fill changes blend while Opacity/mask control coverage, and clipping follows the intended rule. Preserve both regression suites. | NOT RUN |
 | M04 Blend If | Split/rejoin handles with Alt, hard boundaries at 8/16-bit and Gray; adjust opacity on This Layer; Pass Through group with Blend If. | Correct Photoshop boundary and feathering behavior; group isolation; CPU/GPU agree within established tolerance. | NOT RUN |
@@ -100,7 +100,7 @@ See the [executable case appendix](per-pr-regressions.md) for fixture/setup, act
 - [#3461](https://github.com/storytold/photocraft/pull/3461) Replay recorded layer visibility on the intended named layer — NOT RUN
 - [#3748](https://github.com/storytold/photocraft/pull/3748) control: suggest near matches for unknown command ids and methods (#3674) — NOT RUN
 - [#4993](https://github.com/storytold/photocraft/pull/4993) Prevent control-channel engine commands from editing behind modal dialogs — NOT RUN
-- [#5090](https://github.com/storytold/photocraft/pull/5090) Actions: add editable PhotoCraft Essentials starter presets — NOT RUN
+- [#5090](https://github.com/storytold/photocraft/pull/5090) Actions: add editable Lienzo Essentials starter presets — NOT RUN
 - [#5176](https://github.com/storytold/photocraft/pull/5176) Play CopyCat, AJ and Line and Color action sets; keep patterns across restarts; Shift Edge scale — NOT RUN
 - [#6492](https://github.com/storytold/photocraft/pull/6492) Fail control startup promptly when its port is occupied — NOT RUN
 - [#6510](https://github.com/storytold/photocraft/pull/6510) Automation: resolve configured root aliases for absolute paths (#6426) — NOT RUN
@@ -163,7 +163,7 @@ See the [executable case appendix](per-pr-regressions.md) for fixture/setup, act
 ### Platform and reliability
 
 - [#3554](https://github.com/storytold/photocraft/pull/3554) fix(packaging): launch bundled CLI directly from AppImage — NOT RUN
-- [#4742](https://github.com/storytold/photocraft/pull/4742) fix(macos): bundle photocraft-cli and resolve it from droplet scripts — NOT RUN
+- [#4742](https://github.com/storytold/photocraft/pull/4742) fix(macos): bundle lienzo-cli and resolve it from droplet scripts — NOT RUN
 - [#6383](https://github.com/storytold/photocraft/pull/6383) Windows releases ship a symbols zip: the release build's PDBs for profilers (#688) — NOT RUN
 - [#7743](https://github.com/storytold/photocraft/pull/7743) packaging: the portable zip holds the files, not a folder with the files in it — NOT RUN
 - [#9015](https://github.com/storytold/photocraft/pull/9015) fix(xtask): reject leading zeroes in numeric prerelease identifiers — NOT RUN
@@ -202,7 +202,7 @@ See the [executable case appendix](per-pr-regressions.md) for fixture/setup, act
 - [#3520](https://github.com/storytold/photocraft/pull/3520) fix(ui): restore square color chips in Studio Dark theme — NOT RUN
 - [#4023](https://github.com/storytold/photocraft/pull/4023) i18n(es): add 548 missing rows, fix five filter and video terms — NOT RUN
 - [#4042](https://github.com/storytold/photocraft/pull/4042) feat(canvas): rotate view with Shift + middle-mouse drag — NOT RUN
-- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): PhotoCraft icon corner radius matches other Craft apps (#4478) — NOT RUN
+- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): Lienzo icon corner radius matches other Craft apps (#4478) — NOT RUN
 - [#4883](https://github.com/storytold/photocraft/pull/4883) feat(ui): show selection and active-layer bounds in the status bar — NOT RUN
 - [#4890](https://github.com/storytold/photocraft/pull/4890) Add scrollbar visibility preferences (#3262) — NOT RUN
 - [#4938](https://github.com/storytold/photocraft/pull/4938) Layer Style: one dialog size on every page, and it fits short screens — NOT RUN
@@ -231,7 +231,7 @@ See the [executable case appendix](per-pr-regressions.md) for fixture/setup, act
 Validated and packaged source: `f5b3f1238bb414b43851ebe86f3a58ce83bb9b48`. Base: `5f9b4391874aabc9deb2fcb905267613e4d93ec8`.
 Version: `0.17.0-integration.20261029.f5b3f123`; Windows x64; pinned fonts `b076417b5880bd4154bd22f00695b1d28c6bea83`.
 [Full-sweep CI](https://github.com/FredApps/photocraft/actions/runs/40858867520); [portable build](https://github.com/FredApps/photocraft/actions/runs/40867283787);
-[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `photocraft-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
+[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `lienzo-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
 SHA256: `4125eccd5b009f30dc2d72f64bfafcf32220dc5574f765d0b3664ac4d9f992ba`. Artifact ID `12895845995`, job ID `123425396034`.
 The source SHA was checked against the run and artifact metadata. The ZIP was inspected for portable
 content and x64 PE executables; this is not a claim that GUI/manual cases passed.
@@ -257,14 +257,14 @@ P0 scenarios are M01 file exchange, M02 profile fidelity, M03 combined precision
 - CPU/GPU comparison plus large-document zoom/pan/brush: record actual adapter/backend, fallback reasons, output differences, latency and peak memory; GPU early-return skips do not establish parity.
 - Workspace/modal focus with repeated key/pointer input: no background command edits, stale gesture ownership or unexpected shortcut history routing.
 
-For Photoshop acceptance, record Photoshop version/platform, reference fixture identity, profiles and depth, rendering/export options, expected tolerance and its exact repository-document source, and actual image/diff evidence. Use the repository's established oracle thresholds for the specific path; do not invent one universal tolerance. A PhotoCraft CPU/GPU comparison is a separate test from a Photoshop oracle. Reopen exported PSD/PSB in Photoshop before claiming Photoshop acceptance.
+For Photoshop acceptance, record Photoshop version/platform, reference fixture identity, profiles and depth, rendering/export options, expected tolerance and its exact repository-document source, and actual image/diff evidence. Use the repository's established oracle thresholds for the specific path; do not invent one universal tolerance. A Lienzo CPU/GPU comparison is a separate test from a Photoshop oracle. Reopen exported PSD/PSB in Photoshop before claiming Photoshop acceptance.
 
 ## Final automated execution and portable build
 
 Validated and packaged source: `f5b3f1238bb414b43851ebe86f3a58ce83bb9b48`. Base: `5f9b4391874aabc9deb2fcb905267613e4d93ec8`.
 Version: `0.17.0-integration.20261029.f5b3f123`; Windows x64; pinned fonts `b076417b5880bd4154bd22f00695b1d28c6bea83`.
 [Full-sweep CI](https://github.com/FredApps/photocraft/actions/runs/40858867520); [portable build](https://github.com/FredApps/photocraft/actions/runs/40867283787);
-[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `photocraft-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
+[download artifact](https://github.com/FredApps/photocraft/actions/runs/40867283787/artifacts/12895845995). Portable ZIP: `lienzo-0.17.0-integration.20261029.f5b3f123-windows-x64-portable.zip`.
 SHA256: `4125eccd5b009f30dc2d72f64bfafcf32220dc5574f765d0b3664ac4d9f992ba`. Artifact ID `12895845995`, job ID `123425396034`.
 The source SHA was checked against the run and artifact metadata. The ZIP was inspected for portable
 content and x64 PE executables; this is not a claim that GUI/manual cases passed.
@@ -312,7 +312,7 @@ hosted suites passed. The monolithic local abort is retained as a historical gap
 The packaging run's macOS universal job could not start because GitHub reported account payment/spending
 restrictions for its runner. No billing, credentials, permissions or environment settings were changed.
 FreeBSD aarch64 also failed VM provisioning because its configured package repositories lacked `cmake`;
-that job did not compile PhotoCraft. Neither job passes its platform's acceptance requirements.
+that job did not compile Lienzo. Neither job passes its platform's acceptance requirements.
 Record the overall packaging conclusion separately from the successful Windows artifact job.
 
 ### Selection refresh

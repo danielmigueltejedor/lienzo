@@ -8,12 +8,12 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::eraser_range_alert_tests::{alerts, bar, ok, type_into};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::eraser_ui::TOLERANCE_RANGE_ALERT;
 use crate::state::Tool;
 
 /// Clicks into Strength and gives back where it sits.
-fn click_strength(h: &mut Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn click_strength(h: &mut Harness<'static, LienzoApp>) -> egui::Rect {
     let field = h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some("Strength:")).expect("the Strength field");
     let rect = field.rect();
     field.click();
@@ -21,7 +21,7 @@ fn click_strength(h: &mut Harness<'static, PhotocraftApp>) -> egui::Rect {
     rect
 }
 
-fn strength(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn strength(h: &Harness<'static, LienzoApp>) -> f32 {
     h.state().ui.tool_options.strength
 }
 

@@ -1,11 +1,11 @@
 //! Multiple instances of an effect (Photoshop CC's several strokes / shadows / overlays) and
 //! multi-subpath shape components survive a PSD round trip and render the same.
 
-use photocraft_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::vector::{Path, PathOp, ShapeLayer, Subpath};
-use photocraft_doc::*;
-use photocraft_geom::{Rect, Size};
-use photocraft_io::{ExportOptions, export, import};
+use lienzo_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::vector::{Path, PathOp, ShapeLayer, Subpath};
+use lienzo_doc::*;
+use lienzo_geom::{Rect, Size};
+use lienzo_io::{ExportOptions, export, import};
 
 fn stroke(size: f32, position: StrokePosition, paint: FxPaint, opacity: f32) -> Effect {
     Effect::Stroke(StrokeFx { common: FxCommon::new(BlendMode::Normal, opacity), size, position, paint, overprint: false })
@@ -17,7 +17,7 @@ fn roundtrip(doc: &Document) -> Document {
 }
 
 fn max_diff(a: &Document, b: &Document) -> f32 {
-    let (x, y) = (photocraft_compose::flatten(a).into_px(), photocraft_compose::flatten(b).into_px());
+    let (x, y) = (lienzo_compose::flatten(a).into_px(), lienzo_compose::flatten(b).into_px());
     assert_eq!(x.len(), y.len());
     x.iter().zip(&y).flat_map(|(p, q)| (0..4).map(move |c| (p[c] * p[3] - q[c] * q[3]).abs())).fold(0.0, f32::max)
 }
@@ -67,12 +67,12 @@ fn joined_shape_components_roundtrip() {
     let path = Path::new(vec![outer, hole]);
     let mut sh =
         ShapeLayer { path, fill: Some(Fill::Solid(Color::rgb(0.2, 0.4, 0.9))), stroke: None, live: None, cache: None, psd_raw: None, ..ShapeLayer::default() };
-    sh.cache = Some(photocraft_vector::render_shape(&sh, PixelFormat::RGBA8, d.bounds()));
+    sh.cache = Some(lienzo_vector::render_shape(&sh, PixelFormat::RGBA8, d.bounds()));
     let mut l = Layer::new("ring", LayerContent::Shape(sh));
     l.effects.items = vec![stroke(2.0, StrokePosition::Outside, FxPaint::Color(Color::rgb(1.0, 0.0, 0.0)), 1.0)];
     d.layers.push(l);
     // The hole is stroked too (the outline is the joined component).
-    let px = |doc: &Document, x: i32, y: i32| photocraft_compose::render(doc, Rect::from_xywh(x, y, 1, 1)).px[0];
+    let px = |doc: &Document, x: i32, y: i32| lienzo_compose::render(doc, Rect::from_xywh(x, y, 1, 1)).px[0];
     assert!(px(&d, 20, 20)[1] > 0.9, "hole shows the background");
     assert!(px(&d, 20, 13)[0] > 0.9 && px(&d, 20, 13)[1] < 0.1, "stroke inside the hole: {:?}", px(&d, 20, 13));
     let back = roundtrip(&d);

@@ -14,8 +14,8 @@ const OFF_TEXT: (f64, f64) = (300.0, 40.0);
 
 /// A committed type layer reading "Locked text" at `ON_TEXT`, and an empty layer above it that
 /// is active, so the click's activation shows.
-fn locked_text(lock: serde_json::Value) -> (PhotocraftApp, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn locked_text(lock: serde_json::Value) -> (LienzoApp, LayerId) {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 400, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
@@ -30,19 +30,19 @@ fn locked_text(lock: serde_json::Value) -> (PhotocraftApp, LayerId) {
     (app, id)
 }
 
-fn active_layer(app: &PhotocraftApp) -> Option<LayerId> {
+fn active_layer(app: &LienzoApp) -> Option<LayerId> {
     app.session.active().and_then(|st| st.active_layer)
 }
 
-fn history_len(app: &PhotocraftApp) -> usize {
+fn history_len(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn error_dialogs(app: &PhotocraftApp) -> Vec<String> {
+fn error_dialogs(app: &LienzoApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(String::from)).collect()
 }
 
-fn click(app: &mut PhotocraftApp, (x, y): (f64, f64)) -> bool {
+fn click(app: &mut LienzoApp, (x, y): (f64, f64)) -> bool {
     pointer_down(app, x, y, egui::Modifiers::NONE)
 }
 

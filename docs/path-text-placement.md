@@ -16,11 +16,11 @@ Offsets are measured in the text layer's local space, along its current directio
 
 The markers, cursors and gestures follow the reference editor's documented behaviour: an `x` and a circle mark the beginning and end, a plus in the circle signals overflow, the I-beam's triangle points right at the beginning and left at the end, and dragging across the path flips the text, unlike baseline shift. Direct side-by-side comparison is still required before claiming exact parity.
 
-PSD stores the range in the type layer's `Txt2` frame as `/2 /6 [start end]`, in curve-segment units (segment index plus Bézier parameter; `-1` is the default). Three reference-editor files in ag-psd's test set (MIT) fix the mapping: `text-path` (CS6) limits the end a third into the first segment and draws only "so" of "some text", and `text-path-26`/`-27` (2024) move the start on an open path. PhotoCraft reads both ends and writes them back. An open path is saved whole, with its start and end in the range, as those files do. A closed path keeps its start in the path and saves a limited end as a range from there, within one lap; no reference file shows a closed path with a moved range. Flipped type is still saved as the path run backwards; a file's flipped flag (`/2 /11 /0`) is read as the same stretch of path from the other end, which no reference file shows yet.
+PSD stores the range in the type layer's `Txt2` frame as `/2 /6 [start end]`, in curve-segment units (segment index plus Bézier parameter; `-1` is the default). Three reference-editor files in ag-psd's test set (MIT) fix the mapping: `text-path` (CS6) limits the end a third into the first segment and draws only "so" of "some text", and `text-path-26`/`-27` (2024) move the start on an open path. Lienzo reads both ends and writes them back. An open path is saved whole, with its start and end in the range, as those files do. A closed path keeps its start in the path and saves a limited end as a range from there, within one lap; no reference file shows a closed path with a moved range. Flipped type is still saved as the path run backwards; a file's flipped flag (`/2 /11 /0`) is read as the same stretch of path from the other end, which no reference file shows yet.
 
 ## Manual comparison protocol
 
-Use the same font, size, content, baseline shift, and alignment in PhotoCraft and the reference editor.
+Use the same font, size, content, baseline shift, and alignment in Lienzo and the reference editor.
 
 1. Create an open curve and a circle, then add path text. Test left, center, and right alignment.
 2. Select each path-selection tool in turn. Check the `x` and circle markers, the right/left/double triangle cursors and both tools on a marker that sits on an anchor.

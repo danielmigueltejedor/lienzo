@@ -114,9 +114,9 @@ impl Compositor {
             return Err(Unsupported(f.to_string()));
         }
         // CMYK layers convert through the document's own CMYK profile (uploads and plan colours).
-        let space = photocraft_compose::cmyk_space(doc);
+        let space = lienzo_compose::cmyk_space(doc);
         self.cmyk = space.as_ref().map_or(0, |s| s.id);
-        photocraft_color::convert::with_cmyk_space(space.as_ref(), || self.encode_scoped(device, queue, encoder, doc, region, sink, flush))
+        lienzo_color::convert::with_cmyk_space(space.as_ref(), || self.encode_scoped(device, queue, encoder, doc, region, sink, flush))
     }
 
     #[allow(clippy::too_many_arguments)]

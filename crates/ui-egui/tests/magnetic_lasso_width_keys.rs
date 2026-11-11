@@ -3,12 +3,12 @@
 //! (#11688). The keys go through the real shortcut handler on a bare egui context.
 
 use egui::{Event, Key, Modifiers, RawInput};
-use photocraft_ui_egui::canvas::{ToolEvent, tool_event};
-use photocraft_ui_egui::{PhotocraftApp, Tool, magnetic_lasso_ui};
+use lienzo_ui_egui::canvas::{ToolEvent, tool_event};
+use lienzo_ui_egui::{LienzoApp, Tool, magnetic_lasso_ui};
 use serde_json::json;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), lienzo_ui_egui::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::MagneticLasso;
@@ -16,14 +16,14 @@ fn app() -> PhotocraftApp {
 }
 
 /// A border is started with a click, so it is being drawn while the keys are pressed.
-fn start_border(app: &mut PhotocraftApp) {
+fn start_border(app: &mut LienzoApp) {
     tool_event(app, ToolEvent::Down { x: 52.0, y: 37.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: 52.0, y: 37.0 }, Modifiers::NONE);
     assert!(magnetic_lasso_ui::replaces_selection(app), "a border is being drawn");
 }
 
 /// Presses `key` with `modifiers` for one frame and returns whether the Magnetic Lasso took it.
-fn press(app: &mut PhotocraftApp, key: Key, modifiers: Modifiers) -> bool {
+fn press(app: &mut LienzoApp, key: Key, modifiers: Modifiers) -> bool {
     let ctx = egui::Context::default();
     let mut taken = false;
     let events = vec![Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }];
@@ -32,11 +32,11 @@ fn press(app: &mut PhotocraftApp, key: Key, modifiers: Modifiers) -> bool {
     taken
 }
 
-fn width(app: &PhotocraftApp) -> f32 {
+fn width(app: &LienzoApp) -> f32 {
     app.ui.tool_options.magnetic_width
 }
 
-fn with_and_without_border(check: impl Fn(&mut PhotocraftApp)) {
+fn with_and_without_border(check: impl Fn(&mut LienzoApp)) {
     let mut plain = app();
     check(&mut plain);
     let mut drawing = app();

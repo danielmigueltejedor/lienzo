@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::DialogKind;
 
 const MARK: &str = "__equalize";
@@ -26,11 +26,11 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 }
 
 /// Whether Equalize asks first: the active document has a selection and Equalize can run.
-pub fn asks(app: &PhotocraftApp) -> bool {
+pub fn asks(app: &LienzoApp) -> bool {
     app.session.active().is_some_and(|st| st.doc.selection.is_some()) && app.session.is_enabled(COMMAND)
 }
 
-pub fn open(app: &mut PhotocraftApp) -> u64 {
+pub fn open(app: &mut LienzoApp) -> u64 {
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
     f.insert("__command".into(), json!(COMMAND));
@@ -46,7 +46,7 @@ pub fn open(app: &mut PhotocraftApp) -> u64 {
 /// A hash of the selection's stored tiles and its default value, so OK can tell whether the
 /// selection changed after the dialog opened. Tiles that share one allocation (uniform tiles,
 /// copy-on-write clones) are hashed once.
-fn selection_fingerprint(st: &photocraft_engine::DocState) -> Option<String> {
+fn selection_fingerprint(st: &lienzo_engine::DocState) -> Option<String> {
     let sel = st.doc.selection.as_ref()?;
     let mut h = DefaultHasher::new();
     // A point far outside every tile reads the default value.
@@ -65,7 +65,7 @@ fn selection_fingerprint(st: &photocraft_engine::DocState) -> Option<String> {
 
 /// OK runs only while the document, layer and selection the dialog was opened for are still the
 /// active ones; otherwise the dialog stays open.
-pub fn validate(app: &PhotocraftApp, f: &Map<String, Value>) -> Result<(), String> {
+pub fn validate(app: &LienzoApp, f: &Map<String, Value>) -> Result<(), String> {
     let st = app.session.active().ok_or("no document")?;
     if f.get("__document") != Some(&json!(st.doc.id)) {
         return Err("the Equalize dialog belongs to another document".into());

@@ -1,9 +1,9 @@
 //! Camera Raw Filter descriptors observed in real PSD files (filter version 18.4, process 6).
 //! Verified develop controls are editable. Other processing versions
 //! or settings retain the entire filter through the existing opaque-filter path.
-use photocraft_algo::camera_raw::CameraRaw;
-use photocraft_doc::SmartFilter;
-use photocraft_psd::descriptor::{Descriptor, UnicodeString, Value};
+use lienzo_algo::camera_raw::CameraRaw;
+use lienzo_doc::SmartFilter;
+use lienzo_psd::descriptor::{Descriptor, UnicodeString, Value};
 use serde_json::{Value as J, json};
 
 use super::{blend_options, from_hex, get_desc, int, rgbc, set, to_hex};
@@ -71,7 +71,7 @@ const ARRAYS: &[(&str, &[&str])] = &[
 ];
 const CURVES: &[(&str, &str)] = &[("pointCurve", "Crv "), ("pointCurveRed", "CrvR"), ("pointCurveGreen", "CrvG"), ("pointCurveBlue", "CrvB")];
 
-// These controls have no PhotoCraft counterpart yet. Their observed neutral values can be
+// These controls have no Lienzo counterpart yet. Their observed neutral values can be
 // retained in the template; active values must keep the entire filter opaque.
 const NEUTRAL_ONLY: &[(&str, i32)] = &[("LNRC", 0), ("CNRS", 50), ("MDis", 0), ("VigA", 0), ("VigM", 50), ("crfs", 100), ("TMMs", 0), ("PGTM", 0), ("RGBt", 0)];
 
@@ -118,7 +118,7 @@ fn read_number(d: &Descriptor, key: &str) -> Option<f64> {
 
 fn read_curve(value: &Value) -> Option<J> {
     let Value::List(values) = value else { return None };
-    if values.len() < 4 || !values.len().is_multiple_of(2) || values.len() > photocraft_algo::camera_raw::MAX_CURVE_POINTS * 2 {
+    if values.len() < 4 || !values.len().is_multiple_of(2) || values.len() > lienzo_algo::camera_raw::MAX_CURVE_POINTS * 2 {
         return None;
     }
     let points: Option<Vec<[f32; 2]>> = values
@@ -131,7 +131,7 @@ fn read_curve(value: &Value) -> Option<J> {
         })
         .collect();
     let points = points?;
-    photocraft_algo::camera_raw::validate_curve(&points).ok()?;
+    lienzo_algo::camera_raw::validate_curve(&points).ok()?;
     if points == [[0.0, 0.0], [255.0, 255.0]] {
         return Some(json!([]));
     }
@@ -186,7 +186,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
     }
     let mut params = descriptor_params(get_desc(item, "Fltr")?)?;
     let mut template = item.clone();
-    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
     set(&mut template, "blendOptions", blend_options(&neutral));
     set(&mut template, "enab", Value::Boolean(true));
     let bytes = template.to_bytes();
@@ -222,7 +222,7 @@ fn write_number(d: &mut Descriptor, key: &str, value: &J) -> Result<(), String> 
     if !number_range(key).contains(&number) {
         return Err(format!("Camera Raw {key} is outside the supported range"));
     }
-    // PSD stores these as integer slider levels; PhotoCraft's sliders are continuous. Rounding
+    // PSD stores these as integer slider levels; Lienzo's sliders are continuous. Rounding
     // (at most half a level) keeps the filter instead of leaving it out of the PSD.
     // Hue 360 is the same angle as 0.
     let value = match key {
@@ -249,7 +249,7 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
     }
     // Bound variable-sized curves before deserialization allocates their point arrays.
     for (param, _) in CURVES {
-        if params.get(*param).and_then(J::as_array).is_some_and(|v| v.len() > photocraft_algo::camera_raw::MAX_CURVE_POINTS) {
+        if params.get(*param).and_then(J::as_array).is_some_and(|v| v.len() > lienzo_algo::camera_raw::MAX_CURVE_POINTS) {
             return Err(format!("Camera Raw `{param}` has too many points"));
         }
     }
@@ -297,11 +297,7 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
         if get_param(&original, param) != Some(value) {
             write_number(&mut d, key, value)?;
             if matches!(*key, "Temp" | "Tint") {
-                set(
-                    &mut d,
-                    "WBal",
-                    Value::Enumerated { type_id: photocraft_psd::descriptor::Id::new("WBal"), value: photocraft_psd::descriptor::Id::new("Cst ") },
-                );
+                set(&mut d, "WBal", Value::Enumerated { type_id: lienzo_psd::descriptor::Id::new("WBal"), value: lienzo_psd::descriptor::Id::new("Cst ") });
             }
         }
     }
@@ -325,7 +321,7 @@ pub(super) fn export_item(params: &J) -> Result<Descriptor, String> {
             if levels.is_empty() {
                 levels = vec![[0.0, 0.0], [255.0, 255.0]];
             }
-            photocraft_algo::camera_raw::validate_curve(&levels).map_err(|e| format!("Camera Raw `{param}`: {e}"))?;
+            lienzo_algo::camera_raw::validate_curve(&levels).map_err(|e| format!("Camera Raw `{param}`: {e}"))?;
             let values = levels.iter().flatten().map(|v| Value::Integer(*v as i32)).collect();
             set(&mut d, key, Value::List(values));
         }

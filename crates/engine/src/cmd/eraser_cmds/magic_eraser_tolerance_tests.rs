@@ -2,8 +2,8 @@
 //! opposite changes in two channels count double. The expected values are the reference
 //! application's measurements from the issue; the stripes document is drawn at a tenth of the size.
 
-use photocraft_algo::selection as sel;
-use photocraft_geom::Rect;
+use lienzo_algo::selection as sel;
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::Session;

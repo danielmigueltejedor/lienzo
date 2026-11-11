@@ -7,21 +7,21 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable, by};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 use crate::theme::ThemeKind;
 
-fn bar(theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar(theme: ThemeKind) -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
     app.ui.tool = Tool::Pencil;
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, theme);
+    LienzoApp::setup_context(&h.ctx, theme);
     h.run_steps(4);
     h
 }
 
-fn description(h: &Harness<'static, PhotocraftApp>, label: &str) -> Option<String> {
+fn description(h: &Harness<'static, LienzoApp>, label: &str) -> Option<String> {
     h.query_all_by_label(label).next().and_then(|n| n.accesskit_node().description().map(|d| d.to_string()))
 }
 
@@ -47,7 +47,7 @@ fn the_pro_bar_shows_both_toggles_with_the_reference_tooltips() {
 #[test]
 fn the_pro_toggles_edit_the_pencils_own_flags_and_brush_get_sees_them() {
     let mut h = bar(ThemeKind::ProMedium);
-    let flags = |h: &Harness<'static, PhotocraftApp>| (h.state().session.tools.brush.pressure_opacity, h.state().session.tools.brush.pressure_size);
+    let flags = |h: &Harness<'static, LienzoApp>| (h.state().session.tools.brush.pressure_opacity, h.state().session.tools.brush.pressure_size);
     assert_eq!(flags(&h), (false, false), "both off on a fresh Pencil");
     h.get_by_label("Always use pressure for opacity").click();
     h.run_steps(2);
@@ -62,8 +62,8 @@ fn the_pro_toggles_edit_the_pencils_own_flags_and_brush_get_sees_them() {
 #[test]
 fn the_brush_keeps_its_own_pressure_flags() {
     let mut h = bar(ThemeKind::ProMedium);
-    let flags = |h: &Harness<'static, PhotocraftApp>| (h.state().session.tools.brush.pressure_opacity, h.state().session.tools.brush.pressure_size);
-    let toggle = |h: &mut Harness<'static, PhotocraftApp>, label: &str| {
+    let flags = |h: &Harness<'static, LienzoApp>| (h.state().session.tools.brush.pressure_opacity, h.state().session.tools.brush.pressure_size);
+    let toggle = |h: &mut Harness<'static, LienzoApp>, label: &str| {
         h.get_by_label(label).click();
         h.run_steps(2);
     };
@@ -117,7 +117,7 @@ fn the_brush_keeps_its_own_pressure_flags() {
     h.run_steps(4);
     assert_eq!(flags(&h), (true, false), "the mixed pair came back unchanged");
     // And the bar draws that pair, not just stores it.
-    let on = |h: &Harness<'static, PhotocraftApp>, label: &str| h.get_by_label(label).accesskit_node().toggled() == Some(egui::accesskit::Toggled::True);
+    let on = |h: &Harness<'static, LienzoApp>, label: &str| h.get_by_label(label).accesskit_node().toggled() == Some(egui::accesskit::Toggled::True);
     assert!(on(&h, "Always use pressure for opacity"), "the opacity toggle reads as on");
     assert!(!on(&h, "Always use pressure for size"), "the size toggle reads as off");
 }
@@ -151,7 +151,7 @@ fn the_other_themes_show_the_labelled_toggles() {
 }
 
 /// Painted width at column `x` on the active layer, through the stroke's row band.
-fn width(app: &PhotocraftApp, x: i32, y: i32) -> usize {
+fn width(app: &LienzoApp, x: i32, y: i32) -> usize {
     let st = app.session.active().expect("a document");
     let layer = st.active_layer.expect("an active layer");
     let s = st.doc.layer(layer).and_then(|l| l.surface()).expect("a raster layer");

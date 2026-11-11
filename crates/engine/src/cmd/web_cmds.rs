@@ -12,10 +12,10 @@
 //! `?x100 thumb.gif` is exported into `<document>-assets/` whenever the document is saved while
 //! the feature is on; a `default` layer (`default 50% low/ + 200% @2x`) adds variants.
 
-use photocraft_algo::quantize::{self, Dither, Forced, PaletteKind};
-use photocraft_doc::slices::{self, ResolvedSlice, SliceKind};
-use photocraft_doc::{DocId, Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
+use lienzo_algo::quantize::{self, Dither, Forced, PaletteKind};
+use lienzo_doc::slices::{self, ResolvedSlice, SliceKind};
+use lienzo_doc::{DocId, Document, LayerContent, LayerId};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;

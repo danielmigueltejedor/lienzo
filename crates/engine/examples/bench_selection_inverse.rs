@@ -1,7 +1,7 @@
 //! End-to-end timing of `select.inverse` on a 6000×4000 document.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-engine --example bench_selection_inverse -- [--quick] [--reps 11]
+//! cargo run --release -p lienzo-engine --example bench_selection_inverse -- [--quick] [--reps 11]
 //! ```
 //!
 //! Three rows: inverting a rectangular marquee, an elliptical marquee (central 2/3 of the
@@ -13,7 +13,7 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::{Value, json};
 
 type Res = Result<(), Box<dyn std::error::Error>>;

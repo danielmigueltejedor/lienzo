@@ -5,12 +5,12 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use egui::{Color32, Rect, Stroke, StrokeKind, pos2, vec2};
-use photocraft_color::Color;
-use photocraft_doc::{DocId, Document, Fill, LayerContent, LayerId};
-use photocraft_engine::solid_fill_cmds as cmds;
+use lienzo_color::Color;
+use lienzo_doc::{DocId, Document, Fill, LayerContent, LayerId};
+use lienzo_engine::solid_fill_cmds as cmds;
 use serde_json::{Map, Value, json};
 
-use crate::{PhotocraftApp, color_picker_ui, theme::Tokens};
+use crate::{LienzoApp, color_picker_ui, theme::Tokens};
 
 pub(crate) struct Preview {
     document: DocId,
@@ -22,14 +22,14 @@ pub(crate) struct Preview {
     key: u64,
 }
 
-pub(crate) fn open(app: &mut PhotocraftApp) -> Option<u64> {
+pub(crate) fn open(app: &mut LienzoApp) -> Option<u64> {
     let st = app.session.active()?;
     let layer = st.active_layer?;
     let LayerContent::Fill(Fill::Solid(color)) = st.doc.layer(layer)?.content else { return None };
     let params = json!({"layer": layer.0, "document": st.doc.id.0});
     let id = color_picker_ui::open_for_command(app, "Color Picker (Solid Color)", color.to_rgb(), cmds::SET, params);
     // A CMYK fill reopens showing its own inks, not ones recomputed from its sRGB stand-in (#8568).
-    if color.mode == photocraft_color::ColorMode::Cmyk
+    if color.mode == lienzo_color::ColorMode::Cmyk
         && let Some(d) = app.ui.dialog_mut(id)
     {
         d.fields.insert("__cmyk".into(), json!(color.c));
@@ -39,7 +39,7 @@ pub(crate) fn open(app: &mut PhotocraftApp) -> Option<u64> {
 
 /// Creating a Solid Color fill is transactional: the document is unchanged until OK.
 /// The picker is seeded with the foreground colour, matching the engine's default.
-pub(crate) fn open_new(app: &mut PhotocraftApp) -> Option<u64> {
+pub(crate) fn open_new(app: &mut LienzoApp) -> Option<u64> {
     let document = app.session.active()?.doc.id.0;
     let foreground = app.session.tools.foreground;
     Some(color_picker_ui::open_for_command(
@@ -57,7 +57,7 @@ pub(crate) fn owns_new(f: &Map<String, Value>) -> bool {
         && f.get("__params").and_then(|p| p.get("document")).and_then(Value::as_u64).is_some()
 }
 
-pub(crate) fn confirm_new(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub(crate) fn confirm_new(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let expected = f.get("__params").and_then(|p| p.get("document")).and_then(Value::as_u64).ok_or("missing Solid Color document")?;
     let st = app.session.active().ok_or("no document open")?;
     if st.doc.id.0 != expected {
@@ -72,7 +72,7 @@ pub(crate) fn owns(f: &Map<String, Value>) -> bool {
     f.get("__command").and_then(Value::as_str) == Some(cmds::SET)
 }
 
-pub(crate) fn thumbnail_color(app: &PhotocraftApp, document: DocId, layer: LayerId, original: Color) -> Color {
+pub(crate) fn thumbnail_color(app: &LienzoApp, document: DocId, layer: LayerId, original: Color) -> Color {
     app.ui
         .dialogs
         .iter()
@@ -92,13 +92,13 @@ pub(crate) fn thumbnail_color(app: &PhotocraftApp, document: DocId, layer: Layer
 /// The colour the picker would commit to a fill of `original` in a `mode` document, built as the
 /// engine builds it: the picked hex, and in a CMYK document the inks it was picked as (#8568).
 /// `None` while the picker still shows the fill as it is ([`is_edit`]).
-fn picked_color(f: &Map<String, Value>, original: Color, mode: photocraft_color::ColorMode) -> Option<Color> {
+fn picked_color(f: &Map<String, Value>, original: Color, mode: lienzo_color::ColorMode) -> Option<Color> {
     if !is_edit(f, original, mode) {
         return None;
     }
     let color = cmds::color_param(f.get("color")?, original, mode).ok()?;
-    Some(color_picker_ui::picked_cmyk(f).filter(|_| mode == photocraft_color::ColorMode::Cmyk).map_or(color, |c| Color {
-        mode: photocraft_color::ColorMode::Cmyk,
+    Some(color_picker_ui::picked_cmyk(f).filter(|_| mode == lienzo_color::ColorMode::Cmyk).map_or(color, |c| Color {
+        mode: lienzo_color::ColorMode::Cmyk,
         c,
         alpha: color.alpha,
     }))
@@ -107,15 +107,15 @@ fn picked_color(f: &Map<String, Value>, original: Color, mode: photocraft_color:
 /// Whether the picker differs from the fill it edits, inks included: different inks can share a
 /// display colour (CMYK 0/0/0/100 and 50/50/50/100 both read black), so the hex alone doesn't
 /// tell, and an RGB or Lab fill given inks in a CMYK document is an edit too.
-fn is_edit(f: &Map<String, Value>, original: Color, mode: photocraft_color::ColorMode) -> bool {
-    let cmyk = photocraft_color::ColorMode::Cmyk;
+fn is_edit(f: &Map<String, Value>, original: Color, mode: lienzo_color::ColorMode) -> bool {
+    let cmyk = lienzo_color::ColorMode::Cmyk;
     let inks_differ = mode == cmyk && color_picker_ui::picked_cmyk(f).is_some_and(|k| original.mode != cmyk || original.c != k);
     f.get("color") != f.get("__orig") || inks_differ
 }
 
 /// No-op OK preserves imported high-precision / non-RGB colour values rather than quantising
 /// them to the picker's display hex. A stale document must never receive the edit.
-pub(crate) fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub(crate) fn confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     let mut params = f.get("__params").cloned().ok_or("missing Solid Color target")?;
     let st = app.session.active().ok_or("no document open")?;
     if params.get("document").and_then(Value::as_u64) != Some(st.doc.id.0) {
@@ -137,7 +137,7 @@ pub(crate) fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result
     app.run(cmds::SET, params)
 }
 
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     let dialog = app.ui.dialogs.iter().rev().find(|d| owns(&d.fields));
     let Some(d) = dialog else {
         app.solid_fill_preview = None;
@@ -171,7 +171,7 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
         component.to_bits().hash(&mut hash);
     }
     let key = (1 << 36) | (hash.finish() & ((1 << 36) - 1));
-    let shown = Arc::new(photocraft_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
+    let shown = Arc::new(lienzo_engine::mode_cmds::display_document(&doc).unwrap_or(doc));
     app.solid_fill_preview = Some(Preview { document: st.doc.id, revision: st.revision, dialog: d.id, layer, color, shown: shown.clone(), key });
     Some((shown, key))
 }

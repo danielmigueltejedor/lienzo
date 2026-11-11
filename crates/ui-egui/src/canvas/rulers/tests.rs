@@ -5,7 +5,7 @@ fn ruler_ticks_labels_and_pointer_stay_out_of_the_origin_corner() {
     let mut failures = Vec::new();
     for theme in crate::theme::ThemeKind::ALL {
         for (zoom, flip, rotation, width) in [(1.0, false, 0.0, 560.0), (1.0, false, 0.0, 800.0), (0.25, true, 0.0, 560.0), (2.0, false, 30.0, 560.0)] {
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
             let full = Rect::from_min_size(pos2(32.0, 32.0), vec2(width - 80.0, 320.0));
             let corner = Rect::from_min_size(full.min, vec2(RULER, RULER));
@@ -18,7 +18,7 @@ fn ruler_ticks_labels_and_pointer_stay_out_of_the_origin_corner() {
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, theme);
+            LienzoApp::setup_context(&h.ctx, theme);
             h.event(egui::Event::PointerMoved(corner.center()));
             h.run_steps(4);
             let mut ticks = 0;
@@ -43,7 +43,7 @@ fn ruler_ticks_labels_and_pointer_stay_out_of_the_origin_corner() {
 /// narrow "1" lines up with a wide "0".
 #[test]
 fn left_ruler_label_characters_are_centred() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
     let (mut h, full, _) = ruler_harness(app);
     h.run_steps(2);
@@ -75,7 +75,7 @@ fn shift_snaps_the_zero_point_to_ruler_ticks_from_the_current_origin() {
 }
 
 /// Rulers alone in a 400×300 frame at 100 %, centred on a 256×128 document.
-fn ruler_harness(app: PhotocraftApp) -> (egui_kittest::Harness<'static, PhotocraftApp>, Rect, ViewXform) {
+fn ruler_harness(app: LienzoApp) -> (egui_kittest::Harness<'static, LienzoApp>, Rect, ViewXform) {
     let full = Rect::from_min_size(pos2(0.0, 0.0), vec2(400.0, 300.0));
     let rect = Rect::from_min_max(full.min + vec2(RULER, RULER), full.max);
     let xf = ViewXform { rect, zoom: 1.0, center: [128.0, 64.0], flip: false, rotation: 0.0, aspect: 1.0 };
@@ -86,12 +86,12 @@ fn ruler_harness(app: PhotocraftApp) -> (egui_kittest::Harness<'static, Photocra
     (h, full, xf)
 }
 
-fn press(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, pos: Pos2, pressed: bool, modifiers: egui::Modifiers) {
+fn press(h: &mut egui_kittest::Harness<'static, LienzoApp>, pos: Pos2, pressed: bool, modifiers: egui::Modifiers) {
     h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers });
     h.run_steps(2);
 }
 
-fn drag_corner_to(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, full: Rect, to: Pos2, modifiers: egui::Modifiers) {
+fn drag_corner_to(h: &mut egui_kittest::Harness<'static, LienzoApp>, full: Rect, to: Pos2, modifiers: egui::Modifiers) {
     let corner = Rect::from_min_size(full.min, vec2(RULER, RULER)).center();
     h.event(egui::Event::ModifiersChanged(modifiers));
     h.event(egui::Event::PointerMoved(corner));
@@ -106,7 +106,7 @@ fn drag_corner_to(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, full: R
     h.run_steps(1);
 }
 
-fn origin(h: &egui_kittest::Harness<'static, PhotocraftApp>) -> [f64; 2] {
+fn origin(h: &egui_kittest::Harness<'static, LienzoApp>) -> [f64; 2] {
     h.state().session.active().unwrap().doc.ruler_origin
 }
 
@@ -115,7 +115,7 @@ fn origin(h: &egui_kittest::Harness<'static, PhotocraftApp>) -> [f64; 2] {
 /// resets it.
 #[test]
 fn dragging_the_ruler_corner_sets_the_zero_point_and_double_click_resets_it() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
     app.ui.extras.snap = false;
     let (mut h, full, xf) = ruler_harness(app);
@@ -183,7 +183,7 @@ fn dragging_the_ruler_corner_sets_the_zero_point_and_double_click_resets_it() {
 #[test]
 fn info_panel_position_reads_from_the_zero_point() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.run("view.setRulerOrigin", json!({"x": 20, "y": 5})).unwrap();
     app.hover_doc = Some([50.5, 20.5]);
@@ -199,7 +199,7 @@ fn info_panel_position_reads_from_the_zero_point() {
 #[test]
 fn info_panel_shows_guide_drag_position_outside_canvas() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.hover_doc = None;
     app.guide_drag = Some(GuideDrag { vertical: true, index: None, pos: 42.0, press: 42.0, over_ruler: false, flipped: false });
@@ -218,7 +218,7 @@ fn info_panel_shows_guide_drag_position_outside_canvas() {
 #[test]
 fn guide_drag_shows_its_position_beside_the_pointer() {
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     let v = GuideDrag { vertical: true, index: Some(0), pos: 103.24, press: 50.0, over_ruler: false, flipped: false };
     assert_eq!(guide_drag_readout(&app, v), Some(("X:", "103.2 px".to_owned())));
@@ -244,12 +244,12 @@ fn guide_drag_shows_its_position_beside_the_pointer() {
     assert!(h.query_by_label("X:").is_none(), "no readout once the drag ends");
 }
 
-type AppHarness = egui_kittest::Harness<'static, PhotocraftApp>;
+type AppHarness = egui_kittest::Harness<'static, LienzoApp>;
 
 /// The real canvas on a 400 × 300 document with a horizontal guide at y = 100, at 100 %,
 /// with the Move tool and snapping off.
 fn canvas_harness(rulers: bool) -> AppHarness {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("view.newGuide", json!({"orientation": "horizontal", "position": 100})).unwrap();
     app.sync_views();
@@ -257,7 +257,7 @@ fn canvas_harness(rulers: bool) -> AppHarness {
     app.ui.extras.snap = false;
     app.ui.tool = crate::state::Tool::Move;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(800.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -265,7 +265,7 @@ fn canvas_harness(rulers: bool) -> AppHarness {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     (v.zoom, v.center, v.fit_pending) = (1.0, [200.0, 150.0], false);
@@ -365,7 +365,7 @@ fn ticks_follow_1_2_5_series() {
 
 #[test]
 fn hidden_guides_are_not_hit_tested() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
     app.session.execute("view.newGuide", json!({"orientation": "vertical", "position": 50})).unwrap();
@@ -416,7 +416,7 @@ fn unit_menu_lists_every_unit_with_the_current_one_checked() {
 
 #[test]
 fn picking_a_ruler_unit_changes_the_preference() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     assert_eq!(app.session.prefs().units_and_rulers.rulers, Unit::Pixels);
     // The context menu applies its pick exactly as the preference pane does.
     app.run("prefs.set", json!({"path": "unitsAndRulers.rulers", "value": "cm"})).unwrap();
@@ -431,8 +431,8 @@ fn rulers_open_as_last_set_after_a_restart() {
     let saved = Rc::new(RefCell::new(None::<String>));
     let launch = |saved: &Rc<RefCell<Option<String>>>| {
         let (load, store) = (saved.clone(), saved.clone());
-        PhotocraftApp::new(
-            photocraft_engine::Session::new(),
+        LienzoApp::new(
+            lienzo_engine::Session::new(),
             crate::Services {
                 load_prefs: Some(Box::new(move || load.borrow().clone())),
                 save_prefs: Some(Box::new(move |text| {
@@ -456,7 +456,7 @@ fn rulers_open_as_last_set_after_a_restart() {
 
 #[test]
 fn guide_drags_create_move_and_delete() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
     finish_drag(&mut app, GuideDrag { vertical: true, index: None, pos: 50.0, press: 50.0, over_ruler: false, flipped: false });
@@ -489,7 +489,7 @@ fn command_drag_over_a_guide_moves_the_guide_with_any_tool() {
         (Tool::MagicWand, false),
         (Tool::RectMarquee, true),
     ] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 80, "height": 60, "background": "transparent"})).unwrap();
         app.sync_views();
         app.ui.tool = tool;
@@ -497,7 +497,7 @@ fn command_drag_over_a_guide_moves_the_guide_with_any_tool() {
         let layer = app.session.active().unwrap().active_layer.unwrap();
         app.session
             .edit("paint", |doc, _| {
-                doc.layer_mut(layer).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(10, 10, 30, 30), &[1.0, 0.0, 0.0, 1.0]);
+                doc.layer_mut(layer).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(10, 10, 30, 30), &[1.0, 0.0, 0.0, 1.0]);
                 Ok(())
             })
             .unwrap();
@@ -639,7 +639,7 @@ fn alt_drags_a_guide_of_the_other_orientation_out_of_a_ruler() {
     let rect = Rect::from_min_max(full.min + vec2(RULER, RULER), full.max);
     let xf = ViewXform { rect, zoom: 1.0, center: [128.0, 64.0], flip: false, rotation: 0.0, aspect: 1.0 };
     let drag = |from: Pos2, modifiers: egui::Modifiers| {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(400.0, 300.0)).build_ui_state(move |ui, app| draw_rulers(app, ui, full, &xf), app);
         let to = xf.to_screen(37.0, 90.0);
@@ -666,7 +666,7 @@ fn alt_drags_a_guide_of_the_other_orientation_out_of_a_ruler() {
 #[test]
 fn a_guide_dropped_on_either_ruler_is_removed() {
     let new_app = || {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
         app.ui.extras.rulers = true;
         // No snapping, so a guide that is kept lands exactly where it is let go.
@@ -697,10 +697,10 @@ fn a_guide_dropped_on_either_ruler_is_removed() {
 /// two are told apart by where the pointer is, not by the position it reads.
 #[test]
 fn a_guide_let_go_on_a_ruler_is_removed_not_moved() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
-    let horizontal = |app: &PhotocraftApp| app.session.active().unwrap().doc.guides.horizontal.clone();
+    let horizontal = |app: &LienzoApp| app.session.active().unwrap().doc.guides.horizontal.clone();
     for drag in [
         GuideDrag { vertical: false, index: Some(0), pos: 50.0, press: 10.0, over_ruler: true, flipped: false },
         // Dragged sideways onto the left ruler, a horizontal guide holds its y, which on its own
@@ -724,7 +724,7 @@ fn a_guide_let_go_on_a_ruler_is_removed_not_moved() {
 /// are shown: with them hidden the whole canvas rect is canvas (#6286).
 #[test]
 fn only_the_ruler_bands_count_as_a_ruler() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     let full = Rect::from_min_size(pos2(16.0, 42.0), vec2(968.0, 642.0));
     let content = Rect::from_min_size(pos2(32.0, 58.0), vec2(952.0, 626.0));
     app.ui.extras.rulers = true;
@@ -743,15 +743,15 @@ fn only_the_ruler_bands_count_as_a_ruler() {
 }
 
 /// The canvas the guides live on, rulers on, at 100 %.
-fn tool_canvas_harness(tool: crate::state::Tool) -> egui_kittest::Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn tool_canvas_harness(tool: crate::state::Tool) -> egui_kittest::Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = true;
     app.ui.extras.snap = false;
     app.ui.tool = tool;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -761,7 +761,7 @@ fn tool_canvas_harness(tool: crate::state::Tool) -> egui_kittest::Harness<'stati
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -781,7 +781,7 @@ fn a_guide_dragged_onto_a_ruler_is_deleted_through_the_canvas() {
         let mut h = tool_canvas_harness(crate::state::Tool::Move);
         h.state_mut().run("view.newGuide", json!({"orientation": "horizontal", "position": 150})).unwrap();
         h.run_steps(1);
-        let at = |h: &egui_kittest::Harness<'static, PhotocraftApp>, x: f32, y: f32| {
+        let at = |h: &egui_kittest::Harness<'static, LienzoApp>, x: f32, y: f32| {
             let app = h.state();
             let v = &app.ui.views[0];
             let xf = ViewXform {
@@ -832,7 +832,7 @@ fn shift_dragged_guides_land_on_ruler_ticks() {
     let rect = Rect::from_min_max(full.min + vec2(RULER, RULER), full.max);
     let xf = ViewXform { rect, zoom: 1.0, center: [128.0, 64.0], flip: false, rotation: 0.0, aspect: 1.0 };
     let new_app = || {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
         app
     };
@@ -877,7 +877,7 @@ fn alt_turns_a_guide_dragged_out_of_a_ruler() {
     let full = Rect::from_min_size(Pos2::ZERO, vec2(400.0, 300.0));
     let rect = Rect::from_min_max(full.min + vec2(RULER, RULER), full.max);
     let xf = ViewXform { rect, zoom: 1.0, center: [128.0, 64.0], flip: false, rotation: 0.0, aspect: 1.0 };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(400.0, 300.0)).build_ui_state(move |ui, app| draw_rulers(app, ui, full, &xf), app);
     // ⌥ held for the whole drag (`event_modifiers` would let go of it after each event).
@@ -902,14 +902,14 @@ fn alt_turns_a_guide_dragged_out_of_a_ruler() {
 fn alt_turns_a_guide_moved_with_the_move_tool() {
     use crate::canvas::{ToolEvent, tool_event};
     let new_app = || {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 80, "height": 60})).unwrap();
         app.sync_views();
         app.ui.tool = crate::state::Tool::Move;
         app.run("view.newGuide", json!({"orientation": "vertical", "position": 50})).unwrap();
         app
     };
-    let guides = |app: &PhotocraftApp| {
+    let guides = |app: &LienzoApp| {
         let g = &app.session.active().unwrap().doc.guides;
         (g.vertical.clone(), g.horizontal.clone())
     };
@@ -946,7 +946,7 @@ fn a_guide_dropped_on_either_ruler_is_deleted() {
     let rect = Rect::from_min_max(full.min + vec2(RULER, RULER), full.max);
     let xf = ViewXform { rect, zoom: 1.0, center: [128.0, 64.0], flip: false, rotation: 0.0, aspect: 1.0 };
     for (pointer, over) in [(pos2(RULER / 2.0, 150.0), true), (pos2(200.0, RULER / 2.0), true), (pos2(200.0, 150.0), false)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 256, "height": 128})).unwrap();
         app.ui.extras.rulers = true;
         app.run("view.newGuide", json!({"orientation": "horizontal", "position": 30})).unwrap();

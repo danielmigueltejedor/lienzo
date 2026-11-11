@@ -23,7 +23,7 @@ fn session() -> TransformSession {
 #[test]
 fn a_plain_click_far_outside_accepts_transform_but_a_rotation_drag_does_not() {
     let context = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin(&mut app, &context).unwrap();
     let before = app.session.active().unwrap().history.past_len();
     let t = app.ui.transform.as_mut().unwrap();
@@ -42,10 +42,10 @@ fn a_plain_click_far_outside_accepts_transform_but_a_rotation_drag_does_not() {
     assert_eq!(app.session.active().unwrap().history.past_len(), before + 1, "one undo step for the transform");
     let st = app.session.active().unwrap();
     let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
-    assert_eq!(layer.surface().unwrap().content_bounds(), photocraft_geom::Rect::new(14, 8, 30, 24));
+    assert_eq!(layer.surface().unwrap().content_bounds(), lienzo_geom::Rect::new(14, 8, 30, 24));
 
     // An outside drag remains a rotation gesture; releasing it does not commit.
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin(&mut app, &context).unwrap();
     let start = [44.0, 44.0];
     let end = [44.0, 54.0];
@@ -69,7 +69,7 @@ fn a_click_near_rotation_handles_accepts_but_drags_and_option_pivot_do_not() {
     let handle = Gesture { hit: Hit::Corner(0), ..near };
     assert!(!accepts_outside_click(handle, handle.start, tol), "resize handles stay interactive");
 
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin(&mut app, &egui::Context::default()).unwrap();
     let p = [44.0, 44.0];
     pointer(&mut app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, egui::Modifiers::ALT);
@@ -105,11 +105,11 @@ fn angle_readout_tracks_rotated_quad_and_handles_degenerate_edges() {
 fn transform_bar_pins_warp_cancel_and_commit() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.transform = Some(session());
     let width = 720.0;
     let mut h = Harness::builder().with_size(vec2(width, 48.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -117,7 +117,7 @@ fn transform_bar_pins_warp_cancel_and_commit() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(6);
     let commit = h.get_by_label("Commit transform").rect();
     let cancel = h.get_by_label("Cancel transform").rect();
@@ -141,16 +141,16 @@ fn interpolation_selection_is_reused_for_the_next_transform() {
     use egui::accesskit::Role;
     use egui_kittest::{Harness, kittest::Queryable};
 
-    let app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let mut h = Harness::builder().with_size(vec2(2400.0, 360.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal_centered(|ui| options_bar(app, ui));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     let ctx = h.ctx.clone();
     begin(h.state_mut(), &ctx).unwrap();
     h.run_steps(6);
@@ -166,8 +166,8 @@ fn interpolation_selection_is_reused_for_the_next_transform() {
     h.run();
     assert!(h.state().ui.transform.is_some(), "second interpolation step keeps the transform open");
     assert_eq!(h.state().ui.transform.as_ref().unwrap().interpolation, "nearest");
-    assert_eq!(h.state().ui.tool_options.transform_interpolation, Some(photocraft_engine::prefs::Interpolation::Nearest));
-    assert_eq!(h.state().session.prefs().general.image_interpolation, photocraft_engine::prefs::Interpolation::BicubicAutomatic);
+    assert_eq!(h.state().ui.tool_options.transform_interpolation, Some(lienzo_engine::prefs::Interpolation::Nearest));
+    assert_eq!(h.state().session.prefs().general.image_interpolation, lienzo_engine::prefs::Interpolation::BicubicAutomatic);
 
     let transform = h.state_mut().ui.transform.as_mut().unwrap();
     transform.quad = transform.quad.map(|[x, y]| [x + 1.0, y]);
@@ -181,11 +181,11 @@ fn interpolation_selection_is_reused_for_the_next_transform() {
 fn free_transform_bar_buttons_follow_the_fields_on_a_wide_bar() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.transform = Some(session());
     let width = 2400.0;
     let mut h = Harness::builder().with_size(vec2(width, 48.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -193,7 +193,7 @@ fn free_transform_bar_buttons_follow_the_fields_on_a_wide_bar() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(6);
     let commit = h.get_by_label("Commit transform").rect();
     assert!(commit.right() < width * 0.7, "commit sits next to the fields, not at the far right: {commit:?}");
@@ -203,11 +203,11 @@ fn free_transform_bar_buttons_follow_the_fields_on_a_wide_bar() {
 fn warp_bar_buttons_follow_the_fields_on_a_wide_bar() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.transform = Some(session());
     let width = 2000.0;
     let mut h = Harness::builder().with_size(vec2(width, 48.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -215,7 +215,7 @@ fn warp_bar_buttons_follow_the_fields_on_a_wide_bar() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(6);
     h.get_by_label("Switch between free transform and warp modes").click();
     h.run_steps(4);
@@ -282,14 +282,14 @@ fn a_flipped_box_reads_as_a_negative_scale_on_that_axis() {
 /// and a typed W scales it and keeps it mirrored.
 #[test]
 fn bar_fields_keep_a_flipped_box_flipped() {
-    let flip_h = |app: &mut PhotocraftApp| app.ui.transform.as_mut().unwrap().quad = FLIPPED_H;
+    let flip_h = |app: &mut LienzoApp| app.ui.transform.as_mut().unwrap().quad = FLIPPED_H;
     let t = type_into_bar_field_with(flip_h, 4, "0");
     assert!(t.quad.iter().flatten().zip(FLIPPED_H.iter().flatten()).all(|(a, b)| eq6(*a, *b)), "{:?}", t.quad);
     let t = type_into_bar_field_with(flip_h, 2, "-50");
     let (w, h, angle, _) = readout(&t);
     assert!(eq6(w, -50.0) && eq6(h, 50.0) && eq6(angle, 0.0), "{w} {h} {angle}");
     assert!(eq6(t.quad[0][0] - t.quad[1][0], 50.0), "50 px wide, still mirrored: {:?}", t.quad);
-    let flip_v = |app: &mut PhotocraftApp| app.ui.transform.as_mut().unwrap().quad = FLIPPED_V;
+    let flip_v = |app: &mut LienzoApp| app.ui.transform.as_mut().unwrap().quad = FLIPPED_V;
     let t = type_into_bar_field_with(flip_v, 3, "-200");
     let (w, h, _, _) = readout(&t);
     assert!(eq6(w, 200.0) && eq6(h, -200.0), "{w} {h}");
@@ -325,13 +325,13 @@ fn type_into_bar_field(n: usize, text: &str) -> TransformSession {
 
 /// The transform bar over the test box, after `setup` (e.g. picking the W/H unit). Tall enough
 /// for the fields' unit menu to open below the bar unscrolled.
-fn bar_harness(setup: impl FnOnce(&mut PhotocraftApp)) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn bar_harness(setup: impl FnOnce(&mut LienzoApp)) -> egui_kittest::Harness<'static, LienzoApp> {
     use egui_kittest::Harness;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.ui.transform = Some(session());
     setup(&mut app);
     let mut h = Harness::builder().with_size(vec2(1000.0, 360.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -339,13 +339,13 @@ fn bar_harness(setup: impl FnOnce(&mut PhotocraftApp)) -> egui_kittest::Harness<
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(6);
     h
 }
 
 /// [`type_into_bar_field`] after `setup`.
-fn type_into_bar_field_with(setup: impl FnOnce(&mut PhotocraftApp), n: usize, text: &str) -> TransformSession {
+fn type_into_bar_field_with(setup: impl FnOnce(&mut LienzoApp), n: usize, text: &str) -> TransformSession {
     use egui_kittest::kittest::Queryable;
     let mut h = bar_harness(setup);
     h.get_all_by_role(egui::accesskit::Role::SpinButton).nth(n).unwrap().click();
@@ -360,7 +360,7 @@ fn type_into_bar_field_with(setup: impl FnOnce(&mut PhotocraftApp), n: usize, te
 }
 
 /// The values the W and H fields show (the 3rd and 4th numeric fields).
-fn shown_size(h: &egui_kittest::Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn shown_size(h: &egui_kittest::Harness<'static, LienzoApp>) -> Vec<String> {
     use egui_kittest::kittest::{NodeT, Queryable};
     h.get_all_by_role(egui::accesskit::Role::SpinButton).skip(2).take(2).map(|n| n.accesskit_node().value().unwrap_or_default().to_string()).collect()
 }
@@ -368,7 +368,7 @@ fn shown_size(h: &egui_kittest::Harness<'static, PhotocraftApp>) -> Vec<String> 
 #[test]
 fn size_fields_convert_between_percent_and_lengths() {
     use crate::layer_props_ui::LenUnit;
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     // A 300 px side at 300 ppi is one inch at 100 %.
     let at = |unit| LenUnit { unit, dpi: 300.0, ppi: 72.0 };
     for (unit, at_100) in [
@@ -393,9 +393,9 @@ fn size_fields_convert_between_percent_and_lengths() {
 
 #[test]
 fn w_and_h_take_lengths_in_the_unit_picked_for_them() {
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     // The test box is 100 × 50 px; with no document open, lengths convert at 72 ppi.
-    let cm = |app: &mut PhotocraftApp| set_size_unit(app, Unit::Centimeters.name());
+    let cm = |app: &mut LienzoApp| set_size_unit(app, Unit::Centimeters.name());
     let h = bar_harness(cm);
     assert_eq!(shown_size(&h), ["3.53", "1.76"], "the box's size in cm, not 100 %");
     // 7.06 cm is twice the width; linked, the height follows.
@@ -410,7 +410,7 @@ fn w_and_h_take_lengths_in_the_unit_picked_for_them() {
 }
 
 /// Opens a document at `dpi` so the W/H fields convert typed lengths at its resolution.
-fn at_dpi(app: &mut PhotocraftApp, dpi: f32) {
+fn at_dpi(app: &mut LienzoApp, dpi: f32) {
     app.session.execute("file.new", json!({"width": 400, "height": 400})).unwrap();
     app.session
         .edit("resolution", |doc, _| {
@@ -427,7 +427,7 @@ fn box_size(t: &TransformSession) -> (f64, f64) {
 
 #[test]
 fn w_and_h_in_percent_take_a_typed_length() {
-    use photocraft_engine::prefs::Unit;
+    use lienzo_engine::prefs::Unit;
     let near = |a: f64, b: f64| (a - b).abs() < 0.01;
     // The 100 × 50 px box with W/H showing percent (#6284): a typed length is the box's new side.
     for (text, px) in
@@ -457,13 +457,13 @@ fn w_and_h_in_percent_take_a_typed_length() {
     let (w, _) = box_size(&type_into_bar_field_with(|app| at_dpi(app, 300.0), 2, "40"));
     assert!(near(w, 40.0), "40 is 40 % of 100 px: {w}");
     // A percentage typed into a length field is that share of the box's original side.
-    let px = |app: &mut PhotocraftApp| {
+    let px = |app: &mut LienzoApp| {
         at_dpi(app, 300.0);
         set_size_unit(app, Unit::Pixels.name());
     };
     let (w, h) = box_size(&type_into_bar_field_with(px, 2, "50%"));
     assert!(near(w, 50.0) && near(h, 25.0), "50% in px: {w} × {h}");
-    let inches = |app: &mut PhotocraftApp| {
+    let inches = |app: &mut LienzoApp| {
         at_dpi(app, 300.0);
         set_size_unit(app, Unit::Inches.name());
     };
@@ -504,7 +504,7 @@ fn right_clicking_w_or_h_picks_their_unit_and_remembers_it() {
     h.run_steps(2);
     h.get_by_label("Inches").click();
     h.run_steps(3);
-    assert_eq!(size_unit(h.state()).unit, photocraft_engine::prefs::Unit::Inches);
+    assert_eq!(size_unit(h.state()).unit, lienzo_engine::prefs::Unit::Inches);
     assert_eq!(h.state().session.prefs().dialogs[SIZE_UNIT_KEY]["sizeUnit"], "inches");
     assert_eq!(shown_size(&h), ["1.389", "0.694"], "100 × 50 px at 72 ppi");
     // H opens the same menu, with the current unit checked.
@@ -518,18 +518,18 @@ fn right_clicking_w_or_h_picks_their_unit_and_remembers_it() {
     h.state_mut().session.prefs.edit(|p| {
         p.dialogs.insert(SIZE_UNIT_KEY.into(), json!({"sizeUnit": "furlongs"}));
     });
-    assert_eq!(size_unit(h.state()).unit, photocraft_engine::prefs::Unit::Percent);
+    assert_eq!(size_unit(h.state()).unit, lienzo_engine::prefs::Unit::Percent);
     h.state_mut().session.prefs.edit(|p| {
         p.dialogs.insert(SIZE_UNIT_KEY.into(), json!("not an object"));
     });
-    assert_eq!(size_unit(h.state()).unit, photocraft_engine::prefs::Unit::Percent);
+    assert_eq!(size_unit(h.state()).unit, lienzo_engine::prefs::Unit::Percent);
     set_size_unit(h.state_mut(), "points");
-    assert_eq!(size_unit(h.state()).unit, photocraft_engine::prefs::Unit::Points, "a bad entry is replaced, not kept");
+    assert_eq!(size_unit(h.state()).unit, lienzo_engine::prefs::Unit::Points, "a bad entry is replaced, not kept");
 }
 
 #[test]
 fn editing_the_contents_of_a_dropped_file_keeps_the_layer() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
 
     app.session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.sync_views();
@@ -560,7 +560,7 @@ fn editing_the_contents_of_a_dropped_file_keeps_the_layer() {
 #[test]
 fn skip_transform_when_placing_leaves_the_place_without_a_box() {
     for skip in [false, true] {
-        let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+        let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
         app.session.execute("prefs.set", json!({"path": "general.skipTransformWhenPlacing", "value": skip})).unwrap();
         app.session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
         app.session.execute("layer.duplicate", json!({"inPlace": true})).unwrap();
@@ -573,7 +573,7 @@ fn skip_transform_when_placing_leaves_the_place_without_a_box() {
 }
 
 /// Polls the app's background jobs until they have all landed.
-fn land_jobs(app: &mut PhotocraftApp) {
+fn land_jobs(app: &mut LienzoApp) {
     let ctx = egui::Context::default();
     for _ in 0..2000 {
         crate::jobs_ui::tick(app, &ctx);
@@ -588,15 +588,15 @@ fn land_jobs(app: &mut PhotocraftApp) {
 /// A smart object placed the way a dropped file is (the last step made it), in Free Transform
 /// and moved 8 px right, with commits running in the background as in the desktop app:
 /// (app, the placed layer, its frame before the move, history steps before the place).
-fn moved_place() -> (PhotocraftApp, LayerId, photocraft_geom::Rect, usize) {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+fn moved_place() -> (LienzoApp, LayerId, lienzo_geom::Rect, usize) {
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     let steps = app.session.active().unwrap().history.past_len();
     app.session.execute("layer.duplicate", json!({"inPlace": true})).unwrap();
     app.sync_views();
     let st = app.session.active().unwrap();
     let placed = st.active_layer.unwrap();
-    let frame = photocraft_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(placed).unwrap());
+    let frame = lienzo_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(placed).unwrap());
     begin_placed(&mut app, &egui::Context::default()).unwrap();
     let t = app.ui.transform.as_mut().unwrap();
     t.quad = t.quad.map(|[x, y]| [x + 8.0, y]);
@@ -604,9 +604,9 @@ fn moved_place() -> (PhotocraftApp, LayerId, photocraft_geom::Rect, usize) {
     (app, placed, frame, steps)
 }
 
-fn frame_of(app: &PhotocraftApp, layer: LayerId) -> Option<photocraft_geom::Rect> {
+fn frame_of(app: &LienzoApp, layer: LayerId) -> Option<lienzo_geom::Rect> {
     let st = app.session.active()?;
-    Some(photocraft_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(layer)?))
+    Some(lienzo_engine::transform_cmds::transform_frame(&st.doc, st.doc.layer(layer)?))
 }
 
 /// #5665: picking another tool or selecting another layer while a dropped file is in Free
@@ -630,7 +630,7 @@ fn another_tool_or_layer_applies_a_transform_committed_in_the_background() {
         assert_eq!(frame_of(&app, placed), Some(frame.translate(8, 0)), "the dropped file stays, moved (by layer: {by_layer})");
         let st = app.session.active().unwrap();
         assert_eq!(st.history.past_len(), steps + 1, "the place and its move are one step");
-        assert_eq!(st.history.undo_label(), Some(photocraft_engine::file_cmds::PLACE_EMBEDDED));
+        assert_eq!(st.history.undo_label(), Some(lienzo_engine::file_cmds::PLACE_EMBEDDED));
     }
 }
 
@@ -686,10 +686,10 @@ fn only_one_click_waits_for_the_commit() {
 #[test]
 fn clicking_another_layer_row_applies_the_transform() {
     use egui_kittest::kittest::{NodeT, Queryable};
-    let app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let layer = app.session.active().unwrap().active_layer.unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 900.0)).with_max_steps(64).with_step_dt(1.0 / 60.0).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -858,19 +858,19 @@ fn grid_menu_reads_default_and_even_presets() {
 
 #[test]
 fn split_tool_places_the_line_where_the_pointer_releases() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
     begin_warp(&mut app, &egui::Context::default()).unwrap();
     app.transform_preview.as_mut().unwrap().split_tool = Some(SplitTool::Vertical);
-    let knots = |app: &PhotocraftApp| app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap().us.clone();
+    let knots = |app: &LienzoApp| app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.as_ref().unwrap().us.clone();
     assert_eq!(knots(&app).len(), 2);
     let mods = egui::Modifiers::NONE;
     warp_pointer(&mut app, ToolEvent::Down { x: 20.0, y: 20.0, pressure: 1.0 }, 2.0, mods);
@@ -895,13 +895,13 @@ fn split_tool_places_the_line_where_the_pointer_releases() {
 
 #[test]
 fn split_of_a_grid_cuts_one_section_and_keeps_the_rest() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -1087,13 +1087,13 @@ fn move_rotate_and_distort() {
 
 #[test]
 fn begin_and_commit_through_the_engine() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 24, 24), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 24, 24), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -1114,7 +1114,7 @@ fn begin_and_commit_through_the_engine() {
 #[test]
 fn a_refused_commit_keeps_the_box_open() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let (revision, steps) = (app.session.active().unwrap().revision, app.session.active().unwrap().history.past_len());
     begin(&mut app, &ctx).unwrap();
     if let Some(t) = app.ui.transform.as_mut() {
@@ -1136,7 +1136,7 @@ fn a_refused_commit_keeps_the_box_open() {
 #[test]
 fn save_for_web_is_off_under_a_pending_transform() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     assert!(crate::menus::is_enabled(&app, SAVE_FOR_WEB), "enabled with no box");
     crate::menus::invoke(&mut app, &ctx, "edit.freeTransform", json!({})).unwrap();
     assert!(!crate::menus::is_enabled(&app, SAVE_FOR_WEB), "off under the box");
@@ -1154,16 +1154,16 @@ fn save_for_web_is_off_under_a_pending_transform() {
 /// copies the old place, after a commit the new one.
 #[test]
 fn copy_css_is_off_under_a_pending_transform() {
-    let id = photocraft_engine::layer_css_cmds::ID;
+    let id = lienzo_engine::layer_css_cmds::ID;
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
-    let copy_css = |app: &mut PhotocraftApp| {
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
+    let copy_css = |app: &mut LienzoApp| {
         let mut result = None;
         let mut out = ctx.run_ui(egui::RawInput::default(), |ui| result = Some(crate::menus::invoke(app, ui.ctx(), id, json!({}))));
         out.textures_delta.clear();
         (result.unwrap(), out.platform_output.commands)
     };
-    let moved = |app: &mut PhotocraftApp| {
+    let moved = |app: &mut LienzoApp| {
         crate::menus::invoke(app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
         let t = app.ui.transform.as_mut().unwrap();
         t.quad = t.quad.map(|[x, y]| [x + 20.0, y]);
@@ -1196,8 +1196,8 @@ fn copy_css_is_off_under_a_pending_transform() {
 #[test]
 fn free_transform_a_copy() {
     let ctx = egui::Context::default();
-    let bounds = |app: &PhotocraftApp, i: usize| app.session.active().unwrap().doc.layers[i].surface().unwrap().content_bounds();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let bounds = |app: &LienzoApp, i: usize| app.session.active().unwrap().doc.layers[i].surface().unwrap().content_bounds();
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let (layers, steps) = (app.session.active().unwrap().doc.layers.len(), app.session.active().unwrap().history.past_len());
     crate::menus::invoke(&mut app, &ctx, "edit.freeTransformCopy", json!({})).unwrap();
     assert_eq!(app.ui.transform.as_ref().unwrap().made, Some(MadeLayer::Copy));
@@ -1215,8 +1215,8 @@ fn free_transform_a_copy() {
     commit(&mut app);
     let st = app.session.active().unwrap();
     assert_eq!((st.doc.layers.len(), st.history.past_len()), (layers + 1, steps + 1));
-    assert_eq!(bounds(&app, layers - 1), photocraft_geom::Rect::new(8, 8, 24, 24), "the original stays");
-    assert_eq!(bounds(&app, layers), photocraft_geom::Rect::new(28, 8, 44, 24), "the copy moved");
+    assert_eq!(bounds(&app, layers - 1), lienzo_geom::Rect::new(8, 8, 24, 24), "the original stays");
+    assert_eq!(bounds(&app, layers), lienzo_geom::Rect::new(28, 8, 44, 24), "the copy moved");
     app.session.undo();
     assert_eq!(app.session.active().unwrap().doc.layers.len(), layers, "one undo removes copy and move");
     // With a selection: Layer via Copy, so only the selected pixels are copied.
@@ -1233,11 +1233,11 @@ fn free_transform_a_copy() {
 #[test]
 fn untouched_warp_of_a_cylinder_copy_keeps_its_own_step() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.run("layer.smartObjects.warp", json!({"style": "cylinder", "values": [8, 24, 24, 8, 0.3, 0.3, 0.5], "rect": [8, 8, 24, 24]})).unwrap();
-    let warp = |app: &PhotocraftApp, i: usize| match &app.session.active().unwrap().doc.layers[i].content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.warp.as_ref().map(|w| w.style),
+    let warp = |app: &LienzoApp, i: usize| match &app.session.active().unwrap().doc.layers[i].content {
+        lienzo_doc::LayerContent::Smart(sm) => sm.warp.as_ref().map(|w| w.style),
         _ => None,
     };
     let (layers, steps) = (app.session.active().unwrap().doc.layers.len(), app.session.active().unwrap().history.past_len());
@@ -1262,7 +1262,7 @@ fn untouched_warp_of_a_cylinder_copy_keeps_its_own_step() {
 fn cancelling_a_copy_after_switching_documents_preserves_the_active_document() {
     for reorder in [false, true] {
         for finish in [cancel, end_if_left, commit] {
-            let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+            let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
             let original = app.session.active().unwrap().doc.clone();
             let steps = app.session.active().unwrap().history.past_len();
             begin_copy(&mut app, &egui::Context::default()).unwrap();
@@ -1295,7 +1295,7 @@ fn cancelling_a_copy_after_switching_documents_preserves_the_active_document() {
 
 #[test]
 fn cancelling_a_copy_after_its_document_closes_does_not_undo_another_document() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin_copy(&mut app, &egui::Context::default()).unwrap();
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -1311,7 +1311,7 @@ fn cancelling_a_copy_after_its_document_closes_does_not_undo_another_document() 
 
 #[test]
 fn cancelling_an_already_undone_copy_preserves_history_and_redo() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin_copy(&mut app, &egui::Context::default()).unwrap();
     assert!(app.session.undo());
     let st = app.session.active().unwrap();
@@ -1326,7 +1326,7 @@ fn cancelling_an_already_undone_copy_preserves_history_and_redo() {
 
 #[test]
 fn cancelling_a_copy_does_not_undo_a_later_edit() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     begin_copy(&mut app, &egui::Context::default()).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let st = app.session.active().unwrap();
@@ -1341,11 +1341,11 @@ fn cancelling_a_copy_does_not_undo_a_later_edit() {
 /// and to the others show while the box is open, and survive the commit.
 #[test]
 fn edits_during_a_transform_show_in_the_preview() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.tool = Tool::Move;
     let bg = app.session.active().unwrap().doc.layers[0].id;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1368,7 +1368,7 @@ fn edits_during_a_transform_show_in_the_preview() {
     assert!(!pv.doc.layer(bg).unwrap().visible, "the document under the box follows");
     let moving = pv.doc.layer(LayerId(layer)).unwrap();
     assert!(!moving.visible, "the moving layer stays out of the document under the box");
-    assert_eq!(moving.blend, photocraft_color::BlendMode::Multiply);
+    assert_eq!(moving.blend, lienzo_color::BlendMode::Multiply);
 
     h.state_mut().run("layer.setProps", json!({"layer": layer, "visible": false})).unwrap();
     h.run_steps(2);
@@ -1378,19 +1378,19 @@ fn edits_during_a_transform_show_in_the_preview() {
     commit(h.state_mut());
     let st = h.state().session.active().unwrap();
     let l = st.doc.layer(LayerId(layer)).unwrap();
-    assert_eq!((l.opacity, l.fill_opacity, l.blend), (0.5, 0.6, photocraft_color::BlendMode::Multiply));
-    assert_eq!(l.surface().unwrap().content_bounds(), photocraft_geom::Rect::new(28, 8, 44, 24));
+    assert_eq!((l.opacity, l.fill_opacity, l.blend), (0.5, 0.6, lienzo_color::BlendMode::Multiply));
+    assert_eq!(l.surface().unwrap().content_bounds(), lienzo_geom::Rect::new(28, 8, 44, 24));
 }
 
 /// #1384 with a selection: the pixels it leaves behind stay in the rebuilt preview without
 /// the lifted ones, and take the layer's new properties.
 #[test]
 fn edits_during_a_selection_transform_keep_the_lifted_pixels_out() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.tool = Tool::Move;
     app.session.execute("select.rect", json!({"x": 8, "y": 8, "width": 8, "height": 16})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1399,7 +1399,7 @@ fn edits_during_a_selection_transform_keep_the_lifted_pixels_out() {
     h.run_steps(2);
     let layer = LayerId(h.state().ui.transform.as_ref().unwrap().layer);
     // Alpha in the preview's copy of the layer: in the lifted half (x 8..16) and the rest (16..24).
-    let left = |app: &PhotocraftApp| {
+    let left = |app: &LienzoApp| {
         let s = app.transform_preview.as_ref().unwrap().doc.layer(layer).unwrap().surface().unwrap().clone();
         (s.sample_channel(10, 12, 3), s.sample_channel(20, 12, 3))
     };
@@ -1417,11 +1417,11 @@ fn edits_during_a_selection_transform_keep_the_lifted_pixels_out() {
 /// #670: picking another tool applies the open transform, as one history step.
 #[test]
 fn picking_another_tool_applies_the_transform() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.tool = Tool::Move;
     let steps = app.session.active().unwrap().history.past_len();
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1439,7 +1439,7 @@ fn picking_another_tool_applies_the_transform() {
     assert!(app.ui.transform.is_none() && app.transform_preview.is_none());
     let st = app.session.active().unwrap();
     assert_eq!(st.history.past_len(), steps + 1);
-    assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), photocraft_geom::Rect::new(28, 8, 44, 24));
+    assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), lienzo_geom::Rect::new(28, 8, 44, 24));
 }
 
 /// #1400: selecting another layer while transforming applies the box to the layer it was on,
@@ -1447,12 +1447,12 @@ fn picking_another_tool_applies_the_transform() {
 #[test]
 fn selecting_another_layer_applies_the_transform_and_the_next_one_follows() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let first = app.session.active().unwrap().active_layer.unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(40, 40, 56, 60), &[0.0, 0.0, 1.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(40, 40, 56, 60), &[0.0, 0.0, 1.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -1471,8 +1471,8 @@ fn selecting_another_layer_applies_the_transform_and_the_next_one_follows() {
     assert_eq!(st.active_layer, Some(second));
     assert_eq!(st.history.past_len(), steps + 1, "applied as one step");
     let bounds = |id: LayerId| st.doc.layer(id).unwrap().surface().unwrap().content_bounds();
-    assert_eq!(bounds(first), photocraft_geom::Rect::new(28, 8, 44, 24), "applied to the layer it was on");
-    assert_eq!(bounds(second), photocraft_geom::Rect::new(40, 40, 56, 60), "the new layer is untouched");
+    assert_eq!(bounds(first), lienzo_geom::Rect::new(28, 8, 44, 24), "applied to the layer it was on");
+    assert_eq!(bounds(second), lienzo_geom::Rect::new(40, 40, 56, 60), "the new layer is untouched");
     crate::menus::invoke(&mut app, &ctx, "edit.freeTransform", json!({})).unwrap();
     let t = app.ui.transform.as_ref().unwrap();
     assert_eq!((t.layer, t.rect), (second.0, [40.0, 40.0, 56.0, 60.0]), "the next box is on the selected layer");
@@ -1480,7 +1480,7 @@ fn selecting_another_layer_applies_the_transform_and_the_next_one_follows() {
 
 /// The screen rectangle the marching ants cover as [`selection_ants`] places them over the
 /// active document's selection; `None` when it leaves them to the canvas.
-fn ants_bounds(app: &PhotocraftApp, xf: &ViewXform) -> Option<egui::Rect> {
+fn ants_bounds(app: &LienzoApp, xf: &ViewXform) -> Option<egui::Rect> {
     let st = app.session.active().unwrap();
     let sel = st.doc.selection.as_ref().unwrap();
     let segs = crate::outline::outline(sel, sel.content_bounds());
@@ -1513,7 +1513,7 @@ fn rects_match(a: egui::Rect, b: egui::Rect) -> bool {
 #[test]
 fn the_box_is_the_selection_and_the_ants_follow_it() {
     let ctx = gpu_ctx();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let xf = ViewXform {
         rect: egui::Rect::from_min_size(egui::Pos2::ZERO, vec2(400.0, 400.0)),
         zoom: 2.0,
@@ -1529,7 +1529,7 @@ fn the_box_is_the_selection_and_the_ants_follow_it() {
     assert_eq!(app.ui.transform.as_ref().unwrap().quad, rest, "the box is the selection, not the 16 px square in it");
     assert!(rects_match(ants_bounds(&app, &xf).unwrap(), screen_bounds(&xf, &rest)), "untouched, the ants are where they were");
 
-    let on_the_box = |app: &PhotocraftApp, what: &str| {
+    let on_the_box = |app: &LienzoApp, what: &str| {
         let quad = app.ui.transform.as_ref().unwrap().quad;
         let (ants, boxed) = (ants_bounds(app, &xf).unwrap(), screen_bounds(&xf, &quad));
         assert!(rects_match(ants, boxed), "{what}: ants {ants:?}, box {boxed:?}");
@@ -1556,8 +1556,8 @@ fn the_box_is_the_selection_and_the_ants_follow_it() {
     commit(&mut app);
     assert!(app.ui.transform.is_none());
     let st = app.session.active().unwrap();
-    assert_eq!(st.doc.selection.as_ref().unwrap().content_bounds(), photocraft_geom::Rect::new(24, 14, 54, 40));
-    assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), photocraft_geom::Rect::new(28, 18, 44, 34));
+    assert_eq!(st.doc.selection.as_ref().unwrap().content_bounds(), lienzo_geom::Rect::new(24, 14, 54, 40));
+    assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), lienzo_geom::Rect::new(28, 18, 44, 34));
 }
 
 /// #5297: in Warp mode the ants bend with the mesh, and past a Distort's horizon they stop
@@ -1565,7 +1565,7 @@ fn the_box_is_the_selection_and_the_ants_follow_it() {
 #[test]
 fn the_ants_follow_a_warp_and_stop_at_a_distorts_horizon() {
     let ctx = gpu_ctx();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 56, 56));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 56, 56));
     let xf = ViewXform {
         rect: egui::Rect::from_min_size(egui::Pos2::ZERO, vec2(400.0, 400.0)),
         zoom: 2.0,
@@ -1601,7 +1601,7 @@ fn the_ants_follow_a_warp_and_stop_at_a_distorts_horizon() {
 #[test]
 fn selecting_another_layer_keeps_a_transform_selection_open() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let first = app.session.active().unwrap().active_layer.unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.all", json!({})).unwrap();
@@ -1615,7 +1615,7 @@ fn selecting_another_layer_keeps_a_transform_selection_open() {
 #[test]
 fn a_pointer_request_with_another_tool_applies_the_transform_first() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.tool = Tool::Move;
     crate::menus::invoke(&mut app, &ctx, "edit.freeTransform", json!({})).unwrap();
     if let Some(t) = app.ui.transform.as_mut() {
@@ -1634,14 +1634,14 @@ fn a_pointer_request_with_another_tool_applies_the_transform_first() {
 }
 
 /// Drags with real pointer events (snapping off so the drops land exactly).
-fn press_drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], m: egui::Modifiers) {
+fn press_drag(app: &mut LienzoApp, from: [f64; 2], to: [f64; 2], m: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, m);
     crate::canvas::tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, m);
 }
 
 #[test]
 fn distort_mode_moves_one_corner_and_ignores_rotate() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.extras.snap = false;
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "edit.transform.distort", json!({})).unwrap();
@@ -1704,7 +1704,7 @@ fn distort_mode_edge_stops_before_the_box_collapses() {
 /// layer is the quad the box showed (pixels inside it, none outside), in one history step.
 #[test]
 fn distort_mode_edge_drag_commits_what_it_shows_in_one_step() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.extras.snap = false;
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "edit.transform.distort", json!({})).unwrap();
@@ -1767,7 +1767,7 @@ fn perspective_mode_edge_slide_stops_before_the_box_folds() {
 /// #3941: Edit › Transform › Rotate must rotate from a corner handle, not scale.
 #[test]
 fn rotate_mode_turns_the_box_from_a_corner_handle() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.extras.snap = false;
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "edit.transform.rotate", json!({})).unwrap();
@@ -1805,7 +1805,7 @@ fn the_preview_leaves_out_cells_past_the_horizon() {
 
 #[test]
 fn hovering_just_outside_a_corner_asks_for_the_rotate_cursor() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let tol = handle_tolerance(&app);
     let h = std::f64::consts::FRAC_1_SQRT_2;
@@ -1825,10 +1825,10 @@ fn hovering_just_outside_a_corner_asks_for_the_rotate_cursor() {
 // (the preview's overlay draws it otherwise); the pointer vanished over the zone.
 #[test]
 fn the_rotate_zone_draws_the_turn_arrow_where_the_pointer_is_hidden() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.tool = Tool::Move;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     h.run_steps(4);
@@ -1839,7 +1839,7 @@ fn the_rotate_zone_draws_the_turn_arrow_where_the_pointer_is_hidden() {
     let xf = ViewXform::active(h.state()).unwrap();
     let accent = crate::theme::Tokens::get(&h.ctx).accent_text;
     // The arrow's bright stroke: a 17-point arc in the accent colour around the pointer.
-    let arrows = |h: &egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2| {
+    let arrows = |h: &egui_kittest::Harness<'_, LienzoApp>, at: egui::Pos2| {
         h.output()
             .shapes
             .iter()
@@ -1885,7 +1885,7 @@ fn resize_cursors_turn_with_the_box_and_the_view() {
         (0.0, 90.0, false, [NeSw, NwSe, H, V]),
     ];
     for (deg, view, flip, want) in cases {
-        let mut app = app_with_square(256, photocraft_geom::Rect::new(64, 96, 192, 160));
+        let mut app = app_with_square(256, lienzo_geom::Rect::new(64, 96, 192, 160));
         crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
         let view_index = app.session.active_index().unwrap();
         app.ui.views[view_index].rotation = view;
@@ -1911,7 +1911,7 @@ fn resize_cursors_turn_with_the_box_and_the_view() {
 #[test]
 fn corner_cursors_stay_diagonal_on_a_long_box() {
     use CursorIcon::{ResizeNeSw as NeSw, ResizeNwSe as NwSe};
-    for rect in [photocraft_geom::Rect::new(8, 112, 248, 144), photocraft_geom::Rect::new(112, 8, 144, 248)] {
+    for rect in [lienzo_geom::Rect::new(8, 112, 248, 144), lienzo_geom::Rect::new(112, 8, 144, 248)] {
         let mut app = app_with_square(256, rect);
         crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
         let t = app.ui.transform.clone().unwrap();
@@ -1945,11 +1945,11 @@ fn warp_split_cursors_turn_with_the_grid_and_the_view() {
 /// the angle while rotating, W/H while scaling, ΔX/ΔY while moving; nothing otherwise.
 #[test]
 fn the_live_readout_follows_the_drag() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     assert_eq!(live_readout(&app), None, "not dragging");
-    let ev = |app: &mut PhotocraftApp, e| crate::canvas::tool_event(app, e, egui::Modifiers::NONE);
+    let ev = |app: &mut LienzoApp, e| crate::canvas::tool_event(app, e, egui::Modifiers::NONE);
     // A quarter turn about the centre (96, 96): from right of the box to below it.
     ev(&mut app, ToolEvent::Down { x: 220.0, y: 96.0, pressure: 1.0 });
     ev(&mut app, ToolEvent::Move { x: 96.0, y: 220.0, pressure: 1.0 });
@@ -1957,7 +1957,7 @@ fn the_live_readout_follows_the_drag() {
     assert!((a - 90.0).abs() < 1e-6, "{a}");
     ev(&mut app, ToolEvent::Up { x: 96.0, y: 220.0 });
     assert_eq!(live_readout(&app), None, "released");
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     ev(&mut app, ToolEvent::Down { x: 60.0, y: 60.0, pressure: 1.0 });
@@ -1976,16 +1976,16 @@ fn the_live_readout_follows_the_drag() {
 /// the scale of the original box when the rulers are in percent.
 #[test]
 fn the_scale_readout_follows_the_ruler_unit() {
-    use photocraft_engine::prefs::Unit;
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    use lienzo_engine::prefs::Unit;
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
-    let ev = |app: &mut PhotocraftApp, e| crate::canvas::tool_event(app, e, egui::Modifiers::NONE);
+    let ev = |app: &mut LienzoApp, e| crate::canvas::tool_event(app, e, egui::Modifiers::NONE);
     // The right edge from 160 to 288: the 128 px box doubles (proportionally).
     ev(&mut app, ToolEvent::Down { x: 160.0, y: 96.0, pressure: 1.0 });
     ev(&mut app, ToolEvent::Move { x: 288.0, y: 96.0, pressure: 1.0 });
     let Some(Readout::Scale { percent, px }) = live_readout(&app) else { panic!("{:?}", live_readout(&app)) };
-    let shown = |app: &mut PhotocraftApp, unit: Unit| {
+    let shown = |app: &mut LienzoApp, unit: Unit| {
         app.session.prefs.edit(|p| p.units_and_rulers.rulers = unit);
         scale_values(app, percent, px)
     };
@@ -2006,7 +2006,7 @@ fn the_scale_readout_follows_the_ruler_unit() {
 fn a_distort_corner_stops_before_the_box_folds_over() {
     // #1323: dragging a corner across the opposite diagonal stops short of it, so the box
     // stays convex instead of folding into a bow tie.
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.ui.extras.snap = false;
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "edit.transform.distort", json!({})).unwrap();
@@ -2052,7 +2052,7 @@ fn the_legacy_preference_swaps_corner_proportions_and_stretches_edges() {
     // Through the box: a plain corner drag, then a plain right-edge drag, on a 16×16 square.
     for (legacy, proportional) in [(false, true), (true, false)] {
         for at_edge in [false, true] {
-            let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+            let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
             app.ui.extras.snap = false;
             app.session.prefs.edit(|p| p.general.use_legacy_free_transform = legacy);
             begin(&mut app, &egui::Context::default()).unwrap();
@@ -2076,7 +2076,7 @@ fn the_aspect_link_decides_whether_handle_drags_keep_proportions() {
         [(false, false, none, true), (true, false, none, false), (true, false, shift, true), (true, true, none, false)]
     {
         for at_edge in [false, true] {
-            let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+            let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
             app.ui.extras.snap = false;
             app.ui.transform_unlinked = unlinked;
             app.session.prefs.edit(|p| p.general.use_legacy_free_transform = legacy);
@@ -2105,7 +2105,7 @@ fn the_aspect_link_decides_whether_handle_drags_keep_proportions() {
 
 #[test]
 fn right_click_while_transforming_switches_the_mode() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let ctx = egui::Context::default();
     begin(&mut app, &ctx).unwrap();
     assert!(crate::canvas_tool_menu::open_transform(&mut app, &ctx, [10.0, 10.0]));
@@ -2118,7 +2118,7 @@ fn right_click_while_transforming_switches_the_mode() {
 
 #[test]
 fn right_click_menu_warp_row_enters_warp_mode() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let ctx = egui::Context::default();
     begin(&mut app, &ctx).unwrap();
     assert!(crate::canvas_tool_menu::open_transform(&mut app, &ctx, [10.0, 10.0]));
@@ -2138,7 +2138,7 @@ fn right_click_menu_warp_row_enters_warp_mode() {
 #[test]
 fn right_click_menu_offers_warp_for_a_path() {
     // Photoshop's Transform Path menu has Warp too (#3027).
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let ctx = egui::Context::default();
     begin(&mut app, &ctx).unwrap();
     app.ui.transform.as_mut().unwrap().path = Some(json!({}));
@@ -2147,8 +2147,8 @@ fn right_click_menu_offers_warp_for_a_path() {
     assert!(crate::canvas_tool_menu::available(&app, &menu, "edit.transform.warp"));
 }
 
-pub(super) fn app_with_square(size: u32, fill: photocraft_geom::Rect) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn app_with_square(size: u32, fill: lienzo_geom::Rect) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": size, "height": size})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -2163,10 +2163,10 @@ pub(super) fn app_with_square(size: u32, fill: photocraft_geom::Rect) -> Photocr
 
 /// `app_with_square` (A, red over 8..24) plus B (x 40..56, y 8..24) and C (x 8..24, y 40..56)
 /// over it. A and B are linked; C isn't. Only A is selected, and active: (app, A, B, C).
-fn linked_layers_app() -> (PhotocraftApp, LayerId, LayerId, LayerId) {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+fn linked_layers_app() -> (LienzoApp, LayerId, LayerId, LayerId) {
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let a = app.session.active().unwrap().active_layer.unwrap();
-    let add = |app: &mut PhotocraftApp, fill: photocraft_geom::Rect| {
+    let add = |app: &mut LienzoApp, fill: lienzo_geom::Rect| {
         app.session.execute("layer.new.layer", json!({})).unwrap();
         app.session
             .edit("paint", |doc, l| {
@@ -2176,8 +2176,8 @@ fn linked_layers_app() -> (PhotocraftApp, LayerId, LayerId, LayerId) {
             .unwrap();
         app.session.active().unwrap().active_layer.unwrap()
     };
-    let b = add(&mut app, photocraft_geom::Rect::new(40, 8, 56, 24));
-    let c = add(&mut app, photocraft_geom::Rect::new(8, 40, 24, 56));
+    let b = add(&mut app, lienzo_geom::Rect::new(40, 8, 56, 24));
+    let c = add(&mut app, lienzo_geom::Rect::new(8, 40, 24, 56));
     app.session.execute("layer.select", json!({"layer": a.0})).unwrap();
     app.session.execute("layer.select", json!({"layer": b.0, "mode": "add"})).unwrap();
     assert_eq!(app.session.execute("layer.linkLayers", json!({})).unwrap()["linked"], true);
@@ -2229,9 +2229,9 @@ fn free_transform_of_a_linked_layer_boxes_its_link_group() {
     assert!(app.ui.transform.is_none(), "{}", app.ui.status);
     let st = app.session.active().unwrap();
     let bounds = |id: LayerId| st.doc.layer(id).unwrap().surface().unwrap().content_bounds();
-    assert_eq!(bounds(a), photocraft_geom::Rect::new(12, 8, 28, 24));
-    assert_eq!(bounds(b), photocraft_geom::Rect::new(44, 8, 60, 24));
-    assert_eq!(bounds(c), photocraft_geom::Rect::new(8, 40, 24, 56), "an unlinked layer stays put");
+    assert_eq!(bounds(a), lienzo_geom::Rect::new(12, 8, 28, 24));
+    assert_eq!(bounds(b), lienzo_geom::Rect::new(44, 8, 60, 24));
+    assert_eq!(bounds(c), lienzo_geom::Rect::new(8, 40, 24, 56), "an unlinked layer stays put");
 }
 
 /// #11217: a layer without linked layers still opens the one-layer box.
@@ -2250,7 +2250,7 @@ fn free_transform_of_an_unlinked_layer_boxes_that_layer_alone() {
 /// the Background into the box, as the selection doesn't either (#6501).
 #[test]
 fn free_transform_of_a_layer_linked_to_the_background_boxes_that_layer_alone() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let a = app.session.active().unwrap().active_layer.unwrap();
     let bg = app.session.active().unwrap().doc.layers[0].id;
     app.session.execute("layer.select", json!({"layer": bg.0})).unwrap();
@@ -2282,12 +2282,12 @@ fn a_locked_linked_layer_refuses_the_box_over_its_link_group() {
 /// their own and drawn over the moving pixels.
 #[test]
 fn free_transform_keeps_the_layer_under_the_layers_over_it() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let red = app.session.active().unwrap().active_layer.unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -2300,7 +2300,7 @@ fn free_transform_keeps_the_layer_under_the_layers_over_it() {
     assert!(pv.doc.layer(bg).unwrap().visible, "the layers below show under the box");
     assert!(!pv.doc.layer(blue).unwrap().visible, "the layer over it is drawn over the box instead");
     let (texture, rect) = pv.above.as_ref().and_then(|a| a.shown.as_ref()).expect("something covers the layer");
-    assert_eq!(*rect, photocraft_geom::Rect::new(16, 16, 40, 40));
+    assert_eq!(*rect, lienzo_geom::Rect::new(16, 16, 40, 40));
     assert_eq!(texture.size(), [24, 24]);
     cancel(&mut app);
 
@@ -2317,14 +2317,14 @@ fn free_transform_keeps_the_layer_under_the_layers_over_it() {
 /// adjusts (a PSD usually has one): the plain layers over the moving one still cover it.
 #[test]
 fn plain_layers_still_cover_the_moving_one_under_a_blend_or_adjustment_layer() {
-    use photocraft_color::BlendMode;
+    use lienzo_color::BlendMode;
     for adjustment in [false, true] {
-        let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+        let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
         let red = app.session.active().unwrap().active_layer.unwrap();
         app.session.execute("layer.new.layer", json!({})).unwrap();
         app.session
             .edit("paint", |doc, a| {
-                doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
+                doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
                 Ok(())
             })
             .unwrap();
@@ -2351,7 +2351,7 @@ fn plain_layers_still_cover_the_moving_one_under_a_blend_or_adjustment_layer() {
         assert!(pv.doc.layer(top).unwrap().visible, "adjustment={adjustment}: the layer that blends stays in the document under the box");
         assert!(pv.doc.layer(bg).unwrap().visible);
         let (texture, rect) = pv.above.as_ref().and_then(|a| a.shown.as_ref()).expect("the plain layer covers the moving one");
-        assert_eq!(*rect, photocraft_geom::Rect::new(16, 16, 40, 40), "adjustment={adjustment}");
+        assert_eq!(*rect, lienzo_geom::Rect::new(16, 16, 40, 40), "adjustment={adjustment}");
         let (image, _) = texture.level_image(0).unwrap();
         let centre = image.pixels[12 * image.size[0] + 12];
         // The adjustment is composited with the layer it covers: inverted blue is yellow.
@@ -2362,9 +2362,9 @@ fn plain_layers_still_cover_the_moving_one_under_a_blend_or_adjustment_layer() {
 
 #[test]
 fn plain_layers_from_the_top_cover_the_moving_one() {
-    use photocraft_color::BlendMode;
-    use photocraft_doc::Layer;
-    let px = |name: &str| Layer::raster(name, photocraft_color::PixelFormat::RGBA8);
+    use lienzo_color::BlendMode;
+    use lienzo_doc::Layer;
+    let px = |name: &str| Layer::raster(name, lienzo_color::PixelFormat::RGBA8);
     let covers = |layers: &[Layer], id: LayerId| {
         let mut out = Vec::new();
         covering(layers, id, &mut out, &mut Vec::new());
@@ -2416,8 +2416,8 @@ fn plain_layers_from_the_top_cover_the_moving_one() {
 /// under the box; one with nothing covering under it has nothing to adjust.
 #[test]
 fn adjustments_over_covering_layers_are_applied_to_them() {
-    use photocraft_doc::{Adjustment, Layer};
-    let px = |name: &str| Layer::raster(name, photocraft_color::PixelFormat::RGBA8);
+    use lienzo_doc::{Adjustment, Layer};
+    let px = |name: &str| Layer::raster(name, lienzo_color::PixelFormat::RGBA8);
     let adjustment = |name: &str| Layer::new(name, LayerContent::Adjustment(Adjustment::Invert));
     let find = |layers: &[Layer], id: LayerId| {
         let (mut out, mut applied) = (Vec::new(), Vec::new());
@@ -2452,7 +2452,7 @@ fn gpu_ctx() -> egui::Context {
 #[test]
 fn preview_texture_is_full_resolution() {
     // #91: the preview used to be sampled down to 2048 px, so big layers looked blurry at 100%.
-    let mut app = app_with_square(3000, photocraft_geom::Rect::new(10, 20, 2810, 2420));
+    let mut app = app_with_square(3000, lienzo_geom::Rect::new(10, 20, 2810, 2420));
     let ctx = gpu_ctx();
     begin(&mut app, &ctx).unwrap();
     let pv = app.transform_preview.as_ref().unwrap();
@@ -2464,36 +2464,36 @@ fn preview_texture_is_full_resolution() {
 
 #[test]
 fn nested_group_preview_excludes_its_siblings() {
-    use photocraft_color::PixelFormat;
-    use photocraft_doc::Layer;
+    use lienzo_color::PixelFormat;
+    use lienzo_doc::Layer;
 
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active_mut().unwrap();
     let doc = Arc::make_mut(&mut st.doc);
     let target_pixels = doc.layers.pop().unwrap();
     let mut sibling = Layer::raster("sibling", PixelFormat::RGBA8);
-    sibling.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(12, 12, 20, 20), &[0.0, 0.0, 1.0, 1.0]);
+    sibling.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(12, 12, 20, 20), &[0.0, 0.0, 1.0, 1.0]);
     let target = Layer::group("target", vec![target_pixels]);
     let target_id = target.id;
     doc.layers.push(Layer::group("parent", vec![target, sibling]));
 
-    let (image, _) = preview_image(&st.doc, target_id, None, photocraft_geom::Rect::new(8, 8, 24, 24), 4096, false);
+    let (image, _) = preview_image(&st.doc, target_id, None, lienzo_geom::Rect::new(8, 8, 24, 24), 4096, false);
     assert_eq!(image.pixels[8 * image.size[0] + 8], Color32::from_rgb(255, 0, 0), "a sibling in the parent group must not be baked into the moving texture");
 }
 
-fn artboard_preview_app(background: photocraft_doc::ArtboardBackground) -> (PhotocraftApp, LayerId, LayerId) {
-    use photocraft_doc::{Artboard, Layer};
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+fn artboard_preview_app(background: lienzo_doc::ArtboardBackground) -> (LienzoApp, LayerId, LayerId) {
+    use lienzo_doc::{Artboard, Layer};
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active_mut().unwrap();
     let doc = Arc::make_mut(&mut st.doc);
     let red = doc.layers.pop().unwrap();
     let red_id = red.id;
-    let mut blue = Layer::raster("covering blue", photocraft_color::PixelFormat::RGBA8);
-    blue.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
+    let mut blue = Layer::raster("covering blue", lienzo_color::PixelFormat::RGBA8);
+    blue.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(16, 16, 40, 40), &[0.0, 0.0, 1.0, 1.0]);
     let mut board = Layer::group("board", vec![red, blue]);
     let board_id = board.id;
     if let LayerContent::Group(g) = &mut board.content {
-        let mut ab = Artboard::new(photocraft_geom::Rect::new(0, 0, 64, 64));
+        let mut ab = Artboard::new(lienzo_geom::Rect::new(0, 0, 64, 64));
         ab.background = background;
         g.artboard = Some(ab);
     }
@@ -2503,7 +2503,7 @@ fn artboard_preview_app(background: photocraft_doc::ArtboardBackground) -> (Phot
 
 #[test]
 fn artboard_transform_overlay_does_not_cover_moving_pixels_with_the_board_background() {
-    use photocraft_doc::ArtboardBackground;
+    use lienzo_doc::ArtboardBackground;
     for background in [ArtboardBackground::White, ArtboardBackground::Black] {
         let (mut app, board_id, red_id) = artboard_preview_app(background);
         let original = app.session.active().unwrap().doc.clone();
@@ -2514,7 +2514,7 @@ fn artboard_transform_overlay_does_not_cover_moving_pixels_with_the_board_backgr
         let at = |x: i32, y: i32| image.pixels[(y - rect.y0) as usize * image.size[0] + (x - rect.x0) as usize];
         assert_eq!(at(12, 12), Color32::TRANSPARENT, "the board background belongs under the moving layer");
         assert_eq!(at(20, 20), Color32::BLUE, "covering siblings must still cover the moving layer");
-        let under = photocraft_compose::render(&pv.doc, photocraft_geom::Rect::new(0, 0, 64, 64));
+        let under = lienzo_compose::render(&pv.doc, lienzo_geom::Rect::new(0, 0, 64, 64));
         assert_eq!(under.px[12 * 64 + 12], background.rgba().unwrap(), "the board background remains on the base canvas");
         assert!(!pv.doc.layer(red_id).unwrap().visible);
         cancel(&mut app);
@@ -2526,14 +2526,14 @@ fn artboard_transform_overlay_does_not_cover_moving_pixels_with_the_board_backgr
 
 #[test]
 fn artboard_solo_preview_keeps_holes_transparent_and_the_board_clip() {
-    use photocraft_doc::ArtboardBackground;
+    use lienzo_doc::ArtboardBackground;
     let (app, board_id, red_id) = artboard_preview_app(ArtboardBackground::White);
     let original = &app.session.active().unwrap().doc;
     let mut solo = (**original).clone();
-    solo.layer_mut(red_id).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(-2, -2, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
+    solo.layer_mut(red_id).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(-2, -2, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
     solo_layer(&mut solo.layers, red_id);
-    let b = photocraft_geom::Rect::new(-2, -2, 66, 66);
-    let rendered = photocraft_compose::render(&solo, b);
+    let b = lienzo_geom::Rect::new(-2, -2, 66, 66);
+    let rendered = lienzo_compose::render(&solo, b);
     let at = |x: i32, y: i32| rendered.px[(y + 2) as usize * 68 + (x + 2) as usize];
     assert_eq!(at(12, 12), [1.0, 0.0, 0.0, 1.0]);
     assert_eq!(at(30, 30), [0.0; 4], "neither the board's white nor another child enters the moving texture");
@@ -2544,23 +2544,23 @@ fn artboard_solo_preview_keeps_holes_transparent_and_the_board_clip() {
 
 #[test]
 fn artboard_moved_as_a_whole_keeps_its_background() {
-    use photocraft_doc::ArtboardBackground;
+    use lienzo_doc::ArtboardBackground;
     let (app, board_id, _) = artboard_preview_app(ArtboardBackground::Black);
     let mut doc = (*app.session.active().unwrap().doc).clone();
     solo_layer(&mut doc.layers, board_id);
-    let rendered = photocraft_compose::render(&doc, photocraft_geom::Rect::new(0, 0, 64, 64));
+    let rendered = lienzo_compose::render(&doc, lienzo_geom::Rect::new(0, 0, 64, 64));
     assert_eq!(rendered.px[50 * 64 + 50], [0.0, 0.0, 0.0, 1.0]);
     show_only(&mut doc.layers, &[board_id]);
-    let rendered = photocraft_compose::render(&doc, photocraft_geom::Rect::new(0, 0, 64, 64));
+    let rendered = lienzo_compose::render(&doc, lienzo_geom::Rect::new(0, 0, 64, 64));
     assert_eq!(rendered.px[50 * 64 + 50], [0.0, 0.0, 0.0, 1.0], "a whole covering artboard keeps its own background");
 }
 
 #[test]
 fn nested_group_preview_detaches_every_clipped_ancestor() {
-    use photocraft_color::PixelFormat;
-    use photocraft_doc::Layer;
+    use lienzo_color::PixelFormat;
+    use lienzo_doc::Layer;
 
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active_mut().unwrap();
     let doc = Arc::make_mut(&mut st.doc);
     let target_pixels = doc.layers.pop().unwrap();
@@ -2569,47 +2569,47 @@ fn nested_group_preview_detaches_every_clipped_ancestor() {
     let mut middle = Layer::group("middle clipped ancestor", vec![target]);
     middle.clipped = true;
     let mut inner_base = Layer::raster("hidden inner clipping base", PixelFormat::RGBA8);
-    inner_base.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 64, 64), &[0.0, 0.0, 1.0, 1.0]);
+    inner_base.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 0, 64, 64), &[0.0, 0.0, 1.0, 1.0]);
     let mut outer = Layer::group("outer clipped ancestor", vec![inner_base, middle]);
     outer.clipped = true;
     doc.layers.push(outer);
 
-    let (image, _) = preview_image(&st.doc, target_id, None, photocraft_geom::Rect::new(8, 8, 24, 24), 4096, false);
+    let (image, _) = preview_image(&st.doc, target_id, None, lienzo_geom::Rect::new(8, 8, 24, 24), 4096, false);
     assert_eq!(image.pixels[8 * image.size[0] + 8], Color32::from_rgb(255, 0, 0), "hidden clipping bases must not make a nested target disappear");
 }
 
 #[test]
 fn several_preview_detaches_clipped_ancestors() {
-    use photocraft_color::PixelFormat;
-    use photocraft_doc::Layer;
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    use lienzo_color::PixelFormat;
+    use lienzo_doc::Layer;
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active_mut().unwrap();
     let doc = Arc::make_mut(&mut st.doc);
     let first = doc.layers.pop().unwrap();
     let first_id = first.id;
     let mut second = Layer::raster("second", PixelFormat::RGBA8);
-    second.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(32, 8, 48, 24), &[0., 1., 0., 1.]);
+    second.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(32, 8, 48, 24), &[0., 1., 0., 1.]);
     let second_id = second.id;
     let mut group = Layer::group("clipped", vec![first, second]);
     group.clipped = true;
     doc.layers.push(Layer::raster("hidden base", PixelFormat::RGBA8));
     doc.layers.push(group);
     let shown = Several::shown(doc, &[first_id, second_id], &[]);
-    let (image, _) = composite_image(&shown, photocraft_geom::Rect::new(0, 0, 64, 64), 4096);
+    let (image, _) = composite_image(&shown, lienzo_geom::Rect::new(0, 0, 64, 64), 4096);
     assert_eq!(image.pixels[16 * image.size[0] + 16], Color32::from_rgb(255, 0, 0));
     assert_eq!(image.pixels[16 * image.size[0] + 40], Color32::from_rgb(0, 255, 0));
 }
 
 #[test]
 fn unknown_preview_target_keeps_the_previous_document_fallback() {
-    let app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active().unwrap();
-    let (image, _) = preview_image(&st.doc, LayerId::fresh(), None, photocraft_geom::Rect::new(8, 8, 24, 24), 4096, false);
+    let (image, _) = preview_image(&st.doc, LayerId::fresh(), None, lienzo_geom::Rect::new(8, 8, 24, 24), 4096, false);
     assert_eq!(image.pixels[8 * image.size[0] + 8], Color32::from_rgb(255, 0, 0));
 }
 
 /// The textured meshes `draw_content` paints for the moving pixels (not the box or handles).
-fn preview_meshes(app: &PhotocraftApp, xf: &ViewXform) -> Vec<egui::Mesh> {
+fn preview_meshes(app: &LienzoApp, xf: &ViewXform) -> Vec<egui::Mesh> {
     let ctx = gpu_ctx();
     let mut out = ctx.run_ui(egui::RawInput { max_texture_side: Some(16384), ..Default::default() }, |ui| {
         let painter = ui.ctx().layer_painter(egui::LayerId::background());
@@ -2628,7 +2628,7 @@ fn preview_meshes(app: &PhotocraftApp, xf: &ViewXform) -> Vec<egui::Mesh> {
 #[test]
 fn preview_pixels_past_the_canvas_are_hidden() {
     // #2027: a box scaled past the canvas drew its pixels over the pasteboard.
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 56, 56));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 56, 56));
     begin(&mut app, &gpu_ctx()).unwrap();
     scale_about_pivot(&mut app, 2.0, 2.0);
     let q = app.ui.transform.as_ref().unwrap().quad;
@@ -2677,7 +2677,7 @@ fn shift_body_drag_locks_to_eight_directions_and_switches() {
 
 #[test]
 fn alt_click_moves_the_reference_point_and_edges_skew() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let ctx = egui::Context::default();
     begin(&mut app, &ctx).unwrap();
     assert!(pointer(&mut app, ToolEvent::Down { x: 40.0, y: 40.0, pressure: 1.0 }, egui::Modifiers::ALT));
@@ -2699,12 +2699,12 @@ fn alt_click_moves_the_reference_point_and_edges_skew() {
     assert_eq!((s.quad[1], s.quad[2]), ([100.0, -10.0], [100.0, 60.0]));
 }
 
-/// `cargo test --release -p photocraft-ui-egui transform_preview_bench -- --ignored --nocapture`
+/// `cargo test --release -p lienzo-ui-egui transform_preview_bench -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn transform_preview_bench() {
     let (w, h) = (6000, 4000);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": w, "height": h})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -2750,11 +2750,11 @@ fn transform_preview_bench() {
 
 #[test]
 fn transform_selection_moves_only_the_outline() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("select.rect", json!({"x": 8, "y": 8, "width": 16, "height": 16})).unwrap();
-    let px0 = app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 64, 64));
+    let px0 = app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(lienzo_geom::Rect::new(0, 0, 64, 64));
     let ctx = egui::Context::default();
     crate::menus::invoke(&mut app, &ctx, "select.transformSelection", json!({})).unwrap();
     let t = app.ui.transform.as_ref().unwrap();
@@ -2765,18 +2765,18 @@ fn transform_selection_moves_only_the_outline() {
     let st = app.session.active().unwrap();
     let b = st.doc.selection.as_ref().unwrap().content_bounds();
     assert!(b.width().abs_diff(32) <= 2 && b.x0.abs_diff(0) <= 1, "{b:?}");
-    assert_eq!(st.doc.layers[0].surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 64, 64)), px0);
+    assert_eq!(st.doc.layers[0].surface().unwrap().read_region(lienzo_geom::Rect::new(0, 0, 64, 64)), px0);
 }
 
 #[test]
 fn warp_mode_drags_anchor_with_handles_splits_and_commits() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -2811,7 +2811,7 @@ fn warp_mode_drags_anchor_with_handles_splits_and_commits() {
 fn a_thin_layer_scaled_then_warped_commits_the_curve() {
     // #5793: a 3 px column stretched wide, switched to Warp and pulled down in the middle.
     // The commit came out straight: the warp's grid was one cell across the 3 source pixels.
-    let mut app = app_with_square(128, photocraft_geom::Rect::new(40, 20, 43, 60));
+    let mut app = app_with_square(128, lienzo_geom::Rect::new(40, 20, 43, 60));
     let ctx = egui::Context::default();
     begin(&mut app, &ctx).unwrap();
     scale_about_pivot(&mut app, 30.0, 1.0);
@@ -2833,13 +2833,13 @@ fn a_thin_layer_scaled_then_warped_commits_the_curve() {
     assert!(alpha(15, 70) < 0.01 && alpha(15, 40) > 0.99, "end {} {}", alpha(15, 70), alpha(15, 40));
 }
 
-fn warping_square() -> PhotocraftApp {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+fn warping_square() -> LienzoApp {
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     begin_warp(&mut app, &egui::Context::default()).unwrap();
     app
 }
 
-fn warp_mesh(app: &PhotocraftApp) -> BezierMesh {
+fn warp_mesh(app: &LienzoApp) -> BezierMesh {
     app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap().mesh.clone().unwrap()
 }
 
@@ -2869,7 +2869,7 @@ fn warp_drag_from_inside_the_grid_pulls_the_surface_under_the_pointer() {
 #[test]
 fn warp_surface_drag_commits_as_previewed() {
     const N: i32 = 96;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": N, "height": N})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -2974,7 +2974,7 @@ fn ctrl_click_cuts_the_grid_both_ways() {
 
 #[test]
 fn replacing_the_warp_mesh_cancels_a_pending_point_drag() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     let ctx = egui::Context::default();
     begin_warp(&mut app, &ctx).unwrap();
     for _ in 0..3 {
@@ -2995,13 +2995,13 @@ fn replacing_the_warp_mesh_cancels_a_pending_point_drag() {
 /// step); grabbing a point turns it into a custom mesh.
 #[test]
 fn a_press_on_a_preset_warp_converts_it_only_when_it_grabs_the_grid() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(8, 8, 32, 32), &[1.0, 0.0, 0.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -3026,13 +3026,13 @@ fn a_press_on_a_preset_warp_converts_it_only_when_it_grabs_the_grid() {
 // ---- Layer masks (#205) ----
 
 /// `app_with_square` (red over 8..24) plus a reveal-all mask hiding x < 16.
-fn masked_app(linked: bool) -> PhotocraftApp {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+fn masked_app(linked: bool) -> LienzoApp {
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.session.execute("layer.layerMask.revealAll", json!({})).unwrap();
     app.session
         .edit("mask", |doc, a| {
             let m = doc.layer_mut(a.unwrap()).unwrap().mask.as_mut().unwrap();
-            m.surface.fill_rect(photocraft_geom::Rect::new(0, 0, 16, 64), &[0.0]);
+            m.surface.fill_rect(lienzo_geom::Rect::new(0, 0, 16, 64), &[0.0]);
             m.linked = linked;
             Ok(())
         })
@@ -3046,13 +3046,13 @@ fn texel_alpha(img: &egui::ColorImage, x: usize, y: usize) -> u8 {
 
 #[test]
 fn transform_preview_preserves_displayed_profile_colors() {
-    let bounds = photocraft_geom::Rect::new(0, 0, 8, 8);
+    let bounds = lienzo_geom::Rect::new(0, 0, 8, 8);
     for (wide_gamut, monitor, warp) in [(false, "srgb", false), (true, "srgb", false), (false, "display-p3", false), (true, "srgb", true)] {
         let mut app = app_with_square(8, bounds);
         app.session
             .edit("original color sample", |doc, active| {
                 if wide_gamut {
-                    doc.icc_profile = Some(photocraft_cms::Builtin::AdobeRgbCompat.profile().to_bytes());
+                    doc.icc_profile = Some(lienzo_cms::Builtin::AdobeRgbCompat.profile().to_bytes());
                 }
                 doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(bounds, &[0.55, 0.35, 0.2, 1.0]);
                 Ok(())
@@ -3062,7 +3062,7 @@ fn transform_preview_preserves_displayed_profile_colors() {
         let st = app.session.active().unwrap();
         let display = app.session.color.canvas_display(&st.doc).unwrap();
         assert_eq!(!display.is_identity(), wide_gamut || monitor != "srgb");
-        let composite = photocraft_compose::render(&st.doc, bounds);
+        let composite = lienzo_compose::render(&st.doc, bounds);
         let expected = crate::canvas::display_image(Some(&display), &composite);
         let ctx = gpu_ctx();
         if warp {
@@ -3103,7 +3103,7 @@ fn preview_applies_the_linked_mask() {
         let app = masked_app(linked);
         let st = app.session.active().unwrap();
         let id = st.active_layer.unwrap();
-        let b = photocraft_geom::Rect::new(8, 8, 24, 24);
+        let b = lienzo_geom::Rect::new(8, 8, 24, 24);
         let (img, _) = preview_image(&st.doc, id, None, b, 4096, false);
         // Texel x = doc x − 8: x 10 is hidden by the mask, x 20 shows.
         assert_eq!(texel_alpha(&img, 12, 4), 255);
@@ -3117,8 +3117,8 @@ fn preview_applies_the_linked_mask() {
     let st = app.session.active().unwrap();
     let sel = st.doc.selection.clone().unwrap();
     let id = st.active_layer.unwrap();
-    let (lifted, _) = photocraft_engine::transform_cmds::split_selected(st.doc.layer(id).unwrap().surface().unwrap(), &sel).unwrap();
-    let b = photocraft_geom::Rect::new(8, 8, 20, 24);
+    let (lifted, _) = lienzo_engine::transform_cmds::split_selected(st.doc.layer(id).unwrap().surface().unwrap(), &sel).unwrap();
+    let b = lienzo_geom::Rect::new(8, 8, 20, 24);
     let (img, _) = preview_image(&st.doc, id, Some(&lifted), b, 4096, false);
     assert_eq!(texel_alpha(&img, 2, 4), 0, "masked");
     assert_eq!(texel_alpha(&img, 10, 4), 255, "revealed");
@@ -3126,7 +3126,7 @@ fn preview_applies_the_linked_mask() {
 
 #[test]
 fn transform_selection_tint_is_not_document_color() {
-    let mut app = app_with_square(8, photocraft_geom::Rect::new(0, 0, 8, 8));
+    let mut app = app_with_square(8, lienzo_geom::Rect::new(0, 0, 8, 8));
     app.session.color.settings.monitor_profile = "display-p3".into();
     app.session.execute("select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 8})).unwrap();
     let ctx = gpu_ctx();
@@ -3158,7 +3158,7 @@ fn transform_selection_tint_is_not_document_color() {
 
 #[test]
 fn transform_covering_layer_uses_the_same_monitor_profile() {
-    let bounds = photocraft_geom::Rect::new(0, 0, 8, 8);
+    let bounds = lienzo_geom::Rect::new(0, 0, 8, 8);
     let mut app = app_with_square(8, bounds);
     let lower = app.session.active().unwrap().active_layer.unwrap();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -3178,7 +3178,7 @@ fn transform_covering_layer_uses_the_same_monitor_profile() {
         for layer in &mut solo.layers {
             layer.visible = layer.id == id;
         }
-        crate::canvas::display_image(Some(&display), &photocraft_compose::render(&solo, bounds)).pixels[0]
+        crate::canvas::display_image(Some(&display), &lienzo_compose::render(&solo, bounds)).pixels[0]
     });
     app.session.execute("layer.select", json!({"layer": lower.0})).unwrap();
     let ctx = gpu_ctx();
@@ -3212,13 +3212,13 @@ fn transform_covering_layer_uses_the_same_monitor_profile() {
 #[test]
 #[ignore = "requires a GPU adapter; renders profile-managed transform evidence"]
 fn transform_profile_visual_evidence() {
-    let _guard = photocraft_testkit::gpu_lock();
-    let destination = std::env::var("PHOTOCRAFT_TRANSFORM_EVIDENCE").unwrap_or_else(|_| "transform-profile-evidence".into());
+    let _guard = lienzo_testkit::gpu_lock();
+    let destination = std::env::var("LIENZO_TRANSFORM_EVIDENCE").unwrap_or_else(|_| "transform-profile-evidence".into());
     std::fs::create_dir_all(&destination).unwrap();
     for monitor in ["srgb", "display-p3"] {
         let mut h = egui_kittest::Harness::builder().with_size(vec2(1200.0, 800.0)).with_max_steps(64).wgpu().build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-            let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+            LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+            let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
             app.set_wgpu(cc.wgpu_render_state.as_ref().unwrap().clone());
             app.run("file.new", json!({"width": 400, "height": 300, "background": "transparent"})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
@@ -3226,7 +3226,7 @@ fn transform_profile_visual_evidence() {
                 .edit("original color swatches", |doc, active| {
                     let surface = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
                     for (x, color) in [(60, [0.55, 0.35, 0.2, 1.0]), (160, [0.2, 0.6, 0.35, 1.0]), (260, [0.3, 0.4, 0.7, 1.0])] {
-                        surface.fill_rect(photocraft_geom::Rect::new(x, 60, x + 80, 220), &color);
+                        surface.fill_rect(lienzo_geom::Rect::new(x, 60, x + 80, 220), &color);
                     }
                     Ok(())
                 })
@@ -3281,13 +3281,13 @@ fn preview_feathers_the_linked_mask() {
         .unwrap();
     let st = app.session.active().unwrap();
     let id = st.active_layer.unwrap();
-    let b = photocraft_geom::Rect::new(8, 8, 24, 24);
+    let b = lienzo_geom::Rect::new(8, 8, 24, 24);
     let (img, _) = preview_image(&st.doc, id, None, b, 4096, false);
     // Texel x 7 = doc x 15, just inside the hidden half; texel x 8 = doc x 16, just revealed.
     assert!(texel_alpha(&img, 7, 4) > 0, "the feather reaches into the hidden side");
     assert!(texel_alpha(&img, 8, 4) < 255, "the feather reaches into the revealed side");
     // The same values the compositor masks the committed layer with.
-    let m = photocraft_compose::masks::combined_mask(st.doc.layer(id).unwrap(), b).unwrap();
+    let m = lienzo_compose::masks::combined_mask(st.doc.layer(id).unwrap(), b).unwrap();
     for x in [6usize, 7, 8, 9, 15] {
         let want = (m.sample_channel(8 + x as i32, 12, 0) * 255.0).round() as i32;
         assert!((i32::from(texel_alpha(&img, x, 4)) - want).abs() <= 1, "texel {x}");
@@ -3298,11 +3298,11 @@ fn preview_feathers_the_linked_mask() {
 /// was open (its flattened render hid the clipping base too).
 #[test]
 fn preview_of_a_clipped_smart_object_is_not_empty() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     app.session.execute("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, a| {
-            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 64, 64), &[0.0, 0.0, 1.0, 1.0]);
+            doc.layer_mut(a.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(0, 0, 64, 64), &[0.0, 0.0, 1.0, 1.0]);
             Ok(())
         })
         .unwrap();
@@ -3311,7 +3311,7 @@ fn preview_of_a_clipped_smart_object_is_not_empty() {
     let st = app.session.active().unwrap();
     let id = st.active_layer.unwrap();
     assert!(st.doc.layer(id).unwrap().clipped);
-    let (img, _) = preview_image(&st.doc, id, None, photocraft_geom::Rect::new(0, 0, 64, 64), 4096, false);
+    let (img, _) = preview_image(&st.doc, id, None, lienzo_geom::Rect::new(0, 0, 64, 64), 4096, false);
     assert_eq!(texel_alpha(&img, 32, 32), 255, "the moving object shows");
 }
 
@@ -3336,7 +3336,7 @@ fn targeted_unlinked_mask_transforms_alone_through_the_box() {
     let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
     let m = &l.mask.as_ref().unwrap().surface;
     assert!(m.sample_channel(4, 30, 0) > 0.99 && m.sample_channel(30, 30, 0) < 0.01, "mask moved 20 px right");
-    assert_eq!(l.surface().unwrap().content_bounds(), photocraft_geom::Rect::new(8, 8, 24, 24), "pixels untouched");
+    assert_eq!(l.surface().unwrap().content_bounds(), lienzo_geom::Rect::new(8, 8, 24, 24), "pixels untouched");
     // Warp mode doesn't apply to a lone mask.
     app.ui.mask_target = true;
     begin(&mut app, &ctx).unwrap();
@@ -3411,7 +3411,7 @@ fn linked_mask_target_transforms_the_layer() {
 #[test]
 fn free_transform_moves_the_selected_path_not_pixels() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.run("path.set", json!({"name": "work", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [30, 10], [30, 20], [10, 20]]}]}})).unwrap();
@@ -3464,12 +3464,12 @@ fn free_transform_moves_the_selected_path_not_pixels() {
 /// the layer stays type.
 #[test]
 fn warp_on_type_takes_a_style_and_keeps_the_type_editable() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
     app.run("type.create", json!({"x": 10, "y": 60, "text": "Hello"})).unwrap();
     let ctx = egui::Context::default();
-    let past = |app: &PhotocraftApp| app.session.active().unwrap().history.past_len();
+    let past = |app: &LienzoApp| app.session.active().unwrap().history.past_len();
     let before = past(&app);
     crate::menus::invoke(&mut app, &ctx, "edit.transform.warp", json!({})).unwrap();
     assert!(app.ui.dialogs.is_empty(), "no prompt");
@@ -3534,7 +3534,7 @@ fn anchor_grid_point_on_quad_and_carry_pivot() {
 
 #[test]
 fn hovering_corner_with_ctrl_shows_distort_cursor() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let tol = handle_tolerance(&app);
     let corner = [32.0, 32.0];
@@ -3557,7 +3557,7 @@ fn hovering_corner_with_ctrl_shows_distort_cursor() {
 
 #[test]
 fn hovering_edge_with_ctrl_shows_skew_cursor() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let edge = [96.0, 32.0]; // top edge midpoint
     let mut command = egui::Modifiers::NONE;
@@ -3573,7 +3573,7 @@ fn hovering_edge_with_ctrl_shows_skew_cursor() {
 
 #[test]
 fn hovering_corner_on_text_layer_with_ctrl_retains_resize_cursor() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.sync_views();
     app.run("type.create", json!({"x": 10, "y": 60, "text": "Hello"})).unwrap();
@@ -3595,7 +3595,7 @@ fn hovering_corner_on_text_layer_with_ctrl_retains_resize_cursor() {
 
 #[test]
 fn cursor_during_drag_stays_stable() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let mut command = egui::Modifiers::NONE;
@@ -3626,7 +3626,7 @@ fn cmd() -> egui::Modifiers {
 
 /// The indicator each handle shows in `mode` with `mods`: corner 0 and edge 0 (top) of a square.
 fn indicators(mode: &str, mods: egui::Modifiers) -> (Option<HandleIndicator>, Option<HandleIndicator>) {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), mode, json!({})).unwrap();
     let t = app.ui.transform.clone().unwrap();
     (handle_indicator(&app, &t, Hit::Corner(0), mods), handle_indicator(&app, &t, Hit::Edge(0), mods))
@@ -3656,7 +3656,7 @@ fn handle_pointers_follow_what_the_drag_does() {
 
 #[test]
 fn ctrl_in_rotate_mode_keeps_the_rotate_pointer() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.transform.rotate", json!({})).unwrap();
     let xf = ViewXform::active(&app).unwrap();
     let corner = [32.0, 32.0];
@@ -3669,7 +3669,7 @@ fn ctrl_in_rotate_mode_keeps_the_rotate_pointer() {
 
 #[test]
 fn rotate_mode_handle_drag_keeps_the_arrow_away_from_the_corners() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.transform.rotate", json!({})).unwrap();
     let xf = ViewXform::active(&app).unwrap();
@@ -3686,7 +3686,7 @@ fn rotate_mode_handle_drag_keeps_the_arrow_away_from_the_corners() {
 
 #[test]
 fn scale_drag_past_a_corner_shows_no_rotate_arrow() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     app.ui.extras.snap = false;
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let none = egui::Modifiers::NONE;
@@ -3701,7 +3701,7 @@ fn scale_drag_past_a_corner_shows_no_rotate_arrow() {
 
 #[test]
 fn applying_the_box_hides_no_pointer() {
-    let mut app = app_with_square(256, photocraft_geom::Rect::new(32, 32, 160, 160));
+    let mut app = app_with_square(256, lienzo_geom::Rect::new(32, 32, 160, 160));
     crate::menus::invoke(&mut app, &egui::Context::default(), "edit.freeTransform", json!({})).unwrap();
     let xf = ViewXform::active(&app).unwrap();
     app.transform_preview.as_mut().unwrap().committing = Some(JobId(1));
@@ -3712,7 +3712,7 @@ fn applying_the_box_hides_no_pointer() {
 
 // ---- Cylinder (#4112) ----
 
-fn cylinder_of(app: &PhotocraftApp) -> [f64; 7] {
+fn cylinder_of(app: &LienzoApp) -> [f64; 7] {
     cylinder_values(app.ui.transform.as_ref().unwrap().warp.as_ref().unwrap()).unwrap()
 }
 
@@ -3829,7 +3829,7 @@ fn cylinder_drags_set_its_values_and_keep_them_sound() {
 #[test]
 fn warp_mode_drags_a_cylinders_handles_and_commits_it_as_a_cylinder() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     begin_warp(&mut app, &ctx).unwrap();
     let b = app.ui.transform.as_ref().unwrap().rect;
@@ -3886,7 +3886,7 @@ fn warp_mode_drags_a_cylinders_handles_and_commits_it_as_a_cylinder() {
     assert!(app.ui.transform.is_none(), "{}", app.ui.status);
     let st = app.session.active().unwrap();
     assert_eq!(st.history.past_len(), steps + 1, "one step");
-    let photocraft_doc::LayerContent::Smart(sm) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("smart") };
+    let lienzo_doc::LayerContent::Smart(sm) = &st.doc.layer(st.active_layer.unwrap()).unwrap().content else { panic!("smart") };
     assert_eq!(sm.warp.as_ref().map(|w| w.style), Some(WarpStyle::Cylinder), "the smart object keeps a cylinder");
     // Warp mode shows the same cylinder again, with its values, and Enter changes nothing.
     begin_warp(&mut app, &ctx).unwrap();
@@ -3908,7 +3908,7 @@ fn warp_mode_drags_a_cylinders_handles_and_commits_it_as_a_cylinder() {
 #[test]
 fn warp_mode_previews_a_stored_smart_warp_from_the_unwarped_source() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.run("layer.smartObjects.warp", json!({"style": "cylinder", "values": [8, 32, 32, 8, 0.5, 0.5, 0.85], "rect": [8, 8, 32, 32]})).unwrap();
     // The warped render reaches below the box.
@@ -3932,12 +3932,12 @@ fn warp_mode_previews_a_stored_smart_warp_from_the_unwarped_source() {
 #[test]
 fn leaving_warp_mode_restores_the_stored_warps_render() {
     let ctx = egui::Context::default();
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.run("layer.smartObjects.warp", json!({"style": "cylinder", "values": [8, 32, 32, 8, 0.5, 0.5, 0.85], "rect": [8, 8, 32, 32]})).unwrap();
     begin(&mut app, &ctx).unwrap();
-    let texels = |app: &PhotocraftApp| app.transform_preview.as_ref().unwrap().texture.level_image(0).unwrap().0.size;
-    let rect = |app: &PhotocraftApp| app.ui.transform.as_ref().unwrap().rect;
+    let texels = |app: &LienzoApp| app.transform_preview.as_ref().unwrap().texture.level_image(0).unwrap().0.size;
+    let rect = |app: &LienzoApp| app.ui.transform.as_ref().unwrap().rect;
     let (warped, box0) = (texels(&app), rect(&app));
     assert!(warped[1] > 24 && box0[3] > 32.0, "the render with the warp hangs below the box: {warped:?} {box0:?}");
     enter_warp(&mut app, &ctx);
@@ -3963,7 +3963,7 @@ fn leaving_warp_mode_restores_the_stored_warps_render() {
 /// silhouettes and the ones on the back are hidden.
 #[test]
 fn a_cylinder_commits_the_wrapped_pixels() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 32, 32));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 32, 32));
     begin_warp(&mut app, &egui::Context::default()).unwrap();
     let b = app.ui.transform.as_ref().unwrap().rect;
     // Silhouettes pulled in to x 12..28: the square's outer columns go round the back.
@@ -4003,7 +4003,7 @@ fn cylinder_cursors_point_along_their_handles() {
     assert_eq!(cylinder_cursor(&w, wrap, 3.0, &turned), CursorIcon::ResizeVertical);
     assert_eq!(cylinder_cursor(&w, [35.0, 17.5], 3.0, &turned), CursorIcon::ResizeHorizontal);
     // Through the transform tool's cursor, a cylinder is never a split: its surface moves it.
-    let mut app = app_with_square(128, photocraft_geom::Rect::new(8, 8, 104, 104));
+    let mut app = app_with_square(128, lienzo_geom::Rect::new(8, 8, 104, 104));
     begin_warp(&mut app, &egui::Context::default()).unwrap();
     let b = app.ui.transform.as_ref().unwrap().rect;
     app.ui.transform.as_mut().unwrap().warp = Some(cylinder_default(b).unwrap());
@@ -4031,15 +4031,15 @@ fn the_warp_bar_greys_its_fields_for_a_cylinder() {
 
 #[test]
 fn several_layers_reuse_the_transform_interpolation_preference() {
-    let mut app = app_with_square(64, photocraft_geom::Rect::new(8, 8, 24, 24));
+    let mut app = app_with_square(64, lienzo_geom::Rect::new(8, 8, 24, 24));
     let st = app.session.active_mut().unwrap();
     let first = st.active_layer.unwrap();
-    let mut second = photocraft_doc::Layer::raster("second", photocraft_color::PixelFormat::RGBA8);
-    second.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(32, 8, 48, 24), &[0., 1., 0., 1.]);
+    let mut second = lienzo_doc::Layer::raster("second", lienzo_color::PixelFormat::RGBA8);
+    second.surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(32, 8, 48, 24), &[0., 1., 0., 1.]);
     let second_id = second.id;
     Arc::make_mut(&mut st.doc).layers.push(second);
     st.selected_layers = vec![first, second_id];
-    app.ui.tool_options.transform_interpolation = Some(photocraft_engine::prefs::Interpolation::Nearest);
+    app.ui.tool_options.transform_interpolation = Some(lienzo_engine::prefs::Interpolation::Nearest);
     begin(&mut app, &egui::Context::default()).unwrap();
     let transform = app.ui.transform.as_ref().unwrap();
     assert_eq!(transform.layers.len(), 2);

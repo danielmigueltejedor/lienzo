@@ -1,7 +1,7 @@
 //! Recorded identifiers must match Photoshop, even when a local round trip would accept a typo.
 
-use photocraft_engine::{Session, actions_cmds::Action, atn_cmds};
-use photocraft_psd::{
+use lienzo_engine::{Session, actions_cmds::Action, atn_cmds};
+use lienzo_psd::{
     atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem},
     descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value as D},
 };
@@ -13,7 +13,7 @@ fn sized_document(width: u32, height: u32, dpi: u32) -> Session {
     s.execute("file.new", json!({"width":width,"height":height,"background":"white"})).unwrap();
     s.execute("image.imageSize", json!({"resolution":dpi,"resample":"none"})).unwrap();
     s.edit("Mark", |doc, _| {
-        doc.layers[0].surface_mut().unwrap().write_region(photocraft_geom::Rect::from_xywh(0, 0, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
+        doc.layers[0].surface_mut().unwrap().write_region(lienzo_geom::Rect::from_xywh(0, 0, 1, 1), &[1.0, 0.0, 0.0, 1.0]);
         Ok(())
     })
     .unwrap();
@@ -50,11 +50,11 @@ fn recorded_canvas_percent_resolves_at_playback_and_keeps_an_omitted_side() {
         for (width, height) in [(40, 30), (10, 15)] {
             let mut s = sized_document(width, height, 72);
             replay_saved(&mut s, &action);
-            assert_eq!(s.active().unwrap().doc.size, photocraft_geom::Size::new(width * 2, if both_sides { height * 2 } else { height }));
+            assert_eq!(s.active().unwrap().doc.size, lienzo_geom::Size::new(width * 2, if both_sides { height * 2 } else { height }));
             assert_eq!(s.execute("document.pixel", json!({"x":0,"y":0})).unwrap(), json!([1.0, 0.0, 0.0, 1.0]));
             assert_eq!(s.execute("document.pixel", json!({"x":1,"y":0})).unwrap(), json!([1.0, 1.0, 1.0, 1.0]), "canvas expansion must not stretch the mark");
             s.execute("edit.undo", json!({})).unwrap();
-            assert_eq!(s.active().unwrap().doc.size, photocraft_geom::Size::new(width, height));
+            assert_eq!(s.active().unwrap().doc.size, lienzo_geom::Size::new(width, height));
         }
     }
 }
@@ -170,19 +170,19 @@ fn review_layer_transform_uses_the_recorded_anchor() {
             s.execute("file.new", json!({"width":64,"height":64,"depth":depth})).unwrap();
             s.execute("layer.new.layer", json!({})).unwrap();
             s.edit("Mark", |doc, active| {
-                doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(20, 20, 40, 40), &[1.0, 0.0, 0.0, 1.0]);
+                doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(lienzo_geom::Rect::new(20, 20, 40, 40), &[1.0, 0.0, 0.0, 1.0]);
                 Ok(())
             })
             .unwrap();
             replay_saved(&mut s, &action);
             let state = s.active().unwrap();
             let bounds = state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds();
-            assert_eq!(bounds, photocraft_geom::Rect::new(20 + 5 * fx, 20 + 5 * fy, 30 + 5 * fx, 30 + 5 * fy), "{code}, depth {depth}");
+            assert_eq!(bounds, lienzo_geom::Rect::new(20 + 5 * fx, 20 + 5 * fy, 30 + 5 * fx, 30 + 5 * fy), "{code}, depth {depth}");
             // Measured in the reference application: Qcs6 keeps the bottom centre fixed, Qcs1 the
             // top-right corner.
             match code {
-                "Qcs6" => assert_eq!(bounds, photocraft_geom::Rect::new(25, 30, 35, 40), "depth {depth}"),
-                "Qcs1" => assert_eq!(bounds, photocraft_geom::Rect::new(30, 20, 40, 30), "depth {depth}"),
+                "Qcs6" => assert_eq!(bounds, lienzo_geom::Rect::new(25, 30, 35, 40), "depth {depth}"),
+                "Qcs1" => assert_eq!(bounds, lienzo_geom::Rect::new(30, 20, 40, 30), "depth {depth}"),
                 _ => {}
             }
             s.execute("edit.undo", json!({})).unwrap();
@@ -194,10 +194,7 @@ fn review_layer_transform_uses_the_recorded_anchor() {
                 .unwrap();
                 s.execute("edit.transform", json!({"rotate":90,"reference":"topLeft","interpolation":"nearest"})).unwrap();
                 let state = s.active().unwrap();
-                assert_eq!(
-                    state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(),
-                    photocraft_geom::Rect::new(0, 20, 20, 40)
-                );
+                assert_eq!(state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), lienzo_geom::Rect::new(0, 20, 20, 40));
                 assert_eq!(state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().rgba(9, 22), [0.0, 1.0, 0.0, 1.0]);
                 s.execute("edit.undo", json!({})).unwrap();
             }
@@ -211,8 +208,8 @@ fn review_layer_transform_uses_the_recorded_anchor() {
 /// Physical dimensions retain points and resolve current dpi before rounding or style scaling.
 #[test]
 fn recorded_image_points_use_current_resolution_and_keep_style_scaling() {
-    use photocraft_color::{BlendMode, Color};
-    use photocraft_doc::{Effect, Effects, FxCommon, FxPaint, StrokeFx, StrokePosition};
+    use lienzo_color::{BlendMode, Color};
+    use lienzo_doc::{Effect, Effects, FxCommon, FxPaint, StrokeFx, StrokePosition};
     for dpi in [72, 144] {
         for scale_styles in [None, Some(false), Some(true)] {
             let mut d = Descriptor::new("null")
@@ -245,18 +242,18 @@ fn recorded_image_points_use_current_resolution_and_keep_style_scaling() {
             .unwrap();
             replay_saved(&mut s, &action);
             let doc = &s.active().unwrap().doc;
-            assert_eq!(doc.size, photocraft_geom::Size::new(dpi, dpi / 2));
+            assert_eq!(doc.size, lienzo_geom::Size::new(dpi, dpi / 2));
             let Effect::Stroke(stroke) = &doc.layers[0].effects.items[0] else { panic!("stroke lost") };
             assert_eq!(stroke.size, if scale_styles.unwrap_or(false) { 20.0 * dpi as f32 / 40.0 } else { 20.0 });
             s.execute("edit.undo", json!({})).unwrap();
-            assert_eq!(s.active().unwrap().doc.size, photocraft_geom::Size::new(40, 20));
+            assert_eq!(s.active().unwrap().doc.size, lienzo_geom::Size::new(40, 20));
         }
     }
     let d = Descriptor::new("null").with("Wdth", D::UnitFloat { unit: *b"#Rlt", value: 0.36 }).with("Intr", enm("Intp", "Nrst"));
     let action = recorded(AtnEvent::Code(*b"ImgS"), d);
     let mut s = sized_document(40, 20, 300);
     replay_saved(&mut s, &action);
-    assert_eq!(s.active().unwrap().doc.size, photocraft_geom::Size::new(2, 1), "round pixels after point conversion");
+    assert_eq!(s.active().unwrap().doc.size, lienzo_geom::Size::new(2, 1), "round pixels after point conversion");
 }
 
 /// The layered false/false recording writes a class and explicit layer-retaining choices.
@@ -272,7 +269,7 @@ fn recorded_mode_uses_a_class_and_retains_layers_with_false_flags() {
     let mut s = sized_document(4, 2, 72);
     s.execute("layer.new.layer", json!({"name":"Second"})).unwrap();
     replay_saved(&mut s, &action);
-    assert_eq!(s.active().unwrap().doc.mode, photocraft_doc::ColorMode::Grayscale);
+    assert_eq!(s.active().unwrap().doc.mode, lienzo_doc::ColorMode::Grayscale);
     assert_eq!(s.active().unwrap().doc.layers.len(), 2);
 }
 
@@ -329,8 +326,8 @@ fn review_10702_depth_conversion_accepts_false_layer_flags() {
 /// A recorded name is resolved at playback, including names that collide with native sentinels.
 #[test]
 fn review_10702_transparency_names_resolve_at_playback() {
-    use photocraft_doc::LayerId;
-    use photocraft_geom::Rect;
+    use lienzo_doc::LayerId;
+    use lienzo_geom::Rect;
 
     for name in ["Subject", "merged", ""] {
         let d = Descriptor::new("null").with("null", D::Reference(vec![ReferenceItem::Property { class: class("Chnl"), key: Id::new("fsel") }])).with(
@@ -385,8 +382,8 @@ fn review_10702_transparency_names_resolve_at_playback() {
 /// group's combined transparency is not composited yet), rather than failing.
 #[test]
 fn group_transparency_sources_load_the_canvas() {
-    use photocraft_doc::LayerId;
-    use photocraft_geom::Rect;
+    use lienzo_doc::LayerId;
+    use lienzo_geom::Rect;
 
     for name in ["Group", "merged", ""] {
         let mut s = sized_document(2, 1, 72);
@@ -457,7 +454,7 @@ fn native_units_validate_before_edit_and_no_resample_remains_resolution_only() {
     }
     let params = json!({"width":1e308,"units":"pt","resolution":144,"resample":"none"});
     s.execute("image.imageSize", params.clone()).unwrap();
-    assert_eq!(s.active().unwrap().doc.size, photocraft_geom::Size::new(40, 20));
+    assert_eq!(s.active().unwrap().doc.size, lienzo_geom::Size::new(40, 20));
     assert_eq!(s.active().unwrap().doc.resolution_dpi, 144.0);
     let action = Action::new("Resolution", vec![("image.imageSize".into(), params)]);
     let d = saved(&action).descriptor.unwrap();
@@ -690,7 +687,7 @@ fn pass_through_uses_the_string_identifier_and_replays_on_a_group() {
         let (id, p) = &action.steps[0];
         s.execute(id, p.clone()).unwrap();
         let st = s.active().unwrap();
-        assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().blend, photocraft_color::BlendMode::PassThrough);
+        assert_eq!(st.doc.layer(st.active_layer.unwrap()).unwrap().blend, lienzo_color::BlendMode::PassThrough);
     }
 }
 

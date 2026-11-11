@@ -1,6 +1,6 @@
 //! Save As must store the new filename in the native manifest, not just the in-session tab name.
 
-use photocraft_automation::{Headless, files};
+use lienzo_automation::{Headless, files};
 use serde_json::json;
 
 #[test]

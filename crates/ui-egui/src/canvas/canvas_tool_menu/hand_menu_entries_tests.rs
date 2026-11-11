@@ -5,7 +5,7 @@ use egui::Context;
 use serde_json::json;
 
 use super::{FILL_SCREEN, HAND_MENU, Row, VIEW_MENU, choose, open_view, rows};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
 fn labels(rows: &[Row]) -> Vec<Option<&'static str>> {
@@ -13,8 +13,8 @@ fn labels(rows: &[Row]) -> Vec<Option<&'static str>> {
 }
 
 /// A 400 × 300 document, optionally with everything selected, and the view menu of `tool` open.
-fn menu_app(tool: Tool, selection: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn menu_app(tool: Tool, selection: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     if selection {
         app.run("select.all", json!({})).unwrap();

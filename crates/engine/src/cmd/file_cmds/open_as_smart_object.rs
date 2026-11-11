@@ -51,8 +51,8 @@ fn apply(
     path: &str,
     file: &str,
     bytes: Arc<Vec<u8>>,
-    r: photocraft_io::ImportResult,
-    pixels: photocraft_raster::Surface,
+    r: lienzo_io::ImportResult,
+    pixels: lienzo_raster::Surface,
     damaged: bool,
 ) -> Result<Value> {
     let warnings = r.warnings;
@@ -78,7 +78,7 @@ fn apply(
 
     // File › Open's completion: a raw has no embedded profile to ask about; otherwise the profile
     // prompt holds the document, and without a question the Color Settings policy is applied.
-    let raw = warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE));
+    let raw = warnings.iter().any(|w| w.contains(lienzo_io::raw::DEVELOPED_NOTE));
     let question = s.color.open_question(&doc).filter(|_| !raw);
     if damaged || question.is_some() {
         let held = s.hold_open(doc, false);

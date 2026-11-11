@@ -1,5 +1,5 @@
-use photocraft_doc::SliceOrigin;
-use photocraft_engine::Session;
+use lienzo_doc::SliceOrigin;
+use lienzo_engine::Session;
 use serde_json::{Value, json};
 
 fn sliced() -> Session {

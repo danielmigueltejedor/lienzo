@@ -3863,7 +3863,7 @@ curves	Smooth	Hamarlama
 	Multiple Flames Path Directions	Çoxlu Alov Yol İstiqamətləri
 	Multiple Flames Various Length	Çoxlu Alov Müxtəlif Uzunluqda
 	My Brushes	Fırçalarım
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Doğma faylı sürükləyib buraxma hələ Wayland-da dəstəklənmir. Fayldan istifadə edin › Açın və ya Lienzo -ni XWayland altında `WAYLAND_DISPLAY= photocraft` ilə işlədin.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Doğma faylı sürükləyib buraxma hələ Wayland-da dəstəklənmir. Fayldan istifadə edin › Açın və ya Lienzo -ni XWayland altında `WAYLAND_DISPLAY= lienzo` ilə işlədin.
 	Nearest	Ən yaxın
 	Neon Glow	Neon parıltısı
 	Neutralize	Zərərsizləşdirin

@@ -1,12 +1,12 @@
 //! Full filter timing, including tile reads, filtering, writeback and pruning.
-//! RAYON_NUM_THREADS=16 cargo run --release -p photocraft-algo --example bench_pixelate -- facet 6000 4000 u8 3 output.bin
+//! RAYON_NUM_THREADS=16 cargo run --release -p lienzo-algo --example bench_pixelate -- facet 6000 4000 u8 3 output.bin
 //! Also: crystallize, crystallize-large, pointillize, pointillize-large.
 //! Optional final argument after output.bin: rgb (default), gray, cmyk or lab.
 //! Run the same example at the base commit and the PR commit, then compare output.bin with cmp.
-use photocraft_algo::{FilterParams, apply_in};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::{FilterParams, apply_in};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use std::io::Write;
 use std::time::Instant;
 

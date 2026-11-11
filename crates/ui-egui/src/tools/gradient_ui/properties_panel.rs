@@ -1,8 +1,8 @@
 //! Compact live-gradient Properties controls, sharing the editor's stop interaction.
 
 use super::{
-    Color32, Fill, GradientStyle, Layer, LayerId, Marker, PhotocraftApp, Rect, Sense, Sink, Stroke, StrokeKind, Tokens, c32, cmds, edit_stop_color, fill_of,
-    json, preset_stop_color, selection_after_edit, stops_editor_for, strip_key, vec2, widgets,
+    Color32, Fill, GradientStyle, Layer, LayerId, LienzoApp, Marker, Rect, Sense, Sink, Stroke, StrokeKind, Tokens, c32, cmds, edit_stop_color, fill_of, json,
+    preset_stop_color, selection_after_edit, stops_editor_for, strip_key, vec2, widgets,
 };
 use crate::{icons, props_layout, theme};
 
@@ -14,21 +14,21 @@ const STYLES: [(GradientStyle, &str); 5] = [
     (GradientStyle::Diamond, "Diamond Gradient"),
 ];
 
-pub(super) fn show(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+pub(super) fn show(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     let document = app.session.active().map(|s| s.doc.id);
     ui.push_id(("gradient-properties", document, layer.id.0), |ui| {
         layer_controls(app, ui, layer);
     });
 }
 
-pub(super) fn editor(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+pub(super) fn editor(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     let document = app.session.active().map(|s| s.doc.id);
     ui.push_id(("gradient-editor-layer", document, layer.id.0), |ui| {
         layer_controls(app, ui, layer);
     });
 }
 
-fn layer_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+fn layer_controls(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     if props_layout::section(ui, "gradient-fill-stops", "Gradient")
         && let Some(fill) = current_fill(app, layer.id)
     {
@@ -37,7 +37,7 @@ fn layer_controls(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
     options(app, ui, layer);
 }
 
-fn options(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
+fn options(app: &mut LienzoApp, ui: &mut egui::Ui, layer: &Layer) {
     let Some(Fill::Gradient { angle, scale, style, reverse, dither, align, .. }) = fill_of(layer).cloned() else { return };
     if props_layout::section(ui, "gradient-fill-options", "Gradient Options") {
         ui.horizontal(|ui| {
@@ -76,7 +76,7 @@ fn options(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
     }
 }
 
-fn current_fill(app: &PhotocraftApp, id: LayerId) -> Option<Fill> {
+fn current_fill(app: &LienzoApp, id: LayerId) -> Option<Fill> {
     fill_of(app.session.active()?.doc.layer(id)?).cloned()
 }
 
@@ -137,7 +137,7 @@ fn style_button(ui: &mut egui::Ui, style: GradientStyle, selected: bool, name: &
     response.on_hover_text(tl!(name))
 }
 
-pub(super) fn stop_fields(app: &mut PhotocraftApp, ui: &mut egui::Ui, sink: Sink) {
+pub(super) fn stop_fields(app: &mut LienzoApp, ui: &mut egui::Ui, sink: Sink) {
     let Some(Fill::Gradient { mut stops, mut opacity_stops, midpoints, .. }) = sink.fill(app) else { return };
     stops.sort_by(|a, b| a.0.total_cmp(&b.0));
     if opacity_stops.is_empty() {
@@ -224,18 +224,18 @@ mod tests {
         kittest::{NodeT, Queryable},
     };
 
-    fn app() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 120})).unwrap();
         app.run(cmds::CREATE, json!({"from": [20, 60], "to": [180, 60], "stops": [[0, "#ff0000"], [1, "#0000ff"]], "transparency": [[0, 20], [1, 100]]}))
             .unwrap();
         app
     }
 
-    fn panel(ui: &mut egui::Ui, app: &mut PhotocraftApp) {
+    fn panel(ui: &mut egui::Ui, app: &mut LienzoApp) {
         if ui.ctx().cumulative_pass_nr() == 0 {
             // Font definitions take effect on the next pass, before section headers draw.
-            PhotocraftApp::setup_context(ui.ctx(), theme::ThemeKind::ProMedium);
+            LienzoApp::setup_context(ui.ctx(), theme::ThemeKind::ProMedium);
             return;
         }
         let state = app.session.active().unwrap();
@@ -243,12 +243,12 @@ mod tests {
         show(app, ui, &layer);
     }
 
-    fn fill(app: &PhotocraftApp) -> Fill {
+    fn fill(app: &LienzoApp) -> Fill {
         let state = app.session.active().unwrap();
         current_fill(app, state.active_layer.unwrap()).unwrap()
     }
 
-    fn click_strip(h: &mut Harness<'_, PhotocraftApp>, location: f32, y: f32) {
+    fn click_strip(h: &mut Harness<'_, LienzoApp>, location: f32, y: f32) {
         let rect = h.get_by_label("Gradient stops").rect();
         let pos = pos2(rect.left() + 8.0 + (rect.width() - 16.0) * location, rect.top() + y);
         h.event(egui::Event::PointerMoved(pos));
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn style_icons_edit_the_selected_layer_with_one_undo_step() {
         let mut h = Harness::builder().with_size(vec2(280.0, 800.0)).build_ui_state(panel, app());
-        PhotocraftApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
         h.run_steps(3);
         for (style, name) in STYLES.into_iter().skip(1) {
             let before = fill(h.state());
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn combined_strip_adds_only_the_clicked_kind_and_keeps_color_picker_working() {
         let mut h = Harness::builder().with_size(vec2(280.0, 800.0)).build_ui_state(panel, app());
-        PhotocraftApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
         h.run_steps(3);
         assert!(h.query_by_label("Color stops").is_none());
         assert!(h.query_by_label("Opacity stops").is_none());
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn opacity_numeric_edit_commits_once_and_undo_restores_the_gradient() {
         let mut h = Harness::builder().with_size(vec2(280.0, 800.0)).build_ui_state(panel, app());
-        PhotocraftApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
         h.run_steps(3);
         click_strip(&mut h, 0.0, 6.0);
         let before = fill(h.state());
@@ -350,7 +350,7 @@ mod tests {
         let mut app = app();
         app.run(cmds::STOP, json!({"action": "add", "kind": "opacity", "location": 0.5})).unwrap();
         let mut h = Harness::builder().with_size(vec2(280.0, 800.0)).build_ui_state(panel, app);
-        PhotocraftApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
         h.run_steps(3);
         assert!(h.get_all_by_label("Delete").next().unwrap().accesskit_node().is_disabled(), "two colors cannot be reduced further");
         click_strip(&mut h, 0.0, 6.0);
@@ -380,7 +380,7 @@ mod tests {
         assert!(icons::exists("trash"), "the stop deletion button has an embedded icon");
         for theme in theme::ThemeKind::ALL {
             let mut h = Harness::builder().with_size(vec2(260.0, 820.0)).build_ui_state(panel, app());
-            PhotocraftApp::setup_context(&h.ctx, theme);
+            LienzoApp::setup_context(&h.ctx, theme);
             h.run_steps(3);
             for (_, name) in STYLES {
                 let rect = h.get_by_label(name).rect();
@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn selection_follows_sorted_stops_including_equal_positions() {
         let f = Fill::gradient(
-            vec![(0.0, photocraft_color::Color::BLACK), (0.5, photocraft_color::Color::WHITE), (1.0, photocraft_color::Color::WHITE)],
+            vec![(0.0, lienzo_color::Color::BLACK), (0.5, lienzo_color::Color::WHITE), (1.0, lienzo_color::Color::WHITE)],
             0.0,
             1.0,
             GradientStyle::Linear,
@@ -412,7 +412,7 @@ mod tests {
         app.run(cmds::STOP, json!({"action": "add", "location": 0.4})).unwrap();
         let id = app.session.active().unwrap().active_layer.unwrap();
         let mut h = Harness::builder().with_size(vec2(280.0, 800.0)).build_ui_state(panel, app);
-        PhotocraftApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
+        LienzoApp::setup_context(&h.ctx, theme::ThemeKind::ProMedium);
         h.run_steps(3);
         let before = fill(h.state());
         let count = h.state().session.active().unwrap().history.past_len();

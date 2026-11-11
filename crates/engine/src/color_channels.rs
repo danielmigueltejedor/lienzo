@@ -1,7 +1,7 @@
 //! Selected native colour components, shared by commands and live painting.
 use std::collections::BTreeSet;
 
-use photocraft_raster::Surface;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::{EngineError, Result, Session, channel_cmds::ChannelTarget};
@@ -15,7 +15,7 @@ pub struct ColorChannels(u64);
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Restriction {
     pub colors: ColorChannels,
-    pub layer: photocraft_doc::LayerId,
+    pub layer: lienzo_doc::LayerId,
 }
 
 impl ColorChannels {
@@ -93,7 +93,7 @@ pub(crate) fn refusal(s: &Session, id: &str, p: &Value) -> Option<String> {
             return Some("Select an existing pixel layer before rendering into colour channels".into());
         }
         if let Some(layer) = layer
-            && !matches!(layer.content, photocraft_doc::LayerContent::Raster(_))
+            && !matches!(layer.content, lienzo_doc::LayerContent::Raster(_))
         {
             return Some("Rasterize the layer before editing colour channels".into());
         }
@@ -135,11 +135,11 @@ pub fn restrict_surface(before: &Surface, after: &mut Surface, colors: ColorChan
 }
 
 /// Write back selected samples within a known document/preview extent, including changed defaults.
-pub fn restrict_surface_in(before: &Surface, after: &mut Surface, colors: ColorChannels, extent: photocraft_geom::Rect) -> Result<()> {
+pub fn restrict_surface_in(before: &Surface, after: &mut Surface, colors: ColorChannels, extent: lienzo_geom::Rect) -> Result<()> {
     restrict_surface_impl(before, after, colors, Some(extent))
 }
 
-fn restrict_surface_impl(before: &Surface, after: &mut Surface, colors: ColorChannels, extent: Option<photocraft_geom::Rect>) -> Result<()> {
+fn restrict_surface_impl(before: &Surface, after: &mut Surface, colors: ColorChannels, extent: Option<lienzo_geom::Rect>) -> Result<()> {
     if before.format() != after.format() || before.default_bytes() != after.default_bytes() {
         let original = before.format();
         let warped = after.format();
@@ -204,7 +204,7 @@ fn restrict_surface_impl(before: &Surface, after: &mut Surface, colors: ColorCha
 }
 
 /// Live painting restores only the just-damaged tiles, rather than revisiting the whole stroke.
-pub fn restrict_region(before: &Surface, after: &mut Surface, colors: ColorChannels, damage: photocraft_geom::Rect) -> Result<()> {
+pub fn restrict_region(before: &Surface, after: &mut Surface, colors: ColorChannels, damage: lienzo_geom::Rect) -> Result<()> {
     if before.format() != after.format() {
         return Err(EngineError::Other("a colour-channel edit cannot change the pixel format".into()));
     }
@@ -219,7 +219,7 @@ pub fn restrict_region(before: &Surface, after: &mut Surface, colors: ColorChann
     restrict_coords(before, after, colors, coords)
 }
 
-fn restrict_coords(before: &Surface, after: &mut Surface, colors: ColorChannels, coords: BTreeSet<photocraft_geom::TileCoord>) -> Result<()> {
+fn restrict_coords(before: &Surface, after: &mut Surface, colors: ColorChannels, coords: BTreeSet<lienzo_geom::TileCoord>) -> Result<()> {
     if before.default_bytes() != after.default_bytes() {
         return Err(EngineError::Other("a colour-channel edit cannot change unstored pixels".into()));
     }
@@ -260,8 +260,8 @@ pub fn extract(surface: &Surface, component: usize) -> Result<Surface> {
 }
 
 /// Extract only the tiles an operation can read. The plane keeps the source default outside.
-pub(crate) fn extract_region(surface: &Surface, component: usize, region: Option<photocraft_geom::Rect>) -> Result<Surface> {
-    use photocraft_color::{ColorMode, PixelFormat, read_sample};
+pub(crate) fn extract_region(surface: &Surface, component: usize, region: Option<lienzo_geom::Rect>) -> Result<Surface> {
+    use lienzo_color::{ColorMode, PixelFormat, read_sample};
     let fmt = surface.format();
     if component >= fmt.mode.color_channels() {
         return Err(EngineError::Other("invalid colour component".into()));
@@ -276,7 +276,7 @@ pub(crate) fn extract_region(surface: &Surface, component: usize, region: Option
         .map(|(coord, tile)| {
             let mut dest = out.try_default_tile().map_err(|e| EngineError::Other(e.to_string()))?;
             for (src, dst) in tile.bytes().chunks_exact(fmt.bytes_per_pixel()).zip(dest.bytes_mut().chunks_exact_mut(fmt.sample.bytes())) {
-                photocraft_color::write_sample(dst, fmt.sample, 0, tone(read_sample(src, fmt.sample, component)));
+                lienzo_color::write_sample(dst, fmt.sample, 0, tone(read_sample(src, fmt.sample, component)));
             }
             Ok((*coord, std::sync::Arc::new(dest)))
         })
@@ -287,18 +287,12 @@ pub(crate) fn extract_region(surface: &Surface, component: usize, region: Option
 }
 
 /// Write one component without re-encoding any of the other components or transparency.
-pub fn scatter(surface: &mut Surface, plane: &Surface, component: usize, bounds: photocraft_geom::Rect) -> Result<()> {
+pub fn scatter(surface: &mut Surface, plane: &Surface, component: usize, bounds: lienzo_geom::Rect) -> Result<()> {
     scatter_selected(surface, plane, component, bounds, None)
 }
 
-pub(crate) fn scatter_selected(
-    surface: &mut Surface,
-    plane: &Surface,
-    component: usize,
-    bounds: photocraft_geom::Rect,
-    selection: Option<&Surface>,
-) -> Result<()> {
-    use photocraft_color::{ColorMode, read_sample, write_sample};
+pub(crate) fn scatter_selected(surface: &mut Surface, plane: &Surface, component: usize, bounds: lienzo_geom::Rect, selection: Option<&Surface>) -> Result<()> {
+    use lienzo_color::{ColorMode, read_sample, write_sample};
     let fmt = surface.format();
     if component >= fmt.mode.color_channels() {
         return Err(EngineError::Other("invalid colour component".into()));
@@ -335,7 +329,7 @@ pub(crate) fn scatter_selected(
             let src_bytes = src.map(|t| t.bytes());
             let default = plane.default_bytes();
             let stride = fmt.bytes_per_pixel();
-            let size = photocraft_geom::TILE_SIZE as usize;
+            let size = lienzo_geom::TILE_SIZE as usize;
             for (i, pixel) in dest.bytes_mut().chunks_exact_mut(stride).enumerate() {
                 let x = coord.rect().x0.saturating_add((i % size) as i32);
                 let y = coord.rect().y0.saturating_add((i / size) as i32);
@@ -360,11 +354,11 @@ pub(crate) fn scatter_selected(
 pub(crate) fn adjust(
     surface: &mut Surface,
     colors: ColorChannels,
-    adjustment: &photocraft_doc::Adjustment,
+    adjustment: &lienzo_doc::Adjustment,
     selection: Option<&Surface>,
-    bounds: photocraft_geom::Rect,
+    bounds: lienzo_geom::Rect,
 ) -> Result<()> {
-    use photocraft_doc::Adjustment;
+    use lienzo_doc::Adjustment;
     if !matches!(
         adjustment,
         Adjustment::BrightnessContrast { .. }
@@ -384,8 +378,8 @@ pub(crate) fn adjust(
 }
 
 /// Map a native tone record to the scalar RGB oracle without losing its combined record.
-fn scalar_adjustment(adjustment: &photocraft_doc::Adjustment, k: usize) -> photocraft_doc::Adjustment {
-    use photocraft_doc::{Adjustment, adjust::ToneSpace};
+fn scalar_adjustment(adjustment: &lienzo_doc::Adjustment, k: usize) -> lienzo_doc::Adjustment {
+    use lienzo_doc::{Adjustment, adjust::ToneSpace};
     match adjustment {
         Adjustment::Levels { master, per_channel, black, .. } => {
             let channel = if k == 3 { black.clone() } else { per_channel.get(k).cloned().unwrap_or_default() };
@@ -414,19 +408,19 @@ fn scalar_adjustment(adjustment: &photocraft_doc::Adjustment, k: usize) -> photo
 fn adjust_reference(
     surface: &mut Surface,
     colors: ColorChannels,
-    adjustment: &photocraft_doc::Adjustment,
+    adjustment: &lienzo_doc::Adjustment,
     selection: Option<&Surface>,
-    bounds: photocraft_geom::Rect,
+    bounds: lienzo_geom::Rect,
 ) -> Result<()> {
-    use photocraft_doc::Adjustment;
+    use lienzo_doc::Adjustment;
     for k in colors.indices() {
         let scalar = scalar_adjustment(adjustment, k);
         let region = selection.filter(|mask| mask.default_pixel().first().is_none_or(|v| *v <= 0.0)).map(|mask| mask.content_bounds().intersect(&bounds));
         let mut plane = extract_region(surface, k, region)?;
         if matches!(adjustment, Adjustment::Invert)
-            && surface.format().mode == photocraft_color::ColorMode::Lab
+            && surface.format().mode == lienzo_color::ColorMode::Lab
             && k > 0
-            && surface.format().sample != photocraft_color::SampleType::U8
+            && surface.format().sample != lienzo_color::SampleType::U8
         {
             let mirror = 256.0 / 255.0;
             let old = plane.clone();
@@ -439,8 +433,8 @@ fn adjust_reference(
                 let r = coord.rect();
                 let mut values = crate::allocation::read_region(&old, r, "inverting native Lab chroma")?;
                 for (i, v) in values.iter_mut().enumerate() {
-                    let x = r.x0.saturating_add((i % photocraft_geom::TILE_SIZE as usize) as i32);
-                    let y = r.y0.saturating_add((i / photocraft_geom::TILE_SIZE as usize) as i32);
+                    let x = r.x0.saturating_add((i % lienzo_geom::TILE_SIZE as usize) as i32);
+                    let y = r.y0.saturating_add((i / lienzo_geom::TILE_SIZE as usize) as i32);
                     let weight = selection.map_or(1.0, |s| s.sample_channel(x, y, 0)).clamp(0.0, 1.0);
                     *v += (mirror - v.clamp(0.0, 1.0) - *v) * weight;
                 }
@@ -451,8 +445,8 @@ fn adjust_reference(
                 &mut plane,
                 &scalar,
                 selection,
-                photocraft_compose::adjust::Transfer::for_document(surface.format().mode, surface.format().sample),
-                surface.format().mode == photocraft_color::ColorMode::Rgb,
+                lienzo_compose::adjust::Transfer::for_document(surface.format().mode, surface.format().sample),
+                surface.format().mode == lienzo_color::ColorMode::Rgb,
             )?;
         }
         scatter_selected(surface, &plane, k, region.unwrap_or(bounds), selection)?;
@@ -465,9 +459,9 @@ fn adjust_reference(
 #[cfg(test)]
 fn adjust_plane(
     plane: &mut Surface,
-    adjustment: &photocraft_doc::Adjustment,
+    adjustment: &lienzo_doc::Adjustment,
     selection: Option<&Surface>,
-    transfer: photocraft_compose::adjust::Transfer,
+    transfer: lienzo_compose::adjust::Transfer,
     rgb_document: bool,
 ) -> Result<()> {
     if selection.is_some() {
@@ -498,19 +492,19 @@ fn adjust_plane(
 pub(crate) fn tone_adjustment(
     kind: &str,
     p: &Value,
-    mut adjustment: photocraft_doc::Adjustment,
-    mode: photocraft_color::ColorMode,
+    mut adjustment: lienzo_doc::Adjustment,
+    mode: lienzo_color::ColorMode,
     colors: ColorChannels,
-) -> Result<photocraft_doc::Adjustment> {
-    use photocraft_doc::Adjustment;
-    if mode != photocraft_color::ColorMode::Lab {
+) -> Result<lienzo_doc::Adjustment> {
+    use lienzo_doc::Adjustment;
+    if mode != lienzo_color::ColorMode::Lab {
         return Ok(adjustment);
     }
     let mut neutral = p.clone();
     if let Some(o) = neutral.as_object_mut() {
         o.retain(|k, _| !matches!(k.as_str(), "red" | "green" | "blue" | "cyan" | "magenta" | "yellow" | "black" | "lightness" | "a" | "b"));
     }
-    let combined = crate::adjust_params::from_params(kind, &neutral, None, photocraft_color::ColorMode::Grayscale)?;
+    let combined = crate::adjust_params::from_params(kind, &neutral, None, lienzo_color::ColorMode::Grayscale)?;
     let defaults = crate::adjust_params::default_for(kind, mode)?;
     match (&mut adjustment, combined, defaults) {
         (
@@ -521,7 +515,7 @@ pub(crate) fn tone_adjustment(
             if colors.len() == 1 {
                 *master = neutral;
                 if let Some(k) = colors.indices().next()
-                    && p.get(crate::adjust_params::channel_keys(photocraft_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none()
+                    && p.get(crate::adjust_params::channel_keys(lienzo_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none()
                     && let Some(out) = per_channel.get_mut(k)
                 {
                     *out = group;
@@ -543,7 +537,7 @@ pub(crate) fn tone_adjustment(
             if colors.len() == 1 {
                 *master = neutral;
                 if let Some(k) = colors.indices().next()
-                    && p.get(crate::adjust_params::channel_keys(photocraft_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none()
+                    && p.get(crate::adjust_params::channel_keys(lienzo_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none()
                     && let Some(out) = per_channel.get_mut(k)
                 {
                     *out = group;
@@ -567,11 +561,11 @@ mod extraction_tests {
     use super::*;
     #[test]
     fn added_warp_alpha_keeps_the_original_layout_and_unselected_nan_payloads() {
-        let format = photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::F32, false);
+        let format = lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::F32, false);
         let payload = f32::from_bits(0x7fc0_1234);
         let mut before = Surface::new(format);
         before.write_pixel(0, 0, &[0.2, payload, 0.8]);
-        let mut warped = Surface::new(photocraft_color::PixelFormat { alpha: true, ..format });
+        let mut warped = Surface::new(lienzo_color::PixelFormat { alpha: true, ..format });
         warped.write_pixel(0, 0, &[0.9, 0.0, 0.1, 0.4]);
         restrict_surface(&before, &mut warped, ColorChannels::from_indices([0, 2], 3).unwrap()).unwrap();
         assert_eq!(warped.format(), format);
@@ -582,16 +576,16 @@ mod extraction_tests {
 
     #[test]
     fn geometric_writeback_materializes_changed_defaults_only_within_a_bounded_extent() {
-        let format = photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::F32, false);
+        let format = lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::F32, false);
         let before = Surface::with_default(format, &[0.3, 0.5, 0.7]);
-        let mut warped = Surface::new(photocraft_color::PixelFormat { alpha: true, ..format });
+        let mut warped = Surface::new(lienzo_color::PixelFormat { alpha: true, ..format });
         let colors = ColorChannels::from_indices([0, 2], 3).unwrap();
         let original = warped.clone();
         assert!(restrict_surface(&before, &mut warped, colors).is_err());
         assert_eq!(warped, original);
-        assert!(restrict_surface_in(&before, &mut warped, colors, photocraft_geom::Rect::new(0, 0, i32::MAX, i32::MAX)).is_err());
+        assert!(restrict_surface_in(&before, &mut warped, colors, lienzo_geom::Rect::new(0, 0, i32::MAX, i32::MAX)).is_err());
         assert_eq!(warped, original);
-        restrict_surface_in(&before, &mut warped, colors, photocraft_geom::Rect::new(1, 1, 3, 3)).unwrap();
+        restrict_surface_in(&before, &mut warped, colors, lienzo_geom::Rect::new(1, 1, 3, 3)).unwrap();
         assert_eq!(warped.format(), format);
         assert_eq!(warped.pixel(2, 2), vec![0.0, 0.5, 0.0]);
         assert_eq!(warped.pixel(0, 0), vec![0.3, 0.5, 0.7]);
@@ -599,9 +593,9 @@ mod extraction_tests {
     }
     #[test]
     fn region_extraction_copies_only_the_required_tiles() {
-        let mut source = Surface::new(photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::F32, true));
-        source.fill_rect(photocraft_geom::Rect::new(0, 0, 512, 512), &[0.2, 0.4, 0.6, 1.0]);
-        let plane = extract_region(&source, 0, Some(photocraft_geom::Rect::new(0, 0, 16, 16))).unwrap();
+        let mut source = Surface::new(lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Rgb, lienzo_color::SampleType::F32, true));
+        source.fill_rect(lienzo_geom::Rect::new(0, 0, 512, 512), &[0.2, 0.4, 0.6, 1.0]);
+        let plane = extract_region(&source, 0, Some(lienzo_geom::Rect::new(0, 0, 16, 16))).unwrap();
         assert_eq!(plane.tile_count(), 1);
         assert_eq!(plane.pixel(8, 8)[0], source.pixel(8, 8)[0]);
         assert_eq!(plane.pixel(300, 300)[0], 0.0);

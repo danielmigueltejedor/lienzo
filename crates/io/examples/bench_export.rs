@@ -2,21 +2,21 @@
 //! a painted layer covering part of the canvas, and a soft half-transparent layer.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-io --example bench_export -- [--size 7360x4912] [--reps 7] [--only pcraft] [--out DIR]
+//! cargo run --release -p lienzo-io --example bench_export -- [--size 7360x4912] [--reps 7] [--only pcraft] [--out DIR]
 //! ```
 //!
 //! Each row is the median (and min) of `--reps` runs. `--out DIR` writes each format's bytes to
 //! `DIR/out.<ext>` so two builds' output can be compared.
 use std::time::Instant;
 
-use photocraft_doc::Layer;
-use photocraft_geom::Rect;
+use lienzo_doc::Layer;
+use lienzo_geom::Rect;
 
 fn arg(args: &[String], name: &str) -> Option<String> {
     args.iter().position(|a| a == name).and_then(|i| args.get(i + 1).cloned())
 }
 
-fn photo(w: u32, h: u32) -> photocraft_codecs::Image {
+fn photo(w: u32, h: u32) -> lienzo_codecs::Image {
     let mut px = vec![0u8; w as usize * h as usize * 3];
     for (y, row) in px.chunks_mut(w as usize * 3).enumerate() {
         for x in 0..w as usize {
@@ -31,7 +31,7 @@ fn photo(w: u32, h: u32) -> photocraft_codecs::Image {
             }
         }
     }
-    photocraft_codecs::Image::from_raw(w, h, photocraft_codecs::ChannelLayout::Rgb, photocraft_codecs::SampleType::U8, px).expect("image")
+    lienzo_codecs::Image::from_raw(w, h, lienzo_codecs::ChannelLayout::Rgb, lienzo_codecs::SampleType::U8, px).expect("image")
 }
 
 fn main() {
@@ -41,8 +41,8 @@ fn main() {
     let only = arg(&args, "--only");
     let out = arg(&args, "--out");
 
-    let png = photocraft_codecs::encode(&photo(w, h), photocraft_codecs::Format::Png, &Default::default()).expect("png");
-    let mut doc = photocraft_io::import("photo.png", &png).expect("import").document;
+    let png = lienzo_codecs::encode(&photo(w, h), lienzo_codecs::Format::Png, &Default::default()).expect("png");
+    let mut doc = lienzo_io::import("photo.png", &png).expect("import").document;
     let fmt = doc.pixel_format();
     let mut paint = Layer::raster("paint", fmt);
     if let Some(s) = paint.surface_mut() {
@@ -72,16 +72,16 @@ fn main() {
             continue;
         }
         let cached = ext == "pcraft+cache";
-        let opts = photocraft_io::ExportOptions { pcraft_cache: cached.then(photocraft_io::PcraftExportCache::default), ..Default::default() };
+        let opts = lienzo_io::ExportOptions { pcraft_cache: cached.then(lienzo_io::PcraftExportCache::default), ..Default::default() };
         let name = format!("x.{}", ext.trim_end_matches("+cache"));
         if cached {
-            photocraft_io::export(&doc, &name, &opts).expect("warm-up");
+            lienzo_io::export(&doc, &name, &opts).expect("warm-up");
         }
         let mut times = Vec::with_capacity(reps);
         let mut bytes = Vec::new();
         for _ in 0..reps {
             let t = Instant::now();
-            bytes = photocraft_io::export(&doc, &name, &opts).expect("export").bytes;
+            bytes = lienzo_io::export(&doc, &name, &opts).expect("export").bytes;
             times.push(t.elapsed().as_secs_f64() * 1000.0);
         }
         times.sort_by(f64::total_cmp);

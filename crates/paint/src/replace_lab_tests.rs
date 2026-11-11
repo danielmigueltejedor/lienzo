@@ -3,7 +3,7 @@
 //! foreground, a 40 px hard tip, one click on each. Hue, Saturation and Luminosity keep today's RGB
 //! blend.
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
 
 use super::*;
 use crate::{BrushSettings, StrokePoint};
@@ -22,7 +22,7 @@ fn target_in(fmt: PixelFormat) -> Surface {
     for (i, c) in COLOURS.iter().enumerate() {
         let rgba = [f32::from(c[0]) / 255.0, f32::from(c[1]) / 255.0, f32::from(c[2]) / 255.0, 1.0];
         let x0 = i as i32 * 100;
-        s.fill_rect(Rect::new(x0, 0, x0 + 100, 100), &photocraft_raster::from_rgba(&fmt, rgba));
+        s.fill_rect(Rect::new(x0, 0, x0 + 100, 100), &lienzo_raster::from_rgba(&fmt, rgba));
     }
     s
 }
@@ -44,7 +44,7 @@ fn lab(s: &Surface, x: i32, y: i32) -> [f32; 3] {
 
 #[test]
 fn color_keeps_l_and_takes_the_foregrounds_a_and_b() {
-    let fg = photocraft_color::convert::srgb_to_lab([0.0, 0.0, 1.0]);
+    let fg = lienzo_color::convert::srgb_to_lab([0.0, 0.0, 1.0]);
     for i in 0..COLOURS.len() {
         let mut s = target();
         let x = i as i32 * 100 + 50;
@@ -72,7 +72,7 @@ fn hue_saturation_and_luminosity_keep_todays_blend() {
         };
         let c = to_rgba(&LAB8, &pre);
         let b = blend_rgb(blend, [c[0], c[1], c[2]], [0.0, 0.0, 1.0]);
-        let want = photocraft_raster::from_rgba(&LAB8, [b[0], b[1], b[2], c[3]]);
+        let want = lienzo_raster::from_rgba(&LAB8, [b[0], b[1], b[2], c[3]]);
         let got = s.pixel(150, 50);
         for (g, w) in got.iter().zip(&want) {
             assert!((g - w).abs() <= 1.0 / 255.0 + 1e-6, "{mode:?}: {got:?} vs {want:?}");
@@ -91,7 +91,7 @@ fn lab_16_color_keeps_todays_blend() {
         click(&mut s, ReplaceMode::Color, f64::from(x) + 0.5);
         let c = to_rgba(&lab16, &pre);
         let b = blend_rgb(BlendMode::Color, [c[0], c[1], c[2]], [0.0, 0.0, 1.0]);
-        let want = photocraft_raster::from_rgba(&lab16, [b[0], b[1], b[2], c[3]]);
+        let want = lienzo_raster::from_rgba(&lab16, [b[0], b[1], b[2], c[3]]);
         let got = s.pixel(x, 50);
         for (g, w) in got.iter().zip(&want) {
             assert!((g - w).abs() <= 1.0 / 65535.0 + 1e-6, "colour {i}: {got:?} vs {want:?}");

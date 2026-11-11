@@ -57,18 +57,18 @@ mod tests {
     fn a_tap_opens_a_menu_title_every_time() {
         use egui_kittest::{Harness, kittest::Queryable};
 
-        let app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         let mut harness = Harness::builder().with_size(egui::vec2(1200.0, 700.0)).with_step_dt(1.0 / 60.0).build_ui_state(
             |ui, app| {
                 crate::menus::menu_bar(app, ui);
             },
             app,
         );
-        crate::PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+        crate::LienzoApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
         harness.run_steps(3);
         let file = harness.get_by_label("File").rect().center();
         let ctx = harness.ctx.clone();
-        let tap = |harness: &mut Harness<'_, crate::PhotocraftApp>, dedupe: bool| {
+        let tap = |harness: &mut Harness<'_, crate::LienzoApp>, dedupe: bool| {
             for events in tap_frames(file) {
                 harness.input_mut().events = events;
                 if dedupe {

@@ -10,14 +10,14 @@
 //! "commit":true | "cancel":true}}}`.
 
 use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
-use photocraft_algo::transform::Interp;
-use photocraft_algo::wideangle::{self, Camera, Constraint, Orientation, WideAngle, WideMesh, WideModel};
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use lienzo_algo::transform::Interp;
+use lienzo_algo::wideangle::{self, Camera, Constraint, Orientation, WideAngle, WideMesh, WideModel};
+use lienzo_doc::LayerId;
+use lienzo_geom::Rect;
+use lienzo_raster::Surface;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::edit_history::{EditHistory, Step};
 use crate::theme::Tokens;
 use crate::widgets;
@@ -84,11 +84,11 @@ impl WideAngleDialog {
         let p = self.proxy_params();
         let mesh = wideangle::solve(&p, pf);
         self.residual = mesh.residual / self.scale;
-        let mut out = photocraft_algo::warp::warp_triangles(&self.proxy, pf, &mesh.verts, &mesh.triangles(), Interp::Bilinear);
+        let mut out = lienzo_algo::warp::warp_triangles(&self.proxy, pf, &mesh.verts, &mesh.triangles(), Interp::Bilinear);
         if let Some(colors) =
-            photocraft_engine::color_channels::explicit(&json!({"target":self.target}), self.proxy.format().mode.color_channels()).map_err(|e| e.to_string())?
+            lienzo_engine::color_channels::explicit(&json!({"target":self.target}), self.proxy.format().mode.color_channels()).map_err(|e| e.to_string())?
         {
-            photocraft_engine::color_channels::restrict_surface_in(&self.proxy, &mut out, colors, pf).map_err(|e| e.to_string())?;
+            lienzo_engine::color_channels::restrict_surface_in(&self.proxy, &mut out, colors, pf).map_err(|e| e.to_string())?;
         }
         self.mesh = Some(mesh);
         Ok(out)
@@ -123,8 +123,8 @@ impl WideAngleDialog {
     }
 }
 
-pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
-    photocraft_engine::commands::find("filter.adaptiveWideAngle").map(|c| (c.enabled)(&app.session)).unwrap_or(Err("unknown command".into()))?;
+pub fn open(app: &mut LienzoApp, ctx: &egui::Context) -> Result<(), String> {
+    lienzo_engine::commands::find("filter.adaptiveWideAngle").map(|c| (c.enabled)(&app.session)).unwrap_or(Err("unknown command".into()))?;
     let (layer, surf, _) = crate::distort_ui::active_filter_target(app)?;
     let st = app.session.active().ok_or("no document")?;
     let frame = st.doc.bounds();
@@ -135,7 +135,7 @@ pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> 
     let proxy = if k == 1 {
         surf.clone()
     } else {
-        photocraft_algo::resample::resize_surface(&surf, 1.0 / k as f64, 1.0 / k as f64, photocraft_algo::resample::Resample::Bilinear)
+        lienzo_algo::resample::resize_surface(&surf, 1.0 / k as f64, 1.0 / k as f64, lienzo_algo::resample::Resample::Bilinear)
     };
     // Normalise the proxy to start at the origin.
     let mut px = Surface::new(surf.format());
@@ -147,8 +147,8 @@ pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> 
     );
     px.write_region(Rect::new(0, 0, pw as i32, ph as i32), &proxy.read_region(src_r));
     // EXIF focal length / crop factor, as the engine would resolve them.
-    let info = st.doc.metadata.exif.as_ref().map(|e| photocraft_algo::exif::read(e));
-    let params = photocraft_engine::lens_cmds::wide_params("filter.adaptiveWideAngle", &json!({}), info.as_ref()).unwrap_or_default();
+    let info = st.doc.metadata.exif.as_ref().map(|e| lienzo_algo::exif::read(e));
+    let params = lienzo_engine::lens_cmds::wide_params("filter.adaptiveWideAngle", &json!({}), info.as_ref()).unwrap_or_default();
     let mut d = WideAngleDialog {
         layer,
         layer_name: name,
@@ -183,7 +183,7 @@ fn parse_orientation(s: &str) -> Orientation {
     }
 }
 
-pub fn menu(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut LienzoApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id != "filter.adaptiveWideAngle" {
         return None;
     }
@@ -242,7 +242,7 @@ pub fn menu(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Val
     Some(Ok(app.wide_angle.as_ref().map(|d| d.describe()).unwrap_or(Value::Null)))
 }
 
-fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn commit(app: &mut LienzoApp) -> Result<Value, String> {
     let d = app.wide_angle.take().ok_or(tl!("Adaptive Wide Angle isn't open"))?;
     app.run("filter.adaptiveWideAngle", d.command_params())
 }
@@ -273,7 +273,7 @@ fn constraint_menu(ui: &mut egui::Ui, d: &mut WideAngleDialog) {
     }
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.wide_angle.is_none() {
         return;
     }
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn dialog_adds_constraints_and_commits() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width": 160, "height": 100})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
@@ -547,8 +547,8 @@ mod tests {
     }
 
     /// A 160 × 100 grey layer to open the dialog on.
-    fn grey_layer() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    fn grey_layer() -> LienzoApp {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 160, "height": 100})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#808080"})).unwrap();
@@ -556,7 +556,7 @@ mod tests {
     }
 
     /// Open the dialog with one free constraint across the middle of the layer.
-    fn open_with_a_constraint(app: &mut PhotocraftApp, ctx: &egui::Context) {
+    fn open_with_a_constraint(app: &mut LienzoApp, ctx: &egui::Context) {
         menu(app, ctx, "filter.adaptiveWideAngle", &json!({"ui": {"add": {"a": [20, 50], "b": [140, 50]}}})).unwrap().unwrap();
     }
 
@@ -571,7 +571,7 @@ mod tests {
         }
         let mut app = grey_layer();
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        LienzoApp::setup_context(&ctx, Default::default());
         open_with_a_constraint(&mut app, &ctx);
         let input = || egui::RawInput { screen_rect: Some(ERect::from_min_size(Pos2::ZERO, vec2(1000.0, 600.0))), ..Default::default() };
         // Baseline: the source-space line, from which the screen scale and centre are measured.
@@ -651,21 +651,21 @@ mod tests {
     fn right_click_on_a_constraint_opens_its_menu() {
         use egui_kittest::kittest::Queryable;
         let size = vec2(1000.0, 600.0);
-        let mut h = egui_kittest::Harness::builder().with_size(size).build_ui_state(|ui, app: &mut PhotocraftApp| show(app, ui.ctx()), grey_layer());
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut h = egui_kittest::Harness::builder().with_size(size).build_ui_state(|ui, app: &mut LienzoApp| show(app, ui.ctx()), grey_layer());
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
         let ctx = h.ctx.clone();
         open_with_a_constraint(h.state_mut(), &ctx);
         h.run_steps(2);
         // The image view (see `show`): the window less the title, footer and panel, inset 16 pt.
         let view = ERect::from_min_max(pos2(16.0, 30.0 + 16.0), pos2(size.x - PANEL_W - 16.0, size.y - 48.0 - 16.0));
-        let right_click = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, p: Pos2| {
+        let right_click = |h: &mut egui_kittest::Harness<'_, LienzoApp>, p: Pos2| {
             let button = |pressed| egui::Event::PointerButton { pos: p, button: egui::PointerButton::Secondary, pressed, modifiers: egui::Modifiers::NONE };
             h.input_mut().events.extend([egui::Event::PointerMoved(p), button(true)]);
             h.run_steps(1);
             h.input_mut().events.push(button(false));
             h.run_steps(2);
         };
-        let constraints = |h: &egui_kittest::Harness<'_, PhotocraftApp>| h.state().wide_angle.as_ref().unwrap().params.constraints.clone();
+        let constraints = |h: &egui_kittest::Harness<'_, LienzoApp>| h.state().wide_angle.as_ref().unwrap().params.constraints.clone();
         // The constraint runs through the document's centre, which the view centres.
         right_click(&mut h, view.center());
         h.get_by_label("Horizontal").click();
@@ -685,7 +685,7 @@ mod tests {
 
     #[test]
     fn command_z_steps_the_dialog_not_the_document() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width": 160, "height": 100})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();

@@ -10,7 +10,7 @@
 //! path (`vector_ui::freeform_finish`, which keeps the straight segments straight).
 
 use crate::{
-    PhotocraftApp,
+    LienzoApp,
     canvas::{Drag, ToolEvent, ViewXform},
     state::Tool,
 };
@@ -21,7 +21,7 @@ pub struct Lasso {
     pub cursor: [f64; 2],
     down: bool,
     polygonal: bool,
-    document: Option<photocraft_doc::DocId>,
+    document: Option<lienzo_doc::DocId>,
     /// Indices of the points an Alt-click added: the segment into each one is straight.
     straight: Vec<usize>,
 }
@@ -38,7 +38,7 @@ pub fn owns(tool: Tool) -> bool {
     matches!(tool, Tool::Lasso | Tool::FreeformPen)
 }
 
-pub fn active(app: &PhotocraftApp) -> bool {
+pub fn active(app: &LienzoApp) -> bool {
     app.drag.as_ref().is_some_and(|d| owns(d.tool) && d.lasso.is_some())
 }
 
@@ -49,7 +49,7 @@ const SAME_POINT: f64 = 3.0;
 
 /// Between polygonal clicks, Backspace/right-click retracts the last fixed vertex.
 /// Do not affect a freehand stroke whose primary button is still held.
-pub fn waiting_for_vertex(app: &PhotocraftApp) -> bool {
+pub fn waiting_for_vertex(app: &LienzoApp) -> bool {
     owns(app.ui.tool)
         && app
             .drag
@@ -57,7 +57,7 @@ pub fn waiting_for_vertex(app: &PhotocraftApp) -> bool {
             .is_some_and(|d| d.tool == app.ui.tool && d.lasso.as_ref().is_some_and(|l| !l.down && l.document == app.session.active().map(|st| st.doc.id)))
 }
 
-pub fn undo_last_vertex(app: &mut PhotocraftApp) -> bool {
+pub fn undo_last_vertex(app: &mut LienzoApp) -> bool {
     cancel_stale(app);
     if !waiting_for_vertex(app) {
         return false;
@@ -76,7 +76,7 @@ pub fn undo_last_vertex(app: &mut PhotocraftApp) -> bool {
 
 /// A lasso drag that moves the selection (started inside it, `canvas::selection_drag_kind`):
 /// the canvas's own selection-move path handles it, this module only feeds it the events.
-fn moving_selection(app: &PhotocraftApp) -> bool {
+fn moving_selection(app: &LienzoApp) -> bool {
     app.drag.as_ref().is_some_and(|d| d.tool == Tool::Lasso && d.sel_move.is_some())
 }
 
@@ -84,7 +84,7 @@ fn moving_selection(app: &PhotocraftApp) -> bool {
 /// selection, a guide that ⌘ took (`canvas::command_guide_at`, #2690), the layer that ⌘ moves
 /// (`canvas::command_moves_layer`, refused on a locked layer: `move_blocked`, #2725), or a path
 /// that the Freeform Pen's ⌘ (Direct Selection) edits.
-fn handed_over(app: &PhotocraftApp) -> bool {
+fn handed_over(app: &LienzoApp) -> bool {
     moving_selection(app)
         || app.guide_drag.is_some_and(|d| d.index.is_some())
         || app.drag.as_ref().is_some_and(|d| d.tool == Tool::Move)
@@ -92,7 +92,7 @@ fn handed_over(app: &PhotocraftApp) -> bool {
         || app.ui.direct_selection.drag.is_some()
 }
 
-pub fn cancel_stale(app: &mut PhotocraftApp) {
+pub fn cancel_stale(app: &mut LienzoApp) {
     let document = app.session.active().map(|st| st.doc.id);
     if app.drag.as_ref().is_some_and(|d| d.lasso.as_ref().is_some_and(|lasso| app.ui.tool != d.tool || lasso.document != document)) {
         app.drag = None;
@@ -105,7 +105,7 @@ fn append(d: &mut Drag, p: [f64; 2]) {
     }
 }
 
-fn modifiers(app: &mut PhotocraftApp, mods: Modifiers) {
+fn modifiers(app: &mut LienzoApp, mods: Modifiers) {
     let Some(d) = app.drag.as_mut().filter(|d| owns(d.tool)) else { return };
     d.track(mods);
     // Alt held before the initial press still means subtract, until released and pressed again.
@@ -124,7 +124,7 @@ fn modifiers(app: &mut PhotocraftApp, mods: Modifiers) {
     }
 }
 
-pub fn commit(app: &mut PhotocraftApp) {
+pub fn commit(app: &mut LienzoApp) {
     cancel_stale(app);
     if active(app)
         && let Some(d) = app.drag.take()
@@ -133,7 +133,7 @@ pub fn commit(app: &mut PhotocraftApp) {
     }
 }
 
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     cancel_stale(app);
     let tool = app.ui.tool;
     if !owns(tool) || handed_over(app) {
@@ -262,7 +262,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
 
 /// Read actual presses/releases, including clicks below egui's drag threshold. Hover moves
 /// update only the rubber band; they must never become freehand vertices between Alt clicks.
-pub fn canvas_input(app: &mut PhotocraftApp, ctx: &egui::Context, xf: &ViewXform, response: &egui::Response) {
+pub fn canvas_input(app: &mut LienzoApp, ctx: &egui::Context, xf: &ViewXform, response: &egui::Response) {
     let events = ctx.input(|i| i.events.clone());
     let mut mods = app.drag.as_ref().map_or(ctx.input(|i| i.modifiers), |d| d.live);
     for ev in events {

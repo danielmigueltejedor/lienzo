@@ -112,7 +112,7 @@ pub(crate) fn recorded_selection(s: &Session, mut p: Value) -> Value {
 /// contents. Moving layers never changes the others' order, so an occurrence counted among these
 /// means the same layer before the move (when an action replays it) and after it (when the step
 /// is recorded).
-pub(super) fn same_named_targets(doc: &photocraft_doc::Document, name: &str, moved: &[LayerId]) -> Vec<LayerId> {
+pub(super) fn same_named_targets(doc: &lienzo_doc::Document, name: &str, moved: &[LayerId]) -> Vec<LayerId> {
     fn subtree(l: &Layer, out: &mut Vec<LayerId>, depth: usize) {
         out.push(l.id);
         if depth < 256

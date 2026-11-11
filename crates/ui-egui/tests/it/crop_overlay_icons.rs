@@ -4,9 +4,9 @@
 use std::collections::HashSet;
 
 use egui_kittest::Harness;
-use photocraft_ui_egui::crop_overlay::CropOverlay;
-use photocraft_ui_egui::icons;
-use photocraft_ui_egui::state::{Tool, ToolOptions};
+use lienzo_ui_egui::crop_overlay::CropOverlay;
+use lienzo_ui_egui::icons;
+use lienzo_ui_egui::state::{Tool, ToolOptions};
 
 fn collect(shape: &egui::Shape, ids: &mut HashSet<egui::TextureId>) {
     match shape {
@@ -54,9 +54,9 @@ fn harness() -> Harness<'static, ToolOptions> {
         .with_size(egui::vec2(320.0, 520.0))
         .with_max_steps(64)
         .with_accessibility_check(false)
-        .build_ui_state(|ui, o: &mut ToolOptions| photocraft_ui_egui::crop_overlay::options_button(o, ui), ToolOptions::default());
+        .build_ui_state(|ui, o: &mut ToolOptions| lienzo_ui_egui::crop_overlay::options_button(o, ui), ToolOptions::default());
     // The SVG icon loader lives in the app's context setup; without it no glyph is rasterized.
-    photocraft_ui_egui::PhotocraftApp::setup_context(&h.ctx, Default::default());
+    lienzo_ui_egui::LienzoApp::setup_context(&h.ctx, Default::default());
     h
 }
 
@@ -98,8 +98,8 @@ fn the_overlay_button_paints_the_current_overlays_icon() {
         .with_size(egui::vec2(60.0, 60.0))
         .with_max_steps(64)
         .with_accessibility_check(false)
-        .build_ui_state(|ui, o: &mut ToolOptions| photocraft_ui_egui::crop_overlay::options_button(o, ui), ToolOptions::default());
-    photocraft_ui_egui::PhotocraftApp::setup_context(&h.ctx, Default::default());
+        .build_ui_state(|ui, o: &mut ToolOptions| lienzo_ui_egui::crop_overlay::options_button(o, ui), ToolOptions::default());
+    lienzo_ui_egui::LienzoApp::setup_context(&h.ctx, Default::default());
     let mut glyphs = Vec::new();
     for overlay in CropOverlay::ALL {
         h.state_mut().crop_overlay = overlay;
@@ -146,18 +146,18 @@ fn row_glyph<State>(h: &Harness<'_, State>, label: &str) -> egui::TextureId {
 #[test]
 fn the_canvas_crop_menu_lists_a_glyph_per_overlay() {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).with_accessibility_check(false).build_eframe(|cc| {
-        photocraft_ui_egui::PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = photocraft_ui_egui::PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+        lienzo_ui_egui::LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = lienzo_ui_egui::LienzoApp::new(lienzo_engine::Session::new(), lienzo_ui_egui::Services::default());
         app.run("file.new", serde_json::json!({"name": "crop menu", "width": 400, "height": 300})).expect("new document");
         app.ui.tool = Tool::Crop;
-        photocraft_ui_egui::crop_ui::ensure_frame(&mut app);
+        lienzo_ui_egui::crop_ui::ensure_frame(&mut app);
         // The menu opens on a crop the user has started, so nudge the untouched frame once.
-        photocraft_ui_egui::crop_ui::nudge(&mut app, 1.0, 0.0);
+        lienzo_ui_egui::crop_ui::nudge(&mut app, 1.0, 0.0);
         app
     });
     h.run();
     let ctx = h.ctx.clone();
-    let opened = photocraft_ui_egui::canvas::canvas_tool_menu::open_crop(h.state_mut(), &ctx, Tool::Crop, [600.0, 400.0]);
+    let opened = lienzo_ui_egui::canvas::canvas_tool_menu::open_crop(h.state_mut(), &ctx, Tool::Crop, [600.0, 400.0]);
     assert!(opened, "the crop menu opens on a pending crop");
     h.run();
     let glyphs: Vec<_> = CropOverlay::ALL.iter().map(|kind| row_glyph(&h, kind.label())).collect();

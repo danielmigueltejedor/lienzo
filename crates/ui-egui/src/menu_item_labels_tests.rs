@@ -1,7 +1,7 @@
 //! #11399: the Combine Shapes, Open Recent, Arrange and Proof Setup items carry the reference
 //! application's names, in the live menu tree and in the engine's command labels.
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::menus::menu_items;
 
 /// (command id, label the live menu must show).
@@ -15,8 +15,8 @@ const LABELS: [(&str, &str); 7] = [
     ("view.proofSetup.internetStandardRgb", "Internet Standard RGB (sRGB)"),
 ];
 
-fn app() -> PhotocraftApp {
-    PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+fn app() -> LienzoApp {
+    LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default())
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn open_recent_clear_item_is_labelled_with_and_without_recent_files() {
 
 #[test]
 fn engine_command_labels_match_the_menu() {
-    let specs = photocraft_engine::cmd::command_specs();
+    let specs = lienzo_engine::cmd::command_specs();
     // The two Combine Shapes and the three Proof Setup commands have an engine command under the
     // same id as the menu row.
     for (id, label) in LABELS {
@@ -66,7 +66,7 @@ fn engine_command_labels_match_the_menu() {
         assert!(specs.iter().any(|s| s.id == id), "{id} is an engine command");
     }
     // The shell command for the extra window is registered under its own id.
-    let shell = photocraft_engine::shell_commands::SHELL_COMMANDS.iter().find(|c| c.0 == "window.newWindowForDocument").expect("shell command");
+    let shell = lienzo_engine::shell_commands::SHELL_COMMANDS.iter().find(|c| c.0 == "window.newWindowForDocument").expect("shell command");
     assert_eq!(shell.1, "New Window");
 }
 

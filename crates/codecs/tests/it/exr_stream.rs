@@ -1,4 +1,4 @@
-use photocraft_codecs::{exr_stream::Decoder, *};
+use lienzo_codecs::{exr_stream::Decoder, *};
 use std::io::Cursor;
 
 fn fixture(layout: ChannelLayout, sample: SampleType, compression: ExrCompression) -> Vec<u8> {

@@ -1,6 +1,6 @@
 //! Regression coverage for #8341: canvas resizing must scale shape strokes too.
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::{
+use lienzo_doc::{LayerContent, LayerId};
+use lienzo_engine::{
     Session,
     web_cmds::{WebSettings, web_document},
 };
@@ -28,7 +28,7 @@ fn web_downscale_keeps_stroke_only_shape_proportions_at_every_depth() {
                 panic!("shape lost");
             };
             assert_eq!(sh.stroke.as_ref().unwrap().width, 8.0, "{depth}-bit stroke");
-            let pixels = photocraft_compose::flatten(&scaled);
+            let pixels = lienzo_compose::flatten(&scaled);
             let alpha = |x: usize| pixels.px[128 * 256 + x][3];
             assert!(alpha(62) > 0.99, "scaled stroke is visible");
             assert!(alpha(52) < 0.01, "stroke must not retain its original width");
@@ -67,7 +67,7 @@ fn grouped_strokes_scale_up_and_unchanged_size_is_a_noop() {
     let (mut s, id) = shape_session(8);
     s.edit("Group", |doc, _| {
         let children = std::mem::take(&mut doc.layers);
-        doc.layers.push(photocraft_doc::Layer::group("Outer", vec![photocraft_doc::Layer::group("Inner", children)]));
+        doc.layers.push(lienzo_doc::Layer::group("Outer", vec![lienzo_doc::Layer::group("Inner", children)]));
         Ok(())
     })
     .unwrap();
@@ -86,7 +86,7 @@ fn png_export_contains_the_scaled_stroke_and_keeps_the_source_document() {
     let (mut s, _) = shape_session(8);
     let before = s.active().unwrap().doc.clone();
     let mut bytes = Vec::new();
-    photocraft_engine::web_cmds::save_for_web_with_writer(
+    lienzo_engine::web_cmds::save_for_web_with_writer(
         &mut s,
         &json!({"format": "png24", "path": "stroke.png", "width": 256, "height": 256}),
         &mut |_, encoded| {
@@ -95,7 +95,7 @@ fn png_export_contains_the_scaled_stroke_and_keeps_the_source_document() {
         },
     )
     .unwrap();
-    let image = photocraft_codecs::decode(&bytes).unwrap().convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8);
+    let image = lienzo_codecs::decode(&bytes).unwrap().convert(lienzo_codecs::ChannelLayout::Rgba, lienzo_codecs::SampleType::U8);
     assert_eq!(image.dimensions(), (256, 256));
     let alpha = |x: usize| image.data()[(128 * 256 + x) * 4 + 3];
     assert_eq!(alpha(62), 255);

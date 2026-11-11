@@ -65,7 +65,7 @@ fn cancelled_fill_stops_and_progress_reaches_one() {
     let (img, hole) = stripes(w, h);
     let source = vec![true; w * h];
     let yes = || true;
-    let cancelled = photocraft_raster::Interrupt::cancel_only(&yes);
+    let cancelled = lienzo_raster::Interrupt::cancel_only(&yes);
     assert!(fill_with(w, h, 1, &img, &hole, &source, &FillOptions::default(), &cancelled).is_err());
     let last = AtomicU32::new(0);
     let no = || false;
@@ -73,7 +73,7 @@ fn cancelled_fill_stops_and_progress_reaches_one() {
         assert!(f >= f32::from_bits(last.load(Ordering::Relaxed)), "progress went backwards");
         last.store(f.to_bits(), Ordering::Relaxed);
     };
-    let out = fill_with(w, h, 1, &img, &hole, &source, &FillOptions::default(), &photocraft_raster::Interrupt::new(&no, &progress)).unwrap();
+    let out = fill_with(w, h, 1, &img, &hole, &source, &FillOptions::default(), &lienzo_raster::Interrupt::new(&no, &progress)).unwrap();
     assert_eq!(f32::from_bits(last.load(Ordering::Relaxed)), 1.0);
     assert_eq!(out, fill(w, h, 1, &img, &hole, &source, &FillOptions::default()), "same result as the plain fill");
 }

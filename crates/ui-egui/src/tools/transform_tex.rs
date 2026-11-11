@@ -16,7 +16,7 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use egui::{Color32, ColorImage, TextureHandle, TextureId, TextureOptions};
-use photocraft_engine::display_color::CanvasDisplay;
+use lienzo_engine::display_color::CanvasDisplay;
 
 /// One uploaded texture: its mip level, filter and the uv extent covering the source.
 struct Level {
@@ -141,7 +141,7 @@ fn display_image(image: &ColorImage, display: &CanvasDisplay) -> ColorImage {
     let mut out = image.clone();
     let convert = |pixels: &mut [Color32]| {
         let px = pixels.iter().map(|p| p.to_srgba_unmultiplied().map(|c| f32::from(c) / 255.0)).collect();
-        let buffer = photocraft_compose::Buffer { rect: photocraft_geom::Rect::new(0, 0, pixels.len() as i32, 1), px };
+        let buffer = lienzo_compose::Buffer { rect: lienzo_geom::Rect::new(0, 0, pixels.len() as i32, 1), px };
         let converted = display.to_rgba8(&buffer);
         for (p, rgba) in pixels.iter_mut().zip(converted.pixels.as_chunks::<4>().0) {
             *p = Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]);
@@ -179,11 +179,11 @@ fn halve(img: &ColorImage) -> ColorImage {
 /// A layer mask applied to the preview texels: the texel's alpha is scaled by
 /// `1 − density × (1 − value)`, as the compositor applies a pixel mask.
 pub struct PreviewMask {
-    pub surface: photocraft_raster::Surface,
+    pub surface: lienzo_raster::Surface,
     pub density: f32,
 }
 
-pub fn read_surface(surf: &photocraft_raster::Surface, mask: Option<&PreviewMask>, b: photocraft_geom::Rect, max_side: usize) -> (ColorImage, [f32; 2]) {
+pub fn read_surface(surf: &lienzo_raster::Surface, mask: Option<&PreviewMask>, b: lienzo_geom::Rect, max_side: usize) -> (ColorImage, [f32; 2]) {
     let (w, h) = (b.width() as usize, b.height() as usize);
     if w == 0 || h == 0 {
         return (ColorImage::new([1, 1], vec![Color32::TRANSPARENT]), [1.0, 1.0]);
@@ -197,9 +197,9 @@ pub fn read_surface(surf: &photocraft_raster::Surface, mask: Option<&PreviewMask
         let y1 = (y0 + k as i32).min(b.y1);
         let rows = (y1 - y0).max(0) as usize;
         let mut buf = vec![[0u8; 4]; w * rows];
-        surf.read_rgba8_into(photocraft_geom::Rect::new(b.x0, y0, b.x1, y1), &mut buf);
+        surf.read_rgba8_into(lienzo_geom::Rect::new(b.x0, y0, b.x1, y1), &mut buf);
         if let Some(m) = mask {
-            let v = m.surface.read_region(photocraft_geom::Rect::new(b.x0, y0, b.x1, y1));
+            let v = m.surface.read_region(lienzo_geom::Rect::new(b.x0, y0, b.x1, y1));
             let ch = m.surface.channels().max(1);
             for (p, mv) in buf.iter_mut().zip(v.chunks_exact(ch)) {
                 let k = (1.0 - m.density * (1.0 - mv.first().copied().unwrap_or(1.0))).clamp(0.0, 1.0);
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     #[ignore = "reports CPU preparation cost; run explicitly for profile-preview changes"]
     fn transform_profile_upload_cost() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", serde_json::json!({"width": 6000, "height": 4000})).unwrap();
         let doc = session.active().unwrap().doc.clone();
         for monitor in ["raw", "srgb", "display-p3"] {
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn display_upload_changes_with_monitor_but_keeps_raw_alpha_and_mips() {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = lienzo_engine::Session::new();
         session.execute("file.new", serde_json::json!({"width": 2, "height": 1})).unwrap();
         let doc = session.active().unwrap().doc.clone();
         session.color.settings.monitor_profile = "srgb".into();
@@ -326,16 +326,16 @@ mod tests {
 
     #[test]
     fn full_resolution_unless_over_the_texture_limit() {
-        let mut s = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+        let mut s = lienzo_raster::Surface::new(lienzo_color::PixelFormat::RGBA8);
         // A one-pixel checkerboard: any downsampling would turn it grey.
         for y in 0..300 {
             for x in 0..500 {
                 if (x + y) % 2 == 0 {
-                    s.fill_rect(photocraft_geom::Rect::new(x, y, x + 1, y + 1), &[1.0, 1.0, 1.0, 1.0]);
+                    s.fill_rect(lienzo_geom::Rect::new(x, y, x + 1, y + 1), &[1.0, 1.0, 1.0, 1.0]);
                 }
             }
         }
-        let r = photocraft_geom::Rect::new(0, 0, 500, 300);
+        let r = lienzo_geom::Rect::new(0, 0, 500, 300);
         let (img, uv) = read_surface(&s, None, r, 8192);
         assert_eq!(img.size, [500, 300]);
         assert_eq!(uv, [1.0, 1.0]);
@@ -346,11 +346,11 @@ mod tests {
         assert_eq!(small.size, [250, 150]);
         assert!((100..=155).contains(&small.pixels[0].a()), "{:?}", small.pixels[0]);
         assert_eq!(uv, [1.0, 1.0]);
-        let (odd, uv) = read_surface(&s, None, photocraft_geom::Rect::new(0, 0, 301, 3), 256);
+        let (odd, uv) = read_surface(&s, None, lienzo_geom::Rect::new(0, 0, 301, 3), 256);
         assert_eq!(odd.size, [151, 2]);
         assert!(uv[0] < 1.0 && uv[1] < 1.0);
         // Empty rect: a placeholder, no panic.
-        assert_eq!(read_surface(&s, None, photocraft_geom::Rect::new(5, 5, 5, 9), 256).0.size, [1, 1]);
+        assert_eq!(read_surface(&s, None, lienzo_geom::Rect::new(5, 5, 5, 9), 256).0.size, [1, 1]);
     }
 
     #[test]

@@ -36,7 +36,7 @@ commands:
   corpus [--all | --pngsuite | --psd | --psd-tools | --pixls | --atn | --photoshop | --gimp] [--local] [--update-manifest]
                   show where test corpora live and their pins (xtask/src/corpus_pins.rs), or fetch
                   them into corpus/ (pinned commits, sha256-verified; --all = every corpus but pixls,
-                  --photoshop/--gimp --local copy from ../photocraft-corpus or $PHOTOCRAFT_CORPUS_REPO)
+                  --photoshop/--gimp --local copy from ../photocraft-corpus or $LIENZO_CORPUS_REPO)
   test-corpus [-p <crate>]... [--changed] [--pixls] [--local] [-- <test args>]
                   fetch every corpus, then cargo test --release --features corpus on the corpus
                   crates; --changed runs only if psd/io/codecs/compose/gpu/text/format/raw changed;
@@ -55,7 +55,7 @@ commands:
                   print the workspace version, or set it (Cargo.toml + Cargo.lock)
   ico <out.ico> <in.png>...
                   pack square PNGs (<= 256 px) into a Windows .ico (see packaging/icons.sh)
-  psd-write-oracle <recipes.json> <corpus-dir> <photocraft-cli> <new-output-dir>
+  psd-write-oracle <recipes.json> <corpus-dir> <lienzo-cli> <new-output-dir>
                   run PSD export recipes and write a JSON report and manifest
 ";
 
@@ -169,7 +169,7 @@ fn wasm_set() -> Result<Vec<String>, String> {
 
 /// Optional features that official builds enable and the web app ships, also checked for wasm32:
 /// (package, feature).
-const WASM_FEATURES: &[(&str, &str)] = &[("photocraft-codecs", "heif")];
+const WASM_FEATURES: &[(&str, &str)] = &[("lienzo-codecs", "heif")];
 
 /// One `cargo check` for the whole set: each crate is checked once, and `--keep-going` still
 /// reports every failing crate. Features unify across the set, so each crate is checked with the
@@ -224,7 +224,7 @@ fn cmd_test() -> Result<(), String> {
     run(c, &format!("cargo {tool} {}", TEST_TARGETS.join(" ")))
 }
 
-/// What the CI gate adds to every build: `--locked`, and the optional photocraft-heif crate that
+/// What the CI gate adds to every build: `--locked`, and the optional lienzo-heif crate that
 /// official builds open HEIC photos with.
 const GATE_ARGS: [&str; 4] = ["--workspace", "--locked", "--features", "heif"];
 
@@ -236,12 +236,12 @@ fn cmd_gate_tests(panic_hunt: bool) -> Result<(), String> {
     if nextest_available() {
         c.args(["nextest", "run", "--profile", "ci"]).args(GATE_ARGS).args(&TEST_TARGETS[1..]);
         if panic_hunt {
-            c.args(["--run-ignored", "only", "-E", "binary_id(photocraft-engine::panic_hunt)"]);
+            c.args(["--run-ignored", "only", "-E", "binary_id(lienzo-engine::panic_hunt)"]);
         }
     } else if panic_hunt {
         // `-- --ignored` across the workspace would run every ignored test, not only the hunt. The
-        // engine has no `heif` feature of its own; it reaches the decoder through photocraft-io.
-        c.args(["test", "-p", "photocraft-engine", "--locked", "--features", "photocraft-io/heif", "--test", "panic_hunt", "--", "--ignored"]);
+        // engine has no `heif` feature of its own; it reaches the decoder through lienzo-io.
+        c.args(["test", "-p", "lienzo-engine", "--locked", "--features", "lienzo-io/heif", "--test", "panic_hunt", "--", "--ignored"]);
     } else {
         eprintln!("note: cargo-nextest is not installed, running cargo test (cargo install cargo-nextest --locked)");
         c.arg("test").args(GATE_ARGS).args(&TEST_TARGETS[1..]);
@@ -259,8 +259,8 @@ fn cmd_doctest() -> Result<(), String> {
 
 fn cmd_parity() -> Result<(), String> {
     let mut c = cargo();
-    c.args(["run", "-q", "-p", "photocraft-ui-egui", "--example", "parity", "--", "--write", "docs/parity-checklist.md"]);
-    run(c, "cargo run -p photocraft-ui-egui --example parity")
+    c.args(["run", "-q", "-p", "lienzo-ui-egui", "--example", "parity", "--", "--write", "docs/parity-checklist.md"]);
+    run(c, "cargo run -p lienzo-ui-egui --example parity")
 }
 
 fn cmd_ci() -> Result<(), String> {

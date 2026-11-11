@@ -1,7 +1,7 @@
 use super::*;
 
 fn roots(name: &str) -> (PathBuf, PathBuf, AuthorizedWorkspace) {
-    let base = std::env::temp_dir().join(format!("photocraft-workspace-{}-{name}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("lienzo-workspace-{}-{name}", std::process::id()));
     let inside = base.join("inside");
     let outside = base.join("outside");
     let _ = std::fs::remove_dir_all(&base);
@@ -67,8 +67,8 @@ fn read_growth_is_rejected_at_the_observed_length() {
 #[test]
 fn open_pcraft_loads_a_directory_below_the_read_root() {
     let (inside, _, workspace) = roots("pcraft-dir");
-    let doc = photocraft_doc::Document::new("Native", photocraft_doc::Size::new(16, 12), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
-    photocraft_format::PcraftWriter::new().save_dir(&doc, &inside.join("native.pcraft"), &photocraft_format::SaveOptions::default()).unwrap();
+    let doc = lienzo_doc::Document::new("Native", lienzo_doc::Size::new(16, 12), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
+    lienzo_format::PcraftWriter::new().save_dir(&doc, &inside.join("native.pcraft"), &lienzo_format::SaveOptions::default()).unwrap();
     let loaded = workspace.open_pcraft("native.pcraft").unwrap().expect("the directory form loads");
     assert_eq!(loaded.name, doc.name);
     assert_eq!((loaded.size.width, loaded.size.height), (16, 12));
@@ -77,9 +77,9 @@ fn open_pcraft_loads_a_directory_below_the_read_root() {
 #[test]
 fn open_pcraft_reports_zip_files_and_missing_paths_clearly() {
     let (inside, _, workspace) = roots("pcraft-errors");
-    let doc = photocraft_doc::Document::new("Zipped", photocraft_doc::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
+    let doc = lienzo_doc::Document::new("Zipped", lienzo_doc::Size::new(4, 4), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
     let zip = inside.join("zipped.pcraft");
-    photocraft_format::PcraftWriter::new().save_path(&doc, &zip, &photocraft_format::SaveOptions::default()).unwrap();
+    lienzo_format::PcraftWriter::new().save_path(&doc, &zip, &lienzo_format::SaveOptions::default()).unwrap();
     assert!(zip.is_file());
     assert!(workspace.open_pcraft("zipped.pcraft").unwrap().is_none(), "the zip form falls back to the bytes path");
     let error = workspace.open_pcraft("missing.pcraft").unwrap_err().to_string();
@@ -232,7 +232,7 @@ fn write_keeps_the_replaced_files_extended_attributes() {
     #[cfg(target_os = "macos")]
     const TAG: &str = "com.apple.metadata:_kMDItemUserTags";
     #[cfg(not(target_os = "macos"))]
-    const TAG: &str = "user.photocraft.test";
+    const TAG: &str = "user.lienzo.test";
 
     let (inside, _, workspace) = roots("xattr");
     let path = inside.join("doc.psd");
@@ -430,13 +430,13 @@ fn filesystem_command_paths_and_profiles_fail_closed() {
     assert!(authorize_engine_step("file.open", &serde_json::json!({})).is_err());
     assert!(authorize_engine_step("actions.play", &serde_json::json!({})).is_ok());
     // An allowed command can't reach a denied one by running it on its own behalf.
-    let mut session = photocraft_engine::Session::new();
+    let mut session = lienzo_engine::Session::new();
     session.execute("file.new", serde_json::json!({"width": 4, "height": 4})).unwrap();
     session.authorize = Some(authorize_desktop_engine_step);
     let params = serde_json::json!({"to": "grayscale"});
     assert!(authorize_desktop_engine_command("file.automate.conditionalModeChange", &params).is_ok());
     assert!(session.execute("file.automate.conditionalModeChange", params).is_err());
-    assert_eq!(session.active().unwrap().doc.mode, photocraft_engine::doc::ColorMode::Rgb);
+    assert_eq!(session.active().unwrap().doc.mode, lienzo_engine::doc::ColorMode::Rgb);
     assert!(authorize_desktop_engine_step("file.saveACopy", &serde_json::json!({})).is_err());
 }
 
@@ -548,19 +548,19 @@ fn automation_rejects_ambient_path_commands_and_preferences() {
 #[test]
 fn registry_filesystem_path_params_are_classified() {
     let probe = serde_json::json!({
-        "path": "/outside/photocraft-probe",
-        "file": "/outside/photocraft-probe.icc",
-        "mapPath": "/outside/photocraft-probe.png",
-        "profile": "/outside/photocraft-probe.icc",
-        "workingRgb": "/outside/photocraft-probe.icc",
-        "workingCmyk": "/outside/photocraft-probe.icc",
-        "workingGray": "/outside/photocraft-probe.icc",
-        "input": "/outside/photocraft-input",
-        "output": "/outside/photocraft-output",
-        "paths": ["/outside/photocraft-probe.psd"],
+        "path": "/outside/lienzo-probe",
+        "file": "/outside/lienzo-probe.icc",
+        "mapPath": "/outside/lienzo-probe.png",
+        "profile": "/outside/lienzo-probe.icc",
+        "workingRgb": "/outside/lienzo-probe.icc",
+        "workingCmyk": "/outside/lienzo-probe.icc",
+        "workingGray": "/outside/lienzo-probe.icc",
+        "input": "/outside/lienzo-input",
+        "output": "/outside/lienzo-output",
+        "paths": ["/outside/lienzo-probe.psd"],
     });
     let preference_probe = serde_json::json!({"path": ".scriptEvents", "value": {}});
-    let unclassified: Vec<_> = photocraft_engine::command_specs()
+    let unclassified: Vec<_> = lienzo_engine::command_specs()
         .iter()
         .filter(|spec| documents_filesystem_path_params(spec.id, spec.params))
         .filter(|spec| {
@@ -596,14 +596,9 @@ fn svg_smart_handoff_is_memory_only_and_linked_sources_stay_denied() {
     let mut headless = crate::Headless::new();
     headless.command_run("file.new", serde_json::json!({"width": 16, "height": 16})).unwrap();
     let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>"#;
-    let inserted = photocraft_engine::file_cmds::place_bytes(
-        &mut headless.session,
-        "Artwork.svg",
-        svg.as_bytes().to_vec(),
-        None,
-        &serde_json::json!({"smartObject":true}),
-    )
-    .unwrap();
+    let inserted =
+        lienzo_engine::file_cmds::place_bytes(&mut headless.session, "Artwork.svg", svg.as_bytes().to_vec(), None, &serde_json::json!({"smartObject":true}))
+            .unwrap();
     let layer = inserted["layer"].clone();
     let handoff = headless.command_run("layer.smartObjects.exportSvg", serde_json::json!({"layer": layer})).unwrap();
     assert_eq!(handoff["svg"], svg);
@@ -622,9 +617,9 @@ fn svg_smart_handoff_is_memory_only_and_linked_sources_stay_denied() {
         assert!(headless.command_run(id, ambient).is_err(), "{id}");
     }
     let doc = Arc::make_mut(&mut headless.session.active_mut().unwrap().doc);
-    let id = photocraft_doc::LayerId(layer.as_u64().unwrap());
-    let photocraft_doc::LayerContent::Smart(sm) = &mut doc.layer_mut(id).unwrap().content else { panic!("SVG smart object") };
-    sm.source = photocraft_doc::SmartSource::Linked { path: "/outside/source.svg".into() };
+    let id = lienzo_doc::LayerId(layer.as_u64().unwrap());
+    let lienzo_doc::LayerContent::Smart(sm) = &mut doc.layer_mut(id).unwrap().content else { panic!("SVG smart object") };
+    sm.source = lienzo_doc::SmartSource::Linked { path: "/outside/source.svg".into() };
     let before = headless.session.active().unwrap().doc.clone();
     assert!(headless.command_run("layer.smartObjects.exportSvg", serde_json::json!({"layer": layer})).is_err());
     assert!(headless.command_run("layer.smartObjects.updateSvg", params).is_err());
@@ -642,7 +637,7 @@ fn svg_update_cannot_replay_desktop_lut_file_in_any_shared_instance() {
         let mut headless = crate::Headless::new();
         headless.command_run("file.new", serde_json::json!({"width": 16, "height": 16})).unwrap();
         let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>"#;
-        let pasted = photocraft_engine::file_cmds::place_bytes(
+        let pasted = lienzo_engine::file_cmds::place_bytes(
             &mut headless.session,
             "Artwork.svg",
             svg.as_bytes().to_vec(),
@@ -650,7 +645,7 @@ fn svg_update_cannot_replay_desktop_lut_file_in_any_shared_instance() {
             &serde_json::json!({"smartObject":true}),
         )
         .unwrap();
-        let target = photocraft_doc::LayerId(pasted["layer"].as_u64().unwrap());
+        let target = lienzo_doc::LayerId(pasted["layer"].as_u64().unwrap());
         let filtered = if shared_only {
             let doc = Arc::make_mut(&mut headless.session.active_mut().unwrap().doc);
             let duplicate = doc.layer(target).unwrap().duplicate();
@@ -666,7 +661,7 @@ fn svg_update_cannot_replay_desktop_lut_file_in_any_shared_instance() {
         let authorization = headless.session.authorize.take();
         headless.session.execute("image.adjustments.colorLookup", serde_json::json!({"file":lut.to_string_lossy()})).unwrap();
         headless.session.authorize = authorization;
-        let photocraft_doc::LayerContent::Smart(sm) = &headless.session.active().unwrap().doc.layer(filtered).unwrap().content else { panic!("smart object") };
+        let lienzo_doc::LayerContent::Smart(sm) = &headless.session.active().unwrap().doc.layer(filtered).unwrap().content else { panic!("smart object") };
         assert_eq!(sm.smart_filters.last().unwrap().params["file"], lut.to_string_lossy().as_ref());
         let handoff = headless.command_run("layer.smartObjects.exportSvg", serde_json::json!({"layer":target.0})).unwrap();
         let params = serde_json::json!({"document":handoff["document"],"layer":target.0,"contentsId":handoff["contentsId"],"fingerprint":handoff["fingerprint"],"svg":svg.replace("red","blue")});
@@ -678,7 +673,7 @@ fn svg_update_cannot_replay_desktop_lut_file_in_any_shared_instance() {
         assert_eq!(headless.session.active().unwrap().revision, revision);
         // A hidden stored filter is not executed, so its unused filename grants no access.
         let doc = Arc::make_mut(&mut headless.session.active_mut().unwrap().doc);
-        let photocraft_doc::LayerContent::Smart(sm) = &mut doc.layer_mut(filtered).unwrap().content else { panic!("smart object") };
+        let lienzo_doc::LayerContent::Smart(sm) = &mut doc.layer_mut(filtered).unwrap().content else { panic!("smart object") };
         sm.smart_filters.last_mut().unwrap().visible = false;
         assert_eq!(headless.command_run("layer.smartObjects.updateSvg", params).unwrap()["updated"], true);
     }
@@ -691,7 +686,7 @@ fn svg_update_keeps_inline_and_builtin_smart_filters_working() {
         let mut headless = crate::Headless::new();
         headless.command_run("file.new", serde_json::json!({"width":16,"height":16})).unwrap();
         let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>"#;
-        let pasted = photocraft_engine::file_cmds::place_bytes(
+        let pasted = lienzo_engine::file_cmds::place_bytes(
             &mut headless.session,
             "Artwork.svg",
             svg.as_bytes().to_vec(),
@@ -699,12 +694,12 @@ fn svg_update_keeps_inline_and_builtin_smart_filters_working() {
             &serde_json::json!({"smartObject":true}),
         )
         .unwrap();
-        let id = photocraft_doc::LayerId(pasted["layer"].as_u64().unwrap());
+        let id = lienzo_doc::LayerId(pasted["layer"].as_u64().unwrap());
         headless.command_run("image.adjustments.colorLookup", filter_params).unwrap();
         let handoff = headless.command_run("layer.smartObjects.exportSvg", serde_json::json!({"layer":id.0})).unwrap();
         let result = headless.command_run("layer.smartObjects.updateSvg",serde_json::json!({"document":handoff["document"],"layer":id.0,"contentsId":handoff["contentsId"],"fingerprint":handoff["fingerprint"],"svg":svg.replace("red","blue")})).unwrap();
         assert_eq!(result["updated"], true);
-        let photocraft_doc::LayerContent::Smart(sm) = &headless.session.active().unwrap().doc.layer(id).unwrap().content else { panic!("smart object") };
+        let lienzo_doc::LayerContent::Smart(sm) = &headless.session.active().unwrap().doc.layer(id).unwrap().content else { panic!("smart object") };
         assert_eq!(sm.smart_filters.len(), 1);
         assert!(!sm.cache.as_ref().unwrap().content_bounds().is_empty());
     }
@@ -1197,8 +1192,8 @@ fn same_root_leaf_link_save_replaces_the_link_without_writing_its_target() {
 fn directory_pcraft_uses_ordered_roots_without_falling_back_after_selection() {
     let (library, work, _) = roots("pcraft-ordered");
     let save = |root: &Path, name: &str| {
-        let doc = photocraft_doc::Document::new(name, photocraft_doc::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
-        photocraft_format::PcraftWriter::new().save_dir(&doc, &root.join("native.pcraft"), &photocraft_format::SaveOptions::default()).unwrap();
+        let doc = lienzo_doc::Document::new(name, lienzo_doc::Size::new(4, 4), lienzo_doc::ColorMode::Rgb, lienzo_doc::SampleType::U8);
+        lienzo_format::PcraftWriter::new().save_dir(&doc, &root.join("native.pcraft"), &lienzo_format::SaveOptions::default()).unwrap();
     };
     save(&work, "Later");
     let workspace = AuthorizedWorkspace::with_read_roots([library.as_path(), work.as_path()], Some(&work)).unwrap();
@@ -1239,7 +1234,7 @@ fn csh_import_requires_inline_data_in_automation() {
 
 /// A one-shape CSH set (version 2) named `name`, with a single open one-knot subpath.
 fn one_shape_csh(name: &str) -> Vec<u8> {
-    use photocraft_psd::path::{PathData, PsdKnot, PsdSubpath};
+    use lienzo_psd::path::{PathData, PsdKnot, PsdSubpath};
     let mut bytes = b"cush".to_vec();
     bytes.extend_from_slice(&2u32.to_be_bytes());
     bytes.extend_from_slice(&1u32.to_be_bytes());

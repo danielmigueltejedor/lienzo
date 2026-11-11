@@ -222,12 +222,12 @@ fn elsewhere(before: bool, here: bool, there: bool) -> bool {
 
 /// Mark this window as a Wayland surface (or not), for [`native`]; the shell calls it every pass.
 pub(crate) fn set_wayland(ctx: &egui::Context, wayland: bool) {
-    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("photocraft-cursor-wayland"), wayland));
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("lienzo-cursor-wayland"), wayland));
 }
 
 /// A Wayland window whose scale is not 1, where winit's cursor bitmaps are unreliable.
 fn scaled_wayland(ctx: &egui::Context) -> bool {
-    let wayland = cfg!(target_os = "linux") && ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("photocraft-cursor-wayland"))).unwrap_or(false);
+    let wayland = cfg!(target_os = "linux") && ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("lienzo-cursor-wayland"))).unwrap_or(false);
     wayland && ctx.native_pixels_per_point().unwrap_or_else(|| ctx.pixels_per_point() / ctx.zoom_factor()) != 1.0
 }
 
@@ -338,7 +338,7 @@ pub fn pen(ctx: &egui::Context, tool: Tool) -> Option<CursorIcon> {
 
 /// Reuse the latest bitmap per Pen variant and replace only the entry whose scale changed.
 fn cached_pen_image(ctx: &egui::Context, variant: PenVariant, scale: f32) -> Option<CustomCursorImage> {
-    let id = egui::Id::unique("photocraft-pen-cursor-cache");
+    let id = egui::Id::unique("lienzo-pen-cursor-cache");
     let idx = variant as usize;
     if let Some(image) = ctx.data_mut(|d| {
         d.get_temp_mut_or_default::<PenCache>(id)
@@ -381,7 +381,7 @@ fn show(painter: &Painter, at: Pos2, shape: Shape) -> CursorIcon {
 }
 
 fn cached_image(ctx: &egui::Context, shape: &Shape, scale: f32) -> Option<CustomCursorImage> {
-    let id = egui::Id::unique("photocraft-tool-cursor");
+    let id = egui::Id::unique("lienzo-tool-cursor");
     if let Some(cached) = ctx.data(|d| d.get_temp::<Cached>(id))
         && cached.shape == *shape
         && cached.scale == scale

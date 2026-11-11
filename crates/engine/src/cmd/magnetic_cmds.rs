@@ -1,5 +1,5 @@
 //! Magnetic Lasso: a selection border that snaps to edges between fastening points, traced by
-//! `photocraft_algo::magnetic`.
+//! `lienzo_algo::magnetic`.
 //!
 //! The tool is interactive (ui-egui `magnetic_lasso_ui`): it traces live through an
 //! [`EdgeSource`] and commits the outline it showed with `select.magneticLasso` and
@@ -8,10 +8,10 @@
 
 use std::sync::Arc;
 
-use photocraft_algo::magnetic::{self, Settings, Tracer};
-use photocraft_algo::selection as sel;
-use photocraft_doc::{ColorMode, DocId, Document, LayerId};
-use photocraft_geom::Rect;
+use lienzo_algo::magnetic::{self, Settings, Tracer};
+use lienzo_algo::selection as sel;
+use lienzo_doc::{ColorMode, DocId, Document, LayerId};
+use lienzo_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -89,7 +89,7 @@ fn read(doc: &Document, layer: Option<LayerId>, r: Rect) -> Vec<[u8; 4]> {
         Some(surface) => sel::rgba8_image(surface, r),
         None => {
             let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-            photocraft_compose::render(doc, r).px.iter().map(|p| p.map(q)).collect()
+            lienzo_compose::render(doc, r).px.iter().map(|p| p.map(q)).collect()
         }
     }
 }

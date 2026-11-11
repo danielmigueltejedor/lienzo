@@ -3,16 +3,16 @@
 //! run with Bundle Arrow-Key Nudges on), an Alt+drag of selected pixels is "Duplicate". An
 //! Alt+arrow nudge keeps "Duplicate + Move" (not measured).
 
-use photocraft_geom::Rect;
+use lienzo_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
 /// A 64x64 document with one painted layer (8..24)^2, selected, and the Move tool active.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     app.session.execute("layer.new.layer", json!({})).unwrap();
@@ -30,11 +30,11 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn bounds(app: &PhotocraftApp, id: photocraft_doc::LayerId) -> Rect {
+fn bounds(app: &LienzoApp, id: lienzo_doc::LayerId) -> Rect {
     app.session.active().unwrap().doc.layer(id).unwrap().surface().unwrap().content_bounds()
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
+fn drag(app: &mut LienzoApp, from: [f64; 2], by: [f64; 2], mods: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     let mid = [from[0] + by[0] / 2.0, from[1] + by[1] / 2.0];
     crate::canvas::tool_event(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, mods);
@@ -43,7 +43,7 @@ fn drag(app: &mut PhotocraftApp, from: [f64; 2], by: [f64; 2], mods: egui::Modif
     crate::canvas::tool_event(app, ToolEvent::Up { x: end[0], y: end[1] }, mods);
 }
 
-fn press(app: &mut PhotocraftApp, key: egui::Key, mods: egui::Modifiers, time: f64) {
+fn press(app: &mut LienzoApp, key: egui::Key, mods: egui::Modifiers, time: f64) {
     let ctx = egui::Context::default();
     ctx.input_mut(|i| {
         i.time = time;
@@ -53,16 +53,16 @@ fn press(app: &mut PhotocraftApp, key: egui::Key, mods: egui::Modifiers, time: f
     assert!(crate::move_mods::arrow_keys(app, &ctx));
 }
 
-fn history(app: &PhotocraftApp) -> usize {
+fn history(app: &LienzoApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn newest(app: &PhotocraftApp) -> Option<String> {
+fn newest(app: &LienzoApp) -> Option<String> {
     app.session.active().unwrap().history.entries().pop()
 }
 
 /// The five presses of the reference measurement: ->, Shift+->, down, Shift+down, <-.
-fn five_presses(app: &mut PhotocraftApp) {
+fn five_presses(app: &mut LienzoApp) {
     let keys = [
         (egui::Key::ArrowRight, egui::Modifiers::NONE),
         (egui::Key::ArrowRight, egui::Modifiers::SHIFT),

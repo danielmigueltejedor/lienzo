@@ -6,11 +6,11 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 
 use egui::{CursorIcon, Modifiers, Pos2, Stroke, vec2};
-use photocraft_doc::{DocId, Document, LayerContent, LayerId, text::TextShape};
-use photocraft_geom::{Affine, Point, Rect};
+use lienzo_doc::{DocId, Document, LayerContent, LayerId, text::TextShape};
+use lienzo_geom::{Affine, Point, Rect};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::{TransformSession, TypeTransform};
 use crate::transform_tool::{Gesture, Hit};
@@ -34,16 +34,16 @@ pub(crate) struct Preview {
     areas: VecDeque<(u64, Rect)>,
 }
 
-pub(crate) fn active(app: &PhotocraftApp) -> bool {
+pub(crate) fn active(app: &LienzoApp) -> bool {
     app.ui.type_transform.is_some()
 }
 
-pub(crate) fn visible(app: &PhotocraftApp, mods: Modifiers) -> bool {
+pub(crate) fn visible(app: &LienzoApp, mods: Modifiers) -> bool {
     app.ui.tool.is_type() && app.ui.text_edit.is_some() && (mods.command || active(app))
 }
 
 /// Drop pointer capture when its source changed externally. Never apply to another document.
-pub(crate) fn cancel_stale(app: &mut PhotocraftApp) {
+pub(crate) fn cancel_stale(app: &mut LienzoApp) {
     let Some(t) = &app.ui.type_transform else { return };
     let valid = app.ui.tool.is_type()
         && app.ui.text_edit.as_ref().is_some_and(|ed| ed.layer == t.frame.layer)
@@ -62,7 +62,7 @@ pub(crate) fn cancel_stale(app: &mut PhotocraftApp) {
     }
 }
 
-pub(crate) fn cancel_drag(app: &mut PhotocraftApp) {
+pub(crate) fn cancel_drag(app: &mut LienzoApp) {
     app.ui.type_transform = None;
     if let Some(p) = app.type_transform_preview.as_mut() {
         // A closed last document has no next canvas frame to release its preview's tiles.
@@ -74,13 +74,13 @@ pub(crate) fn cancel_drag(app: &mut PhotocraftApp) {
     }
 }
 
-pub(crate) fn reset(app: &mut PhotocraftApp) {
+pub(crate) fn reset(app: &mut LienzoApp) {
     cancel_drag(app);
     app.ui.type_transform_pivot = None;
 }
 
 /// Logical text-space bounds, mapped by the layer's existing affine (including rotation/skew).
-pub(crate) fn frame(app: &mut PhotocraftApp) -> Option<TransformSession> {
+pub(crate) fn frame(app: &mut LienzoApp) -> Option<TransformSession> {
     if let Some(t) = &app.ui.type_transform {
         return Some(t.frame.clone());
     }
@@ -98,7 +98,7 @@ pub(crate) fn frame(app: &mut PhotocraftApp) -> Option<TransformSession> {
         return None;
     }
     let area = match &shape {
-        TextShape::Area { path } => photocraft_text::area::path_bounds(path),
+        TextShape::Area { path } => lienzo_text::area::path_bounds(path),
         _ => None,
     };
     let rect = match (shape, area) {
@@ -153,7 +153,7 @@ fn near_border(t: &TransformSession, p: [f64; 2], tol: f64) -> bool {
 
 /// Screen points from `p` to the frame's outline, as the view draws it (zoom, rotation and pixel
 /// aspect).
-fn border_points(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2]) -> f64 {
+fn border_points(app: &LienzoApp, t: &TransformSession, p: [f64; 2]) -> f64 {
     let xf = ViewXform::active(app);
     let zoom = f64::from(app.point_zoom().max(0.01));
     let on_screen = |q: [f64; 2]| {
@@ -182,7 +182,7 @@ fn border_points(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2]) -> f64 
 
 /// The text's frame when `p` is just outside it, where a plain press moves the text (#5956). Over
 /// another type layer the press is the Type tool's, as before.
-fn move_zone(app: &mut PhotocraftApp, p: [f64; 2]) -> Option<TransformSession> {
+fn move_zone(app: &mut LienzoApp, p: [f64; 2]) -> Option<TransformSession> {
     let t = frame(app)?;
     if crate::transform_tool::hit(&t, p, 0.0) != Hit::Outside || border_points(app, &t, p) > MOVE_REACH_PT {
         return None;
@@ -196,7 +196,7 @@ fn move_zone(app: &mut PhotocraftApp, p: [f64; 2]) -> Option<TransformSession> {
 }
 
 /// Start a temporary drag of `frame` from `p` on `h`. Returns false when it can't start.
-fn start(app: &mut PhotocraftApp, mut frame: TransformSession, h: Hit, p: [f64; 2]) -> bool {
+fn start(app: &mut LienzoApp, mut frame: TransformSession, h: Hit, p: [f64; 2]) -> bool {
     let Some((_, original, _)) = crate::type_tool::layout(app, LayerId(frame.layer)) else { return false };
     let Some(st) = app.session.active() else { return false };
     let (document, revision) = (st.doc.id.0, st.revision);
@@ -210,7 +210,7 @@ fn start(app: &mut PhotocraftApp, mut frame: TransformSession, h: Hit, p: [f64; 
     true
 }
 
-fn hit(app: &PhotocraftApp, t: &TransformSession, p: [f64; 2]) -> Option<Hit> {
+fn hit(app: &LienzoApp, t: &TransformSession, p: [f64; 2]) -> Option<Hit> {
     let h = crate::transform_tool::hit(t, p, crate::transform_tool::handle_tolerance(app));
     (h != Hit::Outside || near_border(t, p, ROTATE_PX / f64::from(app.point_zoom().max(0.01)))).then_some(h)
 }
@@ -252,11 +252,11 @@ fn affine(t: &TypeTransform) -> Option<Affine> {
         .then_some(out)
 }
 
-pub(crate) fn current_transform(app: &PhotocraftApp, id: LayerId) -> Option<Affine> {
+pub(crate) fn current_transform(app: &LienzoApp, id: LayerId) -> Option<Affine> {
     affine(app.ui.type_transform.as_ref().filter(|t| t.frame.layer == id.0)?)
 }
 
-fn update(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) {
+fn update(app: &mut LienzoApp, p: [f64; 2], mods: Modifiers) {
     if !p.iter().all(|v| v.is_finite() && v.abs() <= 1e7) {
         return;
     }
@@ -280,7 +280,7 @@ fn update(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) {
     }
 }
 
-pub(crate) fn finish(app: &mut PhotocraftApp) {
+pub(crate) fn finish(app: &mut LienzoApp) {
     cancel_stale(app);
     let Some(t) = app.ui.type_transform.take() else { return };
     cancel_drag(app);
@@ -300,7 +300,7 @@ pub(crate) fn finish(app: &mut PhotocraftApp) {
 }
 
 /// First refusal before snapping, caret selection, paragraph resizing or clicking out to commit.
-pub(crate) fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub(crate) fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     cancel_stale(app);
     if !app.ui.tool.is_type() || app.ui.text_edit.is_none() {
         return false;
@@ -340,7 +340,7 @@ pub(crate) fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -
 }
 
 /// Preview via the existing text renderer; all glyphs/styles/effects remain native document data.
-pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Document>, u64)> {
+pub(crate) fn display_doc(app: &mut LienzoApp, idx: usize) -> Option<(Arc<Document>, u64)> {
     cancel_stale(app);
     if !active(app) {
         if let Some(p) = app.type_transform_preview.as_mut() {
@@ -372,9 +372,9 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     let LayerContent::Text(text) = &mut shown.layer_mut(layer)?.content else { return None };
     text.transform = transform;
     let started = crate::gpu_canvas::now_ms();
-    photocraft_engine::type_cmds::refresh(&source, text);
+    lienzo_engine::type_cmds::refresh(&source, text);
     let area = text.cache.as_ref().map_or(Rect::EMPTY, |s| s.tile_bounds());
-    let shown = Arc::new(photocraft_engine::mode_cmds::display_document(&shown).unwrap_or(shown));
+    let shown = Arc::new(lienzo_engine::mode_cmds::display_document(&shown).unwrap_or(shown));
     let key = PREVIEW_BASE | (app.ui.alloc_id() & (PREVIEW_BASE - 1));
     let mut areas = app.type_transform_preview.take().filter(|p| p.document == id && p.revision == revision).map(|p| p.areas).unwrap_or_default();
     if areas.len() >= 128 {
@@ -386,13 +386,13 @@ pub(crate) fn display_doc(app: &mut PhotocraftApp, idx: usize) -> Option<(Arc<Do
     Some((shown, key))
 }
 
-pub(crate) fn damage(app: &PhotocraftApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
+pub(crate) fn damage(app: &LienzoApp, doc: DocId, revision: u64, before: u64, after: u64) -> Option<Rect> {
     let p = app.type_transform_preview.as_ref().filter(|p| p.document == doc && p.revision == revision)?;
     let area = |key| if key == 0 { Some(p.original_area) } else { p.areas.iter().find(|(k, _)| *k == key).map(|(_, r)| *r) };
     Some(area(before)?.union(&area(after)?))
 }
 
-pub(crate) fn draw(app: &mut PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, mods: Modifiers) -> bool {
+pub(crate) fn draw(app: &mut LienzoApp, painter: &egui::Painter, xf: &ViewXform, mods: Modifiers) -> bool {
     if !visible(app, mods) {
         return false;
     }
@@ -448,7 +448,7 @@ pub(crate) fn rotation_cursor(ctx: &egui::Context, p: Pos2) {
 }
 
 /// The cursor and press share the exact same hit test, including a bounded outside rotation ring.
-pub(crate) fn cursor(app: &mut PhotocraftApp, ctx: &egui::Context, xf: &ViewXform, p: Pos2, mods: Modifiers) -> Option<CursorIcon> {
+pub(crate) fn cursor(app: &mut LienzoApp, ctx: &egui::Context, xf: &ViewXform, p: Pos2, mods: Modifiers) -> Option<CursorIcon> {
     if !visible(app, mods) {
         let id = LayerId(app.ui.text_edit.as_ref()?.layer);
         let q = xf.to_doc(p);

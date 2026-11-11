@@ -1,5 +1,5 @@
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_compose::Ancestors;
+use lienzo_color::{PixelFormat, SampleType};
+use lienzo_compose::Ancestors;
 
 use super::{Document, Layer, LayerContent, LayerId, Rect, VideoData};
 
@@ -8,7 +8,7 @@ use super::{Document, Layer, LayerContent, LayerId, Rect, VideoData};
 /// coordinate. A merge walk of the two sorted tile maps: pointer compares, no pixel reads. Both
 /// documents stay alive during the comparison, so tile addresses cannot be reused under it.
 /// `false` (and no calls) when the format or default pixel differs: every pixel may have changed.
-fn each_changed_tile(a: &photocraft_raster::Surface, b: &photocraft_raster::Surface, mut f: impl FnMut(Rect)) -> bool {
+fn each_changed_tile(a: &lienzo_raster::Surface, b: &lienzo_raster::Surface, mut f: impl FnMut(Rect)) -> bool {
     if a.format() != b.format() || a.default_bytes() != b.default_bytes() {
         return false;
     }
@@ -42,19 +42,19 @@ fn each_changed_tile(a: &photocraft_raster::Surface, b: &photocraft_raster::Surf
 /// The pixels that differ between two surfaces, to tile precision: the bounding box of the tiles
 /// [`each_changed_tile`] finds (empty when the pixels are identical), or `None` when the format
 /// or default pixel differs.
-fn surface_damage(a: &photocraft_raster::Surface, b: &photocraft_raster::Surface) -> Option<Rect> {
+fn surface_damage(a: &lienzo_raster::Surface, b: &lienzo_raster::Surface) -> Option<Rect> {
     let mut out = Rect::EMPTY;
     each_changed_tile(a, b, |r| out = out.union(&r)).then_some(out)
 }
 
 /// Whether two surfaces hold identical pixels (see [`surface_damage`]).
-fn surfaces_equal(a: &photocraft_raster::Surface, b: &photocraft_raster::Surface) -> bool {
+fn surfaces_equal(a: &lienzo_raster::Surface, b: &lienzo_raster::Surface) -> bool {
     surface_damage(a, b) == Some(Rect::EMPTY)
 }
 
 /// How [`layer_pixels_cmp`] compares a pair of surfaces a layer draws from, given the feather (in
 /// pixels) the compositor blurs it by: `true` when the pair counts as equal for the caller.
-type SurfaceCmp<'f> = &'f mut dyn FnMut(&photocraft_raster::Surface, &photocraft_raster::Surface, f32) -> bool;
+type SurfaceCmp<'f> = &'f mut dyn FnMut(&lienzo_raster::Surface, &lienzo_raster::Surface, f32) -> bool;
 
 /// Byte blobs kept in `Arc`s (PSD raw blocks, embedded smart-object sources): pointer-identical
 /// or content-equal (they are small compared to pixels, and undo steps rarely re-parse them).
@@ -71,7 +71,7 @@ fn blobs_equal(a: &Option<std::sync::Arc<Vec<u8>>>, b: &Option<std::sync::Arc<Ve
 }
 
 /// Layer masks (also the smart-filter mask): scalars plus the surface, compared by `surf`.
-fn masks_cmp(a: &Option<photocraft_doc::LayerMask>, b: &Option<photocraft_doc::LayerMask>, surf: SurfaceCmp) -> bool {
+fn masks_cmp(a: &Option<lienzo_doc::LayerMask>, b: &Option<lienzo_doc::LayerMask>, surf: SurfaceCmp) -> bool {
     match (a, b) {
         (None, None) => true,
         (Some(x), Some(y)) => {
@@ -81,7 +81,7 @@ fn masks_cmp(a: &Option<photocraft_doc::LayerMask>, b: &Option<photocraft_doc::L
     }
 }
 
-fn texts_cmp(a: &photocraft_doc::TextLayer, b: &photocraft_doc::TextLayer, surf: SurfaceCmp) -> bool {
+fn texts_cmp(a: &lienzo_doc::TextLayer, b: &lienzo_doc::TextLayer, surf: SurfaceCmp) -> bool {
     a.text == b.text
         && a.font_family == b.font_family
         && a.size_pt == b.size_pt
@@ -101,7 +101,7 @@ fn texts_cmp(a: &photocraft_doc::TextLayer, b: &photocraft_doc::TextLayer, surf:
         }
 }
 
-fn smarts_cmp(a: &photocraft_doc::SmartObject, b: &photocraft_doc::SmartObject, surf: SurfaceCmp) -> bool {
+fn smarts_cmp(a: &lienzo_doc::SmartObject, b: &lienzo_doc::SmartObject, surf: SurfaceCmp) -> bool {
     a.filters_enabled == b.filters_enabled
         && a.transform == b.transform
         && a.smart_filters == b.smart_filters
@@ -109,10 +109,10 @@ fn smarts_cmp(a: &photocraft_doc::SmartObject, b: &photocraft_doc::SmartObject, 
         && a.perspective == b.perspective
         && a.warp == b.warp
         && match (&a.source, &b.source) {
-            (photocraft_doc::SmartSource::Embedded { file_name: x, bytes: xb }, photocraft_doc::SmartSource::Embedded { file_name: y, bytes: yb }) => {
+            (lienzo_doc::SmartSource::Embedded { file_name: x, bytes: xb }, lienzo_doc::SmartSource::Embedded { file_name: y, bytes: yb }) => {
                 x == y && blob_equal(xb, yb)
             }
-            (photocraft_doc::SmartSource::Linked { path: x }, photocraft_doc::SmartSource::Linked { path: y }) => x == y,
+            (lienzo_doc::SmartSource::Linked { path: x }, lienzo_doc::SmartSource::Linked { path: y }) => x == y,
             _ => false,
         }
         && blobs_equal(&a.psd_raw, &b.psd_raw)
@@ -126,7 +126,7 @@ fn smarts_cmp(a: &photocraft_doc::SmartObject, b: &photocraft_doc::SmartObject, 
 }
 
 /// Extra alpha/spot channels (the image itself in Multichannel mode).
-fn alpha_channels_equal(a: &photocraft_doc::AlphaChannel, b: &photocraft_doc::AlphaChannel) -> bool {
+fn alpha_channels_equal(a: &lienzo_doc::AlphaChannel, b: &lienzo_doc::AlphaChannel) -> bool {
     a.name == b.name && a.spot == b.spot && a.color == b.color && a.opacity == b.opacity && a.indicates == b.indicates && surfaces_equal(&a.surface, &b.surface)
 }
 
@@ -272,7 +272,7 @@ fn doc_pixels_equal(a: &Document, b: &Document) -> bool {
 }
 
 /// Whether `a`'s and `b`'s pattern libraries composite the same. Layers draw a pattern only
-/// through a reference that `photocraft_doc::pattern::find` resolves (fill and shape layers,
+/// through a reference that `lienzo_doc::pattern::find` resolves (fill and shape layers,
 /// Pattern Overlay, pattern strokes and glows, Bevel textures), so patterns appended after an
 /// unchanged prefix change nothing unless some reference now resolves differently: to an
 /// appended pattern where it resolved to an earlier one or to none. A same-named addition that
@@ -280,8 +280,8 @@ fn doc_pixels_equal(a: &Document, b: &Document) -> bool {
 /// document this way on first use; the pixels it paints are a raster change, diffed by tile like
 /// any other.
 fn patterns_pixels_equal(a: &Document, b: &Document) -> bool {
-    use photocraft_doc::effects::{Effect, FxPaint};
-    use photocraft_doc::{Fill, Pattern, pattern::find};
+    use lienzo_doc::effects::{Effect, FxPaint};
+    use lienzo_doc::{Fill, Pattern, pattern::find};
     if a.patterns == b.patterns {
         return true;
     }
@@ -351,7 +351,7 @@ fn pixels_equal_with(a: &Document, b: &Document, video_equal: fn(&VideoData, &Vi
 /// (`VideoData`'s own, shallow equality) and the same tile pointers in every frame, painted and
 /// original. Pointer compares only, like [`surfaces_equal`].
 fn video_frames_equal(a: &VideoData, b: &VideoData) -> bool {
-    let frames = |x: &[photocraft_raster::Surface], y: &[photocraft_raster::Surface]| x.len() == y.len() && x.iter().zip(y).all(|(f, g)| surfaces_equal(f, g));
+    let frames = |x: &[lienzo_raster::Surface], y: &[lienzo_raster::Surface]| x.len() == y.len() && x.iter().zip(y).all(|(f, g)| surfaces_equal(f, g));
     *a == *b
         && frames(&a.frames, &b.frames)
         && match (&a.original_frames, &b.original_frames) {
@@ -491,10 +491,9 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
             if clips(xs, xk) || clips(ys, yk) || !contained(x, 0) || !contained(y, 0) {
                 return false;
             }
-            let (Some(bx), Some(by)) = (
-                photocraft_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())),
-                photocraft_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())),
-            ) else {
+            let (Some(bx), Some(by)) =
+                (lienzo_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())), lienzo_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())))
+            else {
                 return false;
             };
             add(out, grow(bx, a.bounds()));
@@ -560,7 +559,7 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
                 }
                 for (ls, k, path, d) in [(xs, xk, px, a), (ys, yk, py, b)] {
                     for c in (k + 1..ls.len()).take_while(|&c| ls[c].clipped) {
-                        let Some(r) = photocraft_compose::change_bounds_in(ls, c, path, depth, near(d.bounds())) else { return false };
+                        let Some(r) = lienzo_compose::change_bounds_in(ls, c, path, depth, near(d.bounds())) else { return false };
                         add(out, grow(r, d.bounds()));
                     }
                 }
@@ -571,8 +570,8 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
                 // A clipped adjustment reaches as far as its base (#6535). Grown by what the
                 // groups around reach, as any change inside them (a parent's drop shadow).
                 let (Some(bx), Some(by)) = (
-                    photocraft_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())),
-                    photocraft_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())),
+                    lienzo_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())),
+                    lienzo_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())),
                 ) else {
                     return false;
                 };
@@ -581,8 +580,8 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
                 // never more than the whole extents. Effects laid out over a frame repaint it
                 // everywhere when it moves (#4053), so then the whole extents.
                 let frame_moved = around.spans_frame
-                    || (photocraft_compose::effects::spans_frame(y)
-                        && photocraft_compose::effects_frame(x, a.bounds()) != photocraft_compose::effects_frame(y, b.bounds()));
+                    || (lienzo_compose::effects::spans_frame(y)
+                        && lienzo_compose::effects_frame(x, a.bounds()) != lienzo_compose::effects_frame(y, b.bounds()));
                 let d = match tiles {
                     Some(t) if !frame_moved => t.inflate(around.reach).intersect(&whole).intersect(&b.bounds()),
                     _ => whole,
@@ -594,11 +593,11 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
                     // A change inside that moves the group's frame (a layer added, removed or
                     // hidden at its edge) lays effects spanning that frame out again over the
                     // whole group, beyond the change (#4053).
-                    let spans = photocraft_compose::effects::spans_frame;
-                    if (spans(x) || spans(y)) && photocraft_compose::effects_frame(x, a.bounds()) != photocraft_compose::effects_frame(y, b.bounds()) {
+                    let spans = lienzo_compose::effects::spans_frame;
+                    if (spans(x) || spans(y)) && lienzo_compose::effects_frame(x, a.bounds()) != lienzo_compose::effects_frame(y, b.bounds()) {
                         let (Some(bx), Some(by)) = (
-                            photocraft_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())),
-                            photocraft_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())),
+                            lienzo_compose::change_bounds_in(xs, xk, px, depth, near(a.bounds())),
+                            lienzo_compose::change_bounds_in(ys, yk, py, depth, near(b.bounds())),
                         ) else {
                             return false;
                         };
@@ -607,7 +606,7 @@ pub fn step_damage(a: &Document, b: &Document) -> Option<Rect> {
                     }
                     let inner = Around {
                         reach: around.reach.saturating_add(effects_reach(x).max(effects_reach(y))),
-                        spans_frame: around.spans_frame || photocraft_compose::effects::spans_frame(x) || photocraft_compose::effects::spans_frame(y),
+                        spans_frame: around.spans_frame || lienzo_compose::effects::spans_frame(x) || lienzo_compose::effects::spans_frame(y),
                     };
                     let (qx, qy): (Vec<_>, Vec<_>) = (px.iter().copied().chain([(xs, xk)]).collect(), py.iter().copied().chain([(ys, yk)]).collect());
                     if !walk(xc, yc, (&qx, &qy), inner, a, b, out) {
@@ -713,14 +712,14 @@ pub(crate) fn grow_hint(doc: &Document, hint: Rect) -> Rect {
 
 /// How far layer `l`'s own effects carry a change to its pixels: 0 without effects.
 fn effects_reach(l: &Layer) -> i32 {
-    if photocraft_compose::effects::has_effects(l) { photocraft_compose::effects::margin(l) } else { 0 }
+    if lienzo_compose::effects::has_effects(l) { lienzo_compose::effects::margin(l) } else { 0 }
 }
 
 /// `r`, changed pixels of a surface layer `l` draws from, grown as far as the change can show in
 /// `l`'s own render: by the `feather` (in pixels) the compositor blurs the surface by, then by
 /// `l`'s effects.
 fn grow_in_layer(l: &Layer, r: Rect, feather: f32) -> Rect {
-    let r = if feather > 0.0 { photocraft_vector::feather::grow(r, photocraft_vector::feather::feather_sigma(feather)) } else { r };
+    let r = if feather > 0.0 { lienzo_vector::feather::grow(r, lienzo_vector::feather::feather_sigma(feather)) } else { r };
     let margin = effects_reach(l);
     if r.is_empty() || margin == 0 { r } else { r.inflate(margin) }
 }
@@ -748,20 +747,20 @@ fn contained(l: &Layer, depth: usize) -> bool {
 }
 
 /// The pixels adding or removing `layers[k]` can change, when that is bounded: its change bounds
-/// (`photocraft_compose::change_bounds_in`: an unclipped adjustment's cover the layers beneath it
+/// (`lienzo_compose::change_bounds_in`: an unclipped adjustment's cover the layers beneath it
 /// in its isolation scope; a clipped adjustment's are its base's), provided it isn't the clipping base
 /// of clipped layers above it (they would change base), and neither it nor anything inside it is
 /// a video layer (it reaches outside the layer's bounds, see [`step_damage`]) or excludes
 /// channels. Channel exclusion is per pixel where the layer draws, so it doesn't actually reach
 /// further (`step_damage` bounds a property change of it that way); here it stays unbounded only
 /// to be conservative.
-fn one_sided_bounds(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: photocraft_color::SampleType, canvas: Rect) -> Option<Rect> {
+fn one_sided_bounds(layers: &[Layer], k: usize, ancestors: &Ancestors, depth: lienzo_color::SampleType, canvas: Rect) -> Option<Rect> {
     let l = layers.get(k)?;
     let new_base = !l.clipped && layers.get(k + 1).is_some_and(|above| above.clipped);
     if new_base || !contained(l, 0) {
         return None;
     }
-    photocraft_compose::change_bounds_in(layers, k, ancestors, depth, canvas)
+    lienzo_compose::change_bounds_in(layers, k, ancestors, depth, canvas)
 }
 
 /// Whether `layers[k]` draws nothing wherever it sits, so adding or removing it leaves the
@@ -776,13 +775,13 @@ fn inert_at(layers: &[Layer], k: usize) -> bool {
         _ => false,
     };
     empty
-        && matches!(l.blend, photocraft_doc::BlendMode::Normal | photocraft_doc::BlendMode::PassThrough)
+        && matches!(l.blend, lienzo_doc::BlendMode::Normal | lienzo_doc::BlendMode::PassThrough)
         && l.mask.is_none()
         && l.vector_mask.is_none()
-        && !photocraft_compose::effects::has_effects(l)
+        && !lienzo_compose::effects::has_effects(l)
         && l.fill_cache.is_none()
         && l.video.is_none()
-        && l.advanced == photocraft_doc::AdvancedBlending::default()
+        && l.advanced == lienzo_doc::AdvancedBlending::default()
         && (l.clipped || layers.get(k + 1).is_none_or(|above| !above.clipped))
 }
 
@@ -832,7 +831,7 @@ pub(crate) fn align_bounds(l: &Layer, canvas: Rect, sample: SampleType) -> Optio
 
 /// Whether the shape's fill shows everywhere (an inverted path, or below 100 % density), so it has
 /// no extent of its own.
-fn unbounded_fill(sh: &photocraft_doc::ShapeLayer) -> bool {
+fn unbounded_fill(sh: &lienzo_doc::ShapeLayer) -> bool {
     sh.fill.is_some() && (sh.path.inverted || (sh.density.is_finite() && sh.density < 1.0))
 }
 
@@ -849,22 +848,22 @@ const SHAPE_BOUNDS_BAND_PX: u64 = 1 << 20;
 /// everything it can draw (its path, stroke and feather), unclipped, and measured from that. A fill
 /// that shows everywhere (an inverted path, or below 100 % density) has no extent of its own and
 /// keeps the canvas-clipped measure (`None`).
-pub(super) fn shape_pixel_bounds(sh: &photocraft_doc::ShapeLayer, canvas: Rect, sample: SampleType) -> Option<Rect> {
+pub(super) fn shape_pixel_bounds(sh: &lienzo_doc::ShapeLayer, canvas: Rect, sample: SampleType) -> Option<Rect> {
     if unbounded_fill(sh) {
         return None;
     }
-    let reach = photocraft_compose::shape_bounds(sh)?.inflate(1);
+    let reach = lienzo_compose::shape_bounds(sh)?.inflate(1);
     if u64::from(reach.width()) * u64::from(reach.height()) > SHAPE_BOUNDS_MAX_PX {
-        return photocraft_compose::hard_shape_bounds(sh);
+        return lienzo_compose::hard_shape_bounds(sh);
     }
     // Gradients lay out in the document's frame (as the cached render does); the feather and the
     // clip cover the shape's whole reach, beyond the canvas too.
-    let shape = photocraft_vector::CompiledShape::with_frames(sh, photocraft_vector::DEFAULT_TOLERANCE, reach, canvas);
+    let shape = lienzo_vector::CompiledShape::with_frames(sh, lienzo_vector::DEFAULT_TOLERANCE, reach, canvas);
     // Alpha at the document's own precision, as the document stores it: an 8-bit render drops the
     // faint stroke of a 16-bit or float document (the opaque body then aligns by a different
     // extent than the document draws), and a float one would find alpha an 8-bit document never
     // stores. A band of rows at a time keeps the working copy a few MB however large the shape.
-    let format = PixelFormat::new(photocraft_color::ColorMode::Grayscale, sample, true);
+    let format = PixelFormat::new(lienzo_color::ColorMode::Grayscale, sample, true);
     let band_rows = i32::try_from((SHAPE_BOUNDS_BAND_PX / u64::from(reach.width().max(1))).max(1)).unwrap_or(i32::MAX);
     let mut bounds = Rect::EMPTY;
     let mut top = reach.y0;

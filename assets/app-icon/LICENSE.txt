@@ -1,4 +1,4 @@
-Lienzo app icon (photocraft.svg, photocraft-small.svg and every file derived from them in this
+Lienzo app icon (lienzo.svg, lienzo-small.svg and every file derived from them in this
 directory, and the web favicon where the project has one).
 
 The icon is a portrait of Diego Velázquez cut out, converted to black and white and placed over the

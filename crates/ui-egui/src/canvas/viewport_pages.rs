@@ -16,13 +16,13 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 
-use photocraft_doc::Document;
-use photocraft_engine::display_color::CanvasDisplay;
-use photocraft_geom::Rect as DRect;
+use lienzo_doc::Document;
+use lienzo_engine::display_color::CanvasDisplay;
+use lienzo_geom::Rect as DRect;
 
 use super::textures::texture_buffer;
 use super::{ViewXform, canvas_display, damage_since, display_doc, effect_reach, texture_key, visible_doc_rect};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 /// Document pixels per page side at the page's reduction.
 pub(crate) const PAGE_SIDE: u32 = 512;
@@ -171,7 +171,7 @@ pub(crate) struct Done {
     pub exact: bool,
     /// Rendered for [`Page::partial`]: written into the page held, not a page of its own.
     pub region: Option<DRect>,
-    pub result: Result<photocraft_compose::Buffer, String>,
+    pub result: Result<lienzo_compose::Buffer, String>,
 }
 
 /// The counters `inspect` reports.
@@ -194,7 +194,7 @@ pub(crate) struct Stats {
     pub last_error: Option<String>,
 }
 
-/// One document's viewport pages ([`PhotocraftApp::streams`]).
+/// One document's viewport pages ([`LienzoApp::streams`]).
 pub(crate) struct Stream {
     pages: HashMap<PageId, Page>,
     /// Epochs of pages not (or no longer) on the GPU, so their results can still be checked.
@@ -584,27 +584,27 @@ fn render(
     region: Option<DRect>,
     display: Option<&CanvasDisplay>,
     cancel: &AtomicBool,
-) -> Result<photocraft_compose::Buffer, String> {
+) -> Result<lienzo_compose::Buffer, String> {
     let size = [doc.size.width, doc.size.height];
     let source = region.unwrap_or_else(|| page.source(size));
     let rows = u64::from(source.height().min(128));
-    let _working = photocraft_raster::memory::try_reserve(u64::from(source.width()) * rows * 16 + (16 << 20))?;
-    let before = photocraft_raster::spill::read_error_generation();
+    let _working = lienzo_raster::memory::try_reserve(u64::from(source.width()) * rows * 16 + (16 << 20))?;
+    let before = lienzo_raster::spill::read_error_generation();
     let check = || cancel.load(Ordering::Relaxed);
-    let i = photocraft_raster::Interrupt::cancel_only(&check);
+    let i = lienzo_raster::Interrupt::cancel_only(&check);
     let buf = if exact {
-        photocraft_compose::viewport::render_page(doc, source, page.factor, i)?
+        lienzo_compose::viewport::render_page(doc, source, page.factor, i)?
     } else {
-        photocraft_compose::viewport::preview_page(doc, source, page.factor, i)?
+        lienzo_compose::viewport::preview_page(doc, source, page.factor, i)?
     };
     i.check().map_err(|e| e.to_string())?;
-    photocraft_raster::spill::check_since(before)?;
+    lienzo_raster::spill::check_since(before)?;
     Ok(texture_buffer(display, &buf).into_owned())
 }
 
 /// Draw document `idx` from viewport pages when its texture set doesn't fit the GPU canvas
 /// budget: true when the view should paint [`stream_key`] with the GPU canvas.
-pub(super) fn show(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, xf: &ViewXform, zoom: f32) -> bool {
+pub(super) fn show(app: &mut LienzoApp, ctx: &egui::Context, idx: usize, xf: &ViewXform, zoom: f32) -> bool {
     let Some(gpu) = app.gpu.clone() else { return false };
     if app.ui.view.pattern_preview || gpu.fault().is_some() {
         return false;
@@ -660,12 +660,12 @@ pub(super) fn show(app: &mut PhotocraftApp, ctx: &egui::Context, idx: usize, xf:
         gpu.release_texture_set(id.0);
     }
     let stream = app.streams.entry(id).or_default();
-    stream.retry_after((photocraft_raster::spill::read_error_generation(), photocraft_raster::memory::configuration_generation()));
+    stream.retry_after((lienzo_raster::spill::read_error_generation(), lienzo_raster::memory::configuration_generation()));
     // A page that failed: the CPU canvas draws the document until it is retried.
     if stream.stuck(&wanted) {
         return false;
     }
-    let faithful = photocraft_compose::proxy::proxy_faithful(&doc);
+    let faithful = lienzo_compose::proxy::proxy_faithful(&doc);
     let texel_bytes = gpu.page_texture_bytes(doc.depth, size, 1, 1);
     // The GPU canvas dropped the pages (released, or pruned with a closed document): start over.
     if stream.resident() > 0 && gpu.pages(key).0.len() != stream.resident() {
@@ -741,7 +741,7 @@ mod tests {
 
     fn done(p: PageId, epoch: u64, exact: bool, side: i32) -> Done {
         let rect = DRect::new(0, 0, side, side);
-        Done { page: p, epoch, exact, region: None, result: Ok(photocraft_compose::Buffer { rect, px: vec![[0.0; 4]; (side * side) as usize] }) }
+        Done { page: p, epoch, exact, region: None, result: Ok(lienzo_compose::Buffer { rect, px: vec![[0.0; 4]; (side * side) as usize] }) }
     }
 
     /// A stream holding `held` clean, exact pages.

@@ -7,14 +7,14 @@ use serde_json::json;
 #[test]
 fn live_brush_texture_includes_this_frames_press_and_moves() {
     for tool in [Tool::Brush, Tool::MixerBrush] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 128, "height": 64, "background": "white"})).unwrap();
         app.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
         app.run("tools.setBrush", json!({"brush": {"size": 12, "hardness": 1.0, "smoothing": {"amount": 0.0}}})).unwrap();
         app.ui.tool = tool;
         app.sync_views();
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 640.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut LienzoApp| {
                 if !ui.ctx().fonts(|fonts| fonts.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -22,13 +22,13 @@ fn live_brush_texture_includes_this_frames_press_and_moves() {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, Default::default());
+        LienzoApp::setup_context(&h.ctx, Default::default());
         h.run_steps(3);
         let p = h.state().last_canvas_rect.center();
         h.input_mut().events.push(egui::Event::PointerMoved(p));
         h.input_mut().events.push(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
         h.run_steps(1);
-        let shown = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+        let shown = |h: &mut egui_kittest::Harness<'_, LienzoApp>| {
             let app = h.state_mut();
             let live = app.live_stroke.as_ref().expect("painting starts on press");
             let key = live.display_key();
@@ -58,7 +58,7 @@ fn live_brush_texture_includes_this_frames_press_and_moves() {
 #[test]
 fn live_tools_paint_the_interpolated_camera_during_zoom_animation() {
     for tool in [Tool::Brush, Tool::MixerBrush] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
         app.run("prefs.set", json!({"values": {"general.animatedZoom": true}})).unwrap();
         app.sync_views();

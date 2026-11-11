@@ -7,7 +7,7 @@
 //! point reads one composite pixel (no averaging); its values match the Info panel's pointer
 //! readout (RGB 0–255 and colour-managed CMYK percentages, as in the Color Picker).
 
-use photocraft_doc::Document;
+use lienzo_doc::Document;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -25,12 +25,12 @@ fn has_doc(s: &Session) -> std::result::Result<(), String> {
 }
 
 /// Colour-managed CMYK, in percent, as the Info panel shows it: the same conversion the Color
-/// Picker uses (`photocraft_color::convert::rgb_to_cmyk`: the CMYK profile active on this thread,
+/// Picker uses (`lienzo_color::convert::rgb_to_cmyk`: the CMYK profile active on this thread,
 /// else the built-in coated CMYK), so both panels agree (#8101). 32-bit samples can lie outside
 /// 0..1, so each channel is clamped first (NaN reads as 0), like the RGB readout.
 pub fn device_cmyk(r: f32, g: f32, b: f32) -> [i32; 4] {
     let unit = |v: f32| if v.is_nan() { 0.0 } else { v.clamp(0.0, 1.0) };
-    photocraft_color::convert::rgb_to_cmyk([unit(r), unit(g), unit(b)]).map(|v| (unit(v) * 100.0).round() as i32)
+    lienzo_color::convert::rgb_to_cmyk([unit(r), unit(g), unit(b)]).map(|v| (unit(v) * 100.0).round() as i32)
 }
 
 /// The Info-panel values for a sample point at document pixel `pos`: composite RGB 0–255 and
@@ -39,7 +39,7 @@ pub fn device_cmyk(r: f32, g: f32, b: f32) -> [i32; 4] {
 pub fn readout(doc: &Document, pos: [f64; 2]) -> ([i32; 3], [i32; 4]) {
     let rgba = crate::sample_cmds::sample_color(doc, None, pos[0], pos[1], 1, crate::sample_cmds::SampleLayers::All);
     let q = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as i32;
-    let cmyk = photocraft_color::convert::with_cmyk_space(photocraft_compose::cmyk_space(doc).as_ref(), || device_cmyk(rgba[0], rgba[1], rgba[2]));
+    let cmyk = lienzo_color::convert::with_cmyk_space(lienzo_compose::cmyk_space(doc).as_ref(), || device_cmyk(rgba[0], rgba[1], rgba[2]));
     ([q(rgba[0]), q(rgba[1]), q(rgba[2])], cmyk)
 }
 
@@ -86,7 +86,7 @@ fn change<R>(s: &mut Session, f: impl FnOnce(&mut DocState) -> Result<R>) -> Res
     if clean {
         st.saved_revision = st.revision;
     }
-    st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+    st.last_damage = Some(lienzo_geom::Rect::EMPTY);
     Ok(r)
 }
 

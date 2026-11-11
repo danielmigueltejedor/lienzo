@@ -1,11 +1,11 @@
 //! Public load/save/playback witnesses for the measured Shear action mapping.
-use photocraft_engine::{
+use lienzo_engine::{
     Session,
     actions_cmds::Action,
     atn_cmds::{Imported, export, import},
 };
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
 use serde_json::{Value, json};
 
 fn desc(class: &str) -> Descriptor {
@@ -32,7 +32,7 @@ fn one_action(items: Vec<AtnItem>) -> AtnFile {
     }
 }
 fn b64(bytes: &[u8]) -> String {
-    photocraft_engine::paint::tile::b64_encode(bytes)
+    lienzo_engine::paint::tile::b64_encode(bytes)
 }
 fn mapped_recording(event: &str, descriptor: Descriptor) -> Imported {
     import(&atn::write(&one_action(vec![item(event, event, Some(descriptor))])).unwrap()).unwrap()
@@ -200,8 +200,8 @@ fn shear_native_exports_keep_effective_defaults_and_refuse_lossy_options() {
         assert!(loaded.unsupported.is_empty());
         let steps = &loaded.actions[0].steps;
         assert_eq!(
-            photocraft_engine::filters_ext::params_for("filter.distort.shear", &steps[0].1),
-            photocraft_engine::filters_ext::params_for("filter.distort.shear", &p)
+            lienzo_engine::filters_ext::params_for("filter.distort.shear", &steps[0].1),
+            lienzo_engine::filters_ext::params_for("filter.distort.shear", &p)
         );
     }
     for p in [
@@ -230,18 +230,18 @@ fn shear_action_moves_real_pixels_and_undoes_at_each_depth() {
             s.edit("Pattern", |doc, _| {
                 let surface = doc.layers[0].surface_mut().unwrap();
                 let data: Vec<f32> = (0..8).flat_map(|y| (0..32).flat_map(move |x| [x as f32 / 31.0, y as f32 / 7.0, (x % 3) as f32 / 2.0, 1.0])).collect();
-                surface.write_region(photocraft_geom::Rect::new(0, 0, 32, 8), &data);
+                surface.write_region(lienzo_geom::Rect::new(0, 0, 32, 8), &data);
                 Ok(())
             })
             .unwrap();
             let before = s.active().unwrap().doc.clone();
-            let pixels = photocraft_compose::flatten(&before);
+            let pixels = lienzo_compose::flatten(&before);
             let bytes = atn::write(&one_action(vec![item("Shr ", "Shear", Some(shear_descriptor(&[[8.0, 1.0], [8.0, 128.0]], edge)))])).unwrap();
             let loaded = s.execute("actions.load", json!({"data":b64(&bytes)})).unwrap();
             assert_eq!(loaded["unsupported"], json!([]));
             let played = s.execute("actions.play", json!({"action":loaded["actions"][0]})).unwrap();
             assert_eq!(played["ran"], 1, "{played}");
-            let output = photocraft_compose::flatten(&s.active().unwrap().doc);
+            let output = lienzo_compose::flatten(&s.active().unwrap().doc);
             assert_ne!(output, pixels);
             for y in 0..8 {
                 for x in 0..32 {

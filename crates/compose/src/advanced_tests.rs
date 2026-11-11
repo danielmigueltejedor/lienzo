@@ -2,9 +2,9 @@
 //! hide effects) on small synthetic documents with hand-computed pixels, at 8, 16 and 32 bits.
 
 use super::*;
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Effect, FxCommon, FxPaint, Knockout, LayerMask, StrokeFx, StrokePosition};
-use photocraft_geom::Size;
+use lienzo_color::{Color, ColorMode, PixelFormat, SampleType};
+use lienzo_doc::{Effect, FxCommon, FxPaint, Knockout, LayerMask, StrokeFx, StrokePosition};
+use lienzo_geom::Size;
 
 const E: f32 = 2.0 / 255.0;
 const DEPTHS: [SampleType; 3] = [SampleType::U8, SampleType::U16, SampleType::F32];
@@ -37,7 +37,7 @@ fn doc(depth: SampleType, background: bool) -> Document {
 
 fn solid(d: &Document, name: &str, r: Rect, c: [f32; 4]) -> Layer {
     let mut l = Layer::raster(name, d.pixel_format());
-    l.surface_mut().unwrap().fill_rect(r, &photocraft_raster::from_rgba(&d.pixel_format(), c));
+    l.surface_mut().unwrap().fill_rect(r, &lienzo_raster::from_rgba(&d.pixel_format(), c));
     l
 }
 
@@ -166,8 +166,8 @@ fn knockout_follows_masks_and_transparency_shapes() {
         d.layers.push(green);
         let mut k = knocker(&d, Knockout::Deep);
         // A mask hiding x >= 3: only x < 3 knocks out.
-        let mut m = photocraft_raster::Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
-        m.fill_rect(Rect::new(0, 0, 3, 8), &photocraft_raster::from_rgba(&m.format(), [1.0; 4]));
+        let mut m = lienzo_raster::Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
+        m.fill_rect(Rect::new(0, 0, 3, 8), &lienzo_raster::from_rgba(&m.format(), [1.0; 4]));
         k.mask = Some(LayerMask { surface: m, enabled: true, linked: true, density: 1.0, feather: 0.0 });
         d.layers.push(k);
         check(&d, 1, 2, WHITE, "inside the mask");
@@ -281,7 +281,7 @@ fn interior_effects_blend_with_the_backdrop_through_a_see_through_normal_layer()
         let mut d = doc(depth, false);
         d.layers.push(solid(&d, "green", full(&d), [bg[0], bg[1], bg[2], 1.0]));
         let mut l = solid(&d, "fade", Rect::new(0, 0, 6, 8), [0.2, 0.6, 0.9, 1.0]);
-        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &photocraft_raster::from_rgba(&d.pixel_format(), [0.2, 0.6, 0.9, 0.5]));
+        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &lienzo_raster::from_rgba(&d.pixel_format(), [0.2, 0.6, 0.9, 0.5]));
         l.fill_opacity = 0.0;
         l.effects.items = vec![Effect::ColorOverlay { common: FxCommon::new(BlendMode::SoftLight, 1.0), color: Color::rgb(1.0, 1.0, 0.0) }];
         d.layers.push(l);
@@ -300,7 +300,7 @@ fn a_see_through_normal_layer_without_interior_effects_counts_the_backdrop_once(
         d.layers.push(solid(&d, "red", full(&d), [1.0, 0.0, 0.0, 0.5]));
         let mut l = solid(&d, "blue", Rect::new(0, 0, 12, 4), BLUE);
         l.fill_opacity = 0.5;
-        l.effects.items = vec![Effect::DropShadow(photocraft_doc::Shadow {
+        l.effects.items = vec![Effect::DropShadow(lienzo_doc::Shadow {
             common: FxCommon::new(BlendMode::Normal, 1.0),
             color: Color::BLACK,
             angle: 90.0,
@@ -308,7 +308,7 @@ fn a_see_through_normal_layer_without_interior_effects_counts_the_backdrop_once(
             distance: 20.0,
             spread: 1.0,
             size: 0.0,
-            contour: photocraft_doc::Contour::Linear,
+            contour: lienzo_doc::Contour::Linear,
             anti_alias: false,
             noise: 0.0,
             knocks_out: true,
@@ -357,7 +357,7 @@ fn outside_stroke() -> Effect {
 
 #[test]
 fn shapeless_stroke_tile_skips_match_full_region_across_blending_settings() {
-    use photocraft_doc::BlendRange;
+    use lienzo_doc::BlendRange;
 
     let modes = [BlendMode::Normal, BlendMode::Multiply, BlendMode::Screen, BlendMode::Difference];
     for depth in DEPTHS {
@@ -407,7 +407,7 @@ fn shapeless_stroke_tile_skips_match_full_region_across_blending_settings() {
 
 #[test]
 fn shapeless_stroke_skip_rejects_advanced_blending_and_masks() {
-    use photocraft_doc::{BlendRange, Path, Subpath, VectorMask};
+    use lienzo_doc::{BlendRange, Path, Subpath, VectorMask};
 
     let d = doc(SampleType::U8, true);
     let mut l = solid(&d, "stroke", Rect::new(2, 2, 8, 8), BLUE);
@@ -442,8 +442,8 @@ fn layer_mask_hides_effects() {
         let mut l = solid(&d, "l", full(&d), BLUE);
         l.effects.items = vec![inside_stroke()];
         // The mask shows x < 8.
-        let mut m = photocraft_raster::Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
-        m.fill_rect(Rect::new(0, 0, 8, 8), &photocraft_raster::from_rgba(&m.format(), [1.0; 4]));
+        let mut m = lienzo_raster::Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
+        m.fill_rect(Rect::new(0, 0, 8, 8), &lienzo_raster::from_rgba(&m.format(), [1.0; 4]));
         l.mask = Some(LayerMask { surface: m, enabled: true, linked: true, density: 1.0, feather: 0.0 });
         d.layers.push(l);
         // Default: the stroke follows the masked shape, so it runs along the mask's edge.
@@ -466,7 +466,7 @@ fn layer_mask_hides_effects() {
 
 #[test]
 fn vector_mask_hides_effects() {
-    use photocraft_doc::{Path, Subpath, VectorMask};
+    use lienzo_doc::{Path, Subpath, VectorMask};
     for depth in DEPTHS {
         let mut d = doc(depth, true);
         let mut l = solid(&d, "l", full(&d), BLUE);
@@ -485,7 +485,7 @@ fn vector_mask_hides_effects() {
 /// `effects_source` hand it temporary clones whose addresses get reused (#4426).
 #[test]
 fn vector_mask_cache_does_not_mix_up_layers() {
-    use photocraft_doc::{Path, Subpath, VectorMask};
+    use lienzo_doc::{Path, Subpath, VectorMask};
     for depth in DEPTHS {
         let mut d = doc(depth, true);
         for (name, color, x0, x1) in [("a", BLUE, -4.0, 6.0), ("b", GREEN, 6.0, 16.0)] {
@@ -572,7 +572,7 @@ fn transparency_shapes_off_blends_alpha_as_fill() {
         let b = c8([90, 110, 130]);
         let mut d = Document::with_background("t", Size::new(12, 8), ColorMode::Rgb, depth, Color::rgb(b[0], b[1], b[2]));
         let mut l = solid(&d, "a30", Rect::new(0, 0, 6, 8), px([200, 150, 80], A30));
-        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &photocraft_raster::from_rgba(&d.pixel_format(), px([200, 150, 80], A70)));
+        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &lienzo_raster::from_rgba(&d.pixel_format(), px([200, 150, 80], A70)));
         l.blend = mode;
         l.opacity = opacity;
         l.fill_opacity = fill;
@@ -636,7 +636,7 @@ fn transparency_shapes_off_ignores_masks_and_reaches_groups() {
                 let mut l = solid(&d, "l", full(&d), px([200, 150, 80], 1.0));
                 l.blend = mode;
                 l.opacity = o53;
-                l.mask = Some(LayerMask { surface: photocraft_raster::Surface::with_default(PixelFormat::GRAY8, &[77.0 / 255.0]), ..LayerMask::reveal_all() });
+                l.mask = Some(LayerMask { surface: lienzo_raster::Surface::with_default(PixelFormat::GRAY8, &[77.0 / 255.0]), ..LayerMask::reveal_all() });
                 l.advanced.transparency_shapes = tsl;
                 d.layers.push(l);
                 render(&d, d.bounds()).into_px()
@@ -649,7 +649,7 @@ fn transparency_shapes_off_ignores_masks_and_reaches_groups() {
         let mut d = doc(depth, false);
         d.layers.push(solid(&d, "under", full(&d), px([90, 110, 130], 128.0 / 255.0)));
         let mut l = solid(&d, "a30", Rect::new(0, 0, 6, 8), px([200, 150, 80], 77.0 / 255.0));
-        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &photocraft_raster::from_rgba(&d.pixel_format(), px([200, 150, 80], 179.0 / 255.0)));
+        l.surface_mut().unwrap().fill_rect(Rect::new(6, 0, 12, 8), &lienzo_raster::from_rgba(&d.pixel_format(), px([200, 150, 80], 179.0 / 255.0)));
         l.blend = BlendMode::ColorDodge;
         l.opacity = o53;
         l.advanced.transparency_shapes = false;
@@ -680,16 +680,16 @@ fn transparency_shapes_off_ignores_masks_and_reaches_groups() {
 /// is the base's alone.
 #[test]
 fn transparency_shapes_off_keeps_the_base_alpha_under_a_clipped_knockout() {
-    let square = photocraft_doc::vector::Path::new(vec![photocraft_doc::vector::Subpath::polygon(&[(2.0, 1.0), (10.0, 1.0), (10.0, 7.0), (2.0, 7.0)])]);
+    let square = lienzo_doc::vector::Path::new(vec![lienzo_doc::vector::Subpath::polygon(&[(2.0, 1.0), (10.0, 1.0), (10.0, 7.0), (2.0, 7.0)])]);
     for depth in DEPTHS {
         for k in [Knockout::Shallow, Knockout::Deep] {
             let mut d = Document::with_background("t", Size::new(12, 8), ColorMode::Rgb, depth, Color::rgb(90.0 / 255.0, 110.0 / 255.0, 130.0 / 255.0));
             let mut base = solid(&d, "base", Rect::new(0, 0, 3, 8), [0.78, 0.59, 0.31, 0.3]);
-            base.surface_mut().unwrap().fill_rect(Rect::new(3, 0, 12, 8), &photocraft_raster::from_rgba(&d.pixel_format(), [0.78, 0.59, 0.31, 0.7]));
+            base.surface_mut().unwrap().fill_rect(Rect::new(3, 0, 12, 8), &lienzo_raster::from_rgba(&d.pixel_format(), [0.78, 0.59, 0.31, 0.7]));
             base.blend = BlendMode::ColorDodge;
             base.opacity = 0.53;
             base.advanced.transparency_shapes = false;
-            base.vector_mask = Some(photocraft_doc::vector::VectorMask { feather: 1.5, ..photocraft_doc::vector::VectorMask::new(square.clone()) });
+            base.vector_mask = Some(lienzo_doc::vector::VectorMask { feather: 1.5, ..lienzo_doc::vector::VectorMask::new(square.clone()) });
             d.layers.push(base);
             let alone = render(&d, d.bounds()).into_px();
             let mut red = solid(&d, "red", full(&d), [1.0, 0.0, 0.0, 0.5]);

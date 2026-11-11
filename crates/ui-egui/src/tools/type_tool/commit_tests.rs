@@ -3,20 +3,20 @@
 //! taking single-key shortcuts as typing and could type into a layer of the wrong document.
 
 use egui_kittest::Harness;
-use photocraft_doc::{LayerContent, LayerId};
+use lienzo_doc::{LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
-fn new_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn new_app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
     app
 }
 
-fn text_of(app: &PhotocraftApp, doc: usize, id: LayerId) -> Option<String> {
+fn text_of(app: &LienzoApp, doc: usize, id: LayerId) -> Option<String> {
     match &app.session.documents().get(doc)?.doc.layer(id)?.content {
         LayerContent::Text(t) => Some(t.text.clone()),
         _ => None,
@@ -24,16 +24,16 @@ fn text_of(app: &PhotocraftApp, doc: usize, id: LayerId) -> Option<String> {
 }
 
 /// Start a new type layer with a click and type `s` into it, as the canvas does.
-fn type_new(app: &mut PhotocraftApp, s: &str) -> LayerId {
+fn type_new(app: &mut LienzoApp, s: &str) -> LayerId {
     super::pointer_up(app, [50.0, 100.0], [50.0, 100.0]);
     super::insert(app, s);
     LayerId(app.ui.text_edit.as_ref().unwrap().layer)
 }
 
 /// Feed one frame of key handling with `events`.
-fn keys(app: PhotocraftApp, events: Vec<egui::Event>) -> PhotocraftApp {
+fn keys(app: LienzoApp, events: Vec<egui::Event>) -> LienzoApp {
     let mut h = Harness::builder().build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             super::handle_keys(app, ui.ctx());
         },
         app,
@@ -135,11 +135,11 @@ fn closing_the_edited_document_drops_the_edit_without_touching_another() {
 /// instead of typing into the type layer.
 #[test]
 fn tool_shortcuts_work_after_another_layer_is_selected() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 400, "height": 300})).unwrap();
     let mut h = Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     h.run_steps(8);
     let app = h.state_mut();

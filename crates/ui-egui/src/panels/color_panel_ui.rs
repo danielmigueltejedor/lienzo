@@ -12,14 +12,14 @@ use std::sync::Arc;
 use egui::{Color32, Mesh, Pos2, Rect, Sense, Stroke, StrokeKind, pos2, vec2};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::color_picker_ui::{hex, not_web_safe, out_of_gamut};
 use crate::panels::{color_field_fill_id, field_chips, field_hsva, srgb_hsva};
 use crate::state::{ColorPanelMode, ColorRamp};
 use crate::theme::Tokens;
 use crate::widgets;
-use photocraft_color::convert;
-use photocraft_color::convert::{hsb_to_rgb, rgb_to_hsb};
+use lienzo_color::convert;
+use lienzo_color::convert::{hsb_to_rgb, rgb_to_hsb};
 
 /// Width of the chips column, as the cube field's.
 const CHIPS_W: f32 = 38.0;
@@ -33,7 +33,7 @@ const UNIT_W: f32 = 14.0;
 const BOXES_W: f32 = 16.0;
 
 /// The Color tab: whatever the panel menu picked.
-pub(crate) fn panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(crate) fn panel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     match app.ui.color_panel.mode {
         ColorPanelMode::HueCube | ColorPanelMode::BrightnessCube => crate::panels::color_field(app, ui),
         ColorPanelMode::ColorWheel => wheel(app, ui),
@@ -109,14 +109,14 @@ impl Model {
 }
 
 /// The colour the panel edits.
-pub(crate) fn active(app: &PhotocraftApp) -> [f32; 3] {
+pub(crate) fn active(app: &LienzoApp) -> [f32; 3] {
     let c = if app.ui.color_panel.background { app.session.tools.background } else { app.session.tools.foreground };
     [c[0], c[1], c[2]].map(|x| x.clamp(0.0, 1.0))
 }
 
 /// Set the background colour, or the foreground and recolour what is selected as the tool in hand
 /// says (`apply_color`); the picks of one drag or typed value are one history step.
-pub(crate) fn set_color(app: &mut PhotocraftApp, ctx: &egui::Context, background: bool, rgb: [f32; 3]) {
+pub(crate) fn set_color(app: &mut LienzoApp, ctx: &egui::Context, background: bool, rgb: [f32; 3]) {
     let c = [rgb[0], rgb[1], rgb[2], 1.0];
     if background {
         app.session.tools.background = c;
@@ -155,7 +155,7 @@ fn current_values(ui: &egui::Ui, model: Model, background: bool, rgb: [f32; 3]) 
 }
 
 /// Apply edited slider values: the colour, and the values (and the cube's hue) remembered.
-fn apply_values(app: &mut PhotocraftApp, ui: &egui::Ui, model: Model, v: [f32; 4]) {
+fn apply_values(app: &mut LienzoApp, ui: &egui::Ui, model: Model, v: [f32; 4]) {
     let background = app.ui.color_panel.background;
     let rgb = model.to_rgb(v);
     set_color(app, ui.ctx(), background, rgb);
@@ -317,7 +317,7 @@ fn hex_pair(ui: &mut egui::Ui, id: egui::Id, value: &mut f32) -> bool {
 
 /// The slider modes: chips (with the out-of-gamut and web-colour alerts under them) beside the
 /// sliders, over the colour ramp.
-fn sliders(app: &mut PhotocraftApp, ui: &mut egui::Ui, mode: ColorPanelMode) {
+fn sliders(app: &mut LienzoApp, ui: &mut egui::Ui, mode: ColorPanelMode) {
     let model = Model::of(mode);
     let background = app.ui.color_panel.background;
     let rgb = active(app);
@@ -347,7 +347,7 @@ fn sliders(app: &mut PhotocraftApp, ui: &mut egui::Ui, mode: ColorPanelMode) {
 
 /// Photoshop's alerts under the chips: ⚠ when the colour can't print (click: the nearest CMYK
 /// colour) and, for Web Color sliders, the cube when it isn't a web colour (click: the nearest).
-pub(crate) fn alerts(app: &mut PhotocraftApp, ui: &mut egui::Ui, col: Rect, rgb: [f32; 3], web: bool) {
+pub(crate) fn alerts(app: &mut LienzoApp, ui: &mut egui::Ui, col: Rect, rgb: [f32; 3], web: bool) {
     let t = Tokens::get(ui.ctx());
     let background = app.ui.color_panel.background;
     let mut y = col.top() + CHIPS_W + 2.0;
@@ -468,7 +468,7 @@ fn ramp_mesh(r: Rect, colors: &[Color32], web_safe: bool) -> Mesh {
 /// The colour ramp with the white and black boxes at its right end. A click or drag picks; with
 /// Alt it picks the colour the panel isn't editing; Shift-click cycles the ramps; a right-click
 /// opens the ramp menu.
-fn ramp(app: &mut PhotocraftApp, ui: &mut egui::Ui, height: f32) {
+fn ramp(app: &mut LienzoApp, ui: &mut egui::Ui, height: f32) {
     let t = Tokens::get(ui.ctx());
     let w = ui.available_width();
     let (all, _) = ui.allocate_exact_size(vec2(w, height), Sense::hover());
@@ -535,7 +535,7 @@ fn rgb3(c: [f32; 4]) -> [f32; 3] {
 /// The Color Wheel: HSB sliders over a hue ring (red at the right, running counter-clockwise
 /// through yellow and green) around a triangle whose tip is the hue, with white and black at its
 /// other corners; the add-to-swatches button sits under it.
-fn wheel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn wheel(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let top = ui.cursor().top();
     let background = app.ui.color_panel.background;
@@ -732,7 +732,7 @@ fn check_item(ui: &mut egui::Ui, on: bool, label: &str) -> bool {
 
 /// The ramp choices and Make Ramp Web Safe (the panel menu's last section and the ramp's
 /// right-click menu).
-fn ramp_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn ramp_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     for r in ColorRamp::ALL {
         if check_item(ui, app.ui.color_panel.ramp == r, r.label()) {
             app.ui.color_panel.ramp = r;
@@ -747,7 +747,7 @@ fn ramp_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 }
 
 /// The Color panel's panel menu, Photoshop's: the modes, the copy commands, the ramps.
-pub(crate) fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(crate) fn panel_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
     // One section, as Photoshop's: no separator between Color Wheel and Grayscale Slider.
     for mode in ColorPanelMode::ALL {
         if check_item(ui, app.ui.color_panel.mode == mode, mode.label()) {
@@ -771,7 +771,7 @@ pub(crate) fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// Remember the Color panel's options in the preferences when they change, so they survive a
 /// restart (#9592). Cheap: a small JSON compare per frame.
-pub fn persist(app: &mut PhotocraftApp) {
+pub fn persist(app: &mut LienzoApp) {
     let stored = app.session.prefs().color_panel.clone();
     // Changed outside the panel since the last sync (`prefs.set`, a reset): the panel takes it.
     if app.ui.color_panel_synced.as_ref().is_some_and(|synced| *synced != stored) {
@@ -788,6 +788,6 @@ pub fn persist(app: &mut PhotocraftApp) {
 
 /// Restore the remembered Color panel options (at launch, or after a preference change made
 /// outside the panel); none stored (a reset) or unreadable ones are the defaults.
-pub fn restore(app: &mut PhotocraftApp) {
+pub fn restore(app: &mut LienzoApp) {
     app.ui.color_panel = serde_json::from_value(app.session.prefs().color_panel.clone()).unwrap_or_default();
 }

@@ -1,7 +1,7 @@
 //! Filter › Other: Custom (5×5 convolution) and HSB/HSL.
 
-use photocraft_color::ColorMode;
-use photocraft_geom::Rect;
+use lienzo_color::ColorMode;
+use lienzo_geom::Rect;
 
 use crate::fxutil::{ncol, rgba, set_rgba, xy};
 use crate::image::Image;
@@ -124,8 +124,8 @@ pub(crate) fn hsb_hsl(src: &Image, out: Rect, ctx: &Ctx, input: HsbModel, output
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{PixelFormat, SampleType};
-    use photocraft_raster::Surface;
+    use lienzo_color::{PixelFormat, SampleType};
+    use lienzo_raster::Surface;
 
     const DEPTHS: [SampleType; 3] = [SampleType::U8, SampleType::U16, SampleType::F32];
 

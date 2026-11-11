@@ -1,4 +1,4 @@
-use super::{Arc, DialogKind, Map, PhotocraftApp, Tokens, Value, WebSettings, b, check, dropdown_str, json, n, number, params, s, web_cmds, web_preview};
+use super::{Arc, DialogKind, LienzoApp, Map, Tokens, Value, WebSettings, b, check, dropdown_str, json, n, number, params, s, web_cmds, web_preview};
 
 const WEB_FORMATS: [(&str, &str); 6] = [("gif", "GIF"), ("png8", "PNG-8"), ("png24", "PNG-24"), ("jpeg", "JPEG"), ("webp", "WebP"), ("wbmp", "WBMP")];
 
@@ -7,7 +7,7 @@ pub(super) const WEB_COMMAND: &str = "file.export.saveForWebLegacy";
 /// Save for Web's preview tabs: the `__view` field's values and their labels.
 const WEB_VIEWS: [(&str, &str); 4] = [("original", "Original"), ("optimized", "Optimized"), ("2up", "2-Up"), ("4up", "4-Up")];
 
-pub fn open_web(app: &mut PhotocraftApp) -> u64 {
+pub fn open_web(app: &mut LienzoApp) -> u64 {
     let mut f = Map::new();
     f.insert("__web".into(), json!(true));
     f.insert("__command".into(), json!(WEB_COMMAND));
@@ -86,7 +86,7 @@ pub(super) type WebProxy = (Arc<Vec<[f32; 4]>>, u32, u32, f64, egui::Vec2);
 pub(super) type WebCache = (String, Arc<egui::TextureHandle>, Option<(usize, Option<usize>, &'static str)>);
 
 /// Renders one preview pane: the original (`None`) or an optimised variant.
-fn web_pane(app: &PhotocraftApp, ui: &mut egui::Ui, size: egui::Vec2, p: Option<&Value>, f: &mut Map<String, Value>, pane: usize, frame: Option<usize>) {
+fn web_pane(app: &LienzoApp, ui: &mut egui::Ui, size: egui::Vec2, p: Option<&Value>, f: &mut Map<String, Value>, pane: usize, frame: Option<usize>) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else { return };
     let doc = st.doc.clone();
@@ -117,7 +117,7 @@ fn web_pane(app: &PhotocraftApp, ui: &mut egui::Ui, size: egui::Vec2, p: Option<
             else {
                 return;
             };
-            let buf = photocraft_compose::flatten(&wd);
+            let buf = lienzo_compose::flatten(&wd);
             let v = (
                 Arc::new(buf.into_px()),
                 wd.size.width,
@@ -205,7 +205,7 @@ pub(super) fn advance_preview(frame: usize, duration: usize, fps: f32, last: f64
     (next, now - (elapsed_frames - steps) / fps)
 }
 
-fn web_playback(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &photocraft_doc::Document) -> Option<usize> {
+fn web_playback(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &lienzo_doc::Document) -> Option<usize> {
     let mut timeline = doc.timeline.clone()?;
     timeline.clamp();
     if timeline.duration < 2 {
@@ -236,15 +236,15 @@ fn web_playback(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &photocraft_
 }
 
 /// Seek a preview copy, preserving any edits to the source's currently displayed frame.
-pub(super) fn web_frame_document(doc: &photocraft_doc::Document, frame: Option<usize>) -> Result<photocraft_doc::Document, photocraft_engine::EngineError> {
+pub(super) fn web_frame_document(doc: &lienzo_doc::Document, frame: Option<usize>) -> Result<lienzo_doc::Document, lienzo_engine::EngineError> {
     let Some(frame) = frame else { return Ok(doc.clone()) };
-    let mut preview = photocraft_engine::Session::new();
+    let mut preview = lienzo_engine::Session::new();
     preview.add_document(doc.clone(), None);
     preview.execute("timeline.setFrame", json!({"frame": frame}))?;
-    Ok((*preview.active().ok_or(photocraft_engine::EngineError::NoDocument)?.doc).clone())
+    Ok((*preview.active().ok_or(lienzo_engine::EngineError::NoDocument)?.doc).clone())
 }
 
-pub(super) fn web_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(super) fn web_body(app: &mut LienzoApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let Some(doc) = app.session.active().map(|d| d.doc.clone()) else { return };
     ui.horizontal(|ui| {
@@ -408,7 +408,7 @@ pub(super) fn web_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<S
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new(tl!("Image Size")).font(crate::theme::semibold(12.0)).color(t.text));
                 web_size(ui, f, &doc);
-                let nslices = photocraft_doc::slices::resolve(&doc).len();
+                let nslices = lienzo_doc::slices::resolve(&doc).len();
                 if !doc.slices.is_empty() {
                     ui.add_space(6.0);
                     ui.label(egui::RichText::new(crate::i18n::trn(crate::i18n::current(), nslices as u64, "{n} slice", "{n} slices")).color(t.text_dim));
@@ -481,7 +481,7 @@ fn size_field(ui: &mut egui::Ui, label: &str, shown: f64, range: std::ops::Range
 /// Image Size, as in Photoshop's Save for Web: Width and Height linked in proportion (on at
 /// each opening), Percent and the resampling method. A side edit sets exact pixels and drops
 /// `percent`, which the engine would otherwise apply first; a Percent edit sets both sides.
-fn web_size(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &photocraft_doc::Document) {
+fn web_size(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &lienzo_doc::Document) {
     use crate::export_dialog::{MAX_PX, resize_from_scale, resize_from_side};
     let (w0, h0) = (f64::from(doc.size.width).max(1.0), f64::from(doc.size.height).max(1.0));
     let (w, h) = web_preview::dimensions(doc, &params(f)).unwrap_or((w0, h0));
@@ -546,7 +546,7 @@ fn web_size(ui: &mut egui::Ui, f: &mut Map<String, Value>, doc: &photocraft_doc:
     });
 }
 
-pub(super) fn web_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub(super) fn web_confirm(app: &mut LienzoApp, f: &Map<String, Value>) -> Result<Value, String> {
     // Check while the control/input policy is still installed, before an asynchronous picker
     // can outlive the request. A browser download uses the interactive platform writer.
     let authorize = |p: &Value| -> Result<(), String> {
@@ -582,7 +582,7 @@ pub(super) fn web_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Re
     let doc = app.session.active().ok_or("no document")?.doc.clone();
     let html = b(f, "html", true);
     let st = WebSettings::from_params(&p, "file.export.saveForWebLegacy").map_err(|e| e.to_string())?;
-    let base = photocraft_doc::slices::base_name(&doc);
+    let base = lienzo_doc::slices::base_name(&doc);
     let suggested = if has_slices && html { format!("{base}.html") } else { format!("{base}.{}", st.format.ext()) };
     app.pick_export(&suggested, move |app, path| {
         app.refocus(doc.id)?;
@@ -593,7 +593,7 @@ pub(super) fn web_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Re
         } else if let Some(folder) = kept_name_folder(&path, &base, st.format.ext())
             // A save that renamed the document meanwhile: the engine would name the file after
             // the new name, not the one picked.
-            && app.session.active().is_some_and(|state| photocraft_doc::slices::base_name(&state.doc) == base)
+            && app.session.active().is_some_and(|state| lienzo_doc::slices::base_name(&state.doc) == base)
         {
             // The suggested name kept: only the folder, so a recorded action saves each
             // document under its own name, as in Photoshop (#5305).
@@ -609,7 +609,7 @@ pub(super) fn web_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Re
 /// alone: `base` (a name usable on Windows as it is) with the format's own extension `ext`.
 fn kept_name_folder(path: &str, base: &str, ext: &str) -> Option<String> {
     let file = std::path::Path::new(path);
-    let portable = photocraft_engine::file_cmds::portable_device_name(base.to_string()) == base;
+    let portable = lienzo_engine::file_cmds::portable_device_name(base.to_string()) == base;
     let kept = portable && file.file_stem().is_some_and(|s| s.to_string_lossy() == base) && file.extension().is_some_and(|e| e.to_string_lossy() == ext);
     kept.then(|| file.parent().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default())
 }
@@ -629,7 +629,7 @@ pub(super) fn web_params(f: &Map<String, Value>, has_slices: bool) -> Result<Val
 }
 
 /// Runs Save for Web with `p`, which says where to write.
-fn save_for_web(app: &mut PhotocraftApp, p: Value) -> Result<Value, String> {
+fn save_for_web(app: &mut LienzoApp, p: Value) -> Result<Value, String> {
     #[cfg(target_arch = "wasm32")]
     let result = download_for_web(app, p);
     #[cfg(not(target_arch = "wasm32"))]
@@ -646,11 +646,11 @@ fn save_for_web(app: &mut PhotocraftApp, p: Value) -> Result<Value, String> {
 }
 
 #[cfg(any(test, target_arch = "wasm32"))]
-pub(super) fn download_for_web(app: &mut PhotocraftApp, mut p: Value) -> Result<Value, String> {
+pub(super) fn download_for_web(app: &mut LienzoApp, mut p: Value) -> Result<Value, String> {
     // Browser downloads have no directory hierarchy. Keep the HTML's image and spacer URLs
     // beside the downloaded page, matching the names handed to the platform service.
     p["imagesFolder"] = json!("");
     let write = app.services.write.as_mut().ok_or("no download service")?;
-    web_cmds::save_for_web_with_writer(&mut app.session, &p, &mut |path, bytes| write(path, bytes).map_err(photocraft_engine::EngineError::Other))
+    web_cmds::save_for_web_with_writer(&mut app.session, &p, &mut |path, bytes| write(path, bytes).map_err(lienzo_engine::EngineError::Other))
         .map_err(|e| e.to_string())
 }

@@ -1,10 +1,10 @@
-use super::{PhotocraftApp, gpu_canvas, gpu_status};
+use super::{LienzoApp, gpu_canvas, gpu_status};
 
-impl PhotocraftApp {
+impl LienzoApp {
     /// Draw the document canvas on the GPU (custom WGSL shader) instead of via egui textures.
     /// Call from the app creator with `cc.wgpu_render_state`; without it the CPU path is used.
     pub fn set_wgpu(&mut self, rs: eframe::egui_wgpu::RenderState) {
-        // Preferences › Performance › cache tile size (PHOTOCRAFT_GPU_TILE still overrides).
+        // Preferences › Performance › cache tile size (LIENZO_GPU_TILE still overrides).
         let tile = self.session.prefs().performance.cache_tile_size;
         // Escaped driver/setup panics must leave the session and CPU canvas alive.
         self.perf.gpu_info.set_adapter(&rs.adapter.get_info());
@@ -43,14 +43,14 @@ impl PhotocraftApp {
     }
 
     fn start_compositor_inner(&mut self, ctx: &egui::Context, retry: bool) {
-        if self.session.prefs().performance.effective_rendering_mode() == photocraft_engine::prefs::RenderingMode::Cpu {
+        if self.session.prefs().performance.effective_rendering_mode() == lienzo_engine::prefs::RenderingMode::Cpu {
             return;
         }
         let Some(gpu) = self.gpu.clone() else { return };
         let compiler = self.services.shader_compiler.as_deref().unwrap_or("");
         let key = gpu.compositor_memo_key(compiler);
         let mut memo = self.load_gpu_memo();
-        let bypass = retry || std::env::var("PHOTOCRAFT_GPU_REBUILD").is_ok_and(|v| v == "1");
+        let bypass = retry || std::env::var("LIENZO_GPU_REBUILD").is_ok_and(|v| v == "1");
         if bypass {
             if memo.remove(&key) {
                 self.save_gpu_memo(&memo);
@@ -114,14 +114,14 @@ impl PhotocraftApp {
     }
 
     /// The GPU canvas's device health flag (tests inject faults through it).
-    pub fn gpu_health(&self) -> Option<photocraft_gpu::DeviceHealth> {
+    pub fn gpu_health(&self) -> Option<lienzo_gpu::DeviceHealth> {
         self.gpu.as_ref().map(|g| g.health().clone())
     }
 
     /// Watch the device the window draws with when the GPU canvas doesn't (the CPU canvas), so
     /// its loss is handled like the GPU canvas's (see `gpu_status::check_window`).
     pub fn watch_window_device(&mut self, device: &eframe::wgpu::Device) {
-        self.window_device = Some((device.clone(), photocraft_gpu::DeviceHealth::watch(device)));
+        self.window_device = Some((device.clone(), lienzo_gpu::DeviceHealth::watch(device)));
     }
 
     /// Whether the window's graphics device was lost, so the app saves its documents for
@@ -138,7 +138,7 @@ impl PhotocraftApp {
 
     /// Run `hook` once the app has rendered its first frames (and a document opened at launch
     /// has drawn): the desktop app clears its crash-safe GPU startup marker there.
-    pub fn on_started(&mut self, hook: impl FnOnce(&mut PhotocraftApp) + 'static) {
+    pub fn on_started(&mut self, hook: impl FnOnce(&mut LienzoApp) + 'static) {
         self.started = Some(Box::new(hook));
     }
 

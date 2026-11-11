@@ -3,18 +3,18 @@
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_color::BlendMode;
-use photocraft_doc::Document;
+use lienzo_color::BlendMode;
+use lienzo_doc::Document;
 use serde_json::json;
 
 use super::{Filter, FilterBy};
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::UiState;
 use crate::theme::ThemeKind;
 
 /// Background, "Ink" (Multiply) and "Paper" in a group "Sheets", and "ink notes" (type) on top.
-fn session() -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn session() -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Paper"})).unwrap();
     s.execute("layer.groupLayers", json!({"name": "Sheets"})).unwrap();
@@ -91,15 +91,15 @@ fn saved_settings_without_the_new_fields_still_load() {
     assert_eq!(round["layer_filter_by"], "mode");
 }
 
-fn harness() -> Harness<'static, PhotocraftApp> {
+fn harness() -> Harness<'static, LienzoApp> {
     harness_in(ThemeKind::default())
 }
 
-fn harness_in(theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn harness_in(theme: ThemeKind) -> Harness<'static, LienzoApp> {
     let session = session();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, theme);
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        LienzoApp::setup_context(&cc.egui_ctx, theme);
+        let mut app = LienzoApp::new(session, crate::Services::default());
         app.run("prefs.set", json!({"path": "interface.theme", "value": theme.id()})).unwrap();
         app.ui.theme = theme;
         app
@@ -109,7 +109,7 @@ fn harness_in(theme: ThemeKind) -> Harness<'static, PhotocraftApp> {
 }
 
 /// The names of the rows the Layers panel drew, top to bottom.
-fn drawn(h: &Harness<'_, PhotocraftApp>) -> Vec<String> {
+fn drawn(h: &Harness<'_, LienzoApp>) -> Vec<String> {
     let doc = &h.state().session.active().unwrap().doc;
     let mut rows = crate::layer_row_ui::recorded(&h.ctx);
     rows.sort_by(|a, b| a.row.top().total_cmp(&b.row.top()));
@@ -169,23 +169,23 @@ fn the_color_filter_lists_one_label() {
     s.execute("layer.setLabelColor", json!({"layer": sheets, "color": "seafoam"})).unwrap();
     s.execute("layer.setLabelColor", json!({"layer": ink, "color": "red"})).unwrap();
     let doc = &s.active().unwrap().doc;
-    let by_color = |c: photocraft_doc::LabelColor| Filter::of(&UiState { layer_filter_by: FilterBy::Color, layer_filter_color: c, ..UiState::default() });
-    assert!(by_color(photocraft_doc::LabelColor::None).active(), "Color filters at once, as in Photoshop");
-    assert_eq!(listed(doc, &by_color(photocraft_doc::LabelColor::Red)), ["Ink"]);
-    assert_eq!(listed(doc, &by_color(photocraft_doc::LabelColor::Seafoam)), ["Sheets", "Paper"]);
-    assert_eq!(listed(doc, &by_color(photocraft_doc::LabelColor::None)), ["ink notes", "Background"]);
-    assert!(listed(doc, &by_color(photocraft_doc::LabelColor::Blue)).is_empty(), "a colour no layer has lists nothing");
+    let by_color = |c: lienzo_doc::LabelColor| Filter::of(&UiState { layer_filter_by: FilterBy::Color, layer_filter_color: c, ..UiState::default() });
+    assert!(by_color(lienzo_doc::LabelColor::None).active(), "Color filters at once, as in Photoshop");
+    assert_eq!(listed(doc, &by_color(lienzo_doc::LabelColor::Red)), ["Ink"]);
+    assert_eq!(listed(doc, &by_color(lienzo_doc::LabelColor::Seafoam)), ["Sheets", "Paper"]);
+    assert_eq!(listed(doc, &by_color(lienzo_doc::LabelColor::None)), ["ink notes", "Background"]);
+    assert!(listed(doc, &by_color(lienzo_doc::LabelColor::Blue)).is_empty(), "a colour no layer has lists nothing");
     // Over the control channel.
     let f = super::patched(&UiState::default(), &json!({"by": "color", "color": "red"})).unwrap();
-    assert_eq!((f.by, f.color), (FilterBy::Color, photocraft_doc::LabelColor::Red));
+    assert_eq!((f.by, f.color), (FilterBy::Color, lienzo_doc::LabelColor::Red));
     assert!(super::patched(&UiState::default(), &json!({"color": "crimson"})).unwrap_err().contains("crimson"));
     assert!(super::patched(&UiState::default(), &json!({"color": 2})).is_err());
 }
 
 /// On a Background: the artboard "Back" holding "Grass", the artboard "Front" holding the group
 /// "Trees" with "Oak", and "Loose" in no artboard, on top.
-fn boards_session() -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn boards_session() -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     // Every layer is made before the artboards, since a new layer goes into the artboard it is on.
     for name in ["Grass", "Oak", "Loose"] {
@@ -206,7 +206,7 @@ fn boards_session() -> photocraft_engine::Session {
 }
 
 /// The names the Artboard filter lists with the layers `names` selected, every group open.
-fn listed_by_artboard(s: &mut photocraft_engine::Session, names: &[&str]) -> Vec<String> {
+fn listed_by_artboard(s: &mut lienzo_engine::Session, names: &[&str]) -> Vec<String> {
     s.execute("select.deselectLayers", json!({})).unwrap();
     for (i, name) in names.iter().enumerate() {
         let id = layer(&s.active().unwrap().doc, name);
@@ -240,8 +240,8 @@ fn the_artboard_filter_lists_the_artboards_that_hold_the_selected_layers() {
 fn the_artboard_filter_follows_the_selection_in_the_panel() {
     let session = boards_session();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(session, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(session, crate::Services::default())
     });
     h.run_steps(8);
     let all = ["Loose", "Front", "Trees", "Oak", "Back", "Grass", "Background"];
@@ -267,9 +267,9 @@ fn the_artboard_filter_follows_the_selection_in_the_panel() {
 
 #[test]
 fn the_artboard_filter_walks_deep_groups_without_recursion() {
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_doc::{Artboard, Group, Layer, LayerContent, Size};
-    use photocraft_geom::Rect;
+    use lienzo_color::{ColorMode, SampleType};
+    use lienzo_doc::{Artboard, Group, Layer, LayerContent, Size};
+    use lienzo_geom::Rect;
     use std::collections::HashSet;
 
     let mut nested = Layer::new("Leaf", LayerContent::Group(Group { children: vec![], expanded: false, artboard: None, frame_stroke: None }));
@@ -307,7 +307,7 @@ fn the_artboard_filter_walks_deep_groups_without_recursion() {
 fn art_file() -> (tempfile::TempDir, std::path::PathBuf) {
     let directory = tempfile::tempdir().unwrap();
     let file = directory.path().join("art.png");
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 8, "height": 8, "background": "#ff0000"})).unwrap();
     s.execute("file.saveACopy", json!({"path": file.to_string_lossy(), "layers": false})).unwrap();
     (directory, file)
@@ -315,8 +315,8 @@ fn art_file() -> (tempfile::TempDir, std::path::PathBuf) {
 
 /// "Linked art" (linked to `file`) above "Embedded art" (a copy of `file`), "Plain" and
 /// "Background".
-fn smart_session(file: &std::path::Path) -> photocraft_engine::Session {
-    let mut s = photocraft_engine::Session::new();
+fn smart_session(file: &std::path::Path) -> lienzo_engine::Session {
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 32, "height": 32})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Plain"})).unwrap();
     for (command, name) in [("file.placeEmbedded", "Embedded art"), ("file.placeLinked", "Linked art")] {
@@ -370,8 +370,8 @@ fn the_smart_object_toggles_filter_the_panel() {
     let (_directory, file) = art_file();
     let session = smart_session(&file);
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(session, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(session, crate::Services::default())
     });
     h.run_steps(8);
     let all = ["Linked art", "Embedded art", "Plain", "Background"];
@@ -403,9 +403,9 @@ fn the_smart_object_toggles_filter_the_panel() {
 
 #[test]
 fn the_artboard_filter_lists_the_outer_artboard_for_a_layer_in_a_nested_artboard() {
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_doc::{Artboard, Group, Layer, LayerContent, Size};
-    use photocraft_geom::Rect;
+    use lienzo_color::{ColorMode, SampleType};
+    use lienzo_doc::{Artboard, Group, Layer, LayerContent, Size};
+    use lienzo_geom::Rect;
     use std::collections::HashSet;
 
     fn group(name: &str, children: Vec<Layer>, artboard: Option<Artboard>) -> Layer {

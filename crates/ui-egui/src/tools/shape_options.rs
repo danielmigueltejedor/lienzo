@@ -1,29 +1,29 @@
 //! Shape toolbar edits share the engine commands used by the Properties panel.
 
-use photocraft_doc::LayerContent;
+use lienzo_doc::LayerContent;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::shape_gradient_ui::GradientChoices;
 use crate::shape_paint_ui::{PaintChange, paint_param, swatch};
 use crate::state::Tool;
 use crate::theme::Tokens;
 use crate::vector_ui::{enabled_stroke_width, paint_gesture};
 
-fn solid(color: [f32; 4]) -> photocraft_doc::Fill {
-    photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(color[0], color[1], color[2], color[3]))
+fn solid(color: [f32; 4]) -> lienzo_doc::Fill {
+    lienzo_doc::Fill::Solid(lienzo_doc::Color::rgba(color[0], color[1], color[2], color[3]))
 }
 
 /// The shape layer the options bar edits.
 struct SelectedShape {
-    doc: photocraft_doc::DocId,
-    layer: photocraft_doc::LayerId,
-    fill: Option<photocraft_doc::Fill>,
-    stroke: Option<photocraft_doc::ShapeStroke>,
-    live: Option<photocraft_doc::LiveShape>,
+    doc: lienzo_doc::DocId,
+    layer: lienzo_doc::LayerId,
+    fill: Option<lienzo_doc::Fill>,
+    stroke: Option<lienzo_doc::ShapeStroke>,
+    live: Option<lienzo_doc::LiveShape>,
 }
 
-fn selected_shape(session: &photocraft_engine::Session) -> Option<SelectedShape> {
+fn selected_shape(session: &lienzo_engine::Session) -> Option<SelectedShape> {
     let st = session.active()?;
     let layer = st.active_layer?;
     match &st.doc.layer(layer)?.content {
@@ -34,7 +34,7 @@ fn selected_shape(session: &photocraft_engine::Session) -> Option<SelectedShape>
 
 /// The Shape tools' options. `paint` shows Fill and Stroke: off in Path mode, where a drag draws
 /// only an outline, but the tool's geometry (radius, sides, weight, custom shape) stays.
-pub(crate) fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool, paint: bool) {
+pub(crate) fn options_bar(app: &mut LienzoApp, ui: &mut egui::Ui, tool: Tool, paint: bool) {
     let t = Tokens::get(ui.ctx());
     let lbl = |ui: &mut egui::Ui, s: &str| {
         let label = ui.label(egui::RichText::new(s).color(t.text_dim).size(12.0));
@@ -106,7 +106,7 @@ pub(crate) fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool
             crate::widgets::vline(ui, 22.0);
             lbl(ui, tl!("Radius:"));
             let mut r = match target.as_ref().and_then(|s| s.live.as_ref()) {
-                Some(photocraft_doc::LiveShape::Rect { radii, .. }) => radii[0] as f32,
+                Some(lienzo_doc::LiveShape::Rect { radii, .. }) => radii[0] as f32,
                 _ => o.corner_radius,
             };
             if crate::widgets::value_field(ui, &mut r, 0.0..=10000.0, "px", 62.0).changed() {
@@ -133,7 +133,7 @@ pub(crate) fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool
             crate::preset_panels::shape_picker(app, ui);
         }
         _ if matches!(tool, Tool::PathSelection | Tool::DirectSelection) => {
-            if let Some(photocraft_doc::LiveShape::Rect { radii, .. }) = target.as_ref().and_then(|s| s.live.as_ref()) {
+            if let Some(lienzo_doc::LiveShape::Rect { radii, .. }) = target.as_ref().and_then(|s| s.live.as_ref()) {
                 crate::widgets::vline(ui, 22.0);
                 lbl(ui, tl!("Radius:"));
                 let mut r = radii[0] as f32;
@@ -199,7 +199,7 @@ pub(crate) fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool
 }
 
 /// Tool-bar paint changes affect the next shape; Properties edits the selected shape instead.
-pub(crate) fn set_tool_paint(app: &mut PhotocraftApp, stroke: bool, change: PaintChange) -> Result<(), String> {
+pub(crate) fn set_tool_paint(app: &mut LienzoApp, stroke: bool, change: PaintChange) -> Result<(), String> {
     // A colour takes the place of a gradient; No Color keeps it for when the paint comes back.
     let o = &mut app.ui.tool_options;
     let gradient = if stroke { &mut o.shape_stroke_gradient } else { &mut o.shape_fill_gradient };

@@ -5,11 +5,11 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn app(other: &str, caps_lock: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(other: &str, caps_lock: bool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.ui.tool = Tool::MagneticLasso;
     app.ui.tool_options.magnetic_width = 10.0;
@@ -19,13 +19,13 @@ fn app(other: &str, caps_lock: bool) -> PhotocraftApp {
 }
 
 /// The radii of the circles `cursor` draws at `zoom`, and the OS cursor it asks for.
-fn drawn(app: &PhotocraftApp, zoom: f32) -> (Vec<f32>, egui::CursorIcon) {
+fn drawn(app: &LienzoApp, zoom: f32) -> (Vec<f32>, egui::CursorIcon) {
     let (radii, icon, _) = drawn_with_others(app, zoom);
     (radii, icon)
 }
 
 /// As [`drawn`], plus how many shapes that are not circles it draws (the icon).
-fn drawn_with_others(app: &PhotocraftApp, zoom: f32) -> (Vec<f32>, egui::CursorIcon, usize) {
+fn drawn_with_others(app: &LienzoApp, zoom: f32) -> (Vec<f32>, egui::CursorIcon, usize) {
     let ctx = egui::Context::default();
     ctx.begin_pass(egui::RawInput::default());
     let painter = ctx.layer_painter(egui::LayerId::background());

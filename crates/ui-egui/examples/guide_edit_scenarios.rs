@@ -2,11 +2,11 @@
 //! See docs/guide-edit-interactions.md for the pinned runner and scenario command.
 use std::io::{self, BufRead, Write};
 
-use photocraft_ui_egui::{PhotocraftApp, Services, canvas, control, dialogs, guide_select, new_guide_ui};
+use lienzo_ui_egui::{LienzoApp, Services, canvas, control, dialogs, guide_select, new_guide_ui};
 use serde_json::{Value, json};
 
 struct Driver {
-    app: PhotocraftApp,
+    app: LienzoApp,
     ctx: egui::Context,
     time: f64,
 }
@@ -14,13 +14,13 @@ struct Driver {
 impl Driver {
     /// Create a fresh synthetic document and two guides for each independent scenario.
     fn new() -> Result<Self, String> {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Services::default());
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), Services::default());
         app.run("file.new", json!({"width":400,"height":200,"resolution":100}))?;
         app.run("prefs.set", json!({"path":"unitsAndRulers.rulers","value":"pixels"}))?;
         app.run("view.newGuide", json!({"orientation":"vertical","position":10}))?;
         app.run("view.newGuide", json!({"orientation":"vertical","position":20}))?;
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        LienzoApp::setup_context(&ctx, Default::default());
         let mut driver = Self { app, ctx, time: 0.0 };
         driver.frames(false);
         Ok(driver)

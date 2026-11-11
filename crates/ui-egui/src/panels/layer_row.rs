@@ -1,7 +1,7 @@
 use super::layer_drag::{MaskDrag, fx_drop, layer_drag_and_drop, mask_drag_key, mask_drop, start_fx_drag, starts_mask_drag};
 use super::layers::simple_lock_toggle;
 use super::{
-    Color32, CornerRadius, Layer, LayerContent, PhotocraftApp, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Value, icons, json, pos2, theme, vec2, widgets,
+    Color32, CornerRadius, Layer, LayerContent, LienzoApp, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Value, icons, json, pos2, theme, vec2, widgets,
 };
 
 /// How a Layers panel row is selected: in the (multi-)selection, the primary/active layer, and
@@ -109,11 +109,11 @@ fn swept_pointer_range(ctx: &egui::Context) -> Option<(f32, f32)> {
 /// a smart-object image. Returns whether the click was taken.
 #[allow(clippy::too_many_arguments)]
 fn frame_content_thumb(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ctx: &egui::Context,
     ui: &egui::Ui,
     painter: &egui::Painter,
-    (doc, l, rect): (&photocraft_doc::Document, &Layer, Rect),
+    (doc, l, rect): (&lienzo_doc::Document, &Layer, Rect),
     (thumb, x, ts, selected): (Rect, f32, f32, bool),
     resp: &egui::Response,
     actions: &mut Vec<(String, Value)>,
@@ -174,10 +174,10 @@ pub(super) const ARTBOARD_ROW_H: f32 = 26.0;
 /// row, queues what a click or drag on it asks for in `actions`, and returns the row's rect.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn layer_row(
-    app: &mut PhotocraftApp,
+    app: &mut LienzoApp,
     ctx: &egui::Context,
     ui: &mut egui::Ui,
-    doc: &photocraft_doc::Document,
+    doc: &lienzo_doc::Document,
     l: &Layer,
     depth: usize,
     row: RowSel,
@@ -342,7 +342,7 @@ pub(super) fn layer_row(
 /// What the row helpers share once the row's thumbnails are laid out.
 struct RowCtx<'a> {
     l: &'a Layer,
-    doc: &'a photocraft_doc::Document,
+    doc: &'a lienzo_doc::Document,
     row: RowSel,
     rect: Rect,
     ts: f32,
@@ -388,7 +388,7 @@ fn paint_row_background(painter: &egui::Painter, t: &Tokens, l: &Layer, rect: Re
 }
 
 /// The eye column: visibility toggle (⌥ shows only this layer), sweep-drag and its colour menu.
-fn eye_column(app: &mut PhotocraftApp, ui: &mut egui::Ui, l: &Layer, row: RowSel, rect: Rect, actions: &mut Vec<(String, Value)>) -> egui::Response {
+fn eye_column(app: &mut LienzoApp, ui: &mut egui::Ui, l: &Layer, row: RowSel, rect: Rect, actions: &mut Vec<(String, Value)>) -> egui::Response {
     let ctx = &ui.ctx().clone();
     let t = Tokens::get(ctx);
     let selected = row.selected;
@@ -417,7 +417,7 @@ fn eye_column(app: &mut PhotocraftApp, ui: &mut egui::Ui, l: &Layer, row: RowSel
     eye_resp
 }
 
-fn paint_target_brackets(app: &PhotocraftApp, painter: &egui::Painter, t: &Tokens, rc: &RowCtx<'_>) {
+fn paint_target_brackets(app: &LienzoApp, painter: &egui::Painter, t: &Tokens, rc: &RowCtx<'_>) {
     let (l, thumb) = (rc.l, rc.thumb);
     let mask_rect = rc.masks.thumb(crate::mask_thumbs_ui::MaskKind::Pixel);
     let vector_rect = rc.masks.thumb(crate::mask_thumbs_ui::MaskKind::Vector);
@@ -476,7 +476,7 @@ fn paint_row_name(painter: &egui::Painter, t: &Tokens, rc: &RowCtx<'_>, x: f32, 
 }
 
 /// A plain click on the row: select the layer and retarget pixels / mask / vector mask.
-fn select_row_on_click(app: &mut PhotocraftApp, ui: &egui::Ui, rc: &RowCtx<'_>, actions: &mut Vec<(String, Value)>) {
+fn select_row_on_click(app: &mut LienzoApp, ui: &egui::Ui, rc: &RowCtx<'_>, actions: &mut Vec<(String, Value)>) {
     let (l, doc, resp, masks, row, ts, thumb) = (rc.l, rc.doc, rc.resp, rc.masks, rc.row, rc.ts, rc.thumb);
     let ctx = ui.ctx();
     let mask_rect = masks.thumb(crate::mask_thumbs_ui::MaskKind::Pixel);
@@ -493,10 +493,10 @@ fn select_row_on_click(app: &mut PhotocraftApp, ui: &egui::Ui, rc: &RowCtx<'_>, 
     let on_mask = mask_rect.zip(pos).is_some_and(|(r, p)| r.expand(2.0).contains(p));
     let on_vector = pos.and_then(|p| masks.hit(p)) == Some(crate::mask_thumbs_ui::MaskKind::Vector);
     // Clicking the layer thumbnail leaves mask view (#196).
-    let viewing = app.session.active().and_then(photocraft_engine::mask_view_cmds::current).filter(|v| v.layer == l.id);
+    let viewing = app.session.active().and_then(lienzo_engine::mask_view_cmds::current).filter(|v| v.layer == l.id);
     if let Some(v) = viewing.filter(|_| on_thumb) {
         let mask = if v.filter { "filter" } else { "layer" };
-        actions.push((photocraft_engine::mask_view_cmds::ID.into(), json!({"layer": l.id.0, "mode": "off", "mask": mask})));
+        actions.push((lienzo_engine::mask_view_cmds::ID.into(), json!({"layer": l.id.0, "mode": "off", "mask": mask})));
     }
     let content_less = matches!(l.content, LayerContent::Adjustment(_) | LayerContent::Fill(_));
     if on_vector {
@@ -520,7 +520,7 @@ fn select_row_on_click(app: &mut PhotocraftApp, ui: &egui::Ui, rc: &RowCtx<'_>, 
 }
 
 /// Double-click: rename, un-background, open the thumbnail's settings or the row's Layer Style.
-fn handle_row_double_click(app: &mut PhotocraftApp, ctx: &egui::Context, rc: &RowCtx<'_>, name_rect: Option<Rect>, actions: &mut Vec<(String, Value)>) {
+fn handle_row_double_click(app: &mut LienzoApp, ctx: &egui::Context, rc: &RowCtx<'_>, name_rect: Option<Rect>, actions: &mut Vec<(String, Value)>) {
     let (l, doc, resp, masks, ts, thumb, rect) = (rc.l, rc.doc, rc.resp, rc.masks, rc.ts, rc.thumb, rc.rect);
     // A frame row's thumbnails are handled in the row; its name still renames in place.
     if resp.double_clicked()
@@ -570,7 +570,7 @@ fn handle_row_double_click(app: &mut PhotocraftApp, ctx: &egui::Context, rc: &Ro
 
 /// The visibility icon has its own color menu, the layer-mask thumbnail its mask menu (#4575)
 /// and a pixel layer's thumbnail Select Pixels and the thumbnail settings (#12324).
-fn row_context_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui, rc: &RowCtx<'_>, eye_resp: &egui::Response, actions: &mut Vec<(String, Value)>) {
+fn row_context_menu(app: &mut LienzoApp, ui: &mut egui::Ui, rc: &RowCtx<'_>, eye_resp: &egui::Response, actions: &mut Vec<(String, Value)>) {
     let (l, resp, masks, row) = (rc.l, rc.resp, rc.masks, rc.row);
     let (ctx, selected) = (&ui.ctx().clone(), row.selected);
     // The visibility icon has its own color menu, the layer-mask thumbnail its mask menu
@@ -618,12 +618,12 @@ pub(super) fn layer_thumb_fit(cell: Rect, w: u32, h: u32) -> (Rect, Rect) {
     crate::channels_panel::fit_thumb(cell, w, h)
 }
 
-fn draw_layer_thumb(app: &mut PhotocraftApp, ctx: &egui::Context, ui: &egui::Ui, doc: &photocraft_doc::Document, l: &Layer, rect: Rect, selected: bool) {
+fn draw_layer_thumb(app: &mut LienzoApp, ctx: &egui::Context, ui: &egui::Ui, doc: &lienzo_doc::Document, l: &Layer, rect: Rect, selected: bool) {
     let t = Tokens::get(ctx);
     let p = ui.painter();
     if let Some(f) = &l.frame {
         let path = f.path.clone();
-        for line in photocraft_vector::flatten::flatten_path(&path, 0.01) {
+        for line in lienzo_vector::flatten::flatten_path(&path, 0.01) {
             let mut points: Vec<Pos2> =
                 line.pts.iter().map(|&(x, y)| pos2(rect.left() + x as f32 * rect.width(), rect.top() + y as f32 * rect.height())).collect();
             if line.closed
@@ -648,7 +648,7 @@ fn draw_layer_thumb(app: &mut PhotocraftApp, ctx: &egui::Context, ui: &egui::Ui,
         }
         // Gradient fills show the gradient itself (Photoshop); solid ones their colour.
         LayerContent::Fill(f) if crate::gradient_ui::paint_thumbnail(ui, l.id, f, rect) => {}
-        LayerContent::Fill(photocraft_doc::Fill::Solid(color)) => {
+        LayerContent::Fill(lienzo_doc::Fill::Solid(color)) => {
             crate::solid_fill_ui::paint_thumbnail(ui, crate::solid_fill_ui::thumbnail_color(app, doc.id, l.id, *color), rect);
         }
         LayerContent::Fill(_) => {

@@ -1,5 +1,5 @@
 //! The window's own title bar on Windows and Linux, where the window has no OS decorations
-//! ([`PhotocraftApp::custom_titlebar`]): the app's top bar (`panels::title_bar`) is the title bar,
+//! ([`LienzoApp::custom_titlebar`]): the app's top bar (`panels::title_bar`) is the title bar,
 //! as in Photoshop on Windows. The free gap between its menus and controls drags the window and a
 //! double-click there maximizes it (`panels::title_bar`, on every platform); caption buttons
 //! minimize, maximize/restore and close, and thin invisible zones along the window's edges resize
@@ -13,7 +13,7 @@
 use egui::{Color32, CursorIcon, Id, LayerId, Order, PointerButton, Pos2, Rect, ResizeDirection, Sense, Stroke, Ui, ViewportCommand, pos2, vec2};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::theme::Tokens;
 
 /// One Windows caption button: as wide as the native ones.
@@ -194,9 +194,9 @@ impl CaptionStyle {
 /// The caption style the platform reports, or Windows' when it reports none. Preferences ›
 /// Interface › Window Controls › Nodalia (the default) keeps the desktop's placement of the
 /// buttons but draws Nodalia's round ones.
-fn style(app: &PhotocraftApp, ctx: &egui::Context) -> CaptionStyle {
+fn style(app: &LienzoApp, ctx: &egui::Context) -> CaptionStyle {
     let mut s: CaptionStyle = app.services.caption_style.as_ref().map(|read| read(ctx)).unwrap_or_default();
-    if app.session.prefs().interface.window_controls == photocraft_engine::prefs::WindowControls::Nodalia {
+    if app.session.prefs().interface.window_controls == lienzo_engine::prefs::WindowControls::Nodalia {
         s.family = CaptionFamily::Nodalia;
         s.icons = None;
     }
@@ -205,13 +205,13 @@ fn style(app: &PhotocraftApp, ctx: &egui::Context) -> CaptionStyle {
 
 /// The title bar's height: `base`, or with GNOME's buttons at least libadwaita's header bar
 /// (46 pt, plus the bar's 1 pt separator), so the bar is as tall as its neighbours' title bars.
-pub fn bar_height(app: &PhotocraftApp, ctx: &egui::Context, base: f32) -> f32 {
+pub fn bar_height(app: &LienzoApp, ctx: &egui::Context, base: f32) -> f32 {
     if app.custom_titlebar && style(app, ctx).family == CaptionFamily::Adwaita { base.max(47.0) } else { base }
 }
 
 /// The width the caption buttons take at the bar's (left, right) end: zero for a side without
 /// buttons, and for both without the custom title bar.
-pub fn reserved(app: &PhotocraftApp, ctx: &egui::Context) -> (f32, f32) {
+pub fn reserved(app: &LienzoApp, ctx: &egui::Context) -> (f32, f32) {
     if !app.custom_titlebar {
         return (0.0, 0.0);
     }
@@ -269,7 +269,7 @@ fn toggle_maximize(ctx: &egui::Context) {
 /// with the window's edges (even if the bar's contents run wider) so a maximized window's corner
 /// hits the outermost one. Close runs File › Exit, which asks about unsaved documents first. On
 /// Linux the buttons drag the window too, as GTK's and KDE's do.
-pub fn caption_buttons(app: &mut PhotocraftApp, ui: &mut Ui, bar: Rect) {
+pub fn caption_buttons(app: &mut LienzoApp, ui: &mut Ui, bar: Rect) {
     let t = Tokens::get(ui.ctx());
     let s = style(app, ui.ctx());
     let max = maximized(ui.ctx());

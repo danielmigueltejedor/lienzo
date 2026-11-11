@@ -3682,7 +3682,7 @@ layerLabel	No Color	ფერის გარეშე
 	Mezzotint	მეცოტინტო
 	Mosaic	მოზაიკა
 	Motion Blur	მოძრაობის გაბუნდოვნება
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	ფაილების ჩაშენებული გადათრევა-ჩაგდება Wayland-ზე ჯერ მხარდაჭერილი არ არის. გამოიყენეთ ფაილი › გახსნა, ან გაუშვით Lienzo XWayland-ში: `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	ფაილების ჩაშენებული გადათრევა-ჩაგდება Wayland-ზე ჯერ მხარდაჭერილი არ არის. გამოიყენეთ ფაილი › გახსნა, ან გაუშვით Lienzo XWayland-ში: `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	ნეონის ნათება
 	New Guide Layout	დამხმარე ხაზების ახალი განლაგება
 	New Video Layer from File	ახალი ვიდეოშრე ფაილიდან

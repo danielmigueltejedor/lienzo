@@ -1,7 +1,7 @@
-use photocraft_doc::LayerContent;
-use photocraft_engine::{Session, atn_cmds};
-use photocraft_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
-use photocraft_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
+use lienzo_doc::LayerContent;
+use lienzo_engine::{Session, atn_cmds};
+use lienzo_psd::atn::{self, AtnAction, AtnEvent, AtnFile, AtnItem};
+use lienzo_psd::descriptor::{Descriptor, Id, UnicodeString, Value as D};
 use serde_json::json;
 
 #[path = "../../../psd/tests/common/csh_fixture.rs"]
@@ -49,10 +49,10 @@ fn install_square(s: &mut Session) {
 }
 
 fn pixels(s: &Session) -> Vec<[f32; 4]> {
-    photocraft_compose::flatten(&s.active().unwrap().doc).into_px()
+    lienzo_compose::flatten(&s.active().unwrap().doc).into_px()
 }
 fn saved(s: &Session) -> Vec<u8> {
-    photocraft_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
+    lienzo_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap()
 }
 
 fn smart_params(s: &Session) -> serde_json::Value {
@@ -95,7 +95,7 @@ fn smart_filter_params_resolve_custom_shapes_and_keep_portable_geometry() {
 
         let mut reopened = Session::new();
         assert!(!reopened.presets.shapes.iter().flat_map(|g| &g.items).any(|shape| shape.id.as_deref() == Some(SHAPE_ID)));
-        reopened.add_document(photocraft_format::load_from_bytes(&after).unwrap(), None);
+        reopened.add_document(lienzo_format::load_from_bytes(&after).unwrap(), None);
         reopened.execute("layer.smartFilter.setParams", json!({"index":0,"params":{"radius":6}})).unwrap();
         assert_eq!(smart_params(&reopened)["shapePath"], path);
         assert_eq!(pixels(&reopened), pixels(&smart_builtin("square", 6)));
@@ -179,14 +179,14 @@ fn smart_filter_invalid_or_denied_shape_edits_are_atomic() {
     s.execute("layer.smartFilter.setParams", json!({"index":0,"params":{"shapeId":SHAPE_ID}})).unwrap();
     rejected_smart_params(&mut s, json!({"shapeId":"missing"}));
     rejected_smart_params(&mut s, json!({"shapeName":"missing"}));
-    s.authorize = Some(|id, _| if id == "filter.blur.shapeBlur" { Err(photocraft_engine::EngineError::Other("shape edit denied".into())) } else { Ok(()) });
+    s.authorize = Some(|id, _| if id == "filter.blur.shapeBlur" { Err(lienzo_engine::EngineError::Other("shape edit denied".into())) } else { Ok(()) });
     for params in [json!({"radius":6}), json!({"shape":"circle"})] {
         let error = rejected_smart_params(&mut s, params);
         assert!(error.to_string().contains("shape edit denied"), "{error}");
     }
 }
 
-fn rejected_smart_params(s: &mut Session, params: serde_json::Value) -> photocraft_engine::EngineError {
+fn rejected_smart_params(s: &mut Session, params: serde_json::Value) -> lienzo_engine::EngineError {
     let before = saved(s);
     let history = s.active().unwrap().history.past_len();
     let revision = s.active().unwrap().revision;
@@ -229,7 +229,7 @@ fn custom_shape_smart_filter_keeps_geometry_across_save_without_preset_library()
     s.execute("filter.convertForSmartFilters", json!({})).unwrap();
     s.execute("filter.blur.shapeBlur", json!({"radius":5,"shapeId":SHAPE_ID})).unwrap();
     let expected = pixels(&s);
-    let doc = photocraft_format::load_from_bytes(&saved(&s)).unwrap();
+    let doc = lienzo_format::load_from_bytes(&saved(&s)).unwrap();
     let filter = doc
         .walk()
         .into_iter()
@@ -253,13 +253,13 @@ fn custom_shape_smart_filter_keeps_geometry_across_save_without_preset_library()
 fn imported_csh_id_resolves_in_an_action_after_reimport_and_preference_reload() {
     let mut s = fixture(16);
     let bytes = csh_fixture::triangle_csh();
-    let id = photocraft_psd::csh::parse(&bytes).unwrap()[0].id.clone();
-    let p = json!({"data":photocraft_paint::tile::b64_encode(&bytes)});
+    let id = lienzo_psd::csh::parse(&bytes).unwrap()[0].id.clone();
+    let p = json!({"data":lienzo_paint::tile::b64_encode(&bytes)});
     s.execute("shape.presets.importCsh", p.clone()).unwrap();
     s.execute("shape.presets.importCsh", p).unwrap();
     let matches: Vec<_> = s.presets.shapes.iter().flat_map(|g| &g.items).filter(|shape| shape.id.as_deref() == Some(id.as_str())).collect();
     assert_eq!(matches.len(), 2, "both imports retain the source's opaque ID");
-    let path = photocraft_engine::vector_cmds::path_json(&matches[0].path);
+    let path = lienzo_engine::vector_cmds::path_json(&matches[0].path);
     let mut expected = fixture(16);
     expected.execute("filter.blur.shapeBlur", json!({"radius":5,"shapePath":path})).unwrap();
     let mut square = fixture(16);
@@ -285,8 +285,8 @@ fn imported_csh_id_resolves_in_an_action_after_reimport_and_preference_reload() 
     // This original fixture has the same ID but a different path. Keep both presets
     // available by their unique names, while refusing ambiguous action playback.
     let other = csh_fixture::polygon_csh(&[&[(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]]);
-    assert_eq!(photocraft_psd::csh::parse(&other).unwrap()[0].id, id);
-    s.execute("shape.presets.importCsh", json!({"data":photocraft_paint::tile::b64_encode(&other)})).unwrap();
+    assert_eq!(lienzo_psd::csh::parse(&other).unwrap()[0].id, id);
+    s.execute("shape.presets.importCsh", json!({"data":lienzo_paint::tile::b64_encode(&other)})).unwrap();
     let result = s.execute("actions.play", json!({"action":"Shape"})).unwrap();
     assert_eq!(result["ran"], 0);
     assert_eq!(result["failed"]["id"], "filter.blur.shapeBlur");
@@ -399,7 +399,7 @@ fn recorded_custom_shape_blur_keeps_portable_geometry() {
             let mut s = fixture(16);
             install_square(&mut s);
             if background {
-                let photocraft_engine::jobs::Started::Job(job) = s.start("filter.blur.shapeBlur", selector.clone()).unwrap() else {
+                let lienzo_engine::jobs::Started::Job(job) = s.start("filter.blur.shapeBlur", selector.clone()).unwrap() else {
                     panic!("background filter job")
                 };
                 s.wait_job(job).unwrap();

@@ -211,7 +211,7 @@ mod tests {
     fn overflow_icon_and_hover_paint_stay_inside_a_tiny_button() {
         for scale in [1.0, 2.0] {
             let ctx = egui::Context::default();
-            crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
+            crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::Pro);
             ctx.set_pixels_per_point(scale);
             for width in [1.0, 5.0, 11.0, 12.0, 18.0] {
                 let rect = Rect::from_min_size(pos2(20.25, 20.25), vec2(width, 26.0));

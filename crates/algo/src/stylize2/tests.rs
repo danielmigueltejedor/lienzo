@@ -1,7 +1,7 @@
 use super::*;
 use crate::{FilterParams, apply_tiled};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_raster::Surface;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_raster::Surface;
 
 fn image(rect: Rect, n: usize, kind: usize) -> Image {
     let mut img = Image::new(rect, n);
@@ -34,7 +34,7 @@ fn swept_blocks_match_the_pixel_search_part(part: u64) {
     // count and whether the samples are CMYK ink, so modes that agree on both repeat those cases.
     // A run takes a quarter of the rest, a different quarter each day.
     let mut seen = std::collections::HashSet::new();
-    let sweep = photocraft_testkit::Sweep::new(4);
+    let sweep = lienzo_testkit::Sweep::new(4);
     let mut case = 0;
     let mut selected = 0;
     for mode in MODELS {

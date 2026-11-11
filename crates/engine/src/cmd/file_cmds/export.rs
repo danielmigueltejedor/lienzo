@@ -75,7 +75,7 @@ pub fn export_layers_report_with(s: &Session, p: &Value, mut write: impl FnMut(&
         one.layers = vec![only];
         if trim {
             let mut bounds = Rect::EMPTY;
-            let _ = photocraft_compose::render_bands(&one, one.bounds(), 0, |band| -> std::result::Result<(), ()> {
+            let _ = lienzo_compose::render_bands(&one, one.bounds(), 0, |band| -> std::result::Result<(), ()> {
                 let width = band.rect.width() as usize;
                 for (i, rgba) in band.px.iter().enumerate() {
                     if rgba[3] > 0.0 && width > 0 {
@@ -147,7 +147,7 @@ fn lut_layers<'a>(doc: &'a Document, ids: Option<&[LayerId]>) -> Result<Vec<&'a 
 fn bake_cube_layers(size: usize, title: &str, layers: &[&Layer]) -> String {
     let n = size;
     let (w, h) = ((n * n) as u32, n as u32);
-    let mut lattice = Document::new("lut", photocraft_doc::Size::new(w, h), ColorMode::Rgb, photocraft_color::SampleType::F32);
+    let mut lattice = Document::new("lut", lienzo_doc::Size::new(w, h), ColorMode::Rgb, lienzo_color::SampleType::F32);
     let fmt = lattice.pixel_format();
     let step = 1.0 / (n - 1) as f32;
     let mut data = Vec::with_capacity((w * h) as usize * fmt.channels());
@@ -171,7 +171,7 @@ fn bake_cube_layers(size: usize, title: &str, layers: &[&Layer]) -> String {
         a.clipped = false;
         lattice.layers.push(a);
     }
-    let out = photocraft_compose::flatten(&lattice);
+    let out = lienzo_compose::flatten(&lattice);
     let mut s = format!("TITLE \"{}\"\n# Created by Lienzo\nLUT_3D_SIZE {n}\nDOMAIN_MIN 0.0 0.0 0.0\nDOMAIN_MAX 1.0 1.0 1.0\n", title.replace('"', "'"));
     // .cube order: red changes fastest, then green, then blue.
     for b in 0..n {
@@ -189,7 +189,7 @@ fn bake_cube_layers(size: usize, title: &str, layers: &[&Layer]) -> String {
 /// Backwards-compatible helper for exporting all visible top-level adjustments.
 pub fn bake_cube(doc: &Document, size: usize, title: &str) -> String {
     let layers: Vec<&Layer> = doc.layers.iter().filter(|l| l.visible && matches!(l.content, LayerContent::Adjustment(_))).collect();
-    bake_cube_layers(size.clamp(2, photocraft_cms::lutfile::MAX_SIZE), title, &layers)
+    bake_cube_layers(size.clamp(2, lienzo_cms::lutfile::MAX_SIZE), title, &layers)
 }
 
 /// Export either the whole visible stack (backward-compatible default), the Layers panel's
@@ -201,8 +201,8 @@ pub(super) fn color_lookup_tables(s: &mut Session, p: &Value) -> Result<Value> {
         None | Some(Value::Null) => 33,
         Some(v) => v.as_u64().ok_or_else(|| EngineError::BadParams { cmd: CMD.into(), msg: "size must be an integer".into() })?,
     };
-    if !(2..=photocraft_cms::lutfile::MAX_SIZE as u64).contains(&size) {
-        return Err(EngineError::BadParams { cmd: CMD.into(), msg: format!("size must be 2..={}", photocraft_cms::lutfile::MAX_SIZE) });
+    if !(2..=lienzo_cms::lutfile::MAX_SIZE as u64).contains(&size) {
+        return Err(EngineError::BadParams { cmd: CMD.into(), msg: format!("size must be 2..={}", lienzo_cms::lutfile::MAX_SIZE) });
     }
     let scope = match p.get("scope") {
         None | Some(Value::Null) => "all",

@@ -1,6 +1,6 @@
 //! HEIF / HEIC (the iPhone and Mac photo format), read-only: see [`crate::ASYMMETRIC_EXCEPTIONS`].
 //!
-//! Decoding lives in the optional `photocraft-heif` crate (heic-rs, a pure-Rust HEVC
+//! Decoding lives in the optional `lienzo-heif` crate (heic-rs, a pure-Rust HEVC
 //! still-picture decoder), enabled by this crate's `heif` feature. Without it, HEIF files are
 //! still detected and opening one is an [`CodecError::Unsupported`] error, never a panic.
 //!
@@ -26,11 +26,11 @@ pub(crate) fn decode(_bytes: &[u8], _limits: &Limits, _keep_orientation: bool) -
 }
 
 #[cfg(feature = "heif")]
-fn err(e: photocraft_heif::Error) -> CodecError {
+fn err(e: lienzo_heif::Error) -> CodecError {
     match e {
-        photocraft_heif::Error::Unsupported(what) => CodecError::unsupported(F, what),
-        photocraft_heif::Error::Limit(what) => CodecError::LimitExceeded(what),
-        photocraft_heif::Error::Malformed(what) => CodecError::malformed(F, what),
+        lienzo_heif::Error::Unsupported(what) => CodecError::unsupported(F, what),
+        lienzo_heif::Error::Limit(what) => CodecError::LimitExceeded(what),
+        lienzo_heif::Error::Malformed(what) => CodecError::malformed(F, what),
     }
 }
 
@@ -40,7 +40,7 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits, keep_orientation: bool) -> R
     use crate::image::{ChannelLayout, Metadata, SampleType};
 
     // The container alone: the declared size is checked before any pixel is decoded.
-    let info = photocraft_heif::probe(bytes).map_err(err)?;
+    let info = lienzo_heif::probe(bytes).map_err(err)?;
     let layout = if info.has_alpha { ChannelLayout::Rgba } else { ChannelLayout::Rgb };
     let sample = if info.sixteen_bit { SampleType::U16 } else { SampleType::U8 };
     let (w, h) = if keep_orientation { (info.coded_width, info.coded_height) } else { (info.width, info.height) };
@@ -52,8 +52,8 @@ pub(crate) fn decode(bytes: &[u8], limits: &Limits, keep_orientation: bool) -> R
     if !keep_orientation && (info.coded_width, info.coded_height) != (w, h) {
         limits.check(info.coded_width, info.coded_height, layout, sample)?;
     }
-    let options = photocraft_heif::Options { max_pixels: limits.max_pixels, apply_transforms: !keep_orientation };
-    let decoded = photocraft_heif::decode(bytes, &options).map_err(err)?;
+    let options = lienzo_heif::Options { max_pixels: limits.max_pixels, apply_transforms: !keep_orientation };
+    let decoded = lienzo_heif::decode(bytes, &options).map_err(err)?;
     // The decoder re-reads the container; trust its output's shape, not the probe's.
     let layout = if decoded.has_alpha { ChannelLayout::Rgba } else { ChannelLayout::Rgb };
     let sample = if decoded.sixteen_bit { SampleType::U16 } else { SampleType::U8 };

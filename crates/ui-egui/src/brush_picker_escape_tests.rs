@@ -7,17 +7,17 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::state::Tool;
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 20, "hardness": 0.0}})).unwrap();
     app.ui.tool = Tool::Brush;
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -26,19 +26,19 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     h
 }
 
-fn open(h: &mut Harness<'static, PhotocraftApp>) {
+fn open(h: &mut Harness<'static, LienzoApp>) {
     let c = h.state().last_canvas_rect.center();
     h.state_mut().ui.brush_picker = Some([c.x, c.y]);
     h.run_steps(2);
 }
 
 /// Type `text` into the picker's `n`th spin field (0 Size, 1 Hardness), then Tab.
-fn type_into(h: &mut Harness<'static, PhotocraftApp>, n: usize, text: &str) {
+fn type_into(h: &mut Harness<'static, LienzoApp>, n: usize, text: &str) {
     h.get_all_by_role(egui::accesskit::Role::SpinButton).nth(n).expect("the field").click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -48,7 +48,7 @@ fn type_into(h: &mut Harness<'static, PhotocraftApp>, n: usize, text: &str) {
     h.run_steps(2);
 }
 
-fn brush(h: &Harness<'static, PhotocraftApp>) -> (f32, f32) {
+fn brush(h: &Harness<'static, LienzoApp>) -> (f32, f32) {
     let b = &h.state().session.tools.brush;
     (b.size, b.hardness)
 }

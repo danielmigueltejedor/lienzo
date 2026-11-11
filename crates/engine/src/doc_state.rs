@@ -21,12 +21,12 @@ pub struct DocState {
     pub revision: u64,
     pub saved_revision: u64,
     /// Native save cache shared with this document's workers, released with the editing state.
-    pub pcraft_cache: photocraft_io::PcraftExportCache,
+    pub pcraft_cache: lienzo_io::PcraftExportCache,
     /// How much of `revision` came from view-only changes (channel eyes, targeting): pixel caches can ignore those.
     pub view_revision: u64,
     /// Area changed since revision [`DocState::damage_from`] (None = assume everything changed):
     /// the latest revision's, or a whole command's when it made several.
-    pub last_damage: Option<photocraft_geom::Rect>,
+    pub last_damage: Option<lienzo_geom::Rect>,
     /// `(from, to)`: the command that moved `revision` from `from` to `to` in more than one step,
     /// whose whole span `last_damage` covers. Written only by `Session::dispatch`; any later
     /// revision makes it stale, so [`DocState::damage_from`] falls back to one revision.
@@ -63,7 +63,7 @@ pub struct DocState {
     /// When Saving), so saving an unchanged document again doesn't add a duplicate row.
     pub(crate) save_snapshot: Option<u64>,
     /// The snapshot set as the History Brush's source (`history.setSource {snapshot}`); `None`:
-    /// the source is a state, kept by the history ([`photocraft_ops::History::brush_source`]).
+    /// the source is a state, kept by the history ([`lienzo_ops::History::brush_source`]).
     pub(crate) source_snapshot: Option<u64>,
     /// Names the user gave layers (Rename Layer, Duplicate Layer's Name, `type.edit`'s name): a
     /// type layer keeps such a name although it looks like a copy's ("Title copy 2"), while a
@@ -93,7 +93,7 @@ impl DocState {
         history.set_current_layers(target.clone());
         // Spot channels open visible, printing over the composite; alpha channels open hidden.
         let channel_view = channel_cmds::ChannelView {
-            alpha_visible: (0..doc.channels.len()).map(|i| photocraft_compose::multichannel::is_overprint_spot(&doc, i)).collect(),
+            alpha_visible: (0..doc.channels.len()).map(|i| lienzo_compose::multichannel::is_overprint_spot(&doc, i)).collect(),
             ..Default::default()
         };
         let doc = Arc::new(doc);
@@ -178,17 +178,17 @@ impl DocState {
 pub struct ToolState {
     pub foreground: [f32; 4],
     pub background: [f32; 4],
-    pub brush: photocraft_paint::BrushSettings,
+    pub brush: lienzo_paint::BrushSettings,
     /// Brush presets (built-ins plus user presets; see `brush.presets.*`).
-    pub presets: Vec<photocraft_paint::BrushPreset>,
+    pub presets: Vec<lienzo_paint::BrushPreset>,
     /// Bumped whenever `presets` changes ([`Session::brush_presets_changed`]); the preset store
     /// syncs when it moves.
     pub presets_rev: u64,
     /// Mixer Brush paint carried between strokes.
-    pub mixer: photocraft_paint::mixer::MixerState,
+    pub mixer: lienzo_paint::mixer::MixerState,
     /// The coalescing key of the running `tools.setBrush` gesture and the brush before it, so the
     /// gesture journals as one call ([`brush_cmds::coalesce_journal`]).
-    pub brush_gesture: Option<(String, photocraft_paint::BrushSettings)>,
+    pub brush_gesture: Option<(String, lienzo_paint::BrushSettings)>,
     /// Name of the preset the current brush was last picked from. Kept across later edits (the
     /// preset stays "the current brush" so `brush.presets.update` can overwrite it); cleared when
     /// the brush is reset or the preset is gone.
@@ -264,11 +264,8 @@ impl Default for ToolState {
             foreground: [0.0, 0.0, 0.0, 1.0],
             background: [1.0, 1.0, 1.0, 1.0],
             // Photoshop's Brush tool starts at 10 % Smoothing.
-            brush: photocraft_paint::BrushSettings {
-                smoothing: photocraft_paint::brush::Smoothing { amount: 0.1, ..Default::default() },
-                ..Default::default()
-            },
-            presets: photocraft_paint::presets::builtin(),
+            brush: lienzo_paint::BrushSettings { smoothing: lienzo_paint::brush::Smoothing { amount: 0.1, ..Default::default() }, ..Default::default() },
+            presets: lienzo_paint::presets::builtin(),
             presets_rev: 0,
             mixer: Default::default(),
             brush_gesture: None,
@@ -286,20 +283,20 @@ impl Default for ToolState {
 /// copies them (Paste Layer Style puts them all on each target).
 #[derive(Clone, Debug)]
 pub struct CopiedStyle {
-    pub effects: photocraft_doc::Effects,
-    pub blend: photocraft_color::BlendMode,
+    pub effects: lienzo_doc::Effects,
+    pub blend: lienzo_color::BlendMode,
     pub fill: f32,
-    pub advanced: photocraft_doc::AdvancedBlending,
-    pub blend_if: photocraft_doc::BlendIf,
+    pub advanced: lienzo_doc::AdvancedBlending,
+    pub blend_if: lienzo_doc::BlendIf,
     pub excluded_channels: u32,
     /// The colour mode it was copied in: Blend If's channel ranges and the channel restrictions
     /// only carry over to a document in the same mode.
-    pub mode: photocraft_color::ColorMode,
+    pub mode: lienzo_color::ColorMode,
 }
 
 /// The commands whose [`Session::precheck`] is complete: it accepts what `execute` does (Free
 /// Transform applies its box before these, and only when they will run), but for the group
-/// nesting limit ([`photocraft_doc::MAX_GROUP_DEPTH`]): grouping layers already that deep is
+/// nesting limit ([`lienzo_doc::MAX_GROUP_DEPTH`]): grouping layers already that deep is
 /// refused only as the edit is made. Layer via Copy and
 /// Cut aren't: whether they have anything to copy (a selection over transparent pixels, a group
 /// or fill layer) is known only when they run.

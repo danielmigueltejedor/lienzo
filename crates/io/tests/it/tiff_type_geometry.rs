@@ -1,11 +1,11 @@
 //! Photoshop's mixed-order Intel TIFF type blocks and unsafe/unresolved type fallback (#4758).
 
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::text::{CharStyle, TextRun};
-use photocraft_doc::{Document, Layer, LayerContent, Size, TextLayer};
-use photocraft_geom::Affine;
-use photocraft_io::{ExportOptions, PsdExportOptions, document_to_psd_with, export, import, psd_to_document};
-use photocraft_psd::descriptor::{Value, VersionedDescriptor};
+use lienzo_color::{ColorMode, SampleType};
+use lienzo_doc::text::{CharStyle, TextRun};
+use lienzo_doc::{Document, Layer, LayerContent, Size, TextLayer};
+use lienzo_geom::Affine;
+use lienzo_io::{ExportOptions, PsdExportOptions, document_to_psd_with, export, import, psd_to_document};
+use lienzo_psd::descriptor::{Value, VersionedDescriptor};
 
 fn document() -> Document {
     document_in(ColorMode::Rgb, SampleType::U8)
@@ -21,7 +21,7 @@ fn document_in(mode: ColorMode, depth: SampleType) -> Document {
     };
     t.runs = vec![TextRun { len: t.text.len(), style: CharStyle { size_pt: 24.0, ..Default::default() } }];
     t.sync_summary();
-    t.cache = Some(photocraft_text::TextEngine::default().render(&t, doc.resolution_dpi, doc.pixel_format()).1.surface);
+    t.cache = Some(lienzo_text::TextEngine::default().render(&t, doc.resolution_dpi, doc.pixel_format()).1.surface);
     doc.layers.push(Layer::new("Synthetic", LayerContent::Text(t)));
     doc
 }
@@ -32,13 +32,13 @@ fn photoshop_mixed_order_tiff_import_keeps_editable_geometry_and_pixels() {
     let (psd, _) = document_to_psd_with(&doc, &PsdExportOptions::default());
     let canonical = &psd.layers()[0].block(b"TySh").unwrap().data;
     let encoded = export(&doc, "test.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).unwrap();
-    let mut image = photocraft_codecs::decode(&encoded.bytes).unwrap();
+    let mut image = lienzo_codecs::decode(&encoded.bytes).unwrap();
     let blocks = image.meta.photoshop_layers.as_mut().unwrap();
     let at = blocks.windows(8).position(|b| b == b"MIB8hSyT").unwrap() + 12;
     // Only the text version/descriptor switch order; warp and bounds remain little-endian.
-    let (_, used) = photocraft_psd::descriptor::VersionedDescriptor::parse_prefix(&canonical[52..]).unwrap();
+    let (_, used) = lienzo_psd::descriptor::VersionedDescriptor::parse_prefix(&canonical[52..]).unwrap();
     blocks[at + 50..at + 52 + used].copy_from_slice(&canonical[50..52 + used]);
-    let bytes = photocraft_codecs::encode(&image, photocraft_codecs::Format::Tiff, &Default::default()).unwrap();
+    let bytes = lienzo_codecs::encode(&image, lienzo_codecs::Format::Tiff, &Default::default()).unwrap();
     let opened = import("photoshop.tif", &bytes).unwrap();
     assert!(!opened.warnings.iter().any(|w| w.contains("TySh")), "{:?}", opened.warnings);
     let LayerContent::Text(before) = &doc.layers[0].content else { panic!("source type") };
@@ -47,7 +47,7 @@ fn photoshop_mixed_order_tiff_import_keeps_editable_geometry_and_pixels() {
     assert_eq!(after.size_pt, 24.0);
     assert_eq!(after.text, before.text);
     assert_eq!(after.cache.as_ref().unwrap().content_bounds(), before.cache.as_ref().unwrap().content_bounds());
-    let rerendered = photocraft_text::TextEngine::default().render(after, opened.document.resolution_dpi, opened.document.pixel_format()).1.surface;
+    let rerendered = lienzo_text::TextEngine::default().render(after, opened.document.resolution_dpi, opened.document.pixel_format()).1.surface;
     assert_eq!(rerendered.content_bounds(), after.cache.as_ref().unwrap().content_bounds());
 }
 
@@ -67,7 +67,7 @@ fn layered_tiff_export_keeps_tysh_text_descriptor_big_endian() {
         let (psd, _) = document_to_psd_with(&doc, &PsdExportOptions::default());
         let canonical = &psd.layers()[0].block(b"TySh").unwrap().data;
         let encoded = export(&doc, "test.tif", &ExportOptions { tiff_layers: true, ..Default::default() }).unwrap();
-        let (_, layers) = photocraft_codecs::tiff_photoshop_tags(&encoded.bytes);
+        let (_, layers) = lienzo_codecs::tiff_photoshop_tags(&encoded.bytes);
         let layers = layers.expect("layered TIFF tag 37724");
         let block_at = layers.windows(8).position(|window| window == b"MIB8hSyT").expect("little-endian TySh block");
         let length_at = block_at + 8;

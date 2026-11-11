@@ -60,7 +60,7 @@ impl Compositor {
                 e.region = region;
                 rebuild = false;
             }
-            photocraft_raster::scratch::give(v);
+            lienzo_raster::scratch::give(v);
         }
         if rebuild {
             let shape = Tex::map(device, "pc_fx_shape", region, MAP32);
@@ -109,12 +109,12 @@ impl Compositor {
             fx::paste(&mut e.shape_cpu, region, damage, &v);
             e.shape.write_r32(queue, region, damage, &v);
             staged += v.len() as u64 * 4;
-            photocraft_raster::scratch::give(v);
+            lienzo_raster::scratch::give(v);
         }
 
         // Programs, and the distance fields they read (max reach per field).
         // Filled shapes stroke their outline (the effect shape); others estimate it.
-        let vector_shape = matches!(layer.content, LayerContent::Shape(_)) && photocraft_compose::effect_outline(layer).is_none();
+        let vector_shape = matches!(layer.content, LayerContent::Shape(_)) && lienzo_compose::effect_outline(layer).is_none();
         let anchor = layer.effects.reference.unwrap_or((f64::from(f.bounds.x0), f64::from(f.bounds.y0)));
         let progs: Vec<fx::MapProgram> =
             layer.effects.items.iter().filter(|e| e.enabled()).map(|e| fx::program_with(e, &doc.global_light, vector_shape, &doc.patterns, anchor)).collect();
@@ -257,13 +257,13 @@ impl Compositor {
     }
 }
 
-/// A start time when `PHOTOCRAFT_FX_TRACE=1` (it prints the CPU time of effect shapes and
+/// A start time when `LIENZO_FX_TRACE=1` (it prints the CPU time of effect shapes and
 /// distance fields); never on wasm.
 fn web_time_now() -> Option<std::time::Instant> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         static T: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        T.get_or_init(|| std::env::var_os("PHOTOCRAFT_FX_TRACE").is_some()).then(std::time::Instant::now)
+        T.get_or_init(|| std::env::var_os("LIENZO_FX_TRACE").is_some()).then(std::time::Instant::now)
     }
     #[cfg(target_arch = "wasm32")]
     None

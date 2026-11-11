@@ -1,8 +1,8 @@
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_compose::{composite_to_surface, composite_to_surface_with_interrupt};
-use photocraft_doc::{Document, Layer};
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::Interrupt;
+use lienzo_color::{ColorMode, PixelFormat, SampleType};
+use lienzo_compose::{composite_to_surface, composite_to_surface_with_interrupt};
+use lienzo_doc::{Document, Layer};
+use lienzo_geom::{Rect, Size};
+use lienzo_raster::Interrupt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]

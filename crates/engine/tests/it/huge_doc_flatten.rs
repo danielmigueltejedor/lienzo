@@ -1,7 +1,7 @@
 //! Trim and Duplicate › Merged Layers Only flatten the document; on a canvas over the compositor's
 //! render cap the flatten comes back empty, and both must report it instead of panicking (#7223).
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 /// 1.2e9 px: within File › New's per-side limit, over `MAX_RENDER_PIXELS` (2^30).

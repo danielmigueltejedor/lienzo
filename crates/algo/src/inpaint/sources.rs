@@ -152,7 +152,7 @@ pub(super) fn hole_bounds(w: usize, h: usize, px: &[Px]) -> Option<Bounds> {
 
 /// Valid source centres: the whole `2r+1` patch inside the grid and copyable. Found per row
 /// (each pixel's horizontal run), then per column of runs. `None` when cancelled.
-pub(super) fn valid_sources(w: usize, h: usize, r: usize, px: &[Px], ctl: &photocraft_raster::Interrupt) -> Option<Vec<bool>> {
+pub(super) fn valid_sources(w: usize, h: usize, r: usize, px: &[Px], ctl: &lienzo_raster::Interrupt) -> Option<Vec<bool>> {
     const BAND: usize = 64;
     let side = 2 * r + 1;
     let par = w * h >= PAR_MIN;

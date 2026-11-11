@@ -1,8 +1,8 @@
 //! Average changes colour, never coverage. Keep the existing RGB conversion and selection
 //! weighting; Photoshop RGB8 observations are documented in docs/average-filter.md.
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
+use lienzo_color::{PixelFormat, SampleType};
+use lienzo_geom::Rect;
+use lienzo_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
 
 use crate::{Ctx, Image};
 

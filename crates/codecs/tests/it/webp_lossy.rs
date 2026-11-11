@@ -5,7 +5,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 fn lossy(q: u8) -> EncodeOptions {
     EncodeOptions { webp_lossless: false, webp_quality: q, ..Default::default() }

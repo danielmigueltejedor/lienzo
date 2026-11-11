@@ -29,7 +29,7 @@ pub(super) fn from(d: &Descriptor) -> Mapped {
     let mut params = json!({});
     // Descriptor/class names, key order and ID encodings are wire identity, not native options.
     if *d != descriptor() {
-        params[SOURCE] = photocraft_paint::tile::b64_encode(&d.to_bytes()).into();
+        params[SOURCE] = lienzo_paint::tile::b64_encode(&d.to_bytes()).into();
     }
     step(COMMAND, params)
 }
@@ -43,6 +43,6 @@ pub(super) fn to(p: &Value) -> Option<Descriptor> {
     if p.get(SOURCE).is_none() {
         return Some(descriptor());
     }
-    let source = Descriptor::from_bytes(&photocraft_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
+    let source = Descriptor::from_bytes(&lienzo_paint::tile::b64_decode(jstr(p, SOURCE)?)?).ok()?;
     supported(&source).then_some(source)
 }

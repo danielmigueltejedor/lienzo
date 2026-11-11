@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
+use lienzo_doc::{Color, ColorMode, Layer, SampleType, Size};
 
 fn base() -> Document {
     Document::with_background("h", Size::new(64, 64), ColorMode::Rgb, SampleType::U8, Color::WHITE)
@@ -693,7 +693,7 @@ fn history_shares_untouched_tiles() {
 
 #[test]
 fn fill_caches_and_smart_filter_masks_count_toward_history_bytes() {
-    use photocraft_doc::{Affine, Fill, FillCache, LayerContent, LayerMask, PixelFormat, SmartObject, SmartSource, Surface};
+    use lienzo_doc::{Affine, Fill, FillCache, LayerContent, LayerMask, PixelFormat, SmartObject, SmartSource, Surface};
     let mut doc = Document::new("fills", Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
     let mut fill = Layer::new("Fill", LayerContent::Fill(Fill::Solid(Color::WHITE)));
     let mut cache = Surface::new(PixelFormat::GRAY8);
@@ -730,13 +730,13 @@ fn fill_caches_and_smart_filter_masks_count_toward_history_bytes() {
 const TILE: usize = 256 * 256 * 4;
 const SOURCE: usize = 1_000_000;
 
-fn embedded(len: usize) -> photocraft_doc::SmartSource {
-    photocraft_doc::SmartSource::Embedded { file_name: "source.pcraft".into(), bytes: Arc::new(vec![7; len]) }
+fn embedded(len: usize) -> lienzo_doc::SmartSource {
+    lienzo_doc::SmartSource::Embedded { file_name: "source.pcraft".into(), bytes: Arc::new(vec![7; len]) }
 }
 
 /// `base()` with one smart object holding `source`; returns the document and the layer's id.
-fn smart_document(source: photocraft_doc::SmartSource) -> (Document, photocraft_doc::LayerId) {
-    use photocraft_doc::{Affine, LayerContent, SmartObject};
+fn smart_document(source: lienzo_doc::SmartSource) -> (Document, lienzo_doc::LayerId) {
+    use lienzo_doc::{Affine, LayerContent, SmartObject};
     let mut doc = base();
     let layer = Layer::new("Smart", LayerContent::Smart(SmartObject::new(source, Affine::IDENTITY, None)));
     let id = layer.id;
@@ -744,8 +744,8 @@ fn smart_document(source: photocraft_doc::SmartSource) -> (Document, photocraft_
     (doc, id)
 }
 
-fn replace_source(doc: &mut Document, id: photocraft_doc::LayerId, source: photocraft_doc::SmartSource) {
-    if let Some(photocraft_doc::LayerContent::Smart(sm)) = doc.layer_mut(id).map(|l| &mut l.content) {
+fn replace_source(doc: &mut Document, id: lienzo_doc::LayerId, source: lienzo_doc::SmartSource) {
+    if let Some(lienzo_doc::LayerContent::Smart(sm)) = doc.layer_mut(id).map(|l| &mut l.content) {
         sm.source = source;
     }
 }
@@ -766,7 +766,7 @@ fn embedded_smart_object_contents_count_toward_history_bytes() {
     assert_eq!(h.pixel_bytes(&cur), TILE + SOURCE);
     assert_counter(&h, &cur);
     // A linked source holds no bytes of its own.
-    let (linked, _) = smart_document(photocraft_doc::SmartSource::Linked { path: "a.png".into() });
+    let (linked, _) = smart_document(lienzo_doc::SmartSource::Linked { path: "a.png".into() });
     assert_eq!(History::default().pixel_bytes(&linked), TILE);
 }
 
@@ -833,7 +833,7 @@ fn embedded_contents_push_old_states_out_of_the_budget() {
 
 #[test]
 fn selection_tiles_count_current_and_history_without_double_counting() {
-    use photocraft_doc::{PixelFormat, Surface};
+    use lienzo_doc::{PixelFormat, Surface};
     for depth in SampleType::ALL {
         let mut doc = Document::new("selection", Size::new(300, 64), ColorMode::Rgb, depth);
         let mut selection = Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false));
@@ -882,7 +882,7 @@ fn selection_tiles_count_current_and_history_without_double_counting() {
 
 #[test]
 fn selection_byte_budget_drops_old_masks_and_keeps_the_last_undo() {
-    use photocraft_doc::{PixelFormat, Surface};
+    use lienzo_doc::{PixelFormat, Surface};
     for depth in SampleType::ALL {
         let mut doc = Document::new("selection", Size::new(64, 64), ColorMode::Rgb, depth);
         doc.selection = Some(Surface::new(PixelFormat::new(ColorMode::Grayscale, depth, false)));
@@ -926,13 +926,13 @@ fn video_document(depth: SampleType, frames: usize) -> Document {
     let mut layer = Layer::raster("Video", doc.pixel_format());
     let footage: Vec<_> = (0..frames)
         .map(|i| {
-            let mut surface = photocraft_doc::Surface::new(doc.pixel_format());
+            let mut surface = lienzo_doc::Surface::new(doc.pixel_format());
             surface.write_pixel(1, 1, &[i as f32 / frames as f32, 0.0, 0.0, 1.0]);
             surface
         })
         .collect();
-    layer.content = photocraft_doc::LayerContent::Raster(footage[0].clone());
-    layer.video = Some(photocraft_doc::VideoData::new(footage, 24.0));
+    layer.content = lienzo_doc::LayerContent::Raster(footage[0].clone());
+    layer.video = Some(lienzo_doc::VideoData::new(footage, 24.0));
     doc.layers.push(layer);
     doc
 }
@@ -1008,7 +1008,7 @@ fn video_memory_budget_evicts_deleted_off_playhead_frames() {
 /// count like layer pixels, shared ones once; undoing that step leaves them to the redo states.
 #[test]
 fn document_patterns_count_as_document_pixels() {
-    use photocraft_doc::{Pattern, Surface};
+    use lienzo_doc::{Pattern, Surface};
     for depth in SampleType::ALL {
         let tile = 4 * 256 * 256 * depth.bytes();
         let mut cur = Arc::new(Document::new("patterns", Size::new(64, 64), ColorMode::Rgb, depth));
@@ -1046,7 +1046,7 @@ fn document_patterns_count_as_document_pixels() {
 fn counter_tracks_eviction_undo_redo_branching_purge_and_clones() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let mut cur = Arc::new(Document::with_background("h", Size::new(300, 64), ColorMode::Rgb, depth, Color::WHITE));
-        Arc::make_mut(&mut cur).selection = Some(photocraft_doc::Surface::new(photocraft_doc::PixelFormat::GRAY8));
+        Arc::make_mut(&mut cur).selection = Some(lienzo_doc::Surface::new(lienzo_doc::PixelFormat::GRAY8));
         let mut h = History::new(4);
         h.max_bytes = usize::MAX;
         for i in 0..8 {
@@ -1083,7 +1083,7 @@ fn counter_tracks_eviction_undo_redo_branching_purge_and_clones() {
 
 #[test]
 fn shared_masks_channels_and_repeated_snapshot_references_count_once() {
-    use photocraft_doc::{AlphaChannel, LayerMask, PixelFormat, Surface};
+    use lienzo_doc::{AlphaChannel, LayerMask, PixelFormat, Surface};
     let mut doc = base();
     let mut gray = Surface::new(PixelFormat::GRAY8);
     gray.write_pixel(1, 1, &[1.0]);
@@ -1143,12 +1143,12 @@ fn threshold_rechecks_coalesced_current_and_changed_budget() {
 
 #[test]
 fn transferred_tiles_cannot_make_the_budget_check_underestimate_current() {
-    use photocraft_doc::{PixelFormat, Surface};
+    use lienzo_doc::{PixelFormat, Surface};
     let before = Arc::new(base());
     let mut current = (*before).clone();
     let mut large = Surface::new(PixelFormat::new(ColorMode::Cmyk, SampleType::F32, true));
     large.write_pixel(256, 0, &[1.0; 5]);
-    current.layers[0].surface_mut().unwrap().put_tiles(large.take_tiles(photocraft_doc::Rect::from_xywh(256, 0, 1, 1)));
+    current.layers[0].surface_mut().unwrap().put_tiles(large.take_tiles(lienzo_doc::Rect::from_xywh(256, 0, 1, 1)));
     let mut h = History::new(50);
     h.max_bytes = tile_bytes(&current, &mut HashSet::new()) - 1;
     h.record("A", before.clone(), LayerTarget::default());

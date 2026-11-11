@@ -1,11 +1,11 @@
 ---
 title: Text moves when I start editing a PSD text layer
-description: In PhotoCraft 0.7.0, a text layer from a Photoshop file can jump when you click it with the Type tool. PhotoCraft 0.8.2 fixes the known causes; update.
+description: In Lienzo 0.7.0, a text layer from a Photoshop file can jump when you click it with the Type tool. Lienzo 0.8.2 fixes the known causes; update.
 order: 20
 verified: 0.8.2
 ---
 
-Update PhotoCraft. In version 0.7.0, a text layer from a Photoshop file could jump or disappear when you started editing it. PhotoCraft 0.8.2 reads the text's styles and position the way Photoshop saved them, so the text stays where it was.
+Update Lienzo. In version 0.7.0, a text layer from a Photoshop file could jump or disappear when you started editing it. Lienzo 0.8.2 reads the text's styles and position the way Photoshop saved them, so the text stays where it was.
 
 ## Symptoms
 
@@ -22,7 +22,7 @@ If you already saved the file in 0.7.0 after the text moved, the moved text is n
 
 ## Why this happens
 
-Clicking a PSD text layer with the Type tool starts editing it, and PhotoCraft then lays the text out itself instead of showing the pixels Photoshop saved. PhotoCraft 0.7.0 read the alignment and size of each run of text only from Photoshop's default styles, and ignored part of the text position that recent Photoshop versions store. Both are fixed in 0.8.2 ([issue 3795](https://github.com/storytold/photocraft/issues/3795), [pull request 3819](https://github.com/storytold/photocraft/pull/3819)).
+Clicking a PSD text layer with the Type tool starts editing it, and Lienzo then lays the text out itself instead of showing the pixels Photoshop saved. Lienzo 0.7.0 read the alignment and size of each run of text only from Photoshop's default styles, and ignored part of the text position that recent Photoshop versions store. Both are fixed in 0.8.2 ([issue 3795](https://github.com/storytold/photocraft/issues/3795), [pull request 3819](https://github.com/storytold/photocraft/pull/3819)).
 
 ## Still stuck?
 

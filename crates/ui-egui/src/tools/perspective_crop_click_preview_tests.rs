@@ -4,21 +4,21 @@
 use super::*;
 
 /// A 200 × 150 document with the Perspective Crop tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::PerspectiveCrop;
     app
 }
 
-fn click(app: &mut PhotocraftApp, p: [f64; 2]) {
+fn click(app: &mut LienzoApp, p: [f64; 2]) {
     assert!(pointer(app, ToolEvent::Down { x: p[0], y: p[1], pressure: 1.0 }, egui::Modifiers::NONE));
     assert!(pointer(app, ToolEvent::Up { x: p[0], y: p[1] }, egui::Modifiers::NONE));
 }
 
 /// The pointer moved with the button up.
-fn hover(app: &mut PhotocraftApp, p: [f64; 2]) {
+fn hover(app: &mut LienzoApp, p: [f64; 2]) {
     assert!(pointer(app, ToolEvent::Move { x: p[0], y: p[1], pressure: 1.0 }, egui::Modifiers::NONE));
 }
 
@@ -116,7 +116,7 @@ fn the_two_click_grid_meets_at_the_pointer() {
 }
 
 /// Shapes `draw_overlay` paints for the app as it is.
-fn painted(app: &PhotocraftApp) -> usize {
+fn painted(app: &LienzoApp) -> usize {
     let ctx = egui::Context::default();
     let rect = egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(200.0, 150.0));
     let xf = ViewXform { rect, zoom: 1.0, center: [100.0, 75.0], flip: false, rotation: 0.0, aspect: 1.0 };
@@ -161,7 +161,7 @@ fn hover_over_the_canvas_moves_the_preview() {
         zoom_transition: None,
     }];
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut LienzoApp| {
             let v = app.ui.views[0].clone();
             crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
         },

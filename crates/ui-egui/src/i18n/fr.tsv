@@ -4019,7 +4019,7 @@ smartSvg	AI/PDF/EPS contents will be edited as SVG. Saving replaces the embedded
 	Multiple Flames One Direction	Plusieurs flammes dans une direction
 	Multiple Flames Path Directions	Plusieurs flammes selon les directions du tracé
 	Multiple Flames Various Length	Plusieurs flammes de longueurs variées
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Le glisser-déposer natif de fichiers n'est pas encore pris en charge sous Wayland. Utilisez Fichier › Ouvrir, ou lancez Lienzo sous XWayland avec `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Le glisser-déposer natif de fichiers n'est pas encore pris en charge sous Wayland. Utilisez Fichier › Ouvrir, ou lancez Lienzo sous XWayland avec `WAYLAND_DISPLAY= lienzo`.
 	Neon Glow	Lueur néon
 	Neutralize	Neutraliser
 	New Brush Preset	Nouveau préréglage de pinceau

@@ -1,0 +1,73 @@
+# What `scripts/rebrand.py` renames: upstream's PhotoCraft becomes Lienzo, in file contents and in
+# paths. The weekly upstream sync applies the same rules to upstream's tree before merging it, so
+# a rule added here applies to everything upstream sends from then on.
+#
+# Replacements are literal and case-sensitive, applied in order: put the longer, more specific
+# ones first.
+
+# Left as they are wherever they appear.
+keep = [
+    # Links: upstream's issues and pull requests, other people's forks, the shared test corpus.
+    "https?://[^\\s)\\]\"'<>`]+",
+    # Upstream's repository, named without a link (the sync workflow, docs/upstream.md).
+    'storytold/photocraft[\w.-]*',
+    # The shared test corpus repository and its checkout directory.
+    'photocraft-corpus',
+    # craft-libs' update suite names PhotoCraft's release feed; Lienzo overrides what it uses.
+    'craft_update::suite::PHOTOCRAFT',
+    # Credit for work done upstream.
+    'PhotoCraft contributors',
+]
+
+# Files left alone entirely.
+skip = [
+    ".github/rebrand.toml",
+    "scripts/rebrand.py",
+    # The licence notice keeps upstream's copyright line, which the licences require.
+    "NOTICE",
+    # The record of what came from upstream, and upstream's own README kept for reference.
+    "docs/upstream.md",
+    "docs/upstream-readme.md",
+]
+
+# Run after renaming: shorter names change how rustfmt wraps lines and sorts imports.
+after = [["cargo", "fmt", "--all"]]
+
+# Lines that keep this app's value when upstream's tree is rebranded (the sync passes --pin-from).
+[[pin]]
+file = "Cargo.toml"
+pattern = '^version = "[^"]*"'
+
+# Identity: app id, publisher, installer upgrade code (a product of its own, never PhotoCraft's).
+[[replace]]
+from = "ai.storyteller.photocraft"
+to = "dev.danielmiguelt.Lienzo"
+
+[[replace]]
+from = "PhotoCraft maintainers <photocraft@storyteller.ai>"
+to = "Nodalia <https://github.com/danielmigueltejedor/lienzo/issues>"
+
+[[replace]]
+from = "Learning Machines LLC"
+to = "Nodalia"
+
+[[replace]]
+from = "D9660F32-2D0A-4ABE-B73D-17BE25F1542C"
+to = "9FCCBAB3-88D1-42AD-936C-04ABB215AE82"
+
+# The name, in every casing upstream uses.
+[[replace]]
+from = "PhotoCraft"
+to = "Lienzo"
+
+[[replace]]
+from = "Photocraft"
+to = "Lienzo"
+
+[[replace]]
+from = "photocraft"
+to = "lienzo"
+
+[[replace]]
+from = "PHOTOCRAFT"
+to = "LIENZO"

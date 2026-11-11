@@ -2,9 +2,9 @@
 
 use std::collections::BTreeSet;
 
-use photocraft_algo::perspective::{Plane, linked_corners};
-use photocraft_algo::transform::{WARP_REACH, convex_quad};
-use photocraft_io::smart_map::{MAX_PERSPECTIVE_WARP_PLANES as MAX_PLANES, perspective_warp_geometry, perspective_warp_indexed_geometry};
+use lienzo_algo::perspective::{Plane, linked_corners};
+use lienzo_algo::transform::{WARP_REACH, convex_quad};
+use lienzo_io::smart_map::{MAX_PERSPECTIVE_WARP_PLANES as MAX_PLANES, perspective_warp_geometry, perspective_warp_indexed_geometry};
 
 use super::convert::normalise;
 use super::descriptors::{desc, enm, get_obj, get_ref, layer_ref, layer_target, px, ref_class};

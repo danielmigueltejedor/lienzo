@@ -2,17 +2,17 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_engine::{EngineError, Session, actions_cmds::Action, actions_edit_cmds, atn_cmds, prefs::PlaybackPerformance};
-use photocraft_ui_egui::{
-    PhotocraftApp, actions, canvas,
+use lienzo_engine::{EngineError, Session, actions_cmds::Action, actions_edit_cmds, atn_cmds, prefs::PlaybackPerformance};
+use lienzo_ui_egui::{
+    LienzoApp, actions, canvas,
     control::{ControlRequest, Outcome, handle},
     dialogs,
 };
 use serde_json::{Value, json};
 
 /// A real panel and its dialogs with one selected action in a set.
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(Session::new(), Default::default());
+fn harness() -> Harness<'static, LienzoApp> {
+    let mut app = LienzoApp::new(Session::new(), Default::default());
     app.background_jobs = false;
     app.run("file.new", json!({"width":16,"height":12})).unwrap();
     let mut a = Action::new("A", vec![]);
@@ -27,13 +27,13 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    LienzoApp::setup_context(&h.ctx, Default::default());
     h.run_steps(3);
     h
 }
 
 /// Click the actual menu entry and return its modal identity.
-fn open(h: &mut Harness<'static, PhotocraftApp>, label: &str) -> u64 {
+fn open(h: &mut Harness<'static, LienzoApp>, label: &str) -> u64 {
     h.get_by_label(label).click();
     h.run_steps(3);
     h.state().ui.dialogs.last().unwrap().id
@@ -97,18 +97,18 @@ fn insert_menu_item_chooser_cancels_or_records_descriptor_free_filter_event() {
     assert_eq!(h.state_mut().ui.dialog_mut(dialog).unwrap().fields["__command"], "filter.blur.gaussianBlur");
     dialogs::cancel(h.state_mut(), dialog).unwrap();
     h.state_mut().run("paint.stroke", json!({"points":[[6,6]],"size":3,"hardness":1,"color":"#000000"})).unwrap();
-    let original = photocraft_compose::flatten(&h.state().session.active().unwrap().doc).into_px();
+    let original = lienzo_compose::flatten(&h.state().session.active().unwrap().doc).into_px();
     let mut expected = Session::new();
     expected.add_document((*h.state().session.active().unwrap().doc).clone(), None);
     expected.execute("filter.blur.gaussianBlur", json!({"radius":2})).unwrap();
-    let expected = photocraft_compose::flatten(&expected.active().unwrap().doc).into_px();
+    let expected = lienzo_compose::flatten(&expected.active().unwrap().doc).into_px();
     assert_ne!(expected, original, "the Gaussian fixture has a visible effect");
     h.state_mut().session.actions.list[0].steps.push(("select.all".into(), json!({})));
     let paused = h.state_mut().run("actions.play", json!({"action":"A"})).unwrap();
     let dialog = paused["paused"]["dialog"].as_u64().unwrap();
     h.state_mut().ui.dialog_mut(dialog).unwrap().fields.insert("radius".into(), json!(2));
     dialogs::confirm(h.state_mut(), dialog).unwrap();
-    assert_eq!(photocraft_compose::flatten(&h.state().session.active().unwrap().doc).into_px(), expected);
+    assert_eq!(lienzo_compose::flatten(&h.state().session.active().unwrap().doc).into_px(), expected);
     assert!(h.state().session.active().unwrap().doc.selection.is_some(), "confirmation resumes the following step");
 }
 
@@ -154,7 +154,7 @@ static MENU_PREVIEW_CHECKS: AtomicUsize = AtomicUsize::new(0);
 static MENU_PREVIEW_DENIALS: AtomicUsize = AtomicUsize::new(0);
 
 /// Count actual menu preview checks and deny an edited map path.
-fn deny_menu_map_path(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn deny_menu_map_path(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if id == "filter.blur.gaussianBlur" {
         MENU_PREVIEW_CHECKS.fetch_add(1, Ordering::SeqCst);
         if params.get("mapPath").and_then(Value::as_str).is_some_and(|path| !path.is_empty()) {
@@ -197,7 +197,7 @@ fn paused_menu_preview_keeps_the_requesting_gate_and_rejects_retargeting() {
 }
 
 /// Deny the default while allowing insertion of another mapped menu item.
-fn deny_image_size_choice(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn deny_image_size_choice(id: &str, params: &Value) -> lienzo_engine::Result<()> {
     if id == "image.imageSize" || id == "actions.insertMenuItem" && params["id"] == "image.imageSize" {
         return Err(EngineError::Other("choice denied".into()));
     }

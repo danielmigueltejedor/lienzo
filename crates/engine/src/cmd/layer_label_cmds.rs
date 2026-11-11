@@ -1,7 +1,7 @@
 //! Undoable layer colour labels. A group applies the label to its existing descendants,
 //! without changing pixels, visibility, locks or the layer selection.
 
-use photocraft_doc::LabelColor;
+use lienzo_doc::LabelColor;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -61,7 +61,7 @@ fn set_label(s: &mut Session, p: &Value) -> Result<Value> {
         })?;
         if let Some(st) = s.active_mut() {
             // This is saved document metadata; no canvas pixels need recompositing.
-            st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+            st.last_damage = Some(lienzo_geom::Rect::EMPTY);
         }
     }
     Ok(json!({"color": color.id(), "layers": targets.iter().map(|(_, id)| id.0).collect::<Vec<_>>(), "changed": changed}))

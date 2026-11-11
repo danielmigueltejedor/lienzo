@@ -1,11 +1,11 @@
 //! One editor owns one original step; previews and confirmation retain its authority.
-use photocraft_engine::{
+use lienzo_engine::{
     actions_edit_cmds,
     doc::{DocId, LayerId},
 };
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 const COMMAND: &str = "actions.recordAgain";
 const MARK: &str = "__recordAgain";
@@ -26,17 +26,17 @@ pub(crate) fn owns(fields: &Map<String, Value>) -> bool {
 }
 
 /// Whether this dialog id still owns a deferred panel operation.
-pub(crate) fn owns_dialog(app: &PhotocraftApp, dialog: u64) -> bool {
+pub(crate) fn owns_dialog(app: &LienzoApp, dialog: u64) -> bool {
     app.held_record_again.as_ref().is_some_and(|held| held.dialog == dialog)
 }
 
 /// Apply captured and current permissions to the actual operation and final settings.
-fn authorize(app: &PhotocraftApp, held: &Held, id: &str, params: &Value) -> Result<(), String> {
+fn authorize(app: &LienzoApp, held: &Held, id: &str, params: &Value) -> Result<(), String> {
     super::authorize_owned(app, id, params, held.gate, held.automated)
 }
 
 /// Refuse stale selection or a different document before preview or confirmation can edit it.
-fn unchanged(app: &PhotocraftApp, held: &Held) -> Result<(), String> {
+fn unchanged(app: &LienzoApp, held: &Held) -> Result<(), String> {
     super::suspended_guard(app, COMMAND)?;
     if held.selection.get("revision").and_then(Value::as_u64) != Some(app.session.actions.rev)
         || app.session.actions.recording.is_some()
@@ -51,7 +51,7 @@ fn unchanged(app: &PhotocraftApp, held: &Held) -> Result<(), String> {
 }
 
 /// Open the existing command editor and seed its controls from this step's recorded values.
-pub(super) fn open(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub(super) fn open(app: &mut LienzoApp) -> Result<Value, String> {
     if app.held_record_again.is_some() {
         return Err(tl!("Confirm or cancel the pending Record Again editor first.").into());
     }
@@ -71,7 +71,7 @@ pub(super) fn open(app: &mut PhotocraftApp) -> Result<Value, String> {
     unchanged(app, &held)?;
     authorize(app, &held, COMMAND, &held.selection)?;
     authorize(app, &held, &held.command, &target.params)?;
-    let resolved = photocraft_engine::actions_cmds::playback_params(&app.session, &held.command, &target.params).map_err(|e| e.to_string())?;
+    let resolved = lienzo_engine::actions_cmds::playback_params(&app.session, &held.command, &target.params).map_err(|e| e.to_string())?;
     app.session.precheck(&held.command, &resolved).map_err(|e| e.to_string())?;
     let dialog = super::open_step_editor(app, &held.command)?;
     let fields = &mut app.ui.dialog_mut(dialog).ok_or(tl!("The step editor could not be opened."))?.fields;
@@ -85,7 +85,7 @@ pub(super) fn open(app: &mut PhotocraftApp) -> Result<Value, String> {
 }
 
 /// Guard both actual preview routes before parsing LUT files or evaluating a command.
-pub(crate) fn authorize_preview(app: &PhotocraftApp, dialog: u64, command: &str, params: &Value) -> Result<(), String> {
+pub(crate) fn authorize_preview(app: &LienzoApp, dialog: u64, command: &str, params: &Value) -> Result<(), String> {
     let Some(held) = app.held_record_again.as_ref().filter(|h| h.dialog == dialog) else { return Ok(()) };
     unchanged(app, held)?;
     if command != held.command {
@@ -95,7 +95,7 @@ pub(crate) fn authorize_preview(app: &PhotocraftApp, dialog: u64, command: &str,
 }
 
 /// Apply through the registered engine command, retaining flags and replacing only after success.
-pub(crate) fn confirm(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String, Value>) -> Result<Value, String> {
+pub(crate) fn confirm(app: &mut LienzoApp, dialog: u64, fields: &Map<String, Value>) -> Result<Value, String> {
     if app.held_record_again.as_ref().is_none_or(|h| h.dialog != dialog) {
         return Err(tl!("No recorded step belongs to this editor.").into());
     }
@@ -126,7 +126,7 @@ pub(crate) fn confirm(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String,
 }
 
 /// A different dialog cannot discard this editor's selection or authority.
-pub(crate) fn cancel(app: &mut PhotocraftApp, dialog: u64) {
+pub(crate) fn cancel(app: &mut LienzoApp, dialog: u64) {
     if app.held_record_again.as_ref().is_some_and(|held| held.dialog == dialog) {
         app.held_record_again = None;
     }

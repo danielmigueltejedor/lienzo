@@ -35,7 +35,7 @@ impl Session {
                 if clean {
                     st.saved_revision = st.revision;
                 }
-                st.last_damage = Some(photocraft_geom::Rect::EMPTY);
+                st.last_damage = Some(lienzo_geom::Rect::EMPTY);
                 true
             }
             Some((mut d, layers)) => {
@@ -173,7 +173,7 @@ pub(crate) fn carry_visibility(from: &Document, to: &mut Arc<Document>, stepped:
 }
 
 /// The layers (in both documents) whose visibility differs between `before` and `after`: what a
-/// recorded step changed, for [`photocraft_ops::History::add_current_visibility`].
+/// recorded step changed, for [`lienzo_ops::History::add_current_visibility`].
 pub(crate) fn visibility_changes(before: &Document, after: &Document) -> Vec<LayerId> {
     let visible: std::collections::HashMap<LayerId, bool> = before.walk().into_iter().map(|(_, _, l)| (l.id, l.visible)).collect();
     after.walk().into_iter().filter(|(_, _, l)| visible.get(&l.id).is_some_and(|v| *v != l.visible)).map(|(_, _, l)| l.id).collect()

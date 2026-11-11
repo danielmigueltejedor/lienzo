@@ -100,7 +100,7 @@ pub(super) fn native_pixels(doc: &Document, layer: Option<LayerId>) -> Result<(V
                 Some(s) => s,
                 None => {
                     if let LayerContent::Shape(shape) = &l.content {
-                        return Ok((photocraft_vector::render_shape(shape, fmt, r).read_region(r), n));
+                        return Ok((lienzo_vector::render_shape(shape, fmt, r).read_region(r), n));
                     }
                     return Err(EngineError::Other(format!("layer \"{}\" has no pixels", l.name)));
                 }
@@ -113,7 +113,7 @@ pub(super) fn native_pixels(doc: &Document, layer: Option<LayerId>) -> Result<(V
             Ok((raw.chunks_exact(sf.channels()).flat_map(|p| from_rgba(&fmt, to_rgba(&sf, p))).collect(), n))
         }
         None => {
-            let buf = photocraft_compose::render(doc, r);
+            let buf = lienzo_compose::render(doc, r);
             Ok((buf.px.iter().flat_map(|p| from_rgba(&fmt, *p)).collect(), n))
         }
     }
@@ -183,11 +183,7 @@ fn ref_planes(doc: &Document, layer: Option<LayerId>, active: Option<LayerId>, r
                 // Use its existing renderer rather than treating it as a canvas-wide fill.
                 None => match &l.content {
                     LayerContent::Shape(shape) => vec![
-                        photocraft_vector::CompiledShape::new(shape, photocraft_vector::DEFAULT_TOLERANCE, area)
-                            .render_rgba(area)
-                            .into_iter()
-                            .map(|p| p[3])
-                            .collect(),
+                        lienzo_vector::CompiledShape::new(shape, lienzo_vector::DEFAULT_TOLERANCE, area).render_rgba(area).into_iter().map(|p| p[3]).collect(),
                     ],
                     // Groups, adjustment and fill layers cover the whole canvas.
                     _ => vec![vec![1.0; area.width() as usize * area.height() as usize]],
@@ -205,8 +201,8 @@ fn ref_planes(doc: &Document, layer: Option<LayerId>, active: Option<LayerId>, r
             let l = doc.layer(id).ok_or(EngineError::NoLayer(id))?;
             let m = l.vector_mask.as_ref().ok_or_else(|| EngineError::Other(format!("layer \"{}\" has no vector mask", l.name)))?;
             // The path's shape, whether or not the mask is enabled (as Photoshop loads it).
-            let shape = photocraft_doc::VectorMask { enabled: true, density: 1.0, feather: 0.0, ..m.clone() };
-            vec![photocraft_vector::vector_mask_values(&shape, area)]
+            let shape = lienzo_doc::VectorMask { enabled: true, density: 1.0, feather: 0.0, ..m.clone() };
+            vec![lienzo_vector::vector_mask_values(&shape, area)]
         }
     })
 }
@@ -260,7 +256,7 @@ pub(super) fn source(s: &Session, p: &Value, cmd: &str, gray: bool) -> Result<Ve
     let mut planes = if r == ChanRef::Transparency && p.get("layer").is_some_and(|v| v == "merged") {
         // An explicit merged transparency source reads all visible layers. An omitted layer
         // retains the existing active-layer transparency behavior.
-        vec![photocraft_compose::render(&st.doc, st.doc.bounds()).px.iter().map(|p| p[3]).collect()]
+        vec![lienzo_compose::render(&st.doc, st.doc.bounds()).px.iter().map(|p| p[3]).collect()]
     } else if gray {
         vec![gray_plane(&st.doc, layer, st.active_layer, r)?]
     } else {

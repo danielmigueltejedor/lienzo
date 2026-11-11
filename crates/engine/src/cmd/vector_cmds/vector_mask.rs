@@ -141,7 +141,7 @@ pub(super) fn vector_mask_delete(s: &mut Session, p: &Value) -> Result<Value> {
 /// (either mask's) or the pixel mask's density shapes the rendered edge, the pixel mask instead
 /// becomes exactly what the compositor showed, with those settings baked in (#992).
 pub(super) fn vector_mask_rasterize(s: &mut Session, p: &Value) -> Result<Value> {
-    use photocraft_compose::masks::{combined_mask, feather_sigma};
+    use lienzo_compose::masks::{combined_mask, feather_sigma};
     let id = layer_id(s, p)?;
     s.edit("Rasterize Vector Mask", |doc, _| {
         let area = doc.bounds();
@@ -153,15 +153,14 @@ pub(super) fn vector_mask_rasterize(s: &mut Session, p: &Value) -> Result<Value>
         let shown = if soft { combined_mask(l, area) } else { None };
         let vm = l.vector_mask.take().ok_or_else(|| EngineError::Other("layer has no vector mask".into()))?;
         let mut mask = l.mask.take().unwrap_or_else(|| {
-            let mut m = photocraft_doc::LayerMask::reveal_all();
-            m.surface =
-                photocraft_raster::Surface::with_default(photocraft_color::PixelFormat::new(photocraft_color::ColorMode::Grayscale, depth, false), &[1.0]);
+            let mut m = lienzo_doc::LayerMask::reveal_all();
+            m.surface = lienzo_raster::Surface::with_default(lienzo_color::PixelFormat::new(lienzo_color::ColorMode::Grayscale, depth, false), &[1.0]);
             m
         });
         if let Some(shown) = shown {
             // Past the canvas the pixel mask keeps its own (density-applied) default, as below.
             let d = mask.surface.default_pixel().first().copied().unwrap_or(1.0);
-            let mut surface = photocraft_raster::Surface::with_default(mask.surface.format(), &[1.0 - mask.density * (1.0 - d)]);
+            let mut surface = lienzo_raster::Surface::with_default(mask.surface.format(), &[1.0 - mask.density * (1.0 - d)]);
             surface.write_region(area, &shown.read_region(area));
             surface.prune();
             (mask.surface, mask.feather, mask.density) = (surface, 0.0, 1.0);

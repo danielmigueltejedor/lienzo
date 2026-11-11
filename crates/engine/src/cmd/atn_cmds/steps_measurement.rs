@@ -50,7 +50,7 @@ fn recorded(d: &Descriptor) -> Option<Scale> {
     (*pixels > 0 && logical.is_finite() && *logical > 0.0 && !units.trim().is_empty()).then_some(Scale { pixels: *pixels, logical: *logical, units })
 }
 
-/// The descriptor a step recorded in PhotoCraft saves as; `T   ` takes the property's class.
+/// The descriptor a step recorded in Lienzo saves as; `T   ` takes the property's class.
 fn canonical(scale: &Scale) -> Descriptor {
     let t = desc("measurementScale")
         .with("pixelLength", D::Integer(scale.pixels))
@@ -64,7 +64,7 @@ pub(super) fn from(d: &Descriptor) -> Mapped {
     let Some(scale) = recorded(d) else { return Mapped::Unsupported { harmless: false } };
     let mut p = json!({"preset": "custom", "pixelLength": scale.pixels, "logicalLength": scale.logical, "units": scale.units});
     if *d != canonical(&scale) {
-        p[SOURCE] = photocraft_paint::tile::b64_encode(&d.to_bytes()).into();
+        p[SOURCE] = lienzo_paint::tile::b64_encode(&d.to_bytes()).into();
     }
     step(SET_SCALE, p)
 }
@@ -93,7 +93,7 @@ fn native(p: &Value) -> Option<Scale> {
 pub(super) fn to(p: &Value) -> Option<Descriptor> {
     let scale = native(p)?;
     let source = jstr(p, SOURCE)
-        .and_then(photocraft_paint::tile::b64_decode)
+        .and_then(lienzo_paint::tile::b64_decode)
         .and_then(|bytes| Descriptor::from_bytes(&bytes).ok())
         .filter(|d| recorded(d).as_ref() == Some(&scale));
     Some(source.unwrap_or_else(|| canonical(&scale)))

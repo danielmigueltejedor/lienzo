@@ -1725,7 +1725,7 @@ cameraRaw	Shadows	Vùng tối
 	Leave as is (don't color manage)	Giữ nguyên (không quản lý màu)
 	Discard the embedded profile (don't color manage)	Bỏ hồ sơ nhúng (không quản lý màu)
 	Native file drag-and-drop is unavailable	Kéo thả tệp gốc không khả dụng
-	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= photocraft`.	Kéo thả tệp gốc chưa được hỗ trợ trên Wayland. Dùng Tệp › Mở, hoặc chạy Lienzo dưới XWayland với `WAYLAND_DISPLAY= photocraft`.
+	Native file drag-and-drop is not supported on Wayland yet. Use File › Open, or run Lienzo under XWayland with `WAYLAND_DISPLAY= lienzo`.	Kéo thả tệp gốc chưa được hỗ trợ trên Wayland. Dùng Tệp › Mở, hoặc chạy Lienzo dưới XWayland với `WAYLAND_DISPLAY= lienzo`.
 	Switched to CPU rendering	Đã chuyển sang kết xuất CPU
 	GPU acceleration could not continue. Your documents are unchanged.	Không thể tiếp tục tăng tốc GPU. Tài liệu của bạn không đổi.
 	Lienzo is using the CPU image compositor. The window may still use your graphics adapter.	Lienzo đang dùng bộ kết hợp ảnh CPU. Cửa sổ vẫn có thể dùng bộ điều hợp đồ họa của bạn.

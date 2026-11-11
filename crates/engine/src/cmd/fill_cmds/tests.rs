@@ -21,7 +21,7 @@ fn close(a: [f32; 4], b: [f32; 4]) -> bool {
 fn history_fill_reads_only_the_selection_inside_the_canvas() {
     let mut s = session();
     s.edit("selection", |doc, _| {
-        let mut selection = Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let mut selection = Surface::new(lienzo_color::PixelFormat::GRAY8);
         selection.write_pixel(-2_000_000_000, -2_000_000_000, &[1.0]);
         selection.write_pixel(4, 4, &[1.0]);
         doc.selection = Some(selection);
@@ -155,7 +155,7 @@ fn history_fill_refuses_a_locked_destination_when_source_is_unlocked() {
     assert!(close(px(&s, 8, 8), [1.0, 0.0, 0.0, 1.0]), "{:?}", px(&s, 8, 8));
 }
 
-/// `cargo test -p photocraft-engine --release --lib fill_cmds::tests::timing_24mp -- --ignored --nocapture`
+/// `cargo test -p lienzo-engine --release --lib fill_cmds::tests::timing_24mp -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn timing_24mp() {
@@ -223,8 +223,8 @@ fn huge_selection(size: (u32, u32), rects: &[Rect]) -> Session {
     s.execute(CMD, json!({"contents": "color", "color": "#336699"})).unwrap();
     let st = s.active_mut().unwrap();
     let doc = std::sync::Arc::make_mut(&mut st.doc);
-    doc.size = photocraft_geom::Size::new(size.0, size.1);
-    let mut sel = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    doc.size = lienzo_geom::Size::new(size.0, size.1);
+    let mut sel = Surface::new(lienzo_color::PixelFormat::GRAY8);
     for r in rects {
         sel.fill_rect(*r, &[1.0]);
     }
@@ -298,7 +298,7 @@ fn unselected_tiles_stay_shared() {
         let before = surf(&s);
         s.execute(cmd, params).unwrap();
         let after = surf(&s);
-        let corners = [photocraft_geom::Rect::new(0, 0, 256, 256), photocraft_geom::Rect::new(768, 768, 1024, 1024)];
+        let corners = [lienzo_geom::Rect::new(0, 0, 256, 256), lienzo_geom::Rect::new(768, 768, 1024, 1024)];
         let mut kept = 0;
         for (c, t) in before.tiles() {
             if corners.iter().all(|r| c.rect().intersect(r).is_empty()) {

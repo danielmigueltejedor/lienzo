@@ -1,10 +1,10 @@
 //! End-to-end timing of `edit.contentAwareScale` (perf scenario P28, #211) without the UI: a
 //! synthetic 24 MP RGB photo opened from JPEG like `perf_scenarios`' (gradients, soft blobs, fine
 //! noise and a high-contrast disc), scaled to 90 % width, undone between runs.
-//! `cargo run --release -p photocraft-engine --example bench_content_aware_scale [reps] [width height]`
+//! `cargo run --release -p lienzo-engine --example bench_content_aware_scale [reps] [width height]`
 use std::time::Instant;
 
-use photocraft_engine::Session;
+use lienzo_engine::Session;
 use serde_json::json;
 
 fn photo_jpeg(w: u32, h: u32) -> Result<Vec<u8>, String> {
@@ -23,9 +23,8 @@ fn photo_jpeg(w: u32, h: u32) -> Result<Vec<u8>, String> {
             }
         }
     }
-    let img =
-        photocraft_codecs::Image::from_raw(w, h, photocraft_codecs::ChannelLayout::Rgb, photocraft_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
-    photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())
+    let img = lienzo_codecs::Image::from_raw(w, h, lienzo_codecs::ChannelLayout::Rgb, lienzo_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
+    lienzo_codecs::encode(&img, lienzo_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())
 }
 
 fn main() -> Result<(), String> {
@@ -33,7 +32,7 @@ fn main() -> Result<(), String> {
     let num = |i: usize, d: u32| args.get(i).and_then(|v| v.parse::<u32>().ok()).unwrap_or(d);
     let (reps, w, h) = (num(1, 3).clamp(1, 20) as usize, num(2, 6000).clamp(16, 20_000), num(3, 4000).clamp(16, 20_000));
     let jpeg = photo_jpeg(w, h)?;
-    let doc = photocraft_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
+    let doc = lienzo_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
     let mut s = Session::new();
     s.open_document(doc, Some("photo.jpg".into()));
     let mut times = Vec::with_capacity(reps);

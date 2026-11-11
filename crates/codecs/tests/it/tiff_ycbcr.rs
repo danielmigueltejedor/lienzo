@@ -4,7 +4,7 @@
 
 use crate::common::sample_icc;
 use crate::common::tiffgen::*;
-use photocraft_codecs::*;
+use lienzo_codecs::*;
 
 const COMPRESSION: u16 = 259;
 const SUBSAMPLING: u16 = 530;

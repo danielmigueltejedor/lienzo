@@ -1,20 +1,20 @@
 use super::*;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> LienzoApp {
+    let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn layer_blend(app: &PhotocraftApp) -> BlendMode {
+fn layer_blend(app: &LienzoApp) -> BlendMode {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().blend
 }
 
 /// Feeds one key press with `modifiers` through the app's shortcut handling.
-fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: egui::Modifiers) {
+fn key(app: &mut LienzoApp, ctx: &egui::Context, key: Key, modifiers: egui::Modifiers) {
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
         ..Default::default()
@@ -33,7 +33,7 @@ fn german_shift_plus_and_minus_step_the_mode_and_us_shift_bracket_keeps_the_hard
     let mut a = app(Tool::Brush);
     a.session.tools.brush.hardness = 0.5;
     let shift = egui::Modifiers::SHIFT;
-    let typed = |a: &mut PhotocraftApp, key: Key, physical_key: Key, text: &str| {
+    let typed = |a: &mut LienzoApp, key: Key, physical_key: Key, text: &str| {
         let press = egui::Event::Key { key, physical_key: Some(physical_key), pressed: true, repeat: false, modifiers: shift };
         let raw = egui::RawInput { events: vec![egui::Event::ModifiersChanged(shift), press, egui::Event::Text(text.into())], ..Default::default() };
         ctx.begin_pass(raw);
@@ -88,12 +88,12 @@ fn shift_plus_and_minus_step_the_layer_or_the_brush_mode() {
     a.run("layer.select", json!({"layer": bg.0})).unwrap();
     key(&mut a, &ctx, Key::Plus, egui::Modifiers::SHIFT);
     assert_eq!(a.session.active().unwrap().doc.layers[0].blend, BlendMode::Normal);
-    let mut none = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut none = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     press(&mut none, 1);
 }
 
 /// Feeds one ⇧⌥ press of `key`, reported by the platform as `physical` too.
-fn alt_shift(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, physical: Key) {
+fn alt_shift(app: &mut LienzoApp, ctx: &egui::Context, key: Key, physical: Key) {
     let m = egui::Modifiers::SHIFT | egui::Modifiers::ALT;
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(m), egui::Event::Key { key, physical_key: Some(physical), pressed: true, repeat: false, modifiers: m }],
@@ -104,7 +104,7 @@ fn alt_shift(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, physical: K
     ctx.end_pass().textures_delta.clear();
 }
 
-fn blend_of(app: &PhotocraftApp, i: usize) -> BlendMode {
+fn blend_of(app: &LienzoApp, i: usize) -> BlendMode {
     app.session.active().unwrap().doc.layers[i].blend
 }
 
@@ -241,7 +241,7 @@ fn gradient_takes_the_letters_and_smudge_ignores_them() {
     alt_shift(&mut a, &ctx, Key::M, Key::M);
     assert_eq!(layer_blend(&a), BlendMode::Normal);
     assert_eq!(a.ui.tool, Tool::Smudge);
-    let mut none = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut none = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     pick_mode(&mut none, Pick::Mode(BlendMode::Multiply));
 }
 
@@ -261,7 +261,7 @@ fn keys_follow_the_tool_while_a_transform_is_open_and_a_warp_keeps_them() {
     crate::transform_tool::begin(&mut a, &ctx).unwrap();
     crate::transform_tool::nudge(&mut a, 3.0, 0.0);
     let shift_alt = egui::Modifiers::SHIFT | egui::Modifiers::ALT;
-    let opacity = |a: &PhotocraftApp| {
+    let opacity = |a: &LienzoApp| {
         let st = a.session.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().opacity
     };
@@ -341,7 +341,7 @@ fn clone_stamp_pattern_stamp_and_history_brush_take_the_keys_into_their_own_brus
     assert_eq!(tool_mode(&mut a), Some(BlendMode::Multiply), "the Brush keeps its own mode");
 }
 
-fn key_press(a: &mut PhotocraftApp, ctx: &egui::Context, step: i32) {
+fn key_press(a: &mut LienzoApp, ctx: &egui::Context, step: i32) {
     key(a, ctx, if step > 0 { Key::Plus } else { Key::Minus }, egui::Modifiers::SHIFT);
 }
 

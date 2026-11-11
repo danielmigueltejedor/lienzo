@@ -1,12 +1,12 @@
-//! A guide dialog's draft. Rendering and command validation stay in PhotoCraft; the
+//! A guide dialog's draft. Rendering and command validation stay in Lienzo; the
 //! [`edit_session`](crate::edit_session) module owns proposal validity, stale-context rejection
 //! and the single-use/no-op commit decision.
 use crate::edit_session::{EditSession, FinishError};
-use photocraft_doc::{DocId, Document, Guides};
-use photocraft_engine::prefs::{PointSize, Unit};
+use lienzo_doc::{DocId, Document, Guides};
+use lienzo_engine::prefs::{PointSize, Unit};
 use serde_json::{Map, Value};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Guide {
@@ -35,7 +35,7 @@ pub(crate) struct Draft {
 }
 
 /// Identity, revision, units and lock state that must still match at confirmation.
-fn context(app: &PhotocraftApp) -> Option<Context> {
+fn context(app: &LienzoApp) -> Option<Context> {
     let st = app.session.active()?;
     let units = &app.session.prefs().units_and_rulers;
     Some(Context { doc: st.doc.id, revision: st.revision, rulers: units.rulers, points: units.point_size, locked: app.ui.extras.lock_guides })
@@ -58,7 +58,7 @@ fn target(f: &Value) -> Option<(bool, usize)> {
 }
 
 /// Capture the original target and context, retiring any previous guide dialog.
-pub(crate) fn begin(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String, Value>) -> Result<(), String> {
+pub(crate) fn begin(app: &mut LienzoApp, dialog: u64, fields: &Map<String, Value>) -> Result<(), String> {
     let target_value = fields.get("__edit").ok_or("missing guide target")?;
     let (vertical, index) = target(target_value).ok_or("invalid guide target")?;
     let st = app.session.active().ok_or("no document")?;
@@ -81,23 +81,23 @@ pub(crate) fn begin(app: &mut PhotocraftApp, dialog: u64, fields: &Map<String, V
 }
 
 /// Read the live target for comparison with the draft's original context.
-fn current(app: &PhotocraftApp, draft: &Draft) -> Option<(Guide, Context)> {
+fn current(app: &LienzoApp, draft: &Draft) -> Option<(Guide, Context)> {
     let (vertical, index) = target(&draft.target)?;
     Some((guide(&app.session.active()?.doc.guides, vertical, index)?, context(app)?))
 }
 
 /// Invalid text remains editable; a changed target or context requires a new draft.
-fn stale(app: &PhotocraftApp, draft: &Draft) -> bool {
+fn stale(app: &LienzoApp, draft: &Draft) -> bool {
     current(app, draft).is_none_or(|(live, ctx)| !matches!(draft.edit.check(&live, &ctx), Ok(()) | Err(FinishError::InvalidProposal)))
 }
 
 /// Allow retry only while the retained draft still belongs to the same live guide.
-pub(crate) fn retryable(app: &PhotocraftApp) -> bool {
+pub(crate) fn retryable(app: &LienzoApp) -> bool {
     app.guide_edit.as_ref().is_some_and(|d| !stale(app, d))
 }
 
 /// Validate changed parameters on a COW document, retaining the last valid preview on error.
-fn prepare(app: &PhotocraftApp, draft: &mut Draft, fields: &Map<String, Value>) -> Result<(), String> {
+fn prepare(app: &LienzoApp, draft: &mut Draft, fields: &Map<String, Value>) -> Result<(), String> {
     if stale(app, draft) || fields.get("__edit") != Some(&draft.target) {
         return Err("The document or guide changed. Reopen Edit Selected Guides.".into());
     }
@@ -117,7 +117,7 @@ fn prepare(app: &PhotocraftApp, draft: &mut Draft, fields: &Map<String, Value>) 
     let st = app.session.active().ok_or("no document")?;
     // A cheap COW document on parameter changes only. The existing engine owns units,
     // validation, colour inheritance and turning a guide into the other orientation.
-    let mut preview = photocraft_engine::Session::new();
+    let mut preview = lienzo_engine::Session::new();
     preview.prefs = app.session.prefs.clone();
     preview.add_document((*st.doc).clone(), None);
     let result = preview.execute("view.editGuide", params.clone()).map_err(|e| e.to_string()).and_then(|_| {
@@ -134,7 +134,7 @@ fn prepare(app: &PhotocraftApp, draft: &mut Draft, fields: &Map<String, Value>) 
 }
 
 /// Keep the draft and its validation message available after either valid or invalid input.
-pub(crate) fn update(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<(), String> {
+pub(crate) fn update(app: &mut LienzoApp, fields: &Map<String, Value>) -> Result<(), String> {
     let mut draft = app.guide_edit.take().ok_or("Reopen Edit Selected Guides to start an edit.")?;
     let result = prepare(app, &mut draft, fields);
     draft.error = result.as_ref().err().cloned();
@@ -144,7 +144,7 @@ pub(crate) fn update(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Re
 
 /// Commit once through the ordinary command path; a no-op preserves Redo.
 /// A command refusal restores the proposal against its original context for a guarded retry.
-pub(crate) fn finish(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Option<(Value, Value)>, String> {
+pub(crate) fn finish(app: &mut LienzoApp, fields: &Map<String, Value>) -> Result<Option<(Value, Value)>, String> {
     update(app, fields)?;
     let mut draft = app.guide_edit.take().ok_or("no guide draft")?;
     let (live, ctx) = current(app, &draft).ok_or("the guide is gone")?;
@@ -165,7 +165,7 @@ pub(crate) fn finish(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Re
 }
 
 /// Discard only the draft owned by the closing dialog, without touching history.
-pub(crate) fn cancel(app: &mut PhotocraftApp, id: u64) {
+pub(crate) fn cancel(app: &mut LienzoApp, id: u64) {
     if app.guide_edit.as_ref().is_some_and(|d| d.dialog == id)
         && let Some(draft) = app.guide_edit.take()
     {
@@ -174,7 +174,7 @@ pub(crate) fn cancel(app: &mut PhotocraftApp, id: u64) {
 }
 
 /// Refresh after dialog fields change, and drop drafts whose dialog has gone away.
-pub(crate) fn sync(app: &mut PhotocraftApp) -> bool {
+pub(crate) fn sync(app: &mut LienzoApp) -> bool {
     let Some(id) = app.guide_edit.as_ref().map(|d| d.dialog) else { return false };
     let Some(fields) = app.ui.dialogs.iter().find(|d| d.id == id).map(|d| d.fields.clone()) else {
         cancel(app, id);
@@ -199,7 +199,7 @@ pub(crate) fn sync(app: &mut PhotocraftApp) -> bool {
 }
 
 /// Expose the last valid preview only for its unchanged document and still-open dialog.
-pub(crate) fn preview<'a>(app: &'a PhotocraftApp, doc: &Document) -> Option<&'a Guides> {
+pub(crate) fn preview<'a>(app: &'a LienzoApp, doc: &Document) -> Option<&'a Guides> {
     let draft = app.guide_edit.as_ref()?;
     if draft.edit.context().doc != doc.id || stale(app, draft) || !app.ui.dialogs.iter().any(|d| d.id == draft.dialog) {
         return None;

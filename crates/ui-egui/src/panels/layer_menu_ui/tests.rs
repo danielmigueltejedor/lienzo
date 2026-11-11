@@ -2,12 +2,12 @@ use super::*;
 
 #[test]
 fn mask_toggle_label_follows_history_and_selected_layer() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
-    let mut app = crate::PhotocraftApp::new(s, Default::default());
+    let mut app = crate::LienzoApp::new(s, Default::default());
     let toggle = "layer.layerMask.enabled";
-    let check = |app: &crate::PhotocraftApp, label: Option<&str>| {
+    let check = |app: &crate::LienzoApp, label: Option<&str>| {
         let st = app.session.active().unwrap();
         let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
         let entry = entries(l, false, st.doc.selection.is_some()).into_iter().flatten().find(|e| e.1 == toggle);
@@ -18,7 +18,7 @@ fn mask_toggle_label_follows_history_and_selected_layer() {
         assert_eq!(item.enabled, label.is_some());
         assert_eq!(item.label, label.unwrap_or("Enable Layer Mask"));
         for lang in [crate::i18n::Lang::EN, crate::i18n::Lang::from_pref("fr")] {
-            let layout = crate::native_menu::photocraft_layout(&crate::menus::menu_items(app), lang, lang.code());
+            let layout = crate::native_menu::lienzo_layout(&crate::menus::menu_items(app), lang, lang.code());
             let native = layout.bar.find(toggle).unwrap();
             assert_eq!(native.label, crate::i18n::tr(lang, &item.label));
             assert_eq!(native.enabled, item.enabled);
@@ -44,7 +44,7 @@ fn mask_toggle_label_follows_history_and_selected_layer() {
     check(&app, Some("Enable Layer Mask"));
     app.session.active_mut().unwrap().active_layer = None;
     assert!(!crate::menus::is_enabled(&app, toggle));
-    let empty = crate::PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let empty = crate::LienzoApp::new(lienzo_engine::Session::new(), Default::default());
     assert!(!crate::menus::is_enabled(&empty, toggle));
 }
 
@@ -55,7 +55,7 @@ fn mask_toggle_context_menu_follows_the_clicked_layer_and_existing_translations(
     for language in ["en", "fr"] {
         let lang = crate::i18n::Lang::from_pref(language);
         let _language = crate::i18n::language_scope(lang);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
         s.execute("layer.layerMask.revealAll", json!({})).unwrap();
@@ -64,7 +64,7 @@ fn mask_toggle_context_menu_follows_the_clicked_layer_and_existing_translations(
         let other = s.active().unwrap().active_layer.unwrap();
         s.execute("layer.layerMask.revealAll", json!({})).unwrap();
         s.execute("layer.layerMask.enabled", json!({})).unwrap();
-        let app = crate::PhotocraftApp::new(s, Default::default());
+        let app = crate::LienzoApp::new(s, Default::default());
         // `other` stays the active layer with its mask disabled; the menu is opened over `clicked`,
         // whose mask is enabled, and selects it first (a single-layer menu).
         let mut h = Harness::builder().with_size(egui::vec2(400.0, 900.0)).build_ui_state(
@@ -97,7 +97,7 @@ fn mask_toggle_context_menu_follows_the_clicked_layer_and_existing_translations(
 /// offers Add Layer Mask only, whatever the clicked layer has, and does not hit the active layer.
 #[test]
 fn multi_selection_menu_has_no_per_layer_mask_items() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("layer.layerMask.revealAll", json!({})).unwrap();
@@ -112,11 +112,11 @@ fn multi_selection_menu_has_no_per_layer_mask_items() {
 
 #[test]
 fn smart_object_context_menu_edits_the_clicked_layer() {
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
     use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
     use egui_kittest::{Harness, kittest::Queryable};
 
-    fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, button: PointerButton) {
+    fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2, button: PointerButton) {
         h.hover_at(at);
         h.step();
         for pressed in [true, false] {
@@ -127,7 +127,7 @@ fn smart_object_context_menu_edits_the_clicked_layer() {
     }
 
     for ppp in [1.0, 2.0] {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 640, "height": 480})).unwrap();
         s.execute("layer.new.layer", json!({"name": "Smart source"})).unwrap();
         s.execute("paint.stroke", json!({"points": [[100, 100]], "size": 20})).unwrap();
@@ -135,8 +135,8 @@ fn smart_object_context_menu_edits_the_clicked_layer() {
         s.execute("layer.new.layer", json!({"name": "Other active layer"})).unwrap();
         let mut h =
             Harness::builder().with_size(vec2(1440.0, 900.0)).with_pixels_per_point(ppp).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-                PhotocraftApp::new(s, crate::Services::default())
+                LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+                LienzoApp::new(s, crate::Services::default())
             });
         let ctx = h.ctx.clone();
         let (req, _rx) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -152,7 +152,7 @@ fn smart_object_context_menu_edits_the_clicked_layer() {
         assert!(h.state().session.is_enabled("layer.smartObjects.saveContents"));
         assert!(h.state().session.active().unwrap().doc.walk().iter().any(|(_, _, l)| l.name == "Smart source"));
         h.state_mut().session.set_active(0);
-        assert_eq!(h.state().session.active().unwrap().active_layer, Some(photocraft_doc::LayerId(smart)));
+        assert_eq!(h.state().session.active().unwrap().active_layer, Some(lienzo_doc::LayerId(smart)));
     }
 }
 
@@ -160,11 +160,11 @@ fn smart_object_context_menu_edits_the_clicked_layer() {
 /// menu, and its selection items load the clicked layer's mask (not the active layer's).
 #[test]
 fn mask_thumbnail_context_menu_acts_on_the_clicked_mask() {
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
     use egui::{Event, Modifiers, PointerButton, Pos2, vec2};
     use egui_kittest::{Harness, kittest::Queryable};
 
-    fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, button: PointerButton) {
+    fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2, button: PointerButton) {
         h.hover_at(at);
         h.step();
         for pressed in [true, false] {
@@ -174,7 +174,7 @@ fn mask_thumbnail_context_menu_acts_on_the_clicked_mask() {
         h.run_steps(3);
     }
 
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 100, "height": 60})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Masked"})).unwrap();
     s.execute("select.rect", json!({"x": 60, "y": 0, "width": 40, "height": 60})).unwrap();
@@ -184,8 +184,8 @@ fn mask_thumbnail_context_menu_acts_on_the_clicked_mask() {
     s.execute("layer.new.layer", json!({"name": "Other active layer"})).unwrap();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 60})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (req, _rx) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
@@ -221,16 +221,16 @@ fn mask_thumbnail_context_menu_acts_on_the_clicked_mask() {
 
 #[test]
 fn a_long_layer_menu_stays_inside_a_short_window_and_scrolls() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 32, "height": 24})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Paint"})).unwrap();
-    let app = crate::PhotocraftApp::new(s, crate::Services::default());
+    let app = crate::LienzoApp::new(s, crate::Services::default());
     let layer = {
         let st = app.session.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().clone()
     };
     let ctx = egui::Context::default();
-    crate::PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+    crate::LienzoApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
     let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 300.0));
     let id = egui::Id::unique("layer-menu-probe");
     let mut content = 0.0;
@@ -258,10 +258,10 @@ fn a_long_layer_menu_stays_inside_a_short_window_and_scrolls() {
 
 #[test]
 fn edit_contents_is_available_only_for_smart_objects() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 32, "height": 24})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Source"})).unwrap();
-    let layer = |s: &photocraft_engine::Session| {
+    let layer = |s: &lienzo_engine::Session| {
         let st = s.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().clone()
     };
@@ -287,10 +287,10 @@ fn edit_contents_is_available_only_for_smart_objects() {
 /// to Shape from it turns the text into a shape layer.
 #[test]
 fn type_layer_menu_converts_to_shape() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     s.execute("type.create", json!({"text": "Hi", "size": 24, "x": 8, "y": 32})).unwrap();
-    let layer = |s: &photocraft_engine::Session| {
+    let layer = |s: &lienzo_engine::Session| {
         let st = s.active().unwrap();
         st.doc.layer(st.active_layer.unwrap()).unwrap().clone()
     };
@@ -306,7 +306,7 @@ fn type_layer_menu_converts_to_shape() {
 /// selection, whatever kind the clicked layer is, and no single-layer Smart Object items.
 #[test]
 fn multi_selection_menu_rasterizes_the_selection() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 32, "height": 24})).unwrap();
     s.execute("layer.new.layer", json!({"name": "Source"})).unwrap();
     s.execute("paint.stroke", json!({"points": [[12, 12]], "size": 8})).unwrap();
@@ -333,7 +333,7 @@ fn multi_selection_menu_rasterizes_the_selection() {
     assert_eq!(label, "Rasterize Layers");
 }
 
-fn click(h: &mut egui_kittest::Harness<'_, crate::PhotocraftApp>, at: egui::Pos2, button: egui::PointerButton) {
+fn click(h: &mut egui_kittest::Harness<'_, crate::LienzoApp>, at: egui::Pos2, button: egui::PointerButton) {
     h.hover_at(at);
     h.step();
     for pressed in [true, false] {
@@ -346,11 +346,11 @@ fn click(h: &mut egui_kittest::Harness<'_, crate::PhotocraftApp>, at: egui::Pos2
 /// A type layer, an ellipse and a rectangle; the type layer and the ellipse are selected (the
 /// ellipse active), the rectangle stays out. The Layers menu is opened by right-clicking the
 /// type row, which is selected but not the active layer. Returns `[type, ellipse, rectangle]`.
-fn open_multi_selection_menu() -> (egui_kittest::Harness<'static, crate::PhotocraftApp>, [u64; 3]) {
-    use crate::PhotocraftApp;
+fn open_multi_selection_menu() -> (egui_kittest::Harness<'static, crate::LienzoApp>, [u64; 3]) {
+    use crate::LienzoApp;
     use egui::{PointerButton, pos2, vec2};
 
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 640, "height": 480})).unwrap();
     let text = s.execute("type.create", json!({"text": "Hi", "size": 24, "x": 20, "y": 60})).unwrap()["layer"].as_u64().unwrap();
     let shape = s.execute("shape.create", json!({"kind": "ellipse", "rect": [100, 100, 200, 160]})).unwrap()["layer"].as_u64().unwrap();
@@ -360,8 +360,8 @@ fn open_multi_selection_menu() -> (egui_kittest::Harness<'static, crate::Photocr
     let mut h =
         egui_kittest::Harness::builder().with_size(vec2(1440.0, 900.0)).with_pixels_per_point(1.0).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(
             move |cc| {
-                PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-                PhotocraftApp::new(s, crate::Services::default())
+                LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+                LienzoApp::new(s, crate::Services::default())
             },
         );
     let ctx = h.ctx.clone();
@@ -382,7 +382,7 @@ fn rasterize_from_the_menu_converts_every_selected_layer() {
     let at = h.get_by_label("Rasterize Layers").rect().center();
     click(&mut h, at, egui::PointerButton::Primary);
     let doc = &h.state().session.active().unwrap().doc;
-    let raster = |id: u64| matches!(doc.layer(photocraft_doc::LayerId(id)).unwrap().content, photocraft_doc::LayerContent::Raster(_));
+    let raster = |id: u64| matches!(doc.layer(lienzo_doc::LayerId(id)).unwrap().content, lienzo_doc::LayerContent::Raster(_));
     assert!(raster(text) && raster(shape), "both selected layers are rasterized");
     assert!(!raster(other), "an unselected layer is left alone");
     assert_eq!(h.state().session.active().unwrap().selected_layers().len(), 2, "the selection survives");
@@ -394,7 +394,7 @@ fn rasterize_from_the_menu_converts_every_selected_layer() {
 #[test]
 fn group_from_layers_groups_every_selected_layer() {
     use egui_kittest::kittest::Queryable;
-    use photocraft_doc::LayerId;
+    use lienzo_doc::LayerId;
     let (mut h, [text, shape, other]) = open_multi_selection_menu();
     let at = h.get_by_label("Group from Layers…").rect().center();
     click(&mut h, at, egui::PointerButton::Primary);
@@ -472,7 +472,7 @@ fn single_layer_only_covers_the_per_layer_commands() {
     ] {
         assert!(!single_layer_only(id), "{id}");
     }
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("layer.layerMask.revealAll", json!({})).unwrap();
@@ -484,7 +484,7 @@ fn single_layer_only_covers_the_per_layer_commands() {
 
 #[test]
 fn entries_follow_layer_state() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     let st = s.active().unwrap();
@@ -503,7 +503,7 @@ fn entries_follow_layer_state() {
 /// merges the group itself (not into the layer below), and it is enabled.
 #[test]
 fn a_group_offers_merge_group() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("layer.groupLayers", json!({"name": "G"})).unwrap();
@@ -512,7 +512,7 @@ fn a_group_offers_merge_group() {
     let e: Vec<(&str, &str)> = entries(&g, false, false).into_iter().flatten().collect();
     assert!(e.contains(&("Merge Group", "layer.mergeGroup")), "{e:?}");
     assert!(!e.iter().any(|x| x.0 == "Merge Down"));
-    let mut app = crate::PhotocraftApp::new(s, Default::default());
+    let mut app = crate::LienzoApp::new(s, Default::default());
     app.sync_views();
     let items = crate::menus::menu_items(&app);
     let item = items.iter().find(|i| i.id == "layer.mergeLayers").unwrap();
@@ -530,7 +530,7 @@ fn add_mask_uses_the_selection() {
     assert_eq!(add_mask_command(false, true), "layer.layerMask.hideAll");
     assert_eq!(add_mask_command(true, true), "layer.layerMask.hideSelection");
     // With a selection the new mask is the selection: inside revealed, outside hidden.
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 4, "height": 10})).unwrap();
@@ -546,10 +546,10 @@ fn add_mask_uses_the_selection() {
 #[test]
 fn mask_button_never_replaces_a_mask() {
     for alt in [false, true] {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = lienzo_engine::Session::new();
         s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
         s.execute("layer.new.layer", json!({})).unwrap();
-        let layer = |s: &photocraft_engine::Session| {
+        let layer = |s: &lienzo_engine::Session| {
             let st = s.active().unwrap();
             st.doc.layer(st.active_layer.unwrap()).unwrap().clone()
         };
@@ -558,9 +558,9 @@ fn mask_button_never_replaces_a_mask() {
         s.execute(first, json!({})).unwrap();
         // Paint a stroke into the mask.
         s.edit("paint mask", |doc, active| {
-            let id = (*active).ok_or(photocraft_engine::EngineError::NoDocument)?;
-            let m = doc.layer_mut(id).and_then(|l| l.mask.as_mut()).ok_or(photocraft_engine::EngineError::NoDocument)?;
-            m.surface.fill_rect(photocraft_geom::Rect::new(2, 2, 5, 5), &[0.5]);
+            let id = (*active).ok_or(lienzo_engine::EngineError::NoDocument)?;
+            let m = doc.layer_mut(id).and_then(|l| l.mask.as_mut()).ok_or(lienzo_engine::EngineError::NoDocument)?;
+            m.surface.fill_rect(lienzo_geom::Rect::new(2, 2, 5, 5), &[0.5]);
             Ok(())
         })
         .unwrap();
@@ -581,7 +581,7 @@ fn mask_button_never_replaces_a_mask() {
     // No layer: nothing to do.
     assert_eq!(mask_button_command(None, false, false), None);
     // A shape layer's path is already its vector mask: after the layer mask, nothing more.
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     s.execute("shape.create", json!({"kind": "rect", "rect": [0, 0, 5, 5]})).unwrap();
     s.execute("layer.layerMask.revealAll", json!({})).unwrap();
@@ -592,11 +592,11 @@ fn mask_button_never_replaces_a_mask() {
 
 #[test]
 fn every_entry_is_a_known_command() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 10, "height": 10})).unwrap();
     let l = s.active().unwrap().doc.layers[0].clone();
     for (_, id) in entries(&l, false, true).into_iter().chain(entries(&l, false, false)).chain(entries(&l, true, false)).chain(effects_entries()).flatten() {
-        assert!(crate::menu_catalog::CATALOG.iter().any(|m| m.3 == id) || photocraft_engine::commands::find(id).is_some(), "{id}");
+        assert!(crate::menu_catalog::CATALOG.iter().any(|m| m.3 == id) || lienzo_engine::commands::find(id).is_some(), "{id}");
     }
 }
 
@@ -605,11 +605,11 @@ fn every_entry_is_a_known_command() {
 /// thumbnail, with no transparency to load, keeps the layer menu.
 #[test]
 fn layer_thumbnail_context_menu_selects_the_clicked_layers_pixels() {
-    use crate::PhotocraftApp;
+    use crate::LienzoApp;
     use egui::{Event, Modifiers, PointerButton, Pos2, vec2};
     use egui_kittest::{Harness, kittest::Queryable};
 
-    fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, button: PointerButton) {
+    fn click(h: &mut Harness<'_, LienzoApp>, at: Pos2, button: PointerButton) {
         h.hover_at(at);
         h.step();
         for pressed in [true, false] {
@@ -619,7 +619,7 @@ fn layer_thumbnail_context_menu_selects_the_clicked_layers_pixels() {
         h.run_steps(3);
     }
 
-    let mut s = photocraft_engine::Session::new();
+    let mut s = lienzo_engine::Session::new();
     s.execute("file.new", json!({"width": 100, "height": 60})).unwrap();
     let background = s.active().unwrap().active_layer.unwrap();
     s.execute("layer.new.layer", json!({"name": "Painted"})).unwrap();
@@ -630,14 +630,14 @@ fn layer_thumbnail_context_menu_selects_the_clicked_layers_pixels() {
     s.execute("layer.new.layer", json!({"name": "Other active layer"})).unwrap();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 60})).unwrap();
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
+        LienzoApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (req, _rx) = crate::control::ControlRequest::new("ui.set", json!({"dock": {"collapsed": ["color", "properties", "history", "navigator"]}}));
     crate::control::handle(h.state_mut(), &ctx, &req);
     h.run_steps(8);
-    let thumb = |h: &Harness<'_, PhotocraftApp>, layer: photocraft_doc::LayerId| {
+    let thumb = |h: &Harness<'_, LienzoApp>, layer: lienzo_doc::LayerId| {
         crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == layer.0).and_then(|r| r.thumbnail).expect("thumbnail drawn").center()
     };
 

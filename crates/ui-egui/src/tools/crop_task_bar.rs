@@ -14,7 +14,7 @@
 //! Shown while the Crop tool shows a frame on the active document, Window › Contextual Task Bar
 //! is ticked and no dialog is open.
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ViewXform;
 use crate::crop_ui;
 use crate::state::Tool;
@@ -24,26 +24,26 @@ use crate::widgets::task_bar;
 const STRAIGHTEN_ICON: &str = "ruler";
 
 /// The crop frame on screen: the bounds of its (possibly turned) corners.
-fn frame_on_screen(app: &PhotocraftApp, xf: &ViewXform) -> Option<egui::Rect> {
+fn frame_on_screen(app: &LienzoApp, xf: &ViewXform) -> Option<egui::Rect> {
     let r = app.ui.crop_rect?;
     let pts = crop_ui::corners(r, app.ui.crop_angle).map(|[x, y]| xf.to_screen(x as f32, y as f32));
     Some(egui::Rect::from_points(&pts))
 }
 
 /// The bar shows: the Crop tool with a frame, the Window toggle on, no dialog over the canvas.
-fn wanted(app: &PhotocraftApp) -> bool {
+fn wanted(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && app.ui.panels.context_task_bar && app.ui.dialogs.is_empty() && app.session.active().is_some()
 }
 
 /// Whether the bar can show now: [`wanted`] and a crop frame. `ui.inspect` checks it, so a bar
 /// hidden by `ui.set` before the next draw no longer reports last frame's rect.
-pub fn eligible(app: &PhotocraftApp) -> bool {
+pub fn eligible(app: &LienzoApp) -> bool {
     wanted(app) && app.ui.crop_rect.is_some()
 }
 
 /// Draws the bar under the active document's crop frame (the canvas's overlay pass calls it on
 /// that document's tile).
-pub fn draw(app: &mut PhotocraftApp, ui: &mut egui::Ui, xf: &ViewXform) {
+pub fn draw(app: &mut LienzoApp, ui: &mut egui::Ui, xf: &ViewXform) {
     if !wanted(app) {
         return;
     }
@@ -62,7 +62,7 @@ pub fn draw(app: &mut PhotocraftApp, ui: &mut egui::Ui, xf: &ViewXform) {
 }
 
 /// The Crop tool's controls in the bar.
-fn contents(app: &mut PhotocraftApp, ui: &mut egui::Ui, more: &mut task_bar::MoreMenu) {
+fn contents(app: &mut LienzoApp, ui: &mut egui::Ui, more: &mut task_bar::MoreMenu) {
     // Generative Expand (#41) goes here, before the preset dropdown.
     let before_ratio = crop_ui::preset_ratio(app);
     // Its own id: the options bar shows the same dropdown.

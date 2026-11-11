@@ -31,7 +31,7 @@
 
 use egui::{CursorIcon, Modifiers};
 
-use crate::PhotocraftApp;
+use crate::LienzoApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
@@ -57,7 +57,7 @@ pub struct CropState {
     /// The document (id and size) whose frame [`hide_frame`] hid: no default frame is made for it
     /// while this matches. Keyed by id, not tab index, so closing it never hides the frame of the
     /// tab that takes its place.
-    dismissed: Option<(photocraft_doc::DocId, u32, u32)>,
+    dismissed: Option<(lienzo_doc::DocId, u32, u32)>,
     /// The pending frame [`reset`] left when a W x H x Resolution preset kept it a crop: Reset
     /// stays disabled while the frame is still that one.
     reset_to: Option<[f64; 4]>,
@@ -68,7 +68,7 @@ pub struct CropState {
     /// (`crop_overlay::crop_started`, #10930).
     pub drag_moved: bool,
     /// The document the pending frame (or gesture) belongs to ([`cancel_stale`], #1918).
-    doc: Option<photocraft_doc::DocId>,
+    doc: Option<lienzo_doc::DocId>,
     /// The options-bar Straighten button and ⌘-drag (`crop_straighten`).
     pub straighten: crate::crop_straighten::Straighten,
     /// The box's own Undo/Redo while a crop is pending (Photoshop keeps Edit › Undo live during a
@@ -239,7 +239,7 @@ fn along_diagonal(r: [f64; 4], deg: f64, hx: i8, hy: i8, d: [f64; 2]) -> [f64; 2
 /// frame's diagonal ([`along_diagonal`]); a preset, ⌥ ⇧ and the edge handles keep the
 /// larger-extent rule, and the point is unchanged. The resize, Auto Center Preview and handle
 /// snapping all read the pointer through this, so the handle snaps where it is drawn.
-pub(crate) fn resize_point(app: &PhotocraftApp, rect: [f64; 4], hx: i8, hy: i8, start: [f64; 2], q: [f64; 2], mods: Modifiers) -> [f64; 2] {
+pub(crate) fn resize_point(app: &LienzoApp, rect: [f64; 4], hx: i8, hy: i8, start: [f64; 2], q: [f64; 2], mods: Modifiers) -> [f64; 2] {
     if !(mods.shift && !mods.alt && hx != 0 && hy != 0 && preset_ratio(app).is_none()) {
         return q;
     }
@@ -257,7 +257,7 @@ fn size_ok(r: [f64; 4]) -> bool {
 }
 
 /// The options-bar ratio preset as width / height (W : H in W x H x Resolution mode).
-pub(crate) fn preset_ratio(app: &PhotocraftApp) -> Option<f64> {
+pub(crate) fn preset_ratio(app: &LienzoApp) -> Option<f64> {
     if app.ui.tool_options.crop_ratio == crate::crop_size::WHR {
         let dpi = app.session.active().map_or(72.0, |s| f64::from(s.doc.resolution_dpi));
         let pt_per_in = app.session.prefs().units_and_rulers.point_size.per_inch();
@@ -283,7 +283,7 @@ fn fitted_ratio(r: [f64; 4], ratio: f64) -> Option<[f64; 4]> {
 }
 
 /// Apply committed options to the preview now, before a resize or confirmation is needed.
-pub(crate) fn apply_ratio(app: &mut PhotocraftApp) {
+pub(crate) fn apply_ratio(app: &mut LienzoApp) {
     if app.ui.tool != Tool::Crop || app.crop.drag.is_some() {
         return;
     }
@@ -307,7 +307,7 @@ pub(crate) fn apply_ratio(app: &mut PhotocraftApp) {
 
 /// [`apply_ratio`] for a ratio being typed: fits from `base`, the frame the edit started with,
 /// not from the frame the last keystroke's ratio left (#7752).
-pub(crate) fn apply_ratio_from(app: &mut PhotocraftApp, base: [f64; 4]) {
+pub(crate) fn apply_ratio_from(app: &mut LienzoApp, base: [f64; 4]) {
     if app.ui.tool != Tool::Crop || app.crop.drag.is_some() {
         return;
     }
@@ -320,7 +320,7 @@ pub(crate) fn apply_ratio_from(app: &mut PhotocraftApp, base: [f64; 4]) {
     crate::crop_mode::sync_frame(app);
 }
 
-fn fit_frame(app: &mut PhotocraftApp) {
+fn fit_frame(app: &mut LienzoApp) {
     let dpi = app.session.active().map_or(72.0, |s| f64::from(s.doc.resolution_dpi));
     let pt_per_in = app.session.prefs().units_and_rulers.point_size.per_inch();
     let sized = crate::crop_size::target(&app.ui.tool_options, dpi, pt_per_in).is_some();
@@ -394,7 +394,7 @@ pub fn resized(r: [f64; 4], hx: i8, hy: i8, d: [f64; 2], ratio: Option<f64>, alt
 }
 
 /// Space is held (set by the canvas each frame, or by `ui.pointer`'s `space` flag).
-pub fn set_space(app: &mut PhotocraftApp, down: bool) {
+pub fn set_space(app: &mut LienzoApp, down: bool) {
     app.crop.space = down;
 }
 
@@ -409,7 +409,7 @@ pub fn fill_label(delete_cropped_pixels: bool) -> &'static str {
 /// As in Photoshop, the Crop tool always shows a frame: on picking the tool, and after a crop is
 /// cancelled or committed, it frames the selection's bounds, or the whole canvas. In default mode
 /// the view then follows the frame being edited (`crop_mode::sync`).
-pub fn ensure_frame(app: &mut PhotocraftApp) {
+pub fn ensure_frame(app: &mut LienzoApp) {
     frame(app);
     crate::crop_mode::sync(app, None);
 }
@@ -417,7 +417,7 @@ pub fn ensure_frame(app: &mut PhotocraftApp) {
 /// The frame a new crop starts from: the selection's bounds, or the whole canvas.
 /// The default frame: the selection's bounds, or the whole canvas; and whether it is the
 /// selection's (the preset dropdown's temporary "Selection" entry, #10872).
-fn default_rect(app: &PhotocraftApp) -> Option<([f64; 4], bool)> {
+fn default_rect(app: &LienzoApp) -> Option<([f64; 4], bool)> {
     let st = app.session.active()?;
     let canvas = st.doc.bounds();
     // Computed once per new frame, not per frame drawn.
@@ -427,7 +427,7 @@ fn default_rect(app: &PhotocraftApp) -> Option<([f64; 4], bool)> {
     (!r.is_empty()).then(|| ([f64::from(r.x0), f64::from(r.y0), f64::from(r.x1), f64::from(r.y1)], from_selection))
 }
 
-fn frame(app: &mut PhotocraftApp) {
+fn frame(app: &mut LienzoApp) {
     if app.ui.tool != Tool::Crop {
         app.crop.editing = false;
         crate::crop_straighten::reset(app);
@@ -479,14 +479,14 @@ fn frame(app: &mut PhotocraftApp) {
 /// Another tool is current but the drawn frame stays pending: a gesture on it is still in
 /// progress, or the pen's eraser end stands in for the Crop tool until the tip comes back
 /// (`stylus`). The held tools (Space, ⌘…, `hold_keys`) never change the current tool.
-fn keeps_pending(app: &PhotocraftApp) -> bool {
+fn keeps_pending(app: &LienzoApp) -> bool {
     app.crop.drag.is_some() || app.stylus.tool_before_eraser == Some(Tool::Crop)
 }
 
 /// Commits the drawn frame on leaving the Crop tool as ↵ would with the tool still picked (so the
 /// view goes upright too, `crop_mode::upright`), then gives the new tool back. A refused crop
 /// keeps its frame: that is cancelled, so the new tool doesn't retry it every frame.
-fn commit_on_leave(app: &mut PhotocraftApp) {
+fn commit_on_leave(app: &mut LienzoApp) {
     let tool = std::mem::replace(&mut app.ui.tool, Tool::Crop);
     crate::canvas::commit_crop(app);
     if app.ui.crop_rect.is_some() {
@@ -499,7 +499,7 @@ fn commit_on_leave(app: &mut PhotocraftApp) {
 }
 
 /// A crop gesture is in progress: Space repositions the frame rather than panning.
-pub fn active(app: &PhotocraftApp) -> bool {
+pub fn active(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && app.crop.drag.is_some()
 }
 
@@ -508,7 +508,7 @@ pub fn active(app: &PhotocraftApp) -> bool {
 /// those drive the camera themselves. A new frame's drag that hasn't left the size of a click (a
 /// long press that slipped past the edge) doesn't either: scrolling would draw a frame under the
 /// still pointer.
-pub fn autoscrolls(app: &PhotocraftApp) -> bool {
+pub fn autoscrolls(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop
         && match app.crop.drag {
             Some(CropDrag::Draw { anchor, cur, .. }) => !is_click(app, anchor, cur),
@@ -521,14 +521,14 @@ pub fn autoscrolls(app: &PhotocraftApp) -> bool {
 const CLICK_PX: f64 = 3.0;
 
 /// Document points `a` and `b` lie within [`CLICK_PX`] screen points of each other on both axes.
-fn is_click(app: &PhotocraftApp, a: [f64; 2], b: [f64; 2]) -> bool {
+fn is_click(app: &LienzoApp, a: [f64; 2], b: [f64; 2]) -> bool {
     let click = CLICK_PX / (app.point_zoom() as f64).max(0.01);
     (b[0] - a[0]).abs() <= click && (b[1] - a[1]).abs() <= click
 }
 
 /// Cancel the pending crop: the frame, any gesture on it and the default-frame state. With the
 /// Crop tool still picked, [`ensure_frame`] then makes the active document a new default frame.
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut LienzoApp) {
     crate::crop_mode::upright(app);
     app.ui.crop_rect = None;
     app.ui.crop_angle = 0.0;
@@ -544,7 +544,7 @@ pub fn cancel(app: &mut PhotocraftApp) {
 /// document until a press on the canvas (or a ratio), so its corners don't make the applied crop
 /// look still pending. Picking the tool again, also after another tool, keeps it hidden, as in
 /// Photoshop.
-pub fn hide_frame(app: &mut PhotocraftApp) {
+pub fn hide_frame(app: &mut LienzoApp) {
     if app.ui.tool == Tool::Crop {
         app.crop.dismissed = dismiss_key(app);
     }
@@ -552,7 +552,7 @@ pub fn hide_frame(app: &mut PhotocraftApp) {
 
 /// Ends [`hide_frame`] and makes the default frame now, so what follows acts on it as on any
 /// default frame: a press records it as the box's Undo step, a ratio fits it.
-pub(crate) fn show_frame(app: &mut PhotocraftApp) {
+pub(crate) fn show_frame(app: &mut LienzoApp) {
     if app.crop.dismissed.take().is_some() {
         frame(app);
     }
@@ -560,19 +560,19 @@ pub(crate) fn show_frame(app: &mut PhotocraftApp) {
 
 /// Esc or the options bar's cancel: [`cancel`], then [`hide_frame`], so the frame disappears as in
 /// Photoshop (#10370) and stays hidden as after a commit.
-pub fn dismiss(app: &mut PhotocraftApp) {
+pub fn dismiss(app: &mut LienzoApp) {
     cancel(app);
     hide_frame(app);
 }
 
 /// The active document's identity for [`CropState::dismissed`].
-fn dismiss_key(app: &PhotocraftApp) -> Option<(photocraft_doc::DocId, u32, u32)> {
+fn dismiss_key(app: &LienzoApp) -> Option<(lienzo_doc::DocId, u32, u32)> {
     app.session.active().map(|st| (st.doc.id, st.doc.size.width, st.doc.size.height))
 }
 
 /// The frame was drawn, moved, resized or turned since it was last framed by default, so
 /// [`reset`] has something to undo.
-pub fn modified(app: &PhotocraftApp) -> bool {
+pub fn modified(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop
         && app.ui.crop_rect.is_some()
         && app.crop.drag.is_none()
@@ -582,7 +582,7 @@ pub fn modified(app: &PhotocraftApp) -> bool {
 /// Reset the crop box (the options bar's Reset): the default frame again, upright, with the
 /// straighten line gone. The tool stays up and the old frame is a box Undo step, unlike
 /// [`cancel`], which drops the box's history.
-pub fn reset(app: &mut PhotocraftApp) {
+pub fn reset(app: &mut LienzoApp) {
     if !modified(app) {
         return;
     }
@@ -611,14 +611,14 @@ pub fn reset(app: &mut PhotocraftApp) {
 }
 
 /// Drop the box's own Undo/Redo (leaving the tool, cancelling or committing a crop).
-pub fn clear_history(app: &mut PhotocraftApp) {
+pub fn clear_history(app: &mut LienzoApp) {
     app.crop.undo.clear();
     app.crop.redo.clear();
     app.crop.press_step = None;
 }
 
 /// The frame's current state, as an undo step.
-fn step_of(app: &PhotocraftApp) -> CropStep {
+fn step_of(app: &LienzoApp) -> CropStep {
     CropStep {
         rect: app.ui.crop_rect,
         angle: app.ui.crop_angle,
@@ -629,7 +629,7 @@ fn step_of(app: &PhotocraftApp) -> CropStep {
 }
 
 /// Put a frame state back.
-fn apply_step(app: &mut PhotocraftApp, s: CropStep) {
+fn apply_step(app: &mut LienzoApp, s: CropStep) {
     app.ui.crop_rect = s.rect;
     app.ui.crop_angle = s.angle;
     app.crop.default_frame = s.default_frame;
@@ -646,12 +646,12 @@ pub(crate) struct Kept {
     view: Option<(f32, [f32; 2])>,
 }
 
-pub(crate) fn keep(app: &PhotocraftApp) -> Kept {
+pub(crate) fn keep(app: &LienzoApp) -> Kept {
     let view = app.session.active_index().and_then(|i| app.ui.views.get(i)).map(|v| (v.rotation, v.center));
     Kept { step: step_of(app), undo: app.crop.undo.clone(), redo: app.crop.redo.clone(), view }
 }
 
-pub(crate) fn restore(app: &mut PhotocraftApp, k: Kept) {
+pub(crate) fn restore(app: &mut LienzoApp, k: Kept) {
     apply_step(app, k.step);
     (app.crop.undo, app.crop.redo) = (k.undo, k.redo);
     if let Some((rotation, center)) = k.view
@@ -665,7 +665,7 @@ pub(crate) fn restore(app: &mut PhotocraftApp, k: Kept) {
 /// Edit › Undo live during a crop, #1918/#3145). `Some(enabled)` for those commands, else `None` so
 /// the caller falls back to document history. While either box stack has a step, `intercept` takes
 /// both commands, so one with nothing left to step greys out rather than offering the document's.
-pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn is_enabled(app: &LienzoApp, id: &str) -> Option<bool> {
     if app.ui.tool != Tool::Crop || (app.crop.undo.is_empty() && app.crop.redo.is_empty()) {
         return None;
     }
@@ -679,7 +679,7 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> Option<bool> {
 
 /// Intercept Undo/Redo/Toggle Last State while the Crop tool owns box history, for every caller
 /// (menus, shortcuts, the control channel, MCP) — as `transform_tool::intercept` does.
-pub fn intercept(app: &mut PhotocraftApp, id: &str) -> Option<Result<serde_json::Value, String>> {
+pub fn intercept(app: &mut LienzoApp, id: &str) -> Option<Result<serde_json::Value, String>> {
     if holds_history(app, id) {
         return Some(Err("Commit or cancel the crop first".into()));
     }
@@ -697,12 +697,12 @@ pub fn intercept(app: &mut PhotocraftApp, id: &str) -> Option<Result<serde_json:
 /// A History jump waits for a drawn frame (#9285): it would resize the document under the frame,
 /// which keeps its coordinates. Menus and shortcuts ask [`blocks`]; the History panel, its menu and
 /// the control channel come through `app.run`.
-pub fn holds_history(app: &PhotocraftApp, id: &str) -> bool {
+pub fn holds_history(app: &LienzoApp, id: &str) -> bool {
     pending(app) && matches!(id, "history.selectState" | "history.selectSnapshot" | "history.stepBackward" | "history.stepForward" | "history.deleteState")
 }
 
 /// Undo (or redo) one box step.
-fn step(app: &mut PhotocraftApp, redo: bool) -> serde_json::Value {
+fn step(app: &mut LienzoApp, redo: bool) -> serde_json::Value {
     let s = if redo { app.crop.redo.pop() } else { app.crop.undo.pop() };
     let Some(s) = s else { return serde_json::Value::Null };
     let now = step_of(app);
@@ -729,13 +729,13 @@ fn step(app: &mut PhotocraftApp, redo: bool) -> serde_json::Value {
 }
 
 /// The pending frame belongs to the active document.
-fn claim(app: &mut PhotocraftApp) {
+fn claim(app: &mut LienzoApp) {
     app.crop.doc = app.session.active().map(|st| st.doc.id);
 }
 
 /// A crop is pending: the Crop tool's frame on the active document has been set (drawn, moved,
 /// resized or turned), not just the untouched default frame the tool shows.
-pub fn pending(app: &PhotocraftApp) -> bool {
+pub fn pending(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop
         && app.ui.crop_rect.is_some()
         && !app.crop.default_frame
@@ -747,7 +747,7 @@ pub fn pending(app: &PhotocraftApp) -> bool {
 /// Save a Copy; Undo, Redo, Toggle Last State, Search; Image › Crop (which commits the frame); the
 /// View menu but Proof Setup, Pixel Aspect Ratio (Correction), 32-bit Preview Options, Flip
 /// Horizontal and Screen Mode; the Window menu but Workspace and Adjustments; Help but System Info.
-pub fn blocks(app: &PhotocraftApp, id: &str) -> bool {
+pub fn blocks(app: &LienzoApp, id: &str) -> bool {
     pending(app) && !available_while_pending(id)
 }
 
@@ -782,7 +782,7 @@ fn available_while_pending(id: &str) -> bool {
 /// shows on or crops another document. (As in Photoshop: switching to another document discards
 /// the pending crop, and that document gets the tool's own frame.) Run on every frame and command
 /// (`sync_views`) and before a commit.
-pub fn cancel_stale(app: &mut PhotocraftApp) {
+pub fn cancel_stale(app: &mut LienzoApp) {
     let active = app.session.active().map(|st| st.doc.id);
     let pending = app.ui.crop_rect.is_some() || app.crop.drag.is_some();
     // A frame made before any document was claimed (control channel, tests) is the active one's.
@@ -804,13 +804,13 @@ pub fn cancel_stale(app: &mut PhotocraftApp) {
 
 /// The frame is being edited, so the canvas shows the pixels past its edges (Photoshop's crop
 /// preview): from the first press with the tool until the crop is committed or cancelled.
-pub fn shows_beyond_canvas(app: &PhotocraftApp) -> bool {
+pub fn shows_beyond_canvas(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && app.ui.crop_rect.is_some() && (app.crop.editing || app.crop.drag.is_some())
 }
 
 /// The button went down on the canvas with the Crop tool: the frame is being edited from now on.
 /// Returns true when that is new.
-pub fn press(app: &mut PhotocraftApp) -> bool {
+pub fn press(app: &mut LienzoApp) -> bool {
     let new = app.ui.tool == Tool::Crop && app.ui.crop_rect.is_some() && !app.crop.editing;
     if new {
         app.crop.editing = true;
@@ -818,25 +818,25 @@ pub fn press(app: &mut PhotocraftApp) -> bool {
     new
 }
 
-pub(crate) fn tolerance(app: &PhotocraftApp) -> f64 {
+pub(crate) fn tolerance(app: &LienzoApp) -> f64 {
     HANDLE_PX / (app.point_zoom() as f64).max(0.01)
 }
 
 /// The pending frame's angle (degrees), 0 when it isn't a finite number.
-pub fn angle(app: &PhotocraftApp) -> f64 {
+pub fn angle(app: &LienzoApp) -> f64 {
     normalized_angle(app.ui.crop_angle)
 }
 
 /// A press at document point `p` would turn the frame (Crop tool, outside the frame and its
 /// handles) rather than draw, move or resize one.
-pub fn turns_at(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+pub fn turns_at(app: &LienzoApp, p: [f64; 2]) -> bool {
     app.ui.tool == Tool::Crop
         && app.ui.crop_rect.filter(|r| r.iter().all(|v| v.is_finite())).is_some_and(|r| hit_turned(r, angle(app), p, tolerance(app)) == Hit::Outside)
 }
 
 /// A double-click at document point `p` commits the crop (Photoshop: double-click inside the box,
 /// like ↵): Crop tool, a pending frame, and `p` inside it (not on a handle, not outside).
-pub fn commits_at(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+pub fn commits_at(app: &LienzoApp, p: [f64; 2]) -> bool {
     app.ui.tool == Tool::Crop
         && app.crop.drag.is_none()
         && app.ui.crop_rect.filter(|r| r.iter().all(|v| v.is_finite())).is_some_and(|r| hit_turned(r, angle(app), p, tolerance(app)) == Hit::Inside)
@@ -844,7 +844,7 @@ pub fn commits_at(app: &PhotocraftApp, p: [f64; 2]) -> bool {
 
 /// The frame is being turned: the angle for the readout beside the pointer. Classic Mode shows
 /// the frame's turn; the default mode the image's (clockwise positive, as Photoshop 25.1 does).
-pub fn turning(app: &PhotocraftApp) -> Option<f64> {
+pub fn turning(app: &LienzoApp) -> Option<f64> {
     match app.crop.drag {
         Some(CropDrag::Rotate { .. }) => Some(angle(app)),
         Some(CropDrag::TurnImage { .. }) => Some(crate::crop_mode::image_turn(angle(app))),
@@ -861,7 +861,7 @@ pub fn frame_size(r: [f64; 4]) -> Option<[f64; 2]> {
 
 /// The frame is being drawn or resized: its W × H, for the readout beside the pointer (as the
 /// marquee's, in px).
-pub fn sizing(app: &PhotocraftApp) -> Option<[f64; 2]> {
+pub fn sizing(app: &LienzoApp) -> Option<[f64; 2]> {
     match app.crop.drag {
         // Until the pointer moves, the frame shown is still the previous one.
         Some(CropDrag::Draw { anchor, cur, .. }) if anchor != cur => {}
@@ -874,7 +874,7 @@ pub fn sizing(app: &PhotocraftApp) -> Option<[f64; 2]> {
 /// The Info panel's W and H while the Crop tool shows a frame: the frame's size (its own, before
 /// any turn), as Photoshop's Info panel shows it, so its ratio can be matched (#3145). `None`
 /// with another tool or no frame, and the panel shows the selection's size.
-pub fn info_size(app: &PhotocraftApp) -> Option<[f64; 2]> {
+pub fn info_size(app: &LienzoApp) -> Option<[f64; 2]> {
     if app.ui.tool != Tool::Crop {
         return None;
     }
@@ -882,20 +882,20 @@ pub fn info_size(app: &PhotocraftApp) -> Option<[f64; 2]> {
 }
 
 /// The Crop tool owns the arrow keys and X: a pending frame and no gesture in progress.
-pub fn takes_keys(app: &PhotocraftApp) -> bool {
+pub fn takes_keys(app: &LienzoApp) -> bool {
     app.ui.tool == Tool::Crop && app.crop.drag.is_none() && app.ui.transform.is_none() && app.ui.crop_rect.is_some_and(|r| r.iter().all(|v| v.is_finite()))
 }
 
 /// The frame now set by the keys: a real frame (no longer the default), being edited.
 /// The dropdown's temporary "Selection" entry chosen (#10872): the untouched frame on the
 /// selection's bounds becomes a live crop, unchanged.
-pub(crate) fn take_selection_frame(app: &mut PhotocraftApp) {
+pub(crate) fn take_selection_frame(app: &mut LienzoApp) {
     if let Some(r) = app.ui.crop_rect.filter(|_| app.crop.default_frame && app.crop.frame_from_selection) {
         keyed(app, r);
     }
 }
 
-fn keyed(app: &mut PhotocraftApp, r: [f64; 4]) {
+fn keyed(app: &mut LienzoApp, r: [f64; 4]) {
     if r.iter().all(|v| v.is_finite()) {
         app.ui.crop_rect = Some(r);
         app.crop.default_frame = false;
@@ -906,7 +906,7 @@ fn keyed(app: &mut PhotocraftApp, r: [f64; 4]) {
 /// Moves the pending frame by (`dx`, `dy`) document px (a turned frame moves on the page, keeping
 /// its angle); in default mode the image moves that way on screen under the box instead. Returns
 /// false when the Crop tool doesn't take the keys ([`takes_keys`]).
-pub fn nudge(app: &mut PhotocraftApp, dx: f64, dy: f64) -> bool {
+pub fn nudge(app: &mut LienzoApp, dx: f64, dy: f64) -> bool {
     let Some(r) = app.ui.crop_rect.filter(|_| takes_keys(app)) else { return false };
     if crate::crop_mode::moves_image(app) {
         if dx.is_finite() && dy.is_finite() {
@@ -933,7 +933,7 @@ pub fn swapped(r: [f64; 4]) -> [f64; 4] {
 
 /// The options bar's ⇄ with a ratio set: the frame turns with the ratio about its centre, as X
 /// does, so fitting the swapped ratio afterwards doesn't shrink it (#7738).
-pub(crate) fn turn_frame(app: &mut PhotocraftApp) {
+pub(crate) fn turn_frame(app: &mut LienzoApp) {
     // A square frame doesn't change, so an untouched default frame stays one (and isn't
     // committed on leaving the tool).
     if let Some(r) = app.ui.crop_rect.filter(|_| takes_keys(app) && preset_ratio(app).is_some())
@@ -953,7 +953,7 @@ pub fn swapped_ratio(key: &str, doc_w: f64, doc_h: f64) -> Option<String> {
 /// X: swaps the pending frame between portrait and landscape about its centre, keeping its angle,
 /// and swaps the options-bar ratio with it, as in Photoshop. Returns false when the Crop tool
 /// doesn't take the keys ([`takes_keys`]), so X swaps the colours as usual.
-pub fn swap_orientation(app: &mut PhotocraftApp) -> bool {
+pub fn swap_orientation(app: &mut LienzoApp) -> bool {
     let Some(r) = app.ui.crop_rect.filter(|_| takes_keys(app)) else { return false };
     let size = app.session.active().map_or((0.0, 0.0), |s| (f64::from(s.doc.size.width), f64::from(s.doc.size.height)));
     // W x H x Resolution swaps W and H instead of a ratio.
@@ -978,7 +978,7 @@ pub fn swap_orientation(app: &mut PhotocraftApp) -> bool {
 
 /// Crop tool keys with a pending frame: arrows nudge it 1 px (⇧ 10 px) instead of the selection
 /// or layer, and X swaps its orientation instead of the colours. Returns true when a key was used.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut LienzoApp, ctx: &egui::Context) -> bool {
     if !takes_keys(app) {
         return false;
     }
@@ -997,7 +997,7 @@ pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// Pointer input for the Crop tool. Returns true when the event was its.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool {
+pub fn pointer(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers) -> bool {
     if app.ui.tool != Tool::Crop {
         end_drag(app);
         return false;
@@ -1015,7 +1015,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers) -> bool 
 }
 
 /// Press, drag and release of the frame. Returns true when the frame needs syncing to the view.
-fn track(app: &mut PhotocraftApp, ev: ToolEvent, p: [f64; 2], mods: Modifiers) -> bool {
+fn track(app: &mut LienzoApp, ev: ToolEvent, p: [f64; 2], mods: Modifiers) -> bool {
     match ev {
         ToolEvent::Down { .. } => {
             app.crop.drag_moved = false;
@@ -1037,7 +1037,7 @@ fn track(app: &mut PhotocraftApp, ev: ToolEvent, p: [f64; 2], mods: Modifiers) -
 }
 
 /// The Straighten line drag. Returns true when it took the event.
-fn straighten(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers, p: [f64; 2]) -> bool {
+fn straighten(app: &mut LienzoApp, ev: ToolEvent, mods: Modifiers, p: [f64; 2]) -> bool {
     // Straighten button or ⌘: the drag draws a line to level the frame on.
     if !crate::crop_straighten::pointer(app, ev, mods) {
         return false;
@@ -1065,7 +1065,7 @@ fn straighten(app: &mut PhotocraftApp, ev: ToolEvent, mods: Modifiers, p: [f64; 
 }
 
 /// Starts the drag a press at `p` selects: resize, move, turn or draw.
-fn begin_drag(app: &mut PhotocraftApp, p: [f64; 2]) {
+fn begin_drag(app: &mut LienzoApp, p: [f64; 2]) {
     show_frame(app);
     claim(app);
     app.crop.editing = true;
@@ -1089,7 +1089,7 @@ fn begin_drag(app: &mut PhotocraftApp, p: [f64; 2]) {
 }
 
 /// A press inside the frame: moves the image in default mode, else the frame.
-fn inside_drag(app: &PhotocraftApp, p: [f64; 2], rect: [f64; 4]) -> CropDrag {
+fn inside_drag(app: &LienzoApp, p: [f64; 2], rect: [f64; 4]) -> CropDrag {
     // Default mode moves the image and keeps the box in place on screen, as in Photoshop.
     if crate::crop_mode::moves_image(app) {
         CropDrag::MoveImage { start: p, rect, view: crate::crop_mode::press_view(app) }
@@ -1099,7 +1099,7 @@ fn inside_drag(app: &PhotocraftApp, p: [f64; 2], rect: [f64; 4]) -> CropDrag {
 }
 
 /// A press outside the frame: turns the image in default mode, else the frame.
-fn outside_drag(app: &PhotocraftApp, p: [f64; 2], rect: [f64; 4], deg: f64) -> CropDrag {
+fn outside_drag(app: &LienzoApp, p: [f64; 2], rect: [f64; 4], deg: f64) -> CropDrag {
     let c = center(rect);
     let grab = (p[1] - c[1]).atan2(p[0] - c[0]);
     if crate::crop_mode::moves_image(app) {
@@ -1111,7 +1111,7 @@ fn outside_drag(app: &PhotocraftApp, p: [f64; 2], rect: [f64; 4], deg: f64) -> C
 }
 
 /// Ends `drag`: keeps a valid frame or restores the previous one, and records an undo step when it changed.
-fn release(app: &mut PhotocraftApp, drag: CropDrag) {
+fn release(app: &mut LienzoApp, drag: CropDrag) {
     let ok = app.ui.crop_rect.is_some_and(size_ok);
     // A click outside the untouched default frame (no turn) leaves it the default. A drawn, moved
     // or resized frame has changed when the gesture changed it at some point (`drag_moved`), not
@@ -1137,7 +1137,7 @@ fn release(app: &mut PhotocraftApp, drag: CropDrag) {
 /// Another tool was picked while a drag on the frame is held (a tool key, #9223): the gesture ends
 /// where the pointer last moved it, as a release there would, so a box drawn over the untouched
 /// default frame counts as drawn and leaving the tool commits it.
-pub fn end_drag(app: &mut PhotocraftApp) {
+pub fn end_drag(app: &mut LienzoApp) {
     let Some(drag) = app.crop.drag.take() else { return };
     let tool = std::mem::replace(&mut app.ui.tool, Tool::Crop);
     release(app, drag);
@@ -1147,14 +1147,14 @@ pub fn end_drag(app: &mut PhotocraftApp) {
 
 /// [`end_drag`] once another tool is current, except while the pen's eraser end stands in for the
 /// Crop tool (`stylus`): the gesture goes on when the tip comes back.
-pub fn end_drag_on_leave(app: &mut PhotocraftApp) {
+pub fn end_drag_on_leave(app: &mut LienzoApp) {
     if app.ui.tool != Tool::Crop && app.stylus.tool_before_eraser != Some(Tool::Crop) {
         end_drag(app);
     }
 }
 
 /// On release: the frame state at the press becomes a box Undo step when the gesture changed it.
-fn push_press_step(app: &mut PhotocraftApp) {
+fn push_press_step(app: &mut LienzoApp) {
     if let Some(before) = app.crop.press_step.take()
         && step_of(app) != before
     {
@@ -1164,7 +1164,7 @@ fn push_press_step(app: &mut PhotocraftApp) {
 }
 
 /// Puts back the frame a too-small drag started from.
-fn restore_frame(app: &mut PhotocraftApp, drag: CropDrag) {
+fn restore_frame(app: &mut LienzoApp, drag: CropDrag) {
     match drag {
         CropDrag::Draw { prev, .. } => app.ui.crop_rect = prev,
         CropDrag::Move { rect, .. } | CropDrag::Resize { rect, view: None, .. } => app.ui.crop_rect = Some(rect),
@@ -1175,7 +1175,7 @@ fn restore_frame(app: &mut PhotocraftApp, drag: CropDrag) {
 }
 
 /// Centres a newly drawn frame in default mode.
-fn finish_frame(app: &mut PhotocraftApp, drag: CropDrag) {
+fn finish_frame(app: &mut LienzoApp, drag: CropDrag) {
     // Auto Center Preview moves a box drawn in default mode to the middle.
     if let CropDrag::Draw { .. } = drag {
         crate::crop_mode::sync_frame(app);
@@ -1184,7 +1184,7 @@ fn finish_frame(app: &mut PhotocraftApp, drag: CropDrag) {
 }
 
 /// The frame follows the pointer at `p`.
-fn update(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) {
+fn update(app: &mut LienzoApp, p: [f64; 2], mods: Modifiers) {
     if follow_view_drag(app, p, mods) {
         return;
     }
@@ -1194,7 +1194,7 @@ fn update(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) {
 }
 
 /// Follows rotate, turn, move-image and live-centred resize drags. Returns false for the other drags.
-fn follow_view_drag(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) -> bool {
+fn follow_view_drag(app: &mut LienzoApp, p: [f64; 2], mods: Modifiers) -> bool {
     match app.crop.drag {
         Some(CropDrag::Rotate { center, grab, from }) => app.ui.crop_angle = turned_angle(center, grab, from, p, mods.shift),
         Some(CropDrag::TurnImage { center, grab, from, rect, view }) => {
@@ -1225,7 +1225,7 @@ fn follow_view_drag(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) -> bo
 }
 
 /// The frame a draw, move or resize drag gives at `p`, or None for the other drags.
-fn dragged_frame(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) -> Option<[f64; 4]> {
+fn dragged_frame(app: &mut LienzoApp, p: [f64; 2], mods: Modifiers) -> Option<[f64; 4]> {
     let ratio = preset_ratio(app);
     let space = app.crop.space;
     let deg = angle(app);
@@ -1263,14 +1263,14 @@ fn dragged_frame(app: &mut PhotocraftApp, p: [f64; 2], mods: Modifiers) -> Optio
 }
 
 /// Geometry and snapping must use the same ratio so constrained handles stay aligned.
-pub(crate) fn resize_ratio(app: &PhotocraftApp, rect: [f64; 4], mods: Modifiers) -> Option<f64> {
+pub(crate) fn resize_ratio(app: &LienzoApp, rect: [f64; 4], mods: Modifiers) -> Option<f64> {
     let keep = (rect[2] - rect[0] > 0.0 && rect[3] - rect[1] > 0.0).then(|| (rect[2] - rect[0]) / (rect[3] - rect[1]));
     preset_ratio(app).or(if mods.shift { keep } else { None })
 }
 
 /// Cursor over the canvas at document point `p`: resize arrows on the edges, move inside (the
 /// crosshair inside the untouched default frame, where a drag draws a new one).
-pub fn cursor(app: &PhotocraftApp, p: [f64; 2]) -> Option<CursorIcon> {
+pub fn cursor(app: &LienzoApp, p: [f64; 2]) -> Option<CursorIcon> {
     if app.ui.tool != Tool::Crop {
         return None;
     }
@@ -1300,7 +1300,7 @@ pub fn cursor(app: &PhotocraftApp, p: [f64; 2]) -> Option<CursorIcon> {
 /// Where the turn cursor's arc bends at document point `p` (pointer outside the frame, or turning
 /// it): towards the frame corner of `p`'s quadrant, along the diagonal of the frame's own axes.
 /// As in Photoshop that gives four cursors, one per corner; they turn with the frame.
-pub fn turn_cursor_dir(app: &PhotocraftApp, p: [f64; 2]) -> Option<[f64; 2]> {
+pub fn turn_cursor_dir(app: &LienzoApp, p: [f64; 2]) -> Option<[f64; 2]> {
     if app.ui.tool != Tool::Crop || crate::crop_straighten::mode(app) {
         return None;
     }

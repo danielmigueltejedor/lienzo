@@ -3,16 +3,16 @@
 //! * parameter parsing for Selective Color and Color Lookup (both also adjustment layers; their
 //!   commands are generated with the other kinds in `commands.rs`),
 //! * the destructive-only adjustments: Shadows/Highlights, Replace Color, Match Color and HDR
-//!   Toning (maths in `photocraft_algo::tone`).
+//!   Toning (maths in `lienzo_algo::tone`).
 //!
 //! Destructive adjustments convert the target (layer pixels, or a targeted alpha channel /
 //! Quick Mask) to straight RGBA, so every colour model and bit depth is handled, and blend the
 //! result through the selection like the other Image › Adjustments commands.
 
-use photocraft_algo::tone::{self, HdrToning, MatchColor, ShadowsHighlights};
-use photocraft_doc::adjust::{LutFormat, LutSource};
-use photocraft_doc::{Adjustment, Document, Layer, LayerContent, Rect};
-use photocraft_raster::{Surface, to_rgba};
+use lienzo_algo::tone::{self, HdrToning, MatchColor, ShadowsHighlights};
+use lienzo_doc::adjust::{LutFormat, LutSource};
+use lienzo_doc::{Adjustment, Document, Layer, LayerContent, Rect};
+use lienzo_raster::{Surface, to_rgba};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -21,7 +21,7 @@ use crate::{EngineError, Result, Session};
 mod replace_color_range;
 
 /// Built-in Color Lookup looks `(id, label)`.
-pub use photocraft_cms::lutfile::BUILTIN as LOOKS;
+pub use lienzo_cms::lutfile::BUILTIN as LOOKS;
 
 /// Selective Color range keys in storage order.
 pub const RANGES: [&str; 9] = ["reds", "yellows", "greens", "cyans", "blues", "magentas", "whites", "neutrals", "blacks"];
@@ -120,13 +120,13 @@ pub fn lookup_from_params(p: &Value, base: Option<&Adjustment>) -> Result<Adjust
     }
     let format = match opt_str(CMD, p, "lutFormat")? {
         None | Some("auto") => None,
-        Some("cube") => Some(photocraft_cms::lutfile::Format::Cube),
-        Some("3dl") => Some(photocraft_cms::lutfile::Format::ThreeDl),
-        Some("look") => Some(photocraft_cms::lutfile::Format::Look),
+        Some("cube") => Some(lienzo_cms::lutfile::Format::Cube),
+        Some("3dl") => Some(lienzo_cms::lutfile::Format::ThreeDl),
+        Some("look") => Some(lienzo_cms::lutfile::Format::Look),
         Some(_) => return Err(bad(CMD, "`lutFormat` must be \"auto\", \"cube\", \"3dl\" or \"look\"")),
     };
     // The parsed table, its label and (for a file) the file as loaded, which a PSD save embeds.
-    let mut loaded: Option<(photocraft_cms::lutfile::LutFile, String, Option<LutSource>)> = None;
+    let mut loaded: Option<(lienzo_cms::lutfile::LutFile, String, Option<LutSource>)> = None;
     if let Some(id) = opt_str(CMD, p, "lut")? {
         if id == "none" || id.is_empty() {
             name.clear();
@@ -134,7 +134,7 @@ pub fn lookup_from_params(p: &Value, base: Option<&Adjustment>) -> Result<Adjust
             size = 0;
             source = None;
         } else {
-            let f = photocraft_cms::lutfile::builtin(id).ok_or_else(|| bad(CMD, format!("unknown look `{id}` (built-ins: {})", builtin_ids())))?;
+            let f = lienzo_cms::lutfile::builtin(id).ok_or_else(|| bad(CMD, format!("unknown look `{id}` (built-ins: {})", builtin_ids())))?;
             let label = f.title.clone();
             loaded = Some((f, label, None));
         }
@@ -143,18 +143,18 @@ pub fn lookup_from_params(p: &Value, base: Option<&Adjustment>) -> Result<Adjust
     if let Some(text) = opt_str(CMD, p, "data")?.filter(|s| !s.is_empty()) {
         let file_name = file_name.unwrap_or("lut.cube");
         let bytes = if encoding == "base64" {
-            photocraft_paint::tile::b64_decode(text).ok_or_else(|| bad(CMD, "`data` is not valid base64"))?
+            lienzo_paint::tile::b64_decode(text).ok_or_else(|| bad(CMD, "`data` is not valid base64"))?
         } else {
             text.as_bytes().to_vec()
         };
-        let format = format.unwrap_or_else(|| photocraft_cms::lutfile::Format::detect(file_name, &bytes));
-        let f = photocraft_cms::lutfile::parse_as(format, &bytes).map_err(|e| bad(CMD, e.0))?;
+        let format = format.unwrap_or_else(|| lienzo_cms::lutfile::Format::detect(file_name, &bytes));
+        let f = lienzo_cms::lutfile::parse_as(format, &bytes).map_err(|e| bad(CMD, e.0))?;
         loaded = Some((f, base_name(file_name), Some(lut_source(format, bytes))));
     }
     if let Some(path) = opt_str(CMD, p, "file")?.filter(|s| !s.is_empty()) {
         let bytes = read_file(path).ok_or_else(|| bad(CMD, format!("can't read {path}")))?;
-        let format = format.unwrap_or_else(|| photocraft_cms::lutfile::Format::detect(path, &bytes));
-        let f = photocraft_cms::lutfile::parse_as(format, &bytes).map_err(|e| bad(CMD, format!("{path}: {}", e.0)))?;
+        let format = format.unwrap_or_else(|| lienzo_cms::lutfile::Format::detect(path, &bytes));
+        let f = lienzo_cms::lutfile::parse_as(format, &bytes).map_err(|e| bad(CMD, format!("{path}: {}", e.0)))?;
         loaded = Some((f, base_name(path), Some(lut_source(format, bytes))));
     }
     if let Some((f, label, src)) = loaded {
@@ -187,18 +187,18 @@ pub fn lookup_from_params(p: &Value, base: Option<&Adjustment>) -> Result<Adjust
     Ok(Adjustment::ColorLookup { name, lut, size, tetrahedral, dither, source })
 }
 
-/// A loaded LUT file, tagged with the format [`photocraft_cms::lutfile::parse`] read it as.
-fn lut_source(format: photocraft_cms::lutfile::Format, bytes: Vec<u8>) -> LutSource {
+/// A loaded LUT file, tagged with the format [`lienzo_cms::lutfile::parse`] read it as.
+fn lut_source(format: lienzo_cms::lutfile::Format, bytes: Vec<u8>) -> LutSource {
     let format = match format {
-        photocraft_cms::lutfile::Format::Cube => LutFormat::Cube,
-        photocraft_cms::lutfile::Format::ThreeDl => LutFormat::ThreeDl,
-        photocraft_cms::lutfile::Format::Look => LutFormat::Look,
+        lienzo_cms::lutfile::Format::Cube => LutFormat::Cube,
+        lienzo_cms::lutfile::Format::ThreeDl => LutFormat::ThreeDl,
+        lienzo_cms::lutfile::Format::Look => LutFormat::Look,
     };
     LutSource { format, bytes: std::sync::Arc::new(bytes) }
 }
 
 fn builtin_ids() -> String {
-    photocraft_cms::lutfile::BUILTIN.iter().map(|b| b.0).collect::<Vec<_>>().join(", ")
+    lienzo_cms::lutfile::BUILTIN.iter().map(|b| b.0).collect::<Vec<_>>().join(", ")
 }
 
 fn base_name(path: &str) -> String {
@@ -352,13 +352,8 @@ pub(crate) fn adjust_as_smart_filter(s: &mut Session, kind: &str, label: &str, p
     if let Value::Object(m) = &mut params {
         m.remove("__kind");
     }
-    let sf = photocraft_doc::SmartFilter {
-        command: format!("image.adjustments.{kind}"),
-        params,
-        blend: photocraft_color::BlendMode::Normal,
-        opacity: 1.0,
-        visible: true,
-    };
+    let sf =
+        lienzo_doc::SmartFilter { command: format!("image.adjustments.{kind}"), params, blend: lienzo_color::BlendMode::Normal, opacity: 1.0, visible: true };
     let sel = s.active().and_then(|d| d.doc.selection.clone());
     s.edit(label, |doc, _| crate::smart_cmds::add_smart_filter(doc, id, sf, sel.as_ref()))?;
     Ok(true)
@@ -474,9 +469,9 @@ fn replace_color(s: &mut Session, p: &Value) -> Result<Value> {
         Some(radius) => {
             let samples: Vec<_> = points
                 .iter()
-                .map(|&(x, y)| photocraft_algo::selection::RangeSample { color: [c[0], c[1], c[2]], at: Some((x - r.x0 as f32, y - r.y0 as f32)) })
+                .map(|&(x, y)| lienzo_algo::selection::RangeSample { color: [c[0], c[1], c[2]], at: Some((x - r.x0 as f32, y - r.y0 as f32)) })
                 .collect();
-            let mask = photocraft_algo::selection::color_range_samples(px, r.width() as usize, &samples, fuzz, Some(radius));
+            let mask = lienzo_algo::selection::color_range_samples(px, r.width() as usize, &samples, fuzz, Some(radius));
             tone::replace_color_masked(px, &mask, h, sat, l);
         }
         None => {
@@ -510,12 +505,12 @@ fn stats_pixels(doc: &Document, layer: Option<u64>, use_selection: bool) -> Resu
     let area = doc.bounds();
     let px: Vec<[f32; 4]> = match layer {
         Some(id) => {
-            let l = doc.layer(photocraft_doc::LayerId(id)).ok_or(EngineError::NoLayer(photocraft_doc::LayerId(id)))?;
-            photocraft_compose::render_layer(l, area).into_px()
+            let l = doc.layer(lienzo_doc::LayerId(id)).ok_or(EngineError::NoLayer(lienzo_doc::LayerId(id)))?;
+            lienzo_compose::render_layer(l, area).into_px()
         }
-        None => photocraft_compose::flatten(doc).into_px(),
+        None => lienzo_compose::flatten(doc).into_px(),
     };
-    let mask = doc.selection.as_ref().filter(|_| use_selection).map(|sel| photocraft_algo::selection::mask_from_surface(Some(sel), area));
+    let mask = doc.selection.as_ref().filter(|_| use_selection).map(|sel| lienzo_algo::selection::mask_from_surface(Some(sel), area));
     Ok((px, mask))
 }
 
@@ -542,7 +537,7 @@ fn match_color(s: &mut Session, p: &Value) -> Result<Value> {
     let target_sel = p.get("useSelectionInTarget").and_then(Value::as_bool).unwrap_or(false);
     let sel = s.active().and_then(|d| d.doc.selection.clone());
     rgba_edit(s, "Match Color", p, |px, r| {
-        let mask: Option<Vec<f32>> = sel.as_ref().filter(|_| target_sel).map(|sel| photocraft_algo::selection::mask_from_surface(Some(sel), r));
+        let mask: Option<Vec<f32>> = sel.as_ref().filter(|_| target_sel).map(|sel| lienzo_algo::selection::mask_from_surface(Some(sel), r));
         let Some(target) = tone::lab_stats(px, mask.as_deref()) else {
             return;
         };
@@ -571,12 +566,12 @@ fn hdr_toning(s: &mut Session, p: &Value) -> Result<Value> {
     };
     // Like Photoshop, HDR Toning flattens the image first (one history step).
     s.edit("HDR Toning", |doc, active| {
-        let buf = photocraft_compose::flatten(doc).over_background([1.0, 1.0, 1.0]);
+        let buf = lienzo_compose::flatten(doc).over_background([1.0, 1.0, 1.0]);
         let (w, hgt) = (buf.rect.width() as usize, buf.rect.height() as usize);
         let mut px = buf.into_px();
         tone::hdr_toning(&mut px, w, hgt, &h);
         let fmt = doc.pixel_format();
-        let data: Vec<f32> = px.iter().flat_map(|q| photocraft_raster::from_rgba(&fmt, *q)).collect();
+        let data: Vec<f32> = px.iter().flat_map(|q| lienzo_raster::from_rgba(&fmt, *q)).collect();
         let mut bg = Layer::raster("Background", fmt);
         bg.locks.transparency = true;
         bg.locks.position = true;
@@ -591,7 +586,7 @@ fn hdr_toning(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The Color Lookup built-ins (id, label) for UIs and agents.
 fn list_looks(_: &mut Session, _: &Value) -> Result<Value> {
-    Ok(json!(photocraft_cms::lutfile::BUILTIN.iter().map(|(id, label)| json!({"id": id, "label": label})).collect::<Vec<_>>()))
+    Ok(json!(lienzo_cms::lutfile::BUILTIN.iter().map(|(id, label)| json!({"id": id, "label": label})).collect::<Vec<_>>()))
 }
 
 macro_rules! spec {
