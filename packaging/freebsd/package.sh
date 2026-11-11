@@ -108,7 +108,7 @@ sed -e "s/@VERSION@/$VERSION/g" -e "s/@DATE@/$PHOTOCRAFT_BUILD_DATE/g" \
 cp -R "$ROOT/assets/app-icon/hicolor" "$STAGE/share/icons/"
 
 # The .desktop names the icon dev.danielmiguelt.Lienzo (the Nodalia name); install it under that name too.
-for f in "$STAGE"/share/icons/hicolor/*/apps/"$APP_ID".*; do cp "$f" "${f%/*}/dev.danielmiguelt.Lienzo.${f##*.}"; done
+for f in "$STAGE"/share/icons/hicolor/*/apps/"$APP_ID".{png,svg}; do cp "$f" "${f%/*}/dev.danielmiguelt.Lienzo.${f##*.}"; done
 copy_docs "$STAGE/share/doc/photocraft"
 for f in NOTICE ATTRIBUTION.md; do
   if [[ -f "$ROOT/$f" ]]; then install -m 644 "$ROOT/$f" "$STAGE/share/doc/photocraft/"; fi

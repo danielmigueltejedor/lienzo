@@ -22,7 +22,7 @@ install -Dm644 "$HERE/$APP_ID.desktop" "$APPDIR/usr/share/applications/$APP_ID.d
 mkdir -p "$APPDIR/usr/share/icons"
 cp -R "$ROOT/assets/app-icon/hicolor" "$APPDIR/usr/share/icons/"
 # package.sh installs the icons under the .desktop's Nodalia name too.
-for f in "$APPDIR"/usr/share/icons/hicolor/*/apps/"$APP_ID".*; do cp "$f" "${f%/*}/$ICON_NAME.${f##*.}"; done
+for f in "$APPDIR"/usr/share/icons/hicolor/*/apps/"$APP_ID".{png,svg}; do cp "$f" "${f%/*}/$ICON_NAME.${f##*.}"; done
 printf '#!/bin/sh\necho "stub: $*"\n' >"$APPDIR/usr/bin/photocraft"
 chmod +x "$APPDIR/usr/bin/photocraft"
 
