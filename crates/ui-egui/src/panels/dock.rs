@@ -243,7 +243,12 @@ fn rail(app: &mut LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     // In Nodalia the rail is an island of its own, a gap from the dock on its canvas side.
     let toward_canvas = if crate::direction::is_rtl() { crate::theme::Gap::Right } else { crate::theme::Gap::Left };
     let (frame, gap) = crate::theme::island(t, t.chrome, egui::Margin::symmetric(4, 8), toward_canvas);
-    crate::direction::end_panel("rail").resizable(false).show_separator_line(!t.islands()).exact_size(rw + gap).frame(frame).show(ui, |ui| rail_body(app, ui, t));
+    crate::direction::end_panel("rail")
+        .resizable(false)
+        .show_separator_line(!t.islands())
+        .exact_size(rw + gap)
+        .frame(frame)
+        .show(ui, |ui| rail_body(app, ui, t));
 }
 
 /// The rail's buttons, without the panel that normally holds them.

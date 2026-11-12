@@ -37,6 +37,7 @@ pub const SECTIONS: [(&str, &str); 18] = [
 /// blocks), and while an unlisted one is read nowhere.
 pub const HIDDEN_UNTIL_IMPLEMENTED: &[&str] = &[
     "general.colorPicker",
+    "interface.favoriteThemes",
     "workspace.autoShowHiddenPanels",
     "workspace.enableFloatingDocumentWindowDocking",
     "performance.legacyCompositing",
