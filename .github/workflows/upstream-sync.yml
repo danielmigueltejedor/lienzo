@@ -46,6 +46,7 @@ jobs:
           HAS_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN != '' }}
         run: |
           set -euo pipefail
+          tick="$(printf '\140')"  # a backtick, for the Markdown list below
           base="${GITHUB_REF_NAME}"
           today="$(date -u +%Y-%m-%d)"
           branch="sync/upstream-${today}"
@@ -147,7 +148,7 @@ jobs:
             # the pull request shows the conflicts and they can be resolved on the branch.
             git checkout -q -B "$branch" "$up"
             # shellcheck disable=SC2016 # the backticks are Markdown, printed as they are
-            conflict_list="$(printf '%s\n' "$conflicts" | sed 's/^/- `/; s/$/`/')"
+            conflict_list="$(printf '%s\n' "$conflicts" | sed "s/^/- ${tick}/; s/\$/${tick}/")"
             body="Brings **${count} commits** from \`${UPSTREAM_REPO}\` (up to \`${new:0:8}\`).
 
           **Result: conflicts.** The automatic merge stopped and changed nothing in \`${base}\`. These files need a decision:
