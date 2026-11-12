@@ -628,31 +628,38 @@ pub fn editor_window(app: &mut LienzoApp, ctx: &egui::Context) {
     let mut show_panel = false;
     // Resolved before the closure so `app` is borrowed only once inside it.
     let layer = selected_gradient(app);
+    let frame = crate::analysis_ui::float_frame(&Tokens::get(ctx));
     egui::Window::new(tl!("Gradient Editor"))
         .id(egui::Id::unique("gradient-editor"))
-        .open(&mut open)
+        .title_bar(false)
+        .frame(frame)
         .collapsible(false)
         .resizable(true)
         .default_width(330.0)
-        .show(ctx, |ui| match &layer {
-            Some(l) => properties_panel::editor(app, ui, l),
-            None => {
-                // Photoshop's editor edits the gradient the tool paints with, so with no gradient
-                // fill layer around the strip edits the current gradient in place.
-                let t = Tokens::get(ui.ctx());
-                ui.label(egui::RichText::new(tl!("The gradient the Gradient tool paints with")).color(t.text_dim));
-                ui.add_space(6.0);
-                preset_stops_editor(app, ui);
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    if widgets::secondary_button(ui, tl!("Save As Preset"), 0.0)
-                        .on_hover_text(tl!("Adds the current gradient to the Gradients panel"))
-                        .clicked()
-                    {
-                        let _ = app.run("gradient.presets.new", json!({}));
-                    }
-                    show_panel = widgets::secondary_button(ui, tl!("Gradients"), 0.0).clicked();
-                });
+        .show(ctx, |ui| {
+            if crate::analysis_ui::title_row(ui, tl!("Gradient Editor")) {
+                open = false;
+            }
+            match &layer {
+                Some(l) => properties_panel::editor(app, ui, l),
+                None => {
+                    // Photoshop's editor edits the gradient the tool paints with, so with no gradient
+                    // fill layer around the strip edits the current gradient in place.
+                    let t = Tokens::get(ui.ctx());
+                    ui.label(egui::RichText::new(tl!("The gradient the Gradient tool paints with")).color(t.text_dim));
+                    ui.add_space(6.0);
+                    preset_stops_editor(app, ui);
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        if widgets::secondary_button(ui, tl!("Save As Preset"), 0.0)
+                            .on_hover_text(tl!("Adds the current gradient to the Gradients panel"))
+                            .clicked()
+                        {
+                            let _ = app.run("gradient.presets.new", json!({}));
+                        }
+                        show_panel = widgets::secondary_button(ui, tl!("Gradients"), 0.0).clicked();
+                    });
+                }
             }
         });
     if show_panel {

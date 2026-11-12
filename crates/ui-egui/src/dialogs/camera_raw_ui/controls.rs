@@ -266,11 +266,12 @@ fn draw(app: &mut LienzoApp, ctx: &egui::Context, own_window: bool) {
         d.request_render(ctx);
         d.clear_recovered_error(&mut app.ui);
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::click());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         let title = ERect::from_min_size(full.min, vec2(full.width(), if own_window { 0.0 } else { 30.0 }));
         if !own_window {
-            painter.rect_filled(title, 0.0, t.dock);
+            painter.rect_filled(title, 0.0, t.pane());
             painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
             painter.text(title.center(), Align2::CENTER_CENTER, d.window_title(), FontId::proportional(13.0), t.text);
         }
@@ -284,7 +285,7 @@ fn draw(app: &mut LienzoApp, ctx: &egui::Context, own_window: bool) {
         let film_w = if d.target == Target::OpenRaw && app.raw_shelf.len() > 1 { super::filmstrip::FILM_W } else { 0.0 };
         if film_w > 0.0 {
             let film = ERect::from_min_max(body.min, pos2(body.left() + film_w - 1.0, body.bottom()));
-            painter.rect_filled(film, 0.0, t.dock);
+            painter.rect_filled(film, 0.0, t.pane());
             painter.line_segment([film.right_top(), film.right_bottom()], Stroke::new(1.0, t.separator));
             show_held = super::filmstrip::filmstrip(ui, film, &mut app.raw_shelf, d.raw_open.as_ref().map(|r| r.document), &t);
         }
@@ -332,7 +333,7 @@ fn draw(app: &mut LienzoApp, ctx: &egui::Context, own_window: bool) {
         }
         // Panels.
         let right = ERect::from_min_max(pos2(body.right() - PANEL_W, body.top()), body.max);
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let mut props = ui.new_child(egui::UiBuilder::new().max_rect(right.shrink2(vec2(14.0, 10.0))));
         // This header is outside the settings scroll area and follows the same Before/After
@@ -475,7 +476,7 @@ fn draw(app: &mut LienzoApp, ctx: &egui::Context, own_window: bool) {
         }
         // Footer.
         let foot = ERect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
-        painter.rect_filled(foot, 0.0, t.dock);
+        painter.rect_filled(foot, 0.0, t.pane());
         painter.line_segment([foot.left_top(), foot.right_top()], Stroke::new(1.0, t.separator));
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
         if let Some(role) = widgets::dialog_buttons(
@@ -514,6 +515,7 @@ fn draw(app: &mut LienzoApp, ctx: &egui::Context, own_window: bool) {
             remember_edit(d);
             d.params = edited;
         }
+        crate::theme::round_workspace(ui, full);
     });
     crate::camera_raw_scope_ui::persist(app, ctx);
     if let Some(i) = show_held

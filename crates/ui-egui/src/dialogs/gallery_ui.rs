@@ -657,10 +657,11 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let Some(d) = app.distort.gallery.as_mut() else { return };
         d.history.settle(&d.effects, ctx.input(|i| i.pointer.any_down()));
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, 0.0, t.pane());
         painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
         let pct = if d.zoom > 0.0 { format!("{:.0}%", d.zoom * 100.0) } else { tl!("Fit").into() };
         let name = d.effects.get(d.selected).map_or("", |e| tl!(e.filter.name()));
@@ -686,7 +687,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             d.center = [d.center[0] - dl.x, d.center[1] - dl.y];
         }
         // ---- Zoom bar ----
-        painter.rect_filled(zoom_bar, 0.0, t.dock);
+        painter.rect_filled(zoom_bar, 0.0, t.pane());
         let mut zb = ui.new_child(egui::UiBuilder::new().max_rect(zoom_bar.shrink2(vec2(10.0, 3.0))).layout(egui::Layout::left_to_right(egui::Align::Center)));
         if crate::icons::button(&mut zb, "minus", 22.0, false, tl!("Zoom out")).clicked() {
             d.zoom = step_zoom(d, -1);
@@ -715,7 +716,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         }
 
         // ---- Category folders with thumbnails ----
-        painter.rect_filled(mid, 0.0, t.dock);
+        painter.rect_filled(mid, 0.0, t.pane());
         painter.line_segment([mid.left_top(), mid.left_bottom()], Stroke::new(1.0, t.separator));
         update_thumbs(d, ctx, 6);
         let mut mu = ui.new_child(egui::UiBuilder::new().max_rect(mid.shrink2(vec2(8.0, 8.0))));
@@ -769,7 +770,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         });
 
         // ---- Right: buttons, filter settings, effect layers ----
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let inner = right.shrink2(vec2(12.0, 10.0));
         let mut ru = ui.new_child(egui::UiBuilder::new().max_rect(inner));
@@ -854,7 +855,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
                 let sel = i == d.selected;
                 let (row, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::click());
                 if sel {
-                    ui.painter().rect_filled(row, 2.0, t.accent_soft);
+                    ui.painter().rect_filled(row, t.radius_sm, t.accent_soft);
                 }
                 let eye = ERect::from_min_size(row.min + vec2(4.0, 4.0), vec2(16.0, 16.0));
                 crate::icons::paint(ui, eye, if d.effects[i].visible { "eye" } else { "eye-off" }, 14.0, t.icon);
@@ -895,6 +896,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
                 }
             });
         });
+        crate::theme::round_workspace(ui, full);
     });
     match action {
         Some("ok") => {

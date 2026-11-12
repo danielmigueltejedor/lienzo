@@ -1048,7 +1048,7 @@ fn backdrop_layering<T: Copy>(backdrop: Option<T>, mode: BackdropMode, opacity: 
 fn draw_tool_strip(ui: &mut egui::Ui, painter: &egui::Painter, t: &Tokens, d: &mut LiquifyDialog, body: ERect) -> ERect {
     // Left tool strip.
     let left = ERect::from_min_size(body.min, vec2(LEFT_W, body.height()));
-    painter.rect_filled(left, 0.0, t.dock);
+    painter.rect_filled(left, 0.0, t.pane());
     painter.line_segment([left.right_top(), left.right_bottom()], Stroke::new(1.0, t.separator));
     let mut strip = ui.new_child(egui::UiBuilder::new().max_rect(left.shrink2(vec2(6.0, 8.0))));
     strip.spacing_mut().item_spacing.y = 4.0;
@@ -1131,11 +1131,12 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let Some(d) = app.distort.liquify.as_mut() else { return };
         d.upload(ctx);
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         // Title strip.
         let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, 0.0, t.pane());
         painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
         let pct = if d.zoom > 0.0 { d.zoom * 100.0 } else { 100.0 };
         painter.text(
@@ -1149,7 +1150,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let left = draw_tool_strip(ui, &painter, &t, d, body);
         // Right properties panel.
         let right = ERect::from_min_size(pos2(body.right() - RIGHT_W, body.top()), vec2(RIGHT_W, body.height()));
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         // The properties scroll above the Preview row and the buttons.
         let props_rect = ERect::from_min_max(right.min + vec2(14.0, 12.0), pos2(right.right() - 14.0, (right.bottom() - 84.0).max(right.top() + 12.0)));
@@ -1416,6 +1417,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             let q = d.lasso.as_ref().and_then(|(_, pts)| pts.last().copied()).or_else(|| d.cur.as_ref().map(|(_, l)| [l[0], l[1]])).unwrap_or_default();
             events.push(ToolEvent::Up { x: q[0], y: q[1] });
         }
+        crate::theme::round_workspace(ui, full);
     });
     dispatch_frame(app, events, mods, crate::gpu_canvas::now_ms());
     match action {

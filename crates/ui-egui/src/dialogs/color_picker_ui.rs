@@ -520,10 +520,11 @@ fn color_field(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
         if web_only { flat_grid_mesh(rect, WEB_CELLS, |x, y| web_safe(color(x, y))) } else { grid_mesh(rect, 32, color) }
     };
     ui.painter().add(mesh(field, &|x, y| field_color(&mode, fz, x, y)));
-    ui.painter().rect_stroke(field, 0.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
+    ui.painter().rect_stroke(field, t.box_radius(), Stroke::new(1.0, t.field_border), StrokeKind::Outside);
     let marker = pos2(field.left() + fx * field.width(), field.top() + fy * field.height());
     // Clipped to the field: at the extremes the marker sits on the edge (#8968).
     ui.painter().with_clip_rect(field).circle_stroke(marker, 5.0, Stroke::new(1.5, if hsv[2] > 0.6 && hsv[1] < 0.4 { Color32::BLACK } else { Color32::WHITE }));
+    crate::theme::round_corners(ui.painter(), field, t.box_radius(), ui.visuals().window_fill);
     // Photoshop updates the colour on the press itself, not only when the button is released
     // (#6937): `is_pointer_button_down_on` is true from the press frame onwards (it covers
     // dragging too), while `clicked` fires on release and `dragged` only after a move.
@@ -578,7 +579,8 @@ fn swatches(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     p.rect_filled(Rect::from_min_size(sw.min, vec2(56.0, 32.0)), 0.0, c32(rgb));
     let cur = Rect::from_min_size(sw.min + vec2(0.0, 32.0), vec2(56.0, 32.0));
     p.rect_filled(cur, 0.0, c32(orig));
-    p.rect_stroke(sw, 0.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
+    crate::theme::round_corners(p, sw, t.box_radius(), ui.visuals().window_fill);
+    p.rect_stroke(sw, t.box_radius(), Stroke::new(1.0, t.field_border), StrokeKind::Outside);
     let click_cur = ui.interact(cur, ui.scope_id().with("cp-current"), Sense::click());
     click_cur.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), tl!("Click to restore the current color")));
     if click_cur.on_hover_text(tl!("Click to restore the current color")).clicked() {

@@ -106,7 +106,7 @@ pub(crate) fn color_field(app: &mut LienzoApp, ui: &mut egui::Ui) {
             if brightness { egui::ecolor::Hsva::new(x.min(0.9999), 1.0 - y, hsva.v, 1.0) } else { egui::ecolor::Hsva::new(hsva.h, x, 1.0 - y, 1.0) }
         };
         ui.painter().add(color_grid(field, 16, |x, y| hsva_color32(at(x, y))));
-        ui.painter().rect_stroke(field, 0.0, Stroke::new(1.0, t.separator), StrokeKind::Outside);
+        ui.painter().rect_stroke(field, t.box_radius(), Stroke::new(1.0, t.separator), StrokeKind::Outside);
         let field_pick = widgets::pick_pos(&fresp);
         if let Some(p) = field_pick {
             let x = ((p.x - field.left()) / field.width()).clamp(0.0, 1.0);
@@ -125,12 +125,14 @@ pub(crate) fn color_field(app: &mut LienzoApp, ui: &mut egui::Ui) {
         let painter = ui.painter().with_clip_rect(field);
         painter.circle_stroke(knob, 5.0, Stroke::new(1.5, Color32::WHITE));
         painter.circle_stroke(knob, 6.5, Stroke::new(1.0, Color32::from_black_alpha(160)));
+        crate::theme::round_corners(ui.painter(), field, t.box_radius(), t.chrome);
         // The strip: hue (red at both ends, as Photoshop's) or brightness (the colour down to black).
         let (strip, sresp) = ui.allocate_exact_size(vec2(strip_w, h), Sense::click_and_drag());
         let strip_at = |f: f32| {
             if brightness { egui::ecolor::Hsva::new(hsva.h, hsva.s, 1.0 - f, 1.0) } else { egui::ecolor::Hsva::new(1.0 - f, 1.0, 1.0, 1.0) }
         };
         ui.painter().add(color_grid(strip, 24, |_, y| hsva_color32(strip_at(y))));
+        crate::theme::round_corners(ui.painter(), strip, t.box_radius().min(strip_w / 2.0), t.chrome);
         let strip_pick = widgets::pick_pos(&sresp);
         if let Some(p) = strip_pick {
             let f = ((p.y - strip.top()) / strip.height()).clamp(0.0, 1.0);

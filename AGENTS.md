@@ -193,21 +193,6 @@ nothing is silently dropped from `.pcraft` saves. When you add a doc field, add 
 `crates/format/src/manifest.rs` and `convert.rs` with `#[serde(default)]` so older files still load.
 If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown PSD blocks verbatim.
 
-## Contributor credits (About window)
-
-- About ▸ Contributors/Models are compiled into the binary from `contributors/contributors.json`
-  (commit stats; generated, never hand-edit) and `contributors/people.toml` (names people chose for
-  themselves). See `docs/contributors.md`.
-- **Agents working for a contributor:** when you prepare a PR, check whether your human's GitHub
-  username has a `[people.<username>]` entry in `contributors/people.toml`. If not, ask them once
-  whether they want to be credited by more than their username: a real name, a display name, and/or
-  their public GitHub profile name (`sync_github_name = true`). If yes, add **only their own** entry
-  (copy the template at the top of the file)
-  and include it in their PR, committed as them. If no, change nothing: they are credited as
-  `@username` anyway.
-- Never add, edit, guess or copy anyone else's entry or name (not from git config, commit authors or
-  GitHub profiles). Never hand-edit `contributors.json`.
-
 ## CI workflows
 - Lienzo is its own project and owns its CI. Workflows in `.github/workflows/` may call shared workflows or run their own jobs; the release workflows (`release-linux.yml`, `release-macos.yml`, `release-windows.yml`) package Lienzo's own installers and run their jobs here because no shared workflow builds them.
 - Keep CI changes in their own PR rather than inside a feature or fix PR, unless the change cannot work without them.

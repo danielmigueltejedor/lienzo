@@ -1922,11 +1922,12 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let before = (w.opts.clone(), w.sample_all);
         w.texture_limit = ctx.input(|i| i.max_texture_side);
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         // The options bar across the top, as Photoshop's.
         let bar = ERect::from_min_size(full.min, vec2(full.width(), BAR_H));
-        painter.rect_filled(bar, 0.0, t.dock);
+        painter.rect_filled(bar, 0.0, t.pane());
         painter.line_segment([bar.left_bottom(), bar.right_bottom()], Stroke::new(1.0, t.separator));
         let mut bui = ui.new_child(egui::UiBuilder::new().max_rect(bar.shrink2(vec2(8.0, 4.0))).layout(egui::Layout::left_to_right(egui::Align::Center)));
         if let Some(e) = options_bar(&mut bui, w) {
@@ -1935,7 +1936,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let body = ERect::from_min_max(pos2(full.left(), bar.bottom()), full.max);
         // The tools on the left: Lasso and Polygonal Lasso share a slot (right-click to pick).
         let left = ERect::from_min_size(body.min, vec2(LEFT_W, body.height()));
-        painter.rect_filled(left, 0.0, t.dock);
+        painter.rect_filled(left, 0.0, t.pane());
         painter.line_segment([left.right_top(), left.right_bottom()], Stroke::new(1.0, t.separator));
         let mut strip = ui.new_child(egui::UiBuilder::new().max_rect(left.shrink2(vec2(6.0, 8.0))));
         strip.spacing_mut().item_spacing.y = 4.0;
@@ -1960,7 +1961,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         }
         // The Properties panel on the right.
         let right = ERect::from_min_size(pos2(body.right() - PANEL_W, body.top()), vec2(PANEL_W, body.height()));
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let head = ERect::from_min_size(right.min, vec2(PANEL_W, TAB_H));
         painter.line_segment([head.left_bottom(), head.right_bottom()], Stroke::new(1.0, t.separator));
@@ -1991,7 +1992,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         // The document under its tab.
         let doc_area = ERect::from_min_max(pos2(left.right(), body.top()), pos2(right.left(), body.bottom()));
         let tab = ERect::from_min_size(doc_area.min, vec2(doc_area.width(), TAB_H));
-        painter.rect_filled(tab, 0.0, t.dock);
+        painter.rect_filled(tab, 0.0, t.pane());
         painter.line_segment([tab.left_bottom(), tab.right_bottom()], Stroke::new(1.0, t.separator));
         let title = title.clone().unwrap_or_default();
         let galley = painter.layout_no_wrap(title, FontId::proportional(12.0), t.text);
@@ -2036,6 +2037,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         if (w.opts.clone(), w.sample_all) != before {
             w.stale();
         }
+        crate::theme::round_workspace(ui, full);
     });
     for ev in events {
         pointer(app, ev, mods);

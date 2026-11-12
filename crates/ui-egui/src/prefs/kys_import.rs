@@ -219,13 +219,17 @@ pub fn show_offer(app: &mut LienzoApp, ctx: &egui::Context) {
         &[("set", &offer.set), ("n", &n)],
     );
     let mut answer = None;
+    let t = crate::theme::Tokens::get(ctx);
     egui::Window::new(tl!("Import keyboard shortcuts?"))
         .id(egui::Id::unique("kys-offer"))
+        .title_bar(false)
+        .frame(crate::analysis_ui::float_frame(&t))
         .collapsible(false)
         .resizable(false)
         .default_width(440.0)
         .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(ctx, |ui| {
+            crate::analysis_ui::dialog_heading(ui, tl!("Import keyboard shortcuts?"));
             ui.label(line);
             ui.label(tl!("Edit › Keyboard Shortcuts › Reset All to Defaults undoes an import."));
             ui.add_space(8.0);

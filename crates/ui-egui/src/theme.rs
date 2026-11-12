@@ -872,6 +872,18 @@ impl Tokens {
         matches!(self.kind, ThemeKind::Nodalia | ThemeKind::NodaliaLight)
     }
 
+    /// The fill of a pane of a full-window workspace (a tool strip, an options bar, a properties
+    /// panel): in Nodalia an island's panel colour on the window frame, elsewhere the dock's.
+    pub fn pane(&self) -> Color32 {
+        if self.islands() { self.chrome } else { self.dock }
+    }
+
+    /// The corner radius of a box (a colour field, a preview, a thumbnail): rounded in Nodalia,
+    /// square in the Photoshop-style themes.
+    pub fn box_radius(&self) -> f32 {
+        if self.islands() { self.radius_sm } else { 0.0 }
+    }
+
     /// The window frame the islands stand on; the chrome colour in the other themes.
     pub fn frame(&self) -> Color32 {
         match self.kind {
@@ -913,11 +925,35 @@ pub fn island(t: &Tokens, fill: Color32, inner: egui::Margin, gap: Gap) -> (egui
 /// contents, a frame-coloured ring outside a rounded `rect` covers their square corners.
 pub fn round_island_corners(ui: &egui::Ui, rect: egui::Rect) {
     let t = Tokens::get(ui.ctx());
-    if !t.islands() || !rect.is_positive() {
-        return;
+    if t.islands() {
+        round_corners(ui.painter(), rect, ISLAND_RADIUS, t.frame());
     }
-    let ring = ISLAND_RADIUS;
-    ui.painter().with_clip_rect(rect).rect_stroke(rect, CornerRadius::same(ISLAND_RADIUS as u8), Stroke::new(ring, t.frame()), egui::StrokeKind::Outside);
+}
+
+/// Rounds the corners of `rect`, whose contents (a gradient field, an image) paint square: a ring
+/// of `background`, the colour behind it, outside a `radius`-cornered rect and clipped to it covers
+/// the corner pockets. Paint it after the contents.
+pub fn round_corners(painter: &egui::Painter, rect: egui::Rect, radius: f32, background: Color32) {
+    if rect.is_positive() && radius > 0.0 {
+        painter.with_clip_rect(rect).rect_stroke(rect, CornerRadius::same(radius as u8), Stroke::new(radius, background), egui::StrokeKind::Outside);
+    }
+}
+
+/// The area a full-window workspace (Camera Raw, Liquify, Select and Mask…) lays its panes out
+/// in, inside the window rect `screen`: all of it, or in Nodalia the window frame painted and the
+/// panes kept [`ISLAND_GAP`] from the edge. Pair it with [`round_workspace`] after the panes.
+pub fn workspace_area(ui: &egui::Ui, screen: egui::Rect) -> egui::Rect {
+    let t = Tokens::get(ui.ctx());
+    if !t.islands() {
+        return screen;
+    }
+    ui.painter().rect_filled(screen, 0.0, t.frame());
+    screen.shrink(ISLAND_GAP)
+}
+
+/// Rounds the corners of the area [`workspace_area`] returned, once its panes are painted.
+pub fn round_workspace(ui: &egui::Ui, area: egui::Rect) {
+    round_island_corners(ui, area);
 }
 
 /// Lienzo's accent in the Nodalia palette.

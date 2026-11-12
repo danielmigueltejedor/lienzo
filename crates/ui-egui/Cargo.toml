@@ -84,8 +84,6 @@ tempfile = "3"
 flate2 = { workspace = true }
 # egui's default fonts, deflated by build.rs for egui_fonts.rs (the same version egui uses).
 epaint_default_fonts = { version = "0.37", features = ["monochrome_emoji_fonts"] }
-serde_json = { workspace = true }
-toml = "1"
 
 [[example]]
 name = "flat_open_bench"
