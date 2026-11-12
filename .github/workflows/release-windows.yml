@@ -184,5 +184,6 @@ jobs:
           if [[ "$target" != "$SHA" ]]; then
             echo "Draft $TAG targets $target; moving it to $SHA, the commit built here"
             gh release edit "$TAG" --repo "$REPO" --target "$SHA"
+            echo "::warning::Draft $TAG was targeting $target. Files in it that this run does not replace were built elsewhere: rerun the other platform workflows from $SHA before publishing."
           fi
           gh release upload "$TAG" dist/* --repo "$REPO" --clobber
