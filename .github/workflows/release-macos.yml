@@ -12,6 +12,17 @@ name: Release macOS
 # macOS files. Check them, then publish the draft. Without a tag it only uploads workflow artifacts.
 
 on:
+  # Also on every change to the app, like the other Nodalia apps' macOS builds: artifacts only.
+  push:
+    branches: [nodalia]
+  pull_request:
+    paths:
+      - "apps/**"
+      - "crates/**"
+      - "assets/**"
+      - "packaging/macos/**"
+      - "Cargo.lock"
+      - ".github/workflows/release-macos.yml"
   workflow_dispatch:
     inputs:
       tag:
@@ -24,7 +35,7 @@ permissions:
 
 concurrency:
   group: release-macos-${{ inputs.tag || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -78,6 +89,22 @@ jobs:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: packaging/macos/import-cert.sh
 
+      - name: Link against the macOS 26 SDK
+        # AppKit draws the traffic lights in the style of the SDK the app was linked against:
+        # linked against 15, macOS 26 keeps the old flat ones instead of Liquid Glass. The macOS 15
+        # runners carry Xcode 26 beside their default; MACOSX_DEPLOYMENT_TARGET keeps the floor.
+        run: |
+          xcode=$(
+            for candidate in /Applications/Xcode_[0-9]*.app; do
+              if [[ -d "$candidate/Contents/Developer" ]]; then
+                printf '%s\n' "$candidate"
+              fi
+            done | awk -F/ '{version=$NF; sub(/^Xcode_/, "", version); if (version+0 >= 26) print}' | sort -V | tail -n 1
+          )
+          test -n "$xcode" || { echo "no Xcode 26 on this runner" >&2; exit 1; }
+          echo "DEVELOPER_DIR=$xcode/Contents/Developer" >> "$GITHUB_ENV"
+          DEVELOPER_DIR="$xcode/Contents/Developer" xcrun --sdk macosx --show-sdk-version
+
       - name: Build and package
         env:
           # Optional: without them the app is not notarized.
@@ -119,6 +146,9 @@ jobs:
           shasum -a 256 -c SHA256SUMS-macos
           hdiutil attach "lienzo-$VERSION-macos-universal.dmg" -nobrowse -readonly -mountpoint /Volumes/Lienzo
           lipo -archs /Volumes/Lienzo/Lienzo.app/Contents/MacOS/Lienzo
+          sdk=$(otool -l /Volumes/Lienzo/Lienzo.app/Contents/MacOS/Lienzo | awk '$1 == "sdk" {print $2; exit}')
+          echo "linked against SDK $sdk"
+          test "${sdk%%.*}" -ge 26
           /Volumes/Lienzo/Lienzo.app/Contents/MacOS/lienzo-cli --version | tee version.txt
           arch -x86_64 /Volumes/Lienzo/Lienzo.app/Contents/MacOS/lienzo-cli --version
           grep -q "$VERSION" version.txt
