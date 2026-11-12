@@ -7,3 +7,4 @@ docs/upstream.md
 docs/upstream-readme.md
 crates/plugins/tests/fixtures/invert.wasm
 crates/cms/profiles/lienzo-coated-cmyk.icc
+AGENTS.md

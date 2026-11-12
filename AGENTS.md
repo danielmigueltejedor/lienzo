@@ -209,6 +209,6 @@ If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown P
   GitHub profiles). Never hand-edit `contributors.json`.
 
 ## CI workflows
-- Workflows in `.github/workflows/` call the shared workflows in [`storytold/craft-common-actions`](https://github.com/storytold/craft-common-actions) at `@main`, with their inputs and secrets. No other jobs: if no shared workflow does what's needed, it doesn't go here.
-- Don't add or change CI in a feature or fix PR. If the existing workflows can't build or test a change, link an existing craft-common-actions issue or PR, or open a new issue, or a PR only for a small fix that is safe for every app and does not increase CI time.
-- Some workflow files here still run their own jobs. Don't add to them. Moving a job into craft-common-actions is its own task, never part of another PR, and the job stays here until a shared workflow runs it.
+- Lienzo is its own project and owns its CI. Workflows in `.github/workflows/` may call shared workflows or run their own jobs; the release workflows (`release-linux.yml`, `release-macos.yml`, `release-windows.yml`) package Lienzo's own installers and run their jobs here because no shared workflow builds them.
+- Keep CI changes in their own PR rather than inside a feature or fix PR, unless the change cannot work without them.
+- Don't duplicate a job a shared workflow already runs; prefer calling the shared workflow when it does what is needed.
