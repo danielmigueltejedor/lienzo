@@ -80,6 +80,16 @@ jobs:
 
       - name: Build and package
         shell: pwsh
+        env:
+          # Optional: without them the packages are left unsigned.
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_CERT_PROFILE: ${{ secrets.AZURE_CERT_PROFILE }}
         run: pwsh packaging/windows/package.ps1 -Arch x64
 
       - name: Checksums
@@ -147,9 +157,16 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          # A tag that already exists must point at the commit this run built.
-          if tagged="$(gh api "repos/$REPO/commits/$TAG" --jq .sha 2>/dev/null)" && [[ "$tagged" != "$SHA" ]]; then
-            echo "Tag $TAG points at $tagged, not at $SHA (the commit built here)" >&2
+          # A tag that already exists must point at the commit this run built. Only a confirmed
+          # "not found" lets the run go on; any other lookup failure stops it before an upload.
+          if tagged="$(gh api "repos/$REPO/commits/$TAG" --jq .sha 2>"$RUNNER_TEMP/tag.err")"; then
+            if [[ "$tagged" != "$SHA" ]]; then
+              echo "Tag $TAG points at $tagged, not at $SHA (the commit built here)" >&2
+              exit 1
+            fi
+          elif ! grep -qiE "HTTP 404|Not Found|No commit found" "$RUNNER_TEMP/tag.err"; then
+            echo "Could not look up tag $TAG:" >&2
+            cat "$RUNNER_TEMP/tag.err" >&2
             exit 1
           fi
           if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
@@ -160,5 +177,12 @@ jobs:
           if [[ "$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq .isDraft)" != "true" ]]; then
             echo "Release $TAG is already published; not touching its files" >&2
             exit 1
+          fi
+          # Publishing an untagged draft creates the tag at the draft's target, so the target must be
+          # the commit these files were built from.
+          target="$(gh release view "$TAG" --repo "$REPO" --json targetCommitish --jq .targetCommitish)"
+          if [[ "$target" != "$SHA" ]]; then
+            echo "Draft $TAG targets $target; moving it to $SHA, the commit built here"
+            gh release edit "$TAG" --repo "$REPO" --target "$SHA"
           fi
           gh release upload "$TAG" dist/* --repo "$REPO" --clobber
