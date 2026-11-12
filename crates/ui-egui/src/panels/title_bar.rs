@@ -106,17 +106,11 @@ pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                     let mut ws = app.ui.workspace.clone();
                     let options = crate::workspace_ui::switcher_options(app);
                     let opts: Vec<(String, &str)> = options.iter().map(|(k, l)| (k.clone(), l.as_str())).collect();
-                    // A narrow bar drops what is also in a menu, the theme toggle first
-                    // (Preferences), then search (Edit › Search), and narrows the switcher
-                    // (Window › Workspace) before anything runs over.
+                    // A narrow bar drops search (Edit › Search), which is also in a menu, and narrows
+                    // the switcher (Window › Workspace) before anything runs over. The light and
+                    // dark choice lives in Preferences only, as in every Nodalia app.
                     let room = ui.available_width();
-                    let icons_shown: u8 = if room >= WORKSPACE_MIN + 2.0 * ICON_SLOT {
-                        2
-                    } else if room >= WORKSPACE_MIN + ICON_SLOT {
-                        1
-                    } else {
-                        0
-                    };
+                    let icons_shown: u8 = u8::from(room >= WORKSPACE_MIN + ICON_SLOT);
                     let ws_width = (room - f32::from(icons_shown) * ICON_SLOT - 6.0).clamp(WORKSPACE_MIN, 130.0);
                     if room >= WORKSPACE_MIN && widgets::dropdown(ui, "workspace", tl!("Workspace"), &mut ws, &opts, ws_width) {
                         app.ui.workspace = ws;
@@ -126,19 +120,6 @@ pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                         && icons::button(ui, "search", 28.0, app.ui.palette_open, &crate::shortcuts::tip_label(app, "Search commands", "edit.search")).clicked()
                     {
                         app.ui.palette_open = !app.ui.palette_open;
-                    }
-                    let (theme_icon, appearance_label) = match app.session.prefs().interface.appearance_mode {
-                        lienzo_engine::prefs::AppearanceMode::Auto => ("monitor", tl!("Auto")),
-                        lienzo_engine::prefs::AppearanceMode::Dark => ("moon", tl!("Dark")),
-                        lienzo_engine::prefs::AppearanceMode::Light => ("sun", tl!("Light")),
-                    };
-                    let appearance_tip = format!("{}: {}", tl!("Appearance Mode"), appearance_label);
-                    if icons_shown >= 2 {
-                        let button = icons::button(ui, theme_icon, 28.0, false, &appearance_tip);
-                        if button.clicked() {
-                            crate::prefs_ui::cycle_appearance(app, ui.ctx());
-                        }
-                        button.context_menu(|ui| crate::prefs_ui::appearance_context_menu(app, ui));
                     }
                     if rtl { ui.min_rect().right() } else { ui.min_rect().left() }
                 };

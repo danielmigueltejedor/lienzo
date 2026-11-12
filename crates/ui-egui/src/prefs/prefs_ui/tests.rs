@@ -5,7 +5,7 @@ fn memory_usage_has_a_dedicated_explanation_and_keeps_its_value() {
     assert!(!field_visible("performance", &values, "memoryUsageMb", ""));
     let mut h = Harness::builder()
         .with_size(vec2(680.0, 350.0))
-        .build_ui_state(|ui, values| section_fields(ui, "performance", values, &["memoryUsageMb".into()], crate::i18n::Lang::EN, None, ""), values);
+        .build_ui_state(|ui, values| section_fields(ui, "performance", values, &["memoryUsageMb".into()], crate::i18n::Lang::EN, ""), values);
     h.run_steps(2);
     h.get_by_label("Memory Usage");
     h.get_by_label("Per-document RAM limit (MB)");
@@ -22,7 +22,7 @@ fn the_generator_checkbox_reads_enable_generator() {
     let keys: Vec<String> = values.keys().cloned().collect();
     let mut h = Harness::builder()
         .with_size(vec2(680.0, 350.0))
-        .build_ui_state(move |ui, values| section_fields(ui, "plugIns", values, &keys, crate::i18n::Lang::EN, None, ""), values);
+        .build_ui_state(move |ui, values| section_fields(ui, "plugIns", values, &keys, crate::i18n::Lang::EN, ""), values);
     h.run_steps(2);
     assert!(h.query_by_label("Generator enabled").is_none());
     h.get_by_label("Enable Generator").click();
@@ -463,7 +463,7 @@ fn preferences_interface_offers_and_applies_sync_with_system() {
     h.input_mut().system_theme = Some(egui::Theme::Light);
     h.run_steps(4);
     for label in ["Adwaita", "Adwaita dark", "Solarized dark"] {
-        assert!(h.query_by_label(label).is_some(), "missing theme choice {label}");
+        assert!(h.query_by_label(label).is_none(), "{label} is not a choice: the interface is Nodalia's");
     }
     h.get_by_value("Dark").click();
     h.run_steps(2);
@@ -491,50 +491,6 @@ fn preferences_interface_offers_and_applies_sync_with_system() {
 }
 
 #[test]
-fn theme_star_saves_favorite_and_menu_groups_it() {
-    use egui_kittest::{Harness, kittest::Queryable};
-    let (mut app, _) = app_with_store();
-    open_preferences(&mut app, "interface");
-    let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
-        app
-    });
-    h.run_steps(4);
-    h.get_by_label("Classic").hover();
-    h.run_steps(2);
-    h.get_by_label("Add to favorites: Classic").click();
-    h.run_steps(2);
-    h.get_by_label("Apply").click();
-    h.run_steps(2);
-    assert_eq!(h.state().session.prefs().interface.favorite_themes, vec![SavedTheme::Classic]);
-    assert!(h.query_by_label("Remove from favorites: Classic").is_some());
-    let (light, dark) = favorite_theme_groups(&[SavedTheme::Studio, SavedTheme::Classic, SavedTheme::Adwaita]);
-    assert_eq!(light, vec![ThemeKind::Classic, ThemeKind::Adwaita]);
-    assert_eq!(dark, vec![ThemeKind::Studio]);
-}
-
-/// The favourite star badge overhangs its swatch; showing it on hover must not move the swatches
-/// after it, or the row would shift under the pointer.
-#[test]
-fn theme_star_badge_on_hover_does_not_move_the_next_swatch() {
-    use egui_kittest::{Harness, kittest::Queryable};
-    let (mut app, _) = app_with_store();
-    open_preferences(&mut app, "interface");
-    let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).build_eframe(move |cc| {
-        LienzoApp::setup_context(&cc.egui_ctx, Default::default());
-        app
-    });
-    h.run_steps(4);
-    let first = h.get_by_label("Classic").rect();
-    let next = h.get_by_label("Adwaita").rect();
-    h.hover_at(first.right_top() + vec2(-3.0, 3.0));
-    h.run_steps(3);
-    assert!(h.query_by_label("Add to favorites: Classic").is_some(), "the badge shows while the swatch is hovered");
-    assert_eq!(h.get_by_label("Classic").rect(), first);
-    assert_eq!(h.get_by_label("Adwaita").rect(), next);
-}
-
-#[test]
 fn preferences_interface_shows_language_without_scrolling() {
     // #2532: in a small window the theme cards filled the page and Language sat out of view
     // below them. Like Photoshop, Presentation follows Appearance and both fit.
@@ -548,16 +504,14 @@ fn preferences_interface_shows_language_without_scrolling() {
     });
     h.run_steps(4);
     let language = h.query_all_by_label("Language").next().expect("the Language row").rect();
-    let dark = h.query_all_by_label("Dark Theme").next().expect("the dark theme row").rect();
+    let mode = h.query_all_by_label("Appearance Mode").next().expect("the appearance mode row").rect();
     let ok = h.get_by_label("OK").rect();
-    assert!(dark.bottom() < language.top(), "Presentation {language:?} follows the theme swatches {dark:?}");
+    assert!(mode.bottom() < language.top(), "Presentation {language:?} follows the appearance mode {mode:?}");
     assert!(language.bottom() < ok.top() - 20.0, "Language {language:?} must show above the buttons {ok:?} without scrolling");
-    // Every theme in the option lists gets a swatch, Breeze included.
-    for (id, _) in LIGHT_THEME_OPTIONS.iter().chain(DARK_THEME_OPTIONS) {
-        let label = choice_label(id);
-        assert!(h.query_by_label(&label).is_some(), "missing theme swatch {label}");
+    // There are no theme swatches: light, dark or the system's, in Nodalia's design.
+    for gone in ["Light Theme", "Dark Theme", "Breeze light", "Breeze dark", "Classic"] {
+        assert!(h.query_by_label(gone).is_none(), "{gone} is not a choice");
     }
-    assert!(h.query_by_label("Breeze light").is_some() && h.query_by_label("Breeze dark").is_some());
 }
 
 #[test]
@@ -579,14 +533,14 @@ fn preferences_interface_search_hides_rows_and_skips_empty_groups() {
 
     let h = render("language");
     assert!(shown(&h, "Language") && shown(&h, "Presentation"));
-    for gone in ["Appearance", "Appearance Mode", "Dark Theme", "Options", "UI scale"] {
+    for gone in ["Appearance", "Appearance Mode", "Options", "UI scale"] {
         assert!(!shown(&h, gone), "\"language\" must not show {gone}");
     }
 
-    let h = render("theme");
-    assert!(shown(&h, "Appearance") && shown(&h, "Light Theme") && shown(&h, "Dark Theme") && shown(&h, "Breeze dark"));
-    for gone in ["Appearance Mode", "Presentation", "Language", "Options"] {
-        assert!(!shown(&h, gone), "\"theme\" must not show {gone}");
+    let h = render("appearance mode");
+    assert!(shown(&h, "Appearance") && shown(&h, "Appearance Mode"));
+    for gone in ["Presentation", "Language", "Options"] {
+        assert!(!shown(&h, gone), "\"appearance mode\" must not show {gone}");
     }
 
     let h = render("");
@@ -1810,17 +1764,15 @@ fn system_title_bar_explains_next_launch_and_preserves_apply_and_cancel() {
 fn rendering_mode_explains_next_launch() {
     use egui_kittest::{Harness, kittest::Queryable};
     let obj = json!({"renderingMode": "auto", "historyStates": 50}).as_object().unwrap().clone();
-    let mut h = Harness::new_ui_state(
-        |ui, obj: &mut Map<String, Value>| section_fields(ui, "performance", obj, &[], crate::i18n::Lang::from_pref("en"), None, ""),
-        obj,
-    );
+    let mut h =
+        Harness::new_ui_state(|ui, obj: &mut Map<String, Value>| section_fields(ui, "performance", obj, &[], crate::i18n::Lang::from_pref("en"), ""), obj);
     h.run_steps(4);
     assert!(h.query_all_by_label("Rendering Mode").next().is_some(), "the Rendering Mode setting");
     assert!(h.query_all_by_label("Applies at next launch.").next().is_some(), "its next-launch notice");
     // A search that leaves Rendering Mode out leaves its notice out too.
     let obj = json!({"renderingMode": "auto", "historyStates": 50}).as_object().unwrap().clone();
     let mut h = Harness::new_ui_state(
-        |ui, obj: &mut Map<String, Value>| section_fields(ui, "performance", obj, &[], crate::i18n::Lang::from_pref("en"), None, "history"),
+        |ui, obj: &mut Map<String, Value>| section_fields(ui, "performance", obj, &[], crate::i18n::Lang::from_pref("en"), "history"),
         obj,
     );
     h.run_steps(4);
@@ -1832,10 +1784,8 @@ fn rendering_mode_explains_next_launch() {
 fn integrations_explain_next_launch() {
     use egui_kittest::{Harness, kittest::Queryable};
     let obj = json!({"allowAgentControl": true, "controlPort": 0}).as_object().unwrap().clone();
-    let mut h = Harness::new_ui_state(
-        |ui, obj: &mut Map<String, Value>| section_fields(ui, "integrations", obj, &[], crate::i18n::Lang::from_pref("en"), None, ""),
-        obj,
-    );
+    let mut h =
+        Harness::new_ui_state(|ui, obj: &mut Map<String, Value>| section_fields(ui, "integrations", obj, &[], crate::i18n::Lang::from_pref("en"), ""), obj);
     h.run_steps(4);
     h.get_by_label("Allow agent control");
     assert_eq!(h.query_all_by_label("Applies at next launch.").count(), 2, "one notice under each row");
@@ -1846,7 +1796,7 @@ fn next_launch_notice_does_not_mark_unrelated_interface_preferences() {
     use egui_kittest::{Harness, kittest::Queryable};
     let obj = json!({"showTooltips": true}).as_object().unwrap().clone();
     let mut h =
-        Harness::new_ui_state(|ui, obj: &mut Map<String, Value>| section_fields(ui, "interface", obj, &[], crate::i18n::Lang::from_pref("en"), None, ""), obj);
+        Harness::new_ui_state(|ui, obj: &mut Map<String, Value>| section_fields(ui, "interface", obj, &[], crate::i18n::Lang::from_pref("en"), ""), obj);
     h.run_steps(4);
     assert!(h.query_by_label("Applies at next launch.").is_none());
     h.get_by_label("Show tooltips").click();
