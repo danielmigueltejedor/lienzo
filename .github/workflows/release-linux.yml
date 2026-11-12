@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     # The oldest glibc we build on is the oldest one the packages run on.
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     outputs:
       version: ${{ steps.ver.outputs.version }}
     env:
@@ -96,7 +96,7 @@ jobs:
   smoke:
     # Bare distribution images: the AppImage must start its CLI with nothing installed but glibc.
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -123,7 +123,7 @@ jobs:
     # Nothing reaches a release unless every start-up check above passed.
     needs: [build, smoke]
     if: inputs.tag != ''
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
     steps:
