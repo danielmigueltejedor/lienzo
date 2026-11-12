@@ -6,7 +6,8 @@
 hand (macdeployqt bundles only the cocoa platform, and `--headless` needs offscreen),
 code-signs and notarizes when the environment is configured (see below), runs a
 `--headless --run-script` smoke check on the staged bundle, and images the result with
-`hdiutil`.
+`hdiutil`. The Finder window (background, icon positions) comes from
+[`dmg/`](dmg/README.md).
 `scripts/remote/release-mac.ps1` drives the whole flow from the Windows machine.
 
 Run the staged connector's `--check` after code signing, like the headless app
