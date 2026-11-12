@@ -86,7 +86,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Git dependencies come from storytold or Nodalia
+      - name: Git dependencies come from Nodalia
         run: |
           set -euo pipefail
           test -f Cargo.lock || { echo "Cargo.lock is missing"; exit 1; }
@@ -110,13 +110,14 @@ jobs:
           python3 - <<'PY'
           import sys, tomllib
           lock = tomllib.load(open("Cargo.lock", "rb"))
-          # Nodalia's own design crates (nodalia-theme) come from danielmigueltejedor/nodalia-design.
-          trusted = ("git+https://github.com/storytold/", "git+https://github.com/danielmigueltejedor/nodalia-design?")
+          # Inherited libraries are vendored in getnodalia/foundation; Nodalia's own design crates
+          # (nodalia-theme) come from danielmigueltejedor/nodalia-design.
+          trusted = ("git+https://github.com/getnodalia/", "git+https://github.com/danielmigueltejedor/nodalia-design?")
           bad = sorted({p["source"] for p in lock.get("package", [])
                         if p.get("source", "").startswith("git+")
                         and not p["source"].startswith(trusted)})
           if bad:
-              print("Git dependencies outside github.com/storytold and nodalia-design:", *bad, sep="\n")
+              print("Git dependencies outside getnodalia and nodalia-design:", *bad, sep="\n")
               sys.exit(1)
           PY
       - name: No upstream names
@@ -208,7 +209,7 @@ jobs:
       - name: Check out craft-fonts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: storytold/craft-fonts
+          repository: getnodalia/foundation # craft-fonts, kept at vendor/craft-fonts/main
           ref: b076417b5880bd4154bd22f00695b1d28c6bea83
           path: craft-fonts
           persist-credentials: false
