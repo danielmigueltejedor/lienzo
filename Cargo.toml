@@ -46,8 +46,8 @@ craft-pdf = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e
 craft-docpath = { version = "0.1.0", git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e62138fc2438d2734523b302840b45d" }
 craft-jpeg = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e62138fc2438d2734523b302840b45d" }
 craft-pcraft-format = { git = "https://github.com/storytold/craft-libs", rev = "b8f7d93b00dfb8f172938f3d2d796ae62dcfe123" }
-# craft-update: app-specific pretend versions apply to startup and manual checks.
-craft-update = { git = "https://github.com/storytold/craft-libs", version = "=0.1.0", rev = "1b34eba41e62138fc2438d2734523b302840b45d", features = ["egui"] }
+# In-app updates (check GitHub Releases, verify, replace the AppImage or the macOS app, restart).
+nodalia-update = { git = "https://github.com/danielmigueltejedor/nodalia-design", rev = "1e02c72bd50664a5da101c413cbd726e53c732b6", features = ["egui"] }
 thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"

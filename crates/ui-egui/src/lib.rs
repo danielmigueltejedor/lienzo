@@ -9,20 +9,12 @@
 #![recursion_limit = "256"]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-/// Lienzo as craft-update knows it: its releases on GitHub, its 128 px icon and accent colour
-/// (the update prompt shows both, and an AppImage's menu entry gets the icon). The asset stem
-/// stays `lienzo` until the packages are renamed.
+/// Lienzo as the in-app updater knows it: its releases on GitHub and the macOS bundle name. The
+/// packages it installs are the release's `lienzo-<version>-linux-x86_64.AppImage` and
+/// `lienzo-<version>-macos-universal.dmg`.
 #[cfg(not(target_arch = "wasm32"))]
-pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
-    name: "Lienzo",
-    tagline: "Image editor",
-    repo: "danielmigueltejedor/lienzo",
-    former_names: &[],
-    icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/dev.danielmiguelt.Lienzo.png")),
-    accent: Some([0xee, 0x3b, 0x6b]),
-    developer: "Nodalia",
-    ..craft_update::suite::PHOTOCRAFT
-};
+pub const UPDATE_APP: nodalia_update::App =
+    nodalia_update::App { name: "Lienzo", repo: "getnodalia/lienzo", bundle: "Lienzo.app", version: env!("CARGO_PKG_VERSION"), edition: None };
 
 /// Translate a string literal into the current UI language: `tl!("Image Size…")`.
 macro_rules! tl {
@@ -270,8 +262,8 @@ pub use services::{
     AdoptAutosaveFn, AppendTextFn, AutomationCommandFn, AutomationOpenPcraftFn, AutomationReadFn, AutomationWriteFn, AutosaveFn, AutosaveResultsFn, CapsLockFn,
     CaptionStyleFn, ClipboardGetFn, ClipboardGetSvgFn, ClipboardSetFn, ClipboardUnreadableFn, CursorPosFn, DiscardAutosaveFn, EncodePngFn, ExportFn,
     ExportSettings, ExternalSvgEditor, ExternalSvgSession, ExternalVectorSave, ExternalVectorSource, FileStamp, FileStampFn, FormatChoices, ImportFn, Inbox,
-    LastUpdateFn, LoadTextFn, OpenExternalSvgFn, OpenUrlFn, OsEventsFn, PenEndFn, PhotoshopShortcutsFn, PlaceInbox, QuitFn, RecoverFn, Recoverable,
-    RightButtonDownFn, SameFileFn, SaveFileFn, SaveTextFn, Services, SystemThemeFn, TabletPollFn, WindowFrameFn, WriteFn,
+    LoadTextFn, OpenExternalSvgFn, OpenUrlFn, OsEventsFn, PenEndFn, PhotoshopShortcutsFn, PlaceInbox, QuitFn, RecoverFn, Recoverable, RightButtonDownFn,
+    SameFileFn, SaveFileFn, SaveTextFn, Services, SystemThemeFn, TabletPollFn, WindowFrameFn, WriteFn,
 };
 pub use text::bidi_text;
 pub use text::cjk_fonts;

@@ -14,8 +14,6 @@ keep = [
     'storytold/photocraft[\w.-]*',
     # The shared test corpus repository and its checkout directory.
     'photocraft-corpus',
-    # craft-libs' update suite names PhotoCraft's release feed; Lienzo overrides what it uses.
-    'craft_update::suite::PHOTOCRAFT',
     # Credit for work done upstream.
     'PhotoCraft contributors',
 ]

@@ -1,5 +1,5 @@
-//! Release checks through `craft-update`, the library every Craft App shares. Only public release
-//! metadata is requested.
+//! The release check behind `help.checkForUpdates` for the CLI, MCP and automation, through
+//! `nodalia-update`. The windows people see (and the install itself) are `lienzo_ui_egui::updates_ui`.
 
 use lienzo_engine::updates_cmds::{CheckFn, CheckResult, Release};
 
@@ -20,21 +20,9 @@ pub fn service() -> CheckFn {
     })
 }
 
-/// What the last self-update came to, once: `craft-update` removes its records as it reads them.
-pub fn last_update() -> Option<Result<String, String>> {
-    use craft_update::self_update::{Outcome, current_version, take_outcome};
-    let app = &lienzo_ui_egui::UPDATE_APP;
-    let paths = craft_update::Paths::for_app(app).ok()?;
-    let version = lienzo_engine::build_info::VERSION;
-    let running = current_version(app, version).map_or_else(|| version.to_string(), |v| v.to_string());
-    match take_outcome(&paths, &running)? {
-        Outcome::Installed(installed) => Some(Ok(installed.to_string())),
-        Outcome::Failed(reason) => Some(Err(reason)),
-    }
-}
-
 fn check() -> CheckResult {
-    let http = craft_update::Http::new("Lienzo/Update")?;
-    let found = craft_update::check_for_update(&lienzo_ui_egui::UPDATE_APP, &http, lienzo_engine::build_info::VERSION)?;
-    Ok(found.map(|release| Release { version: release.tag.trim_start_matches(['v', 'V']).to_string(), url: release.html_url }))
+    match nodalia_update::check(&lienzo_ui_egui::UPDATE_APP).map_err(|e| e.to_string())? {
+        nodalia_update::Check::UpToDate => Ok(None),
+        nodalia_update::Check::Available(release) => Ok(Some(Release { version: release.version, url: release.page })),
+    }
 }

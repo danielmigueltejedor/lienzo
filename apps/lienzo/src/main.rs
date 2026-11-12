@@ -347,14 +347,6 @@ fn main() -> eframe::Result {
     // Then, so the panic hook and every start-up warning are recorded (`logging`).
     let logger = logging::install();
     crash_guard::install_hook();
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Some(done) = craft_update::self_update::finish(&lienzo_ui_egui::UPDATE_APP, &std::env::args_os().skip(1).collect::<Vec<_>>()) {
-        if let Err(e) = done {
-            eprintln!("Lienzo update helper failed: {e}");
-            std::process::exit(1);
-        }
-        return Ok(());
-    }
 
     // The system font scan can take seconds (minutes on some Macs): run it off the UI thread.
     lienzo_ui_egui::type_tool::warm_fonts();
