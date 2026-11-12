@@ -46,6 +46,19 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
     /// tabs follow the panel tabs and fit with them ([`fit_with_extra`]). `minimized` hides the body
     /// but keeps the strip. Tabs, strip, header and drag bar are mirrored in right-to-left layout.
     pub(super) fn group(&mut self, ui: &mut Ui, panels: &[P], active: usize, minimized: bool, rect: Rect, kind: GroupKind) -> bool {
+        // A rounded dock group is a card: its fill first, the strip and body on top of it.
+        let round = kind == GroupKind::Dock && self.style.dock_radius > 0.0 && crate::docking::targets::usable(rect);
+        if round {
+            let radius = self.style.dock_radius.clamp(0.0, 255.0).round() as u8;
+            ui.painter().rect_filled(rect, radius, self.style.background);
+            self.dock_frame = Some(rect);
+        }
+        let taken = self.group_inner(ui, panels, active, minimized, rect, kind);
+        self.dock_frame = None;
+        taken
+    }
+
+    fn group_inner(&mut self, ui: &mut Ui, panels: &[P], active: usize, minimized: bool, rect: Rect, kind: GroupKind) -> bool {
         let Some(selected) = panels.get(active) else { return false };
         let host_collapsed = self.content.group_collapsed(panels);
         let minimized = minimized || host_collapsed;
@@ -174,7 +187,9 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
         if !minimized {
             self.contents(ui, selected, Rect::from_min_max(pos2(rect.left(), strip.bottom()), rect.max));
         }
-        ui.painter().rect_stroke(rect, 0.0, self.style.border, StrokeKind::Inside);
+        // A rounded dock group's outline follows its corners.
+        let radius = if kind == GroupKind::Dock { self.style.dock_radius.clamp(0.0, 255.0).round() as u8 } else { 0 };
+        ui.painter().rect_stroke(rect, radius, self.style.border, StrokeKind::Inside);
         false
     }
 

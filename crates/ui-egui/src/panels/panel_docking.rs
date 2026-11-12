@@ -821,6 +821,8 @@ fn show_layout(app: &mut LienzoApp, ui: &mut egui::Ui, dock_only: bool) {
         // The floating Properties card is an island too: its own fill is rounded, so the strip
         // must not paint a square over the corners.
         style.floating_radius = crate::theme::ISLAND_RADIUS;
+        // Docked groups are cards too, standing apart in the column rather than one square slab.
+        style.dock_radius = crate::theme::ISLAND_RADIUS;
         style.tab_background = egui::Color32::TRANSPARENT;
     }
     style.text = t.text;
