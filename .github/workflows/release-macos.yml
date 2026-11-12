@@ -1,0 +1,135 @@
+name: Release macOS
+
+# Builds Lienzo's universal (Apple Silicon + Intel) macOS DMG and the headless CLI zip, starts the
+# app's CLI from the mounted DMG, and only then attaches the files to a GitHub release.
+#
+# The app is signed ad hoc (no Apple Developer ID): macOS asks for confirmation the first time it
+# is opened (right-click > Open). Set MACOS_SIGN_IDENTITY and the APPLE_* secrets to sign and
+# notarize it; packaging/macos/package.sh does the rest.
+#
+# To release: set [workspace.package] version in Cargo.toml, merge, then run this workflow with
+# tag=vX.Y.Z. It reuses the draft release that Release Linux created (or creates one) and adds the
+# macOS files. Check them, then publish the draft. Without a tag it only uploads workflow artifacts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the packages to, e.g. v0.1.0 (empty: artifacts only)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-macos-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-14
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    env:
+      CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+      CRAFT_FONTS_REQUIRED: "1"
+      DIST: ${{ github.workspace }}/dist
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version
+        id: ver
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version="$(awk '/^\[/ { p = ($0 == "[workspace.package]"); next } p && $1 == "version" { gsub(/[" ]/, "", $3); print $3; exit }' Cargo.toml)"
+          test -n "$version"
+          # A tag must describe the code it is built from.
+          if [[ -n "$TAG" && "${TAG#v}" != "$version" ]]; then
+            echo "Tag $TAG does not match Cargo.toml's version $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: storytold/craft-fonts
+          ref: b076417b5880bd4154bd22f00695b1d28c6bea83
+          path: craft-fonts
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: release-macos
+
+      - name: Build and package
+        run: packaging/macos/package.sh --arch universal
+
+      - name: Checksums
+        working-directory: dist
+        run: |
+          ls -lh
+          shasum -a 256 lienzo-* > SHA256SUMS-macos
+          cat SHA256SUMS-macos
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lienzo-macos
+          path: dist/
+          if-no-files-found: error
+
+  smoke:
+    # The DMG as a user gets it: mount it and start the CLI inside the app, once per architecture
+    # the runners offer (arm64 and, via Rosetta, x86_64).
+    needs: build
+    runs-on: macos-14
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: lienzo-macos
+          path: dist
+      - name: Start the app's CLI from the DMG
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          cd dist
+          shasum -a 256 -c SHA256SUMS-macos
+          hdiutil attach "lienzo-$VERSION-macos-universal.dmg" -nobrowse -readonly -mountpoint /Volumes/Lienzo
+          lipo -archs /Volumes/Lienzo/Lienzo.app/Contents/MacOS/Lienzo
+          /Volumes/Lienzo/Lienzo.app/Contents/MacOS/lienzo-cli --version | tee version.txt
+          arch -x86_64 /Volumes/Lienzo/Lienzo.app/Contents/MacOS/lienzo-cli --version || echo "x86_64 slice not runnable here (no Rosetta)"
+          grep -q "$VERSION" version.txt
+          hdiutil detach /Volumes/Lienzo
+
+  attach:
+    # Nothing reaches a release unless the start-up check above passed.
+    needs: [build, smoke]
+    if: inputs.tag != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: lienzo-macos
+          path: dist
+      - name: Attach to the release (a draft, created if missing)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$REPO" --draft --target "$SHA" \
+              --title "Lienzo ${TAG#v}" --notes "Lienzo ${TAG#v}."
+          fi
+          gh release upload "$TAG" dist/* --repo "$REPO" --clobber
