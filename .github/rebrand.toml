@@ -27,6 +27,8 @@ skip = [
     # The record of what came from upstream, and upstream's own README kept for reference.
     "docs/upstream.md",
     "docs/upstream-readme.md",
+    # A copy of the docking library with one local change; its own tests and comments keep its names.
+    "vendor/*",
 ]
 
 # Run after renaming: shorter names change how rustfmt wraps lines and sorts imports.
