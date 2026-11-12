@@ -101,7 +101,7 @@ in-flight and completed images together.
    gains a bounded logical surrounding-text payload, and the Type tool supplies a
    real model adapter. E21b is new work, not existing E21/W27 capability.
 9. Treat E11 as optional. Lienzo does not enable `epaint/multithreading`; the
-   patch's forced single-threaded glyph context is a suite fix for Servo/VectorCraft,
+   patch's forced single-threaded glyph context is a suite fix for Servo/Pluma,
    not a Lienzo requirement.
 10. No PR may contain an absolute `path` patch. Final production manifests pin the
     reviewed, published `storytold` full 40-hex SHAs for the whole family and winit,
@@ -1448,7 +1448,7 @@ Remaining open gates:
    individual fork a required public dependency; choosing storytold requires
    pushing there. No approval is granted in this plan.
 2. **E11 inclusion.** No Lienzo consumer enables `epaint/multithreading`.
-   Decide whether the shared fork carries E11 for VectorCraft or whether
+   Decide whether the shared fork carries E11 for Pluma or whether
    Lienzo's qualifying revision excludes it.
 3. **E9/`direction.rs` overlap.** Keep explicit shell mirroring and leave
    `Style::right_to_left` off, or switch to E9 and remove overlapping manual

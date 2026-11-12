@@ -14,7 +14,7 @@ use lienzo_doc::DocId;
 use lienzo_engine::jobs::{JobEvent, JobId, JobOutcome, Started};
 #[cfg(test)]
 use lienzo_engine::prefs::Theme;
-use lienzo_engine::prefs::{self, AppearanceMode, DarkTheme, LightTheme, SECTIONS, Theme as SavedTheme};
+use lienzo_engine::prefs::{self, AppearanceMode, DarkTheme, LightTheme, SECTIONS};
 use lienzo_engine::snap::{SnapLine, SnapOptions, SnapTargets};
 use serde_json::{Map, Value, json};
 
@@ -72,10 +72,10 @@ mod save;
 mod shortcuts;
 mod startup;
 
-#[cfg(test)]
-use appearance::{DARK_THEME_OPTIONS, LIGHT_THEME_OPTIONS, display_scale, favorite_theme_groups, selected_theme};
-pub(crate) use appearance::{appearance_context_menu, cycle_appearance, step_brightness, sync_appearance};
 pub use appearance::{canvas_style, pasteboard_color};
+pub(crate) use appearance::{cycle_appearance, step_brightness, sync_appearance};
+#[cfg(test)]
+use appearance::{display_scale, selected_theme};
 pub use dialogs::{
     PREFERENCES_SIZE, apply, confirm, invoke, is_preferences, open_mismatch, open_preferences, open_shortcuts, owns, preferences_changed, width,
 };
@@ -83,9 +83,7 @@ pub use dialogs::{
 use dialogs::{preference_values, presets_io_body, settings_height};
 pub use fields::body;
 #[cfg(test)]
-use fields::{
-    choice_label, export_field_visible, field_visible, has_visible_fields, hex_field, humanize, preference_sections, section_fields, tools_field_visible,
-};
+use fields::{export_field_visible, field_visible, has_visible_fields, hex_field, humanize, preference_sections, section_fields, tools_field_visible};
 #[cfg(test)]
 use graphics::{gpu_status_rows, rendering_mode_value};
 use save::SaveRetry;

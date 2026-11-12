@@ -1456,7 +1456,7 @@ fn type_edit_rerenders_cache_to_new_text() {
         st.doc.layer(lienzo_doc::LayerId(id)).unwrap().surface().unwrap().content_bounds().width()
     };
     let w0 = width(&s);
-    s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "Lienzo"}, "coalesce": "k"})).unwrap();
+    s.execute("type.edit", json!({"layer": id, "replace": {"start": 0, "end": 11, "text": "Lienzo Nodalia"}, "coalesce": "k"})).unwrap();
     let w1 = width(&s);
     assert!(w0 > 150 && w1 > 150, "cache widths {w0} → {w1}");
 }
