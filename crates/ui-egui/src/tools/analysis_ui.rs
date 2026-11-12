@@ -689,13 +689,23 @@ fn count_size_params(marker: f32, label: f32) -> Value {
     json!({"markerSize": whole(marker, 1.0, 10.0), "labelSize": whole(label, 8.0, 72.0)})
 }
 
-fn float_frame(t: &Tokens) -> egui::Frame {
+pub(crate) fn float_frame(t: &Tokens) -> egui::Frame {
     egui::Frame::NONE
         .fill(t.card)
         .stroke(Stroke::new(1.0, t.card_border))
         .corner_radius(CornerRadius::same(t.radius_lg as u8))
         .shadow(egui::Shadow { offset: [0, 10], blur: 30, spread: 0, color: t.shadow })
         .inner_margin(egui::Margin::same(8))
+}
+
+/// The heading of a floating dialog that has no title bar of its own: the title in the dialog font
+/// over a hairline.
+pub(crate) fn dialog_heading(ui: &mut egui::Ui, title: &str) {
+    let t = Tokens::get(ui.ctx());
+    ui.add(egui::Label::new(RichText::new(title).font(crate::theme::semibold(15.0)).color(t.text)).selectable(false));
+    ui.add_space(4.0);
+    crate::widgets::hairline(ui);
+    ui.add_space(6.0);
 }
 
 /// Title row with a close button; returns true when closed.
@@ -705,7 +715,7 @@ pub(crate) fn title_row(ui: &mut egui::Ui, title: &str) -> bool {
     ui.horizontal(|ui| {
         ui.label(RichText::new(tl!(&title)).color(t.text).size(12.0).strong());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+            if crate::dialogs::window_close(ui) {
                 close = true;
             }
         });
@@ -952,14 +962,13 @@ fn dialog(app: &mut LienzoApp, ctx: &egui::Context) {
     let mut result: Option<bool> = None;
     egui::Window::new(title)
         .id(egui::Id::unique("analysis-dialog"))
+        .title_bar(false)
         .collapsible(false)
         .resizable(false)
         .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
         .frame(float_frame(&t))
         .show(ctx, |ui| {
-            ui.label(RichText::new(tl!(&title)).color(t.text).size(13.0).strong());
-            crate::widgets::hairline(ui);
-            ui.add_space(6.0);
+            dialog_heading(ui, tl!(&title));
             match kind.as_str() {
                 "scale" => {
                     choice(ui, &mut f, "preset", tl!("Presets:"), &[("custom", tl!("Custom")), ("default", tl!("Default"))]);

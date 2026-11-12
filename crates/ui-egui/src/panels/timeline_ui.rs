@@ -57,7 +57,7 @@ pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
         ui.horizontal(|ui| {
             ui.label(RichText::new(tl!("Timeline")).strong().color(t.text));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                if crate::dialogs::window_close(ui) {
                     close = true;
                 }
             });

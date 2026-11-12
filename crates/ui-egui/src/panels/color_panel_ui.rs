@@ -249,7 +249,8 @@ fn track(ui: &egui::Ui, r: Rect, resp: &egui::Response, value: &mut f32, lo: f32
         mesh.add_triangle(a, a + 3, a + 2);
     }
     ui.painter().add(mesh);
-    ui.painter().rect_stroke(bar, 0.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
+    crate::theme::round_corners(ui.painter(), bar, t.box_radius().min(bar.height() / 2.0), t.chrome);
+    ui.painter().rect_stroke(bar, t.box_radius().min(bar.height() / 2.0), Stroke::new(1.0, t.field_border), StrokeKind::Outside);
     if web {
         // Ticks at the web steps.
         for k in 0..=5 {
@@ -488,7 +489,8 @@ fn ramp(app: &mut LienzoApp, ui: &mut egui::Ui, height: f32) {
     };
     let colors = ramp_colors(ui, cp.ramp, cp.web_safe_ramp, fg, bg);
     ui.painter().add(ramp_mesh(bar, &colors, cp.web_safe_ramp));
-    ui.painter().rect_stroke(bar, 0.0, Stroke::new(1.0, t.field_border), StrokeKind::Outside);
+    crate::theme::round_corners(ui.painter(), bar, t.box_radius().min(bar.height() / 2.0), t.chrome);
+    ui.painter().rect_stroke(bar, t.box_radius().min(bar.height() / 2.0), Stroke::new(1.0, t.field_border), StrokeKind::Outside);
     let (white, black) =
         (Rect::from_min_max(boxes.min, pos2(boxes.right(), boxes.center().y)), Rect::from_min_max(pos2(boxes.left(), boxes.center().y), boxes.max));
     ui.painter().rect_filled(white, 0.0, Color32::WHITE);

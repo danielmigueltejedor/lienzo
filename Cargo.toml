@@ -2,9 +2,10 @@
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
 default-members = ["crates/*", "apps/lienzo", "apps/lienzo-cli", "xtask"]
+exclude = ["vendor/craft-ui"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
@@ -211,3 +212,8 @@ hayro = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e6213
 hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e62138fc2438d2734523b302840b45d" }
 hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e62138fc2438d2734523b302840b45d" }
 hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "1b34eba41e62138fc2438d2734523b302840b45d" }
+
+# craft-ui is vendored (vendor/craft-ui, see vendor/craft-ui/VENDORED.md) so that a floating window
+# can have rounded corners; every craft-libs crate that depends on it gets this copy.
+[patch."https://github.com/storytold/craft-libs"]
+craft-ui = { path = "vendor/craft-ui" }

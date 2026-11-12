@@ -135,7 +135,7 @@ fn float_window(
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(tl!(&title)).color(t.text).size(12.0).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                    if crate::dialogs::window_close(ui) {
                         close = true;
                     }
                     if key == "styles" {

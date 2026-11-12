@@ -174,7 +174,7 @@ pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
                         app.ui.type_panels.options = None;
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                        if crate::dialogs::window_close(ui) {
                             close = true;
                         }
                     });
@@ -200,7 +200,7 @@ pub fn windows(app: &mut LienzoApp, ctx: &egui::Context) {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(tl!("Glyphs")).color(t.text).size(12.0).strong());
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                        if crate::dialogs::window_close(ui) {
                             close = true;
                         }
                     });
@@ -849,7 +849,7 @@ fn spelling_window(app: &mut LienzoApp, ctx: &egui::Context) {
                 // The close box (#5496) is Done, as in Photoshop: every change is already made.
                 if crate::dialogs::CLOSE_BOX {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                        if crate::dialogs::window_close(ui) {
                             act = Some("done");
                         }
                     });

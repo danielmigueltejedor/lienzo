@@ -268,11 +268,14 @@ pub fn show_fallback(app: &mut LienzoApp, ctx: &egui::Context) {
     let mut choice = None;
     egui::Window::new(tl!("Switched to CPU rendering"))
         .id(egui::Id::unique("gpu-fallback-warning"))
+        .title_bar(false)
+        .frame(crate::analysis_ui::float_frame(&t))
         .collapsible(false)
         .resizable(false)
         .default_width(440.0)
         .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(ctx, |ui| {
+            crate::analysis_ui::dialog_heading(ui, tl!("Switched to CPU rendering"));
             ui.label(egui::RichText::new(tl!("GPU acceleration could not continue. Your documents are unchanged.")).color(t.warning));
             ui.label(tl!("Lienzo is using the CPU image compositor. The window may still use your graphics adapter."));
             ui.collapsing(tl!("Details"), |ui| {

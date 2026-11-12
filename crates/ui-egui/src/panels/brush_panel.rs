@@ -530,7 +530,7 @@ pub fn window(app: &mut LienzoApp, ctx: &egui::Context) {
                 }
                 app.ui.brush_tab = tab;
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if icons::button(ui, "x", 20.0, false, tl!("Close")).clicked() {
+                    if crate::dialogs::window_close(ui) {
                         open = false;
                     }
                     let menu_btn = widgets::panel_menu_button(ui);

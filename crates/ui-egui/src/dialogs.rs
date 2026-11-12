@@ -264,19 +264,32 @@ fn show_modal<T>(
 pub(crate) const CLOSE_BOX: bool = !cfg!(target_os = "macos");
 
 /// The side of the close box's square, in points.
-const CLOSE_BOX_SIZE: f32 = 20.0;
+const CLOSE_BOX_SIZE: f32 = 24.0;
 
 /// The close box's square: flush with the title band's right end `right`, centred on the title
 /// row at height `centre_y`.
-fn close_box_rect(right: f32, centre_y: f32) -> egui::Rect {
+pub(crate) fn close_box_rect(right: f32, centre_y: f32) -> egui::Rect {
     egui::Rect::from_min_size(egui::pos2(right - CLOSE_BOX_SIZE, centre_y - CLOSE_BOX_SIZE / 2.0), egui::vec2(CLOSE_BOX_SIZE, CLOSE_BOX_SIZE))
 }
 
 /// Draws a title bar's close box in `rect`, the same × icon button the floating panels close with,
 /// and says whether it was clicked. Its own child `Ui`, so the title row's layout is unchanged.
 pub(crate) fn close_box(ui: &mut egui::Ui, rect: egui::Rect) -> bool {
+    if !crate::theme::Tokens::get(ui.ctx()).pro {
+        return crate::panels::titlebar::ndl_close_button(ui, rect, ui.scope_id().with("dialog-close"));
+    }
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect).layout(egui::Layout::right_to_left(egui::Align::Center)));
     crate::icons::button(&mut child, "x", CLOSE_BOX_SIZE, false, tl!("Close")).clicked()
+}
+
+/// The close button of a floating panel's title row, laid out where the row's layout puts it: in
+/// Nodalia the round window-button disc with its ×, elsewhere the small × icon button.
+pub(crate) fn window_close(ui: &mut egui::Ui) -> bool {
+    if crate::theme::Tokens::get(ui.ctx()).pro {
+        return crate::icons::button(ui, "x", 20.0, false, tl!("Close")).clicked();
+    }
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(CLOSE_BOX_SIZE, CLOSE_BOX_SIZE), egui::Sense::hover());
+    crate::panels::titlebar::ndl_close_button(ui, rect, response.id.with("close"))
 }
 
 /// The dialog's contents under the title rule, picked by its kind and the marker field that routes
@@ -392,22 +405,7 @@ fn dialog_body(app: &mut LienzoApp, ui: &mut egui::Ui, d: &Dialog, fields: &mut 
             }
         }
         DialogKind::About => {
-            // Tabs About · Contributors · Models. The
-            // tab is a dialog field, so automation can switch it with `ui.dialog.set`.
-            let tab = about_tab(fields);
-            let mut chosen = tab;
-            ui.horizontal(|ui| {
-                for (key, label) in [("about", tl!("About")), ("contributors", tl!("Contributors")), ("models", tl!("Models"))] {
-                    if crate::widgets::pill_tab(ui, label, tab == key).clicked() {
-                        chosen = key;
-                    }
-                }
-            });
-            if chosen != tab {
-                fields.insert("tab".into(), json!(chosen));
-            }
-            ui.add_space(8.0);
-            about_tab_body(app, ui, chosen);
+            about_body(app, ui);
         }
         DialogKind::Command => outcome = command_body(app, ui, d, fields, id, interactive),
         DialogKind::LayerStyle => outcome = crate::layer_style::body_with_response(app, ui, fields, interactive),
@@ -572,11 +570,9 @@ fn ok_label(d: &Dialog) -> &'static str {
 }
 
 /// The widest a dialog grows when its body names no width of its own.
-fn default_max_width(d: &Dialog, compact: bool, curves: bool, about_tabs: bool, available: f32) -> f32 {
+fn default_max_width(d: &Dialog, compact: bool, curves: bool, available: f32) -> f32 {
     if d.kind == DialogKind::NewDocument {
         800.0
-    } else if about_tabs {
-        700.0
     } else if d.kind == DialogKind::LayerStyle || d.fields.contains_key("__export") || crate::color_picker_ui::owns(&d.fields) {
         600.0
     } else if compact {
@@ -674,12 +670,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             if d.kind == DialogKind::NewDocument {
                 ui.set_min_width(800.0);
             }
-            // The About window: room for the contributor table, the same width on every tab.
-            let about_tabs = d.kind == DialogKind::About && d.fields.get("systemInfo").and_then(Value::as_bool) != Some(true);
-            if about_tabs {
-                ui.set_min_width(700.0);
-            }
-            ui.set_max_width(wide.unwrap_or_else(|| default_max_width(&d, compact, curves, about_tabs, available.x)));
+            ui.set_max_width(wide.unwrap_or_else(|| default_max_width(&d, compact, curves, available.x)));
             if web || fixed.is_some() {
                 ui.set_max_width(available.x);
                 ui.set_min_size(available);
@@ -816,39 +807,22 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
     }
 }
 
-/// The About window's tabs, as stored in its `tab` field.
-pub const ABOUT_TABS: [&str; 3] = ["about", "contributors", "models"];
-
-/// The About tab to show: the `tab` field when it names one, otherwise "about".
-fn about_tab(fields: &serde_json::Map<String, Value>) -> &'static str {
-    let want = fields.get("tab").and_then(Value::as_str).unwrap_or("");
-    ABOUT_TABS.iter().copied().find(|t| *t == want).unwrap_or("about")
-}
-
-/// One About tab's contents: the credits lists, or the product blurb and links.
-fn about_tab_body(app: &mut LienzoApp, ui: &mut egui::Ui, tab: &str) {
-    match tab {
-        "contributors" => crate::credits::contributors_ui(app, ui),
-        "models" => crate::credits::models_ui(ui),
-        _ => {
-            let t = crate::theme::Tokens::get(ui.ctx());
-            ui.vertical_centered(|ui| {
-                let (mark, _) = ui.allocate_exact_size(egui::vec2(96.0, 96.0), egui::Sense::hover());
-                crate::panels::brand::paint_mark(ui, mark);
-                ui.add_space(10.0);
-                ui.label(egui::RichText::new("Lienzo").font(crate::theme::display(26.0)).color(t.text));
-                ui.label(
-                    egui::RichText::new(crate::i18n::fmt(tl!("Version {version}"), &[("version", &lienzo_engine::build_info::long_version())]))
-                        .color(t.text_dim),
-                );
-                ui.add_space(8.0);
-                ui.label(tl!("A native image editor, layer by layer. No account, no cloud."));
-                ui.label(egui::RichText::new(tl!("by Nodalia")).color(t.text_dim));
-                ui.add_space(12.0);
-                crate::links::link_row(app, ui);
-            });
-        }
-    }
+/// The About window's contents: the mark, the version, the one-line blurb and the links.
+fn about_body(app: &mut LienzoApp, ui: &mut egui::Ui) {
+    let t = crate::theme::Tokens::get(ui.ctx());
+    ui.set_min_width(380.0);
+    ui.vertical_centered(|ui| {
+        let (mark, _) = ui.allocate_exact_size(egui::vec2(96.0, 96.0), egui::Sense::hover());
+        crate::panels::brand::paint_mark(ui, mark);
+        ui.add_space(10.0);
+        ui.label(egui::RichText::new("Lienzo").font(crate::theme::display(26.0)).color(t.text));
+        ui.label(egui::RichText::new(crate::i18n::fmt(tl!("Version {version}"), &[("version", &lienzo_engine::build_info::long_version())])).color(t.text_dim));
+        ui.add_space(8.0);
+        ui.label(tl!("A native image editor, layer by layer. No account, no cloud."));
+        ui.label(egui::RichText::new(tl!("by Nodalia")).color(t.text_dim));
+        ui.add_space(12.0);
+        crate::links::link_row(app, ui);
+    });
 }
 
 /// The dialog title as shown: [`title`] in the UI language.
@@ -1279,7 +1253,6 @@ pub(crate) mod color_picker_preview;
 pub mod color_picker_ui;
 pub mod color_range_ui;
 pub mod color_table_ui;
-pub mod credits;
 pub mod dds_options_ui;
 pub mod delete_layer_prompt;
 pub mod dialog_alt_reset;

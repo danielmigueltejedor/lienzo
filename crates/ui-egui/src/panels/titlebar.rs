@@ -295,7 +295,7 @@ pub fn caption_buttons(app: &mut LienzoApp, ui: &mut Ui, bar: Rect) {
             let ink = if close && resp.hovered() { t.caption_close_text } else { t.icon };
             paint_windows_glyph(ui, c, max, r.center(), Stroke::new(1.0, ink));
         } else if s.family == CaptionFamily::Nodalia {
-            paint_nodalia(ui, &t, c, max, centre, resp.hovered(), pressed);
+            paint_nodalia(ui, &t, c, max, centre, (resp.hovered(), pressed), 1.0);
         } else {
             paint_round(ui, &t, &s, c, max, centre, resp.hovered(), pressed);
         }
@@ -443,8 +443,9 @@ fn paint_round(ui: &Ui, t: &Tokens, s: &CaptionStyle, c: Caption, maximized: boo
 
 /// A Nodalia window button centred at `centre`: a raised disc at rest, then the hover tint of its
 /// kind, and NDL's window glyph (`window-minimize`, `-maximize`, `-restore`, `-close`) drawn on
-/// its 24 pt grid with 2 pt strokes on whole pixels.
-fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2, hovered: bool, pressed: bool) {
+/// its 24 pt grid with 2 pt strokes on whole pixels, all scaled by `k` (1 for the window's own
+/// 28 pt buttons, smaller for a dialog's close button).
+fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2, (hovered, pressed): (bool, bool), k: f32) {
     let p = if t.dark() { nodalia_theme::Mode::Dark } else { nodalia_theme::Mode::Light }.palette_with(crate::theme::LIENZO);
     let c32 = crate::theme::ndl;
     let ppp = ui.ctx().pixels_per_point();
@@ -459,10 +460,10 @@ fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2,
         fill = fill.gamma_multiply(0.82).to_opaque();
     }
     let painter = ui.painter();
-    painter.circle_filled(centre, 14.0, fill);
-    let at = |x: f32, y: f32| centre + vec2(x - 12.0, y - 12.0);
-    let s = Stroke::new(2.0, ink);
-    let round = |q: Pos2| painter.circle_filled(q, 1.0, ink);
+    painter.circle_filled(centre, 14.0 * k, fill);
+    let at = |x: f32, y: f32| centre + vec2(x - 12.0, y - 12.0) * k;
+    let s = Stroke::new(2.0 * k, ink);
+    let round = |q: Pos2| painter.circle_filled(q, k, ink);
     let path = |points: Vec<Pos2>| {
         if let (Some(&a), Some(&b)) = (points.first(), points.last()) {
             round(a);
@@ -491,6 +492,17 @@ fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2,
             path(vec![at(16.0, 8.0), at(8.0, 16.0)]);
         }
     }
+}
+
+/// A dialog's close button in the Nodalia look: the window buttons' disc and × at 24 pt, filling
+/// `rect`. Says whether it was clicked.
+pub(crate) fn ndl_close_button(ui: &mut Ui, rect: Rect, id: Id) -> bool {
+    let t = Tokens::get(ui.ctx());
+    let resp = ui.interact(rect, id, Sense::click());
+    let pressed = resp.is_pointer_button_down_on() && resp.hovered();
+    paint_nodalia(ui, &t, Caption::Close, false, rect.center(), (resp.hovered(), pressed), rect.height() / 28.0);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Close")));
+    resp.clicked()
 }
 
 /// `icon` from the theme at `px` device pixels, uploaded once per theme and size; `None` (also

@@ -209,7 +209,7 @@ fn caf_props_panel(
 
 /// The Preview panel: the sampled result in its own pan / zoom view, and the zoom row under it.
 fn caf_preview_panel(ui: &mut egui::Ui, painter: &egui::Painter, t: &Tokens, w: &mut CafWorkspace, pv_rect: ERect) {
-    painter.rect_filled(pv_rect, 0.0, t.dock);
+    painter.rect_filled(pv_rect, 0.0, t.pane());
     painter.line_segment([pv_rect.left_top(), pv_rect.left_bottom()], Stroke::new(1.0, t.separator));
     painter.text(pv_rect.left_top() + vec2(12.0, 10.0), Align2::LEFT_TOP, tl!("Preview"), FontId::proportional(12.0), t.text);
     let pv_area = ERect::from_min_max(pv_rect.min + vec2(0.0, 30.0), pv_rect.max - vec2(0.0, 44.0));
@@ -284,11 +284,12 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let before = w.opts.clone();
         w.texture_limit = ctx.input(|i| i.max_texture_side);
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         // Title strip.
         let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, 0.0, t.pane());
         painter.line_segment([title.left_bottom(), title.right_bottom()], Stroke::new(1.0, t.separator));
         let pct = if w.zoom > 0.0 { w.zoom * 100.0 } else { 100.0 };
         painter.text(
@@ -300,7 +301,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         );
         // Options bar.
         let bar = ERect::from_min_size(pos2(full.left(), title.bottom()), vec2(full.width(), BAR_H));
-        painter.rect_filled(bar, 0.0, t.dock);
+        painter.rect_filled(bar, 0.0, t.pane());
         painter.line_segment([bar.left_bottom(), bar.right_bottom()], Stroke::new(1.0, t.separator));
         let mut bui =
             ui.new_child(egui::UiBuilder::new().max_rect(bar.shrink2(vec2(LEFT_W + 8.0, 4.0))).layout(egui::Layout::left_to_right(egui::Align::Center)));
@@ -309,7 +310,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         let body = ERect::from_min_max(pos2(full.left(), bar.bottom()), full.max);
         // Left tool strip.
         let left = ERect::from_min_size(pos2(full.left(), title.bottom()), vec2(LEFT_W, full.height() - title.height()));
-        painter.rect_filled(left, 0.0, t.dock);
+        painter.rect_filled(left, 0.0, t.pane());
         painter.line_segment([left.right_top(), left.right_bottom()], Stroke::new(1.0, t.separator));
         let mut strip = ui.new_child(egui::UiBuilder::new().max_rect(left.shrink2(vec2(6.0, 8.0))));
         strip.spacing_mut().item_spacing.y = 4.0;
@@ -320,7 +321,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         }
         // Right: the Content-Aware Fill panel.
         let right = ERect::from_min_size(pos2(body.right() - PANEL_W, body.top()), vec2(PANEL_W, body.height()));
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let mut props =
             ui.new_child(egui::UiBuilder::new().max_rect(ERect::from_min_max(right.min + vec2(14.0, 12.0), pos2(right.right() - 14.0, right.bottom() - 60.0))));
@@ -444,6 +445,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             w.overlay_dirty = true;
             w.stale();
         }
+        crate::theme::round_workspace(ui, full);
     });
     if let Some(s) = new_sampling {
         set_sampling(app, s);

@@ -817,6 +817,12 @@ fn show_layout(app: &mut LienzoApp, ui: &mut egui::Ui, dock_only: bool) {
     // card behind it, so the canvas showed through its titles (#4509).
     style.tab_background = if t.tab_strip.a() == 0 { t.card } else { t.tab_strip };
     style.active_background = t.card;
+    if t.islands() {
+        // The floating Properties card is an island too: its own fill is rounded, so the strip
+        // must not paint a square over the corners.
+        style.floating_radius = crate::theme::ISLAND_RADIUS;
+        style.tab_background = egui::Color32::TRANSPARENT;
+    }
     style.text = t.text;
     style.inactive_text = t.text_dim;
     style.border = egui::Stroke::new(1.0, t.card_border);

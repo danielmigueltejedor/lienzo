@@ -288,10 +288,11 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             d.render(ctx);
         }
         let (full, _) = ui.allocate_exact_size(screen.size(), Sense::hover());
+        let full = crate::theme::workspace_area(ui, full);
         let painter = ui.painter().clone();
         painter.rect_filled(full, 0.0, t.chrome);
         let title = ERect::from_min_size(full.min, vec2(full.width(), 30.0));
-        painter.rect_filled(title, 0.0, t.dock);
+        painter.rect_filled(title, 0.0, t.pane());
         painter.text(title.center(), Align2::CENTER_CENTER, format!("Adaptive Wide Angle ({})", d.layer_name), FontId::proportional(13.0), t.text);
         let footer_h = 48.0;
         let body = ERect::from_min_max(pos2(full.left(), title.bottom()), pos2(full.right(), full.bottom() - footer_h));
@@ -379,7 +380,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         }
         // Panel.
         let right = ERect::from_min_max(pos2(body.right() - PANEL_W, body.top()), body.max);
-        painter.rect_filled(right, 0.0, t.dock);
+        painter.rect_filled(right, 0.0, t.pane());
         painter.line_segment([right.left_top(), right.left_bottom()], Stroke::new(1.0, t.separator));
         let mut props = ui.new_child(egui::UiBuilder::new().max_rect(right.shrink2(vec2(14.0, 10.0))));
         egui::ScrollArea::vertical().id_salt("awa-props").show(&mut props, |ui| {
@@ -455,7 +456,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
             );
         });
         let foot = ERect::from_min_max(pos2(full.left(), full.bottom() - footer_h), full.max);
-        painter.rect_filled(foot, 0.0, t.dock);
+        painter.rect_filled(foot, 0.0, t.pane());
         let mut fu = ui.new_child(egui::UiBuilder::new().max_rect(foot.shrink2(vec2(16.0, 9.0))).layout(egui::Layout::right_to_left(egui::Align::Center)));
         if let Some(role) = widgets::dialog_buttons(
             &mut fu,
@@ -471,6 +472,7 @@ pub fn show(app: &mut LienzoApp, ctx: &egui::Context) {
         if d.dirty {
             ctx.request_repaint();
         }
+        crate::theme::round_workspace(ui, full);
     });
     if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         action = Some("cancel");

@@ -288,7 +288,7 @@ fn the_prompt_shows_the_set_and_its_import_button_applies_it() {
         with_photoshop(SAMPLE, None).0
     });
     h.run_steps(2);
-    h.get_by_label("Import keyboard shortcuts?");
+    h.get_all_by_label("Import keyboard shortcuts?").next().expect("the prompt is shown");
     assert!(h.query_by_label_contains("keyboard shortcut set texcuts").is_some());
     h.get_by_label("Import").click();
     h.run_steps(2);

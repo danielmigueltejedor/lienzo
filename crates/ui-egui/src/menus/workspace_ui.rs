@@ -408,10 +408,20 @@ fn dialog(app: &mut LienzoApp, ctx: &egui::Context) {
     let title = title(&kind);
     let names: Vec<String> = app.session.prefs().workspaces.keys().cloned().collect();
     let mut result: Option<bool> = None;
-    egui::Window::new(title).id(egui::Id::unique("shell-dialog")).collapsible(false).resizable(false).anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0)).show(
-        ctx,
-        |ui| {
-            ui.label(RichText::new(tl!(&title)).color(t.text).size(13.0).strong());
+    egui::Window::new(title)
+        .id(egui::Id::unique("shell-dialog"))
+        .title_bar(false)
+        .frame(crate::analysis_ui::float_frame(&t))
+        .collapsible(false)
+        .resizable(false)
+        .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
+        .show(ctx, |ui| {
+            ui.set_width((ctx.content_rect().width() - 32.0).clamp(0.0, 340.0));
+            let heading = ui.add(egui::Label::new(RichText::new(tl!(&title)).font(crate::theme::semibold(15.0)).color(t.text)).selectable(false));
+            if crate::dialogs::CLOSE_BOX && crate::dialogs::close_box(ui, crate::dialogs::close_box_rect(ui.max_rect().right(), heading.rect.center().y)) {
+                result = Some(false);
+            }
+            ui.add_space(4.0);
             crate::widgets::hairline(ui);
             ui.add_space(6.0);
             let text = |ui: &mut egui::Ui, f: &mut Map<String, Value>, key: &str, label: &str| {
@@ -465,9 +475,8 @@ fn dialog(app: &mut LienzoApp, ctx: &egui::Context) {
                     number(ui, &mut f, "ratio", tl!("Factor:"), 0.1..=10.0);
                 }
                 "preview32" => {
-                    // A slider fills its available width. Keep its field above it, so the
+                    // A slider fills its available width; the window's width is fixed above, so its
                     // field cannot grow an auto-sized window beyond that width each frame.
-                    ui.set_width((ctx.content_rect().width() - 32.0).clamp(0.0, 320.0));
                     let mut m = f.get("method").and_then(Value::as_str).unwrap_or("exposureGamma").to_string();
                     if crate::widgets::dropdown(
                         ui,
@@ -509,8 +518,7 @@ fn dialog(app: &mut LienzoApp, ctx: &egui::Context) {
                     }
                 });
             });
-        },
-    );
+        });
     match result {
         Some(true) => {
             app.ui.shell.dialog = Some((kind, f));
