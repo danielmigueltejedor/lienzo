@@ -18,7 +18,7 @@ It is a native app written in Rust that draws the canvas on your graphics card, 
 
 ## Part of the Craft App Suite
 
-Lienzo is one of the Crafting Apps from the ArtCraft team, next to VectorCraft, FilmCraft and the other Craft apps. You can install and update them from [ArtCraft Launcher](https://getartcraft.com/docs/craft-launcher).
+Lienzo is one of the Nodalia apps from the ArtCraft team, next to Pluma, Toma and the other Nodalia apps. You can install and update them from [ArtCraft Launcher](https://getartcraft.com/docs/craft-launcher).
 
 ## Get help
 

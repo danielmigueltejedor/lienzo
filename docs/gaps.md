@@ -408,7 +408,7 @@ what an agent can't finish alone.
 ## File-format gaps
 
 ### G10. Missing and partial file formats
-- **Progress (2026-10-26):** Embedded SVG/PDF-compatible AI/PDF/EPS smart objects can be edited in VectorCraft, including nested PSD payloads. AI/PDF/EPS working copies retain their format with a separate source-bound SVG display preview; native bytes and previews persist through .pcraft and PSD/PSB saves. This does not add standalone EPS/DCS import or establish lossless Adobe round-trip compatibility. See [workflow and limits](embedded-vector-editing.md); estimates and parity percentages are unchanged.
+- **Progress (2026-10-26):** Embedded SVG/PDF-compatible AI/PDF/EPS smart objects can be edited in Pluma, including nested PSD payloads. AI/PDF/EPS working copies retain their format with a separate source-bound SVG display preview; native bytes and previews persist through .pcraft and PSD/PSB saves. This does not add standalone EPS/DCS import or establish lossless Adobe round-trip compatibility. See [workflow and limits](embedded-vector-editing.md); estimates and parity percentages are unchanged.
 - **Missing:** JPEG Options' Matte, progressive Scans and size preview (FILE-215-19 partial), TIFF Options' JPEG compression, Pixel Order and Byte Order (the rest landed 2026-11-02, #8827), Photoshop PDF read and its vector/text/multi-page
   write (FILE-215-10, #2541; a single flattened page now saves via Save As / Save a Copy / CLI,
   2026-10-11, #3401), AVIF read (#463) and default-build AVIF write, JPEG XL, JPEG 2000 (#1047),

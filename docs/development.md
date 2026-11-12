@@ -117,7 +117,7 @@ Rust test and variable work on Windows with the native shell's environment-varia
 
 ## Fonts (craft-fonts)
 
-Font assets shared by the Crafting Apps live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), never in this repo: don't commit font files here (Inter and JetBrains Mono in `assets/fonts/` are the only exceptions; new fonts go to craft-fonts).
+Font assets shared by the Nodalia apps live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), never in this repo: don't commit font files here (Inter and JetBrains Mono in `assets/fonts/` are the only exceptions; new fonts go to craft-fonts).
 
 craft-fonts is an **optional build input**, never a Cargo dependency:
 
