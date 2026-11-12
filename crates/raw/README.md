@@ -36,11 +36,11 @@ Implemented only from public specifications, papers and observation of files:
   (prose: the `0x0096` table layout, a lossy curve followed by a fixed-table Huffman stage),
   ExifTool's Nikon tag-name documentation and ITU-T T.81 Annex F / H. The Huffman tables are not
   stored in the files; they were recovered by black-box analysis of CC0 raw.pixls.us samples (the
-  same scenes shot compressed and uncompressed) for LightCraft (storytold/lightcraft#86) and
+  same scenes shot compressed and uncompressed) for Luz (storytold/lightcraft#86) and
   verified there on ~45 files from ~35 bodies.
   The "lossy after split" fixed-rate section (word size, prefix-to-category tables, bin-centre
   dequantisation, end-of-strip rule) was likewise derived by black-box analysis of 11 CC0
-  raw.pixls.us files for LightCraft (storytold/lightcraft#633).
+  raw.pixls.us files for Luz (storytold/lightcraft#633).
 * Sony cRAW (ARW 2): H. Dietz, "Sony ARW2 Compression: Artifacts And Credible Repair"
   (Electronic Imaging 2016) and the RawDigger / diglloyd write-ups of the 11 + 7-bit scheme;
   the exact bit layout and tone-curve scale were established by observation of sample files.
@@ -60,8 +60,8 @@ Implemented only from public specifications, papers and observation of files:
   and performance measures", IEEE TIP 2003) with edge-aware colour differences.
 * McCamy's CCT approximation (1992); the Bradford chromatic adaptation transform.
 * Per-file colour from the camera's embedded JPEG (`fit_look`, `src/look.rs`): the method follows
-  the prose description in LightCraft's `docs/camera-preview-colour.md` (storytold/lightcraft#165,
-  Apache-2.0, same organisation); no LightCraft code was used. Pool-adjacent-violators isotonic
+  the prose description in Luz's `docs/camera-preview-colour.md` (storytold/lightcraft#165,
+  Apache-2.0, same organisation); no Luz code was used. Pool-adjacent-violators isotonic
   regression (Ayer et al., 1955), Tukey's biweight (Beaton & Tukey, 1974), ridge regression
   (Hoerl & Kennard, 1970) and the CIE 1976 L\*a\*b\* colour difference.
 
@@ -84,7 +84,7 @@ camera colour tables were copied.
 | Olympus ORF, uncompressed 16-bit (E-1, E-400…) | Decoded, with ImageProcessing black / WB / ValidBits / crop |
 | Sony "Compressed RAW 2", Pentax compressed PEF, RW2 RawFormat 6 and newer, Olympus compressed ORF | Unsupported: no public description of these codes was found apart from GPL decoder source, which this crate may not use (clean-room). `lienzo-io` opens the embedded JPEG preview instead |
 | Fujifilm RAF, uncompressed (X-Trans I–V, GFX and Bayer bodies since about 2010) | Decoded: 16-bit containers (either byte order), 12-bit LSB-first packing, 14-bit packing in 32-bit words; X-Trans 6×6 or Bayer 2×2 layout, black, as-shot WB, crop, RawExposureBias, orientation from the preview's EXIF |
-| Fujifilm compressed RAF, lossless and lossy (X-Trans and Bayer, 12/14/16-bit) | Decoded (`rafc.rs`): ported from LightCraft's clean-room decoder (storytold/lightcraft `crates/raw/src/vendor/rafc.rs`, MIT OR Apache-2.0, same organisation), verified there sample for sample on 24 files from 13 bodies; here on an X-T30 lossless file |
+| Fujifilm compressed RAF, lossless and lossy (X-Trans and Bayer, 12/14/16-bit) | Decoded (`rafc.rs`): ported from Luz's clean-room decoder (storytold/lightcraft `crates/raw/src/vendor/rafc.rs`, MIT OR Apache-2.0, same organisation), verified there sample for sample on 24 files from 13 bodies; here on an X-T30 lossless file |
 | Early FinePix / SuperCCD RAF (no CFA TIFF) | Unsupported; preview fallback |
 | CR3 | Native CRX unsupported; bounded JPEG-track/PRVW preview fallback with CMT1 orientation. I/O labels the result as an 8-bit camera preview |
 | X-Trans and other periodic non-Bayer CFAs (up to 16×16) | Demosaiced by one pattern-agnostic edge-directed method, whatever `Demosaic` is chosen |

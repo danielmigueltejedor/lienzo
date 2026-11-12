@@ -4271,7 +4271,7 @@ Expected assertion context (overlapping windows merged):
 - Tester/date:
 - Tested SHA:
 
-## PR-4547: fix(icons): Lienzo icon corner radius matches other Craft apps (#4478)
+## PR-4547: fix(icons): Lienzo icon corner radius matches other Nodalia apps (#4478)
 
 - Fixture/setup and action: execute **all** identified changed regression functions below on the final frozen tree. Their checked-in setup constructs the concrete inputs; preserve those inputs, capability prerequisites and assertions.
 

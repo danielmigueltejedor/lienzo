@@ -202,7 +202,7 @@ See the [executable case appendix](per-pr-regressions.md) for fixture/setup, act
 - [#3520](https://github.com/storytold/photocraft/pull/3520) fix(ui): restore square color chips in Studio Dark theme — NOT RUN
 - [#4023](https://github.com/storytold/photocraft/pull/4023) i18n(es): add 548 missing rows, fix five filter and video terms — NOT RUN
 - [#4042](https://github.com/storytold/photocraft/pull/4042) feat(canvas): rotate view with Shift + middle-mouse drag — NOT RUN
-- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): Lienzo icon corner radius matches other Craft apps (#4478) — NOT RUN
+- [#4547](https://github.com/storytold/photocraft/pull/4547) fix(icons): Lienzo icon corner radius matches other Nodalia apps (#4478) — NOT RUN
 - [#4883](https://github.com/storytold/photocraft/pull/4883) feat(ui): show selection and active-layer bounds in the status bar — NOT RUN
 - [#4890](https://github.com/storytold/photocraft/pull/4890) Add scrollbar visibility preferences (#3262) — NOT RUN
 - [#4938](https://github.com/storytold/photocraft/pull/4938) Layer Style: one dialog size on every page, and it fits short screens — NOT RUN

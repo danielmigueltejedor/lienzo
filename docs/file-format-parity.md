@@ -143,7 +143,7 @@ remaining gaps in #1606 stay tracked with per-sample corpus ceilings.
 
 ## Embedded vectors in PSD smart objects (2026-10-22)
 
-Embedded SVG and PDF-compatible AI/PDF/EPS payloads can use an explicit VectorCraft editor choice, including nested PSB contents. AI/PDF/EPS working copies retain their format on save-back; a separate source-bound SVG display preview does not replace the native payload. Placement, shared instances, masks and Undo/Redo use existing smart-object transactions, with native bytes and previews persisted through .pcraft and PSD/PSB saves. Unsupported editor features may still change; standalone EPS/DCS import and lossless Adobe round-trip compatibility remain unverified. See [workflow, safety and validation limits](embedded-vector-editing.md). No corpus floor or parity percentage is changed.
+Embedded SVG and PDF-compatible AI/PDF/EPS payloads can use an explicit Pluma editor choice, including nested PSB contents. AI/PDF/EPS working copies retain their format on save-back; a separate source-bound SVG display preview does not replace the native payload. Placement, shared instances, masks and Undo/Redo use existing smart-object transactions, with native bytes and previews persisted through .pcraft and PSD/PSB saves. Unsupported editor features may still change; standalone EPS/DCS import and lossless Adobe round-trip compatibility remain unverified. See [workflow, safety and validation limits](embedded-vector-editing.md). No corpus floor or parity percentage is changed.
 
 ## Revision history
 

@@ -14,7 +14,7 @@ Their actual bodies and diffs were reviewed before this change; neither is merge
 inspection date. This change addresses metadata missing from the existing decoder, without
 duplicating those colour-development proposals.
 
-LightCraft's [#115](https://github.com/storytold/lightcraft/pull/115),
+Luz's [#115](https://github.com/storytold/lightcraft/pull/115),
 [#535](https://github.com/storytold/lightcraft/issues/535) and its current camera-preview-colour
 documentation distinguish applied WB, camera calibration and JPEG tone/DRO. Its SR2 investigation
 suggested testing encrypted metadata before estimating WB from scene pixels. Lienzo's
@@ -70,7 +70,7 @@ The full sensor buffer still passes through black subtraction, applied WB, demos
 16-bit ProPhoto-compatible development. The embedded JPEG remains a comparison image; it is
 not substituted for RAW pixels. All three files import and export at 6000 × 4000 in 16-bit RGB.
 
-Local comparisons with the paired camera JPEGs and installed LightCraft 0.6.0 show reduced
+Local comparisons with the paired camera JPEGs and installed Luz 0.6.0 show reduced
 WB casts, but Lienzo remains flatter, darker and less saturated. These ARWs have no DNG
 colour matrix, so the existing neutral camera-to-sRGB fallback and scene-referred tone remain.
 Camera JPEGs also have DRO Auto and lens/tone processing; they are visual references, not

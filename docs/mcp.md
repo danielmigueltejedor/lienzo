@@ -47,7 +47,7 @@ not put the CLI on `PATH`.
 
 ## Start a session
 
-Lienzo follows the same conventions as FilmCraft #28. Start a headless session:
+Lienzo follows the same conventions as Toma #28. Start a headless session:
 
 ```sh
 lienzo-cli mcp \

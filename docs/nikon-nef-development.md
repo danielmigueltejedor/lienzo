@@ -47,7 +47,7 @@ Full-resolution default, +0.5 EV and Temperature +20/Tint −15 imports were exp
 for each file and independently verified as RGB16 TIFFs with the ProPhoto-compatible
 ICC profile. Default tuned pixels and ICC bytes equal normal import exactly. Local
 whole-frame and 100% edge comparisons were inspected against the camera JPEG and
-installed LightCraft 0.6.0: the border is gone and colour/contrast improve, with
+installed Luz 0.6.0: the border is gone and colour/contrast improve, with
 remaining differences in sunset highlight saturation and noise/detail rendering.
 
 ## Regression coverage

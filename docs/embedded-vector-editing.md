@@ -1,8 +1,8 @@
 # Embedded vector smart-object editing
 
-Layer > Smart Objects > Edit Contents offers VectorCraft editing for embedded SVG,
+Layer > Smart Objects > Edit Contents offers Pluma editing for embedded SVG,
 PDF-compatible AI, PDF and EPS, including payloads retained in PSD linked-layer tables.
-Choose VectorCraft or a local executable. Lienzo creates a private working copy in the original format;
+Choose Pluma or a local executable. Lienzo creates a private working copy in the original format;
 saving that file updates the original smart object when its parent is active and ready.
 Each accepted save is one undo step, including all shared instances. Placement, masks,
 filters and Undo/Redo remain in the existing smart-object transaction.
@@ -24,17 +24,17 @@ Native Adobe Photoshop/Illustrator Edit Contents acceptance remains unverified. 
 keeps that warning explicit. `updateSvg` only replaces SVG contents: it refuses an AI, PDF or
 EPS source, which only `updateVectorSource` saves back, in its own format.
 
-Native editing requires VectorCraft and its adjacent vectorcraft-cli for bounded previews,
+Native editing requires Pluma and its adjacent vectorcraft-cli for bounded previews,
 even when another interactive editor is selected. The CLI runs headless in the background,
 restricted to a fresh private temporary read/write root per snapshot, separate from the
 interactive working directory. Open and export must both succeed, with cancellation and a
 60-second timeout. Each stable native save is validated before Lienzo accepts it.
 
-Foreign AI files ordinarily require Save As in VectorCraft to protect the source. When VectorCraft
-is the editor, Lienzo regenerates only the private AI working copy with VectorCraft editing
+Foreign AI files ordinarily require Save As in Pluma to protect the source. When Pluma
+is the editor, Lienzo regenerates only the private AI working copy with Pluma editing
 data before launching it, so ordinary Save can be used without changing that general protection.
 Illustrator and other editors get the original AI bytes. Merely opening the
-editor never updates the embedded original. Ordinary EPS Save needs the companion VectorCraft
+editor never updates the embedded original. Ordinary EPS Save needs the companion Pluma
 EPS-save support; older editors may require exporting EPS to the opened private file.
 
 The PSD source-pixel frame is retained when PDF points differ from stored dimensions. The
@@ -42,31 +42,31 @@ native file retains its own geometry; the display preview fits the original plac
 Unsupported or oversized frames fail without changing the smart object.
 
 Desktop integration supports an explicitly selected executable. Linux discovery checks
-standard native locations and a user Flatpak deployment. On Linux, choosing VectorCraft
+standard native locations and a user Flatpak deployment. On Linux, choosing Pluma
 uses the desktop's Open With chooser to launch the regular application;
-select VectorCraft there. The writable document portal shares only the private working
+select Pluma there. The writable document portal shares only the private working
 file. Working copies live in Lienzo's private cache because its isolated /tmp cannot
-be exported. Ordinary VectorCraft launches retain preferences and existing-window
+be exported. Ordinary Pluma launches retain preferences and existing-window
 handoff instead of running a second payload inside Lienzo's sandbox. Reusing tabs
-requires the installed VectorCraft build's Linux single-instance support.
+requires the installed Pluma build's Linux single-instance support.
 
 Native AI/PDF/EPS previews still need vectorcraft-cli alongside the discovered
 executable. The local Flatpak runtime test granted read-only access to the test
-VectorCraft build for that invocation. A sandboxed distribution must arrange access to
+Pluma build for that invocation. A sandboxed distribution must arrange access to
 its compatible converter; this source change adds no broad filesystem or host-process
 permissions and does not establish default Flatpak packaging acceptance. SVG editing
-through the portal does not require access to the VectorCraft deployment. Explicit
+through the portal does not require access to the Pluma deployment. Explicit
 Other application executables retain their direct-launch behavior.
 
-On macOS, VectorCraft discovery also checks `/Applications/VectorCraft.app` and
-`~/Applications/VectorCraft.app` and runs the bundle's executable directly. Other application
+On macOS, Pluma discovery also checks `/Applications/Pluma.app` and
+`~/Applications/Pluma.app` and runs the bundle's executable directly. Other application
 accepts an application bundle (`.app`): its Info.plist `CFBundleExecutable` must name an
 executable inside the bundle's `Contents/MacOS`. Bundles with the application identifier
 `ai.storyteller.vectorcraft` run directly with the working file as an argument, matching
 automatic discovery; other bundles use `/usr/bin/open -a` for open-document events. Adobe Illustrator is
 offered when an `Adobe Illustrator*.app` is found in `/Applications` (at most one folder deep).
 AI/PDF/EPS previews look for `vectorcraft-cli` in the same bundle's `Contents/MacOS`, then in
-the other known locations; current VectorCraft macOS packages ship the CLI as a separate
+the other known locations; current Pluma macOS packages ship the CLI as a separate
 download, so it must be placed there or installed beside a discovered executable. These paths
 are unit-tested on Linux with synthetic bundles. Windows and macOS runtime acceptance has not
 been performed. Browser and automation paths do not launch
@@ -121,7 +121,7 @@ append full artwork to the replay journal; document Undo/Redo remains available.
 ## Validation evidence
 
 Eight contributor-owned logo PSDs were tested through their visible nested AI vectors.
-A real VectorCraft edit/save reached Lienzo's native watcher and engine; child and
+A real Pluma edit/save reached Lienzo's native watcher and engine; child and
 parent Undo/Redo and PSD export/reopen preserved the changed vector. Original SHA256
 hashes were unchanged. This combines runtime editor/engine acceptance and separate UI
 wiring tests; it is not a claim of manual full Lienzo GUI acceptance. Private artwork,
@@ -132,11 +132,11 @@ accepts local paths through environment variables; it contains no private artwor
 
 Earlier SVG-only Linux Flatpak GUI acceptance verified an editor save through the writable document
 portal reached Lienzo's watcher, with an ordinary document opening as a second tab
-in the same VectorCraft window. Both launch orders were checked.
+in the same Pluma window. Both launch orders were checked.
 
-![Regular and Lienzo vector documents in one VectorCraft window](images/embedded-vector-tabs-linux.png)
+![Regular and Lienzo vector documents in one Pluma window](images/embedded-vector-tabs-linux.png)
 
-Separate isolated VectorCraft GUI tests saved AI, PDF and EPS back to the same paths
+Separate isolated Pluma GUI tests saved AI, PDF and EPS back to the same paths
 and opened a second document as another tab. The native-format watcher/engine test
 also passed inside Lienzo's Flatpak runtime. These tests do not establish lossless
 Adobe compatibility or Windows/macOS acceptance.
