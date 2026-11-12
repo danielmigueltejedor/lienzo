@@ -132,8 +132,8 @@ pub(super) fn memory_usage_row(ui: &mut egui::Ui, obj: &mut Map<String, Value>) 
 /// Settings read only when the app starts, which say "Applies at next launch." under their row.
 pub(super) fn read_at_launch(path: &str) -> bool {
     match path {
-        // Only Windows and Linux draw their own title bar.
-        "interface.systemTitleBar" => cfg!(all(not(target_arch = "wasm32"), not(target_os = "macos"))),
+        // Only Linux draws its own title bar.
+        "interface.systemTitleBar" => cfg!(all(not(target_arch = "wasm32"), not(any(target_os = "macos", target_os = "windows")))),
         // The desktop app decides on the control server before its window opens.
         "integrations.allowAgentControl" | "integrations.controlPort" => cfg!(not(target_arch = "wasm32")),
         // The WinTab context is opened once, when the window starts.
