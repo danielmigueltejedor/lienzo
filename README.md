@@ -6,7 +6,7 @@
     </picture>
   </a>
   <br><br>
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/dev.danielmiguelt.Lienzo.png" width="160" alt="Lienzo">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/lienzo/nodalia/assets/app-icon/hicolor/512x512/apps/dev.danielmiguelt.Lienzo.png" width="192" alt="Lienzo">
   <h1>Lienzo</h1>
   <p><strong>The image editor of the Nodalia suite.</strong></p>
 
