@@ -126,8 +126,13 @@ echo "== dmg =="
 DMG_STAGE=$(mktemp -d)
 cp -R "$STAGE/Lienzo.app" "$DMG_STAGE/"
 ln -s /Applications "$DMG_STAGE/Applications"
+# Finder window: background, icon size and positions (packaging/macos/dmg/README.md).
+mkdir -p "$DMG_STAGE/.background"
+cp "packaging/macos/dmg/background.tiff" "$DMG_STAGE/.background/background.tiff"
+cp "packaging/macos/dmg/dmg-layout.DS_Store" "$DMG_STAGE/.DS_Store"
 rm -f "$DMG"
-hdiutil create -volname "Lienzo $VERSION" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DMG"
+# No version in the volume name: the layout finds its background through an alias that names it.
+hdiutil create -volname "Lienzo" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DMG"
 rm -rf "$DMG_STAGE"
 
 if [ -n "${PATCHY_MAC_SIGN_IDENTITY:-}" ]; then
