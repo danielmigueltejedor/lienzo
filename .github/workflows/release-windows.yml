@@ -159,17 +159,23 @@ jobs:
         run: |
           # A tag that already exists must point at the commit this run built. Only a confirmed
           # "not found" lets the run go on; any other lookup failure stops it before an upload.
-          if gh api "repos/$REPO/git/ref/tags/$TAG" >/dev/null 2>"$RUNNER_TEMP/tag.err"; then
-            tagged="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
-            if [[ "$tagged" != "$SHA" ]]; then
-              echo "Tag $TAG points at $tagged, not at $SHA (the commit built here)" >&2
+          # The status comes from the response's own status line (gh api --include), never from
+          # message text that could mention another code.
+          status="$(gh api --include "repos/$REPO/git/ref/tags/$TAG" 2>/dev/null | head -n 1 | awk '{print $2}' || true)"
+          case "$status" in
+            200)
+              tagged="$(gh api "repos/$REPO/commits/$TAG" --jq .sha)"
+              if [[ "$tagged" != "$SHA" ]]; then
+                echo "Tag $TAG points at $tagged, not at $SHA (the commit built here)" >&2
+                exit 1
+              fi
+              ;;
+            404) ;;
+            *)
+              echo "Could not look up tag $TAG (HTTP status: ${status:-none})" >&2
               exit 1
-            fi
-          elif ! grep -q "HTTP 404" "$RUNNER_TEMP/tag.err"; then
-            echo "Could not look up tag $TAG:" >&2
-            cat "$RUNNER_TEMP/tag.err" >&2
-            exit 1
-          fi
+              ;;
+          esac
           if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release create "$TAG" --repo "$REPO" --draft --target "$SHA" \
               --title "Lienzo ${TAG#v}" --notes "Lienzo ${TAG#v}."
