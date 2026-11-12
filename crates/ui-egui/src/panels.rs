@@ -155,9 +155,10 @@ mod title_tests {
 
     #[test]
     fn without_the_preference_the_mark_stays() {
-        // The default (e.g. the web build or snapshot example): the integrated title bar.
+        // The default (e.g. the web build or snapshot example): the integrated title bar, except
+        // on Windows, which always uses the system's.
         let app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
-        assert!(!system_title_bar(&app));
+        assert_eq!(system_title_bar(&app), cfg!(target_os = "windows"));
     }
 
     fn open_named(app: &mut crate::LienzoApp, name: &str) {
