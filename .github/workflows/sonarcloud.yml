@@ -21,4 +21,6 @@ jobs:
     with:
       timeout-minutes: 120
       fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
-    secrets: inherit
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_CLOUD_PAT: ${{ secrets.SONAR_CLOUD_PAT }}
