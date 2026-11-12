@@ -80,12 +80,13 @@ use lienzo_ui_egui::LienzoApp;
 
 use lienzo_ui_egui::os_window::APP_ID;
 
-/// Windows and Linux can use the app's title bar, with its own caption buttons and edge resizing
-/// (`lienzo_ui_egui::titlebar`); the preference below selects the mode. macOS always keeps its
-/// system traffic lights over the integrated title strip.
-const CUSTOM_TITLEBAR: bool = !cfg!(target_os = "macos");
+/// Only Linux can use the app's title bar, with its own caption buttons and edge resizing
+/// (`lienzo_ui_egui::titlebar`); the preference below selects the mode. macOS keeps its system
+/// traffic lights over the integrated title strip and Windows its own title bar: Nodalia's round
+/// buttons are for Linux alone.
+const CUSTOM_TITLEBAR: bool = !cfg!(any(target_os = "macos", target_os = "windows"));
 
-/// Whether this start draws its own title bar: Windows and Linux do, unless Preferences ›
+/// Whether this start draws its own title bar: Linux does, unless Preferences ›
 /// Interface › System Title Bar asks for the system's (#1271, #1316). Read from the saved
 /// preferences before the window opens; a missing or unreadable file keeps the default.
 fn custom_titlebar(prefs_file: Option<&std::path::Path>) -> bool {

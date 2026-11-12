@@ -56,6 +56,11 @@ to = "Nodalia"
 from = "D9660F32-2D0A-4ABE-B73D-17BE25F1542C"
 to = "9FCCBAB3-88D1-42AD-936C-04ABB215AE82"
 
+# A test builds an EXIF block around a 12-byte string, so its renamed value must stay 12 bytes.
+[[replace]]
+from = 'b"PhotoCraftCo"'
+to = 'b"LienzoStudio"'
+
 # The name, in every casing upstream uses.
 [[replace]]
 from = "PhotoCraft"

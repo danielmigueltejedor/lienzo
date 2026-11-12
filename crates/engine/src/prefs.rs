@@ -58,7 +58,7 @@ choice!(Interpolation { BicubicAutomatic = "bicubicAutomatic", Nearest = "neares
 choice!(ColorPicker { Adobe = "adobe", System = "system" } default Adobe);
 choice!(Theme { Nodalia = "nodalia", NodaliaLight = "nodaliaLight", Pro = "pro", ProMedium = "proMedium", ProLightGray = "proLightGray", ProLight = "proLight", Studio = "studio", StudioLight = "studioLight", Classic = "classic", SolarizedDark = "solarizedDark", Adwaita = "adwaita", AdwaitaDark = "adwaitaDark", BreezeLight = "breezeLight", BreezeDark = "breezeDark", SoftDark = "softDark", SoftLight = "softLight" } default Nodalia);
 choice!(
-    /// The look of the window's own minimize, maximize and close buttons (Windows and Linux).
+    /// The look of the window's own minimize, maximize and close buttons (Linux only: Windows and macOS use the system title bar).
     WindowControls { Nodalia = "nodalia", System = "system" } default Nodalia
 );
 choice!(AppearanceMode { Auto = "auto", Dark = "dark", Light = "light" } default Auto);

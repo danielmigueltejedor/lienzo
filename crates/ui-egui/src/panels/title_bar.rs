@@ -3,9 +3,9 @@ use super::{LienzoApp, Sense, Tokens, icons, theme, vec2, widgets};
 // ----------------------------------------------------------------------------- title bar
 
 /// The app's top bar: brand mark, menus, the document title and the workspace controls. With
-/// [`LienzoApp::custom_titlebar`] (Windows and Linux) it is also the window's title bar, as in
-/// Photoshop on Windows: the caption buttons take its ends (`titlebar`). With the system
-/// title bar (Windows and Linux, `system_title_bar`) the OS draws its own icon and title, so the
+/// [`LienzoApp::custom_titlebar`] (Linux) it is also the window's title bar, as in
+/// other desktop editors: the caption buttons take its ends (`titlebar`). With the system
+/// title bar (Windows always, Linux with `system_title_bar`) the OS draws its own icon and title, so the
 /// in-app bar shows menus and workspace controls only: no brand mark, no centred title.
 pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
@@ -205,12 +205,14 @@ fn main_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
 }
 
 /// Whether the window shows the system's title bar instead of the app drawing its own: Windows
-/// and Linux with Preferences › Interface › System Title Bar. macOS always has system decorations,
+/// always, Linux with Preferences › Interface › System Title Bar. macOS always has system decorations,
 /// but keeps the in-app brand mark and centred title, so it never counts as system mode here; nor
 /// does the web build (the browser tab has no document title), nor an embedder or the snapshot
 /// example that never turned the preference on.
 pub fn system_title_bar(app: &LienzoApp) -> bool {
-    !app.custom_titlebar && app.session.prefs().interface.system_title_bar && !cfg!(any(target_os = "macos", target_arch = "wasm32"))
+    !app.custom_titlebar
+        && (cfg!(target_os = "windows") || app.session.prefs().interface.system_title_bar)
+        && !cfg!(any(target_os = "macos", target_arch = "wasm32"))
 }
 
 /// The OS window title: the active document's name suffixed with the app name (a `*` prefix
