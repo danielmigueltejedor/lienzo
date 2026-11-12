@@ -1,0 +1,98 @@
+name: macOS
+
+# Lienzo.app and its DMG, built the way packaging/macos/README.md describes (Qt from aqtinstall,
+# the mac-release preset, make-dmg.sh), on a standard macOS runner: an artifact on every run, and
+# the release asset when a release is published.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  QT_VERSION: "6.8.3"
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Link against the macOS 26 SDK
+        # AppKit draws the traffic lights in the style of the SDK the app was linked against:
+        # linked against 15, macOS 26 keeps the old flat ones instead of Liquid Glass. The macOS 15
+        # runners carry Xcode 26 beside their default; the preset's deployment target keeps the floor.
+        run: |
+          xcode=$(ls -d /Applications/Xcode_[0-9]*.app | awk -F'[_.]' '$2 >= 26' | sort -V | tail -n 1)
+          test -n "$xcode" || { echo "no Xcode 26 on this runner" >&2; exit 1; }
+          echo "DEVELOPER_DIR=$xcode/Contents/Developer" >> "$GITHUB_ENV"
+          DEVELOPER_DIR="$xcode/Contents/Developer" xcrun --sdk macosx --show-sdk-version
+
+      - name: Build tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install --quiet aqtinstall cmake ninja
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+
+      - name: Cache Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: .deps/Qt
+          key: qt-${{ env.QT_VERSION }}-macos-imageformats-pdf
+
+      - name: Install Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: aqt install-qt mac desktop "$QT_VERSION" -m qtimageformats qtpdf -O .deps/Qt
+
+      - name: Build
+        run: |
+          cmake --preset mac-release -DPATCHY_BUILD_TESTS=OFF
+          cmake --build --preset mac-release -j "$(sysctl -n hw.ncpu)"
+
+      - name: DMG
+        # Unsigned: without a Developer ID the DMG is opened with right click > Open.
+        run: bash packaging/macos/make-dmg.sh
+
+      - name: Check the DMG
+        run: |
+          set -euo pipefail
+          dmg=$(ls build/package/Lienzo-*.dmg)
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint /Volumes/Lienzo
+          bin=/Volumes/Lienzo/Lienzo.app/Contents/MacOS/Lienzo
+          lipo -archs "$bin"
+          sdk=$(otool -l "$bin" | awk '$1 == "sdk" {print $2; exit}')
+          echo "linked against SDK $sdk"
+          test "${sdk%%.*}" -ge 26
+          hdiutil detach /Volumes/Lienzo
+          # The name the README and latest_version.json link to.
+          mv "$dmg" build/package/LienzoMacOS.dmg
+          (cd build/package && shasum -a 256 LienzoMacOS.dmg > SHA256SUMS-macos && cat SHA256SUMS-macos)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lienzo-macos
+          path: |
+            build/package/LienzoMacOS.dmg
+            build/package/SHA256SUMS-macos
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" build/package/LienzoMacOS.dmg build/package/SHA256SUMS-macos --clobber --repo "$GITHUB_REPOSITORY"
