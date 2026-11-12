@@ -88,12 +88,7 @@ fn main() {
             services.xwayland_command = wayland_notice.then(|| "WAYLAND_DISPLAY= lienzo".into());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), services);
             if update_notice {
-                app.session.updates.status = lienzo_engine::updates_cmds::Status::Available {
-                    release: lienzo_engine::updates_cmds::Release {
-                        version: "99.0.0".into(),
-                        url: "https://github.com/danielmigueltejedor/lienzo/releases/tag/v99.0.0".into(),
-                    },
-                };
+                lienzo_ui_egui::updates_ui::preview(&mut app, "99.0.0", "A newer version of Lienzo is available.");
             }
             app.background_jobs = background_jobs;
             app.custom_titlebar = custom_titlebar;

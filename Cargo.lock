@@ -1502,32 +1502,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft-update"
-version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=1b34eba41e62138fc2438d2734523b302840b45d#1b34eba41e62138fc2438d2734523b302840b45d"
-dependencies = [
- "chrono",
- "dunce",
- "egui",
- "flate2",
- "getrandom 0.3.4",
- "image",
- "log",
- "plist",
- "semver",
- "serde",
- "serde_json",
- "sha2",
- "tar",
- "tempfile",
- "ureq",
- "verifysign",
- "winreg",
- "winsafe",
- "zip",
-]
-
-[[package]]
 name = "craft-winprint-gdi"
 version = "0.1.0"
 source = "git+https://github.com/storytold/winprint.rs?rev=64e7afd4d1483512385012c340ecaaaf0f3beb7f#64e7afd4d1483512385012c340ecaaaf0f3beb7f"
@@ -4056,7 +4030,6 @@ dependencies = [
  "chrono",
  "clap",
  "core-graphics2",
- "craft-update",
  "dispatch2",
  "eframe",
  "egui",
@@ -4077,6 +4050,7 @@ dependencies = [
  "lienzo-ui-egui",
  "log",
  "muda",
+ "nodalia-update",
  "objc2 0.6.5",
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
@@ -4521,7 +4495,6 @@ dependencies = [
  "chrono",
  "craft-print",
  "craft-ui",
- "craft-update",
  "eframe",
  "egui",
  "egui_extras",
@@ -4551,6 +4524,7 @@ dependencies = [
  "lienzo-vector",
  "log",
  "nodalia-theme",
+ "nodalia-update",
  "rayon",
  "serde",
  "serde_json",
@@ -4921,18 +4895,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
-name = "nix"
-version = "0.31.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
-dependencies = [
- "bitflags 2.13.2",
- "cfg-if",
- "cfg_aliases",
- "libc",
-]
-
-[[package]]
 name = "no_std_io2"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4945,6 +4907,17 @@ dependencies = [
 name = "nodalia-theme"
 version = "0.1.0-alpha.1"
 source = "git+https://github.com/danielmigueltejedor/nodalia-design?rev=2735df88232c065eaa5a5d01ef2c06aec6020d11#2735df88232c065eaa5a5d01ef2c06aec6020d11"
+
+[[package]]
+name = "nodalia-update"
+version = "0.1.0-alpha.1"
+source = "git+https://github.com/danielmigueltejedor/nodalia-design?rev=1e02c72bd50664a5da101c413cbd726e53c732b6#1e02c72bd50664a5da101c413cbd726e53c732b6"
+dependencies = [
+ "egui",
+ "serde_json",
+ "sha2",
+ "ureq",
+]
 
 [[package]]
 name = "nohash-hasher"
@@ -7112,10 +7085,6 @@ name = "semver"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
-dependencies = [
- "serde",
- "serde_core",
-]
 
 [[package]]
 name = "send_wrapper"
@@ -8281,12 +8250,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typed-path"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ce898823d8cd0f028662d2f349694b1af0a5cc9be83f1d213a00d3147445e1e"
-
-[[package]]
 name = "typeid"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8411,6 +8374,7 @@ dependencies = [
  "rustls-platform-verifier",
  "ureq-proto",
  "utf8-zero",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -8583,16 +8547,6 @@ dependencies = [
  "glifo 0.3.0",
  "hashbrown 0.17.1",
  "vello_common 0.2.0",
-]
-
-[[package]]
-name = "verifysign"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6acfcc42a8d44f340d001193d97ef56bf33210b51ad760ae8308c97d5241ca51"
-dependencies = [
- "core-foundation 0.10.1",
- "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8974,6 +8928,15 @@ name = "webpki-root-certs"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
+dependencies = [
+ "rustls-pki-types",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "1.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7265c9301c16a8711c992c2d8da90ee77ef54b1ed51482d6dfeb00dc756b1297"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -9498,16 +9461,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "winreg"
-version = "0.55.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5a765337c50e9ec252c2069be9bf91c7df47afb103b642ba3a53bf8101be97"
-dependencies = [
- "cfg-if",
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "winresource"
 version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9996,22 +9949,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
-]
-
-[[package]]
-name = "zip"
-version = "9.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2886b00003a72c4ccee3f42cfc34908d33b2508a74d827dc2a4244706475c704"
-dependencies = [
- "crc32fast",
- "flate2",
- "getrandom 0.4.3",
- "indexmap",
- "memchr",
- "nix",
- "typed-path",
- "windows-sys 0.61.2",
 ]
 
 [[package]]
