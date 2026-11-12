@@ -1,6 +1,5 @@
-use super::dialogs::open_preferences;
-use super::fields::{choice_label, color_of, preference_matches};
-use super::{AppearanceMode, Color32, DarkTheme, LienzoApp, LightTheme, Map, RichText, SavedTheme, Sense, ThemeKind, Tokens, Value, json, prefs, vec2};
+use super::fields::{color_of, preference_matches};
+use super::{AppearanceMode, Color32, DarkTheme, LienzoApp, LightTheme, Map, RichText, ThemeKind, Tokens, Value, json, prefs};
 
 /// The GPU canvas colours from Preferences › Transparency & Gamut.
 pub fn canvas_style(app: &LienzoApp) -> crate::gpu_canvas::CanvasStyle {
@@ -37,6 +36,12 @@ pub(super) fn selected_theme(interface: &prefs::Interface, system: Option<egui::
         AppearanceMode::Dark => false,
         AppearanceMode::Auto => system == Some(egui::Theme::Light),
     };
+    // Lienzo has one design language, Nodalia's: a style saved by an older version (Pro, Studio,
+    // Adwaita…) resolves to it, in the mode chosen. Unit tests keep the dense Pro look their
+    // geometry was written against, as `ThemeKind::default` does.
+    if !cfg!(test) {
+        return if light { ThemeKind::NodaliaLight } else { ThemeKind::Nodalia };
+    }
     if light {
         match interface.light_theme {
             LightTheme::NodaliaLight => ThemeKind::NodaliaLight,
@@ -98,63 +103,6 @@ pub(crate) fn step_brightness(app: &mut LienzoApp, ctx: &egui::Context, lighter:
     Ok(())
 }
 
-pub(super) const LIGHT_THEME_OPTIONS: &[(&str, ThemeKind)] = &[
-    ("nodaliaLight", ThemeKind::NodaliaLight),
-    ("proLight", ThemeKind::ProLight),
-    ("proLightGray", ThemeKind::ProLightGray),
-    ("studioLight", ThemeKind::StudioLight),
-    ("classic", ThemeKind::Classic),
-    ("adwaita", ThemeKind::Adwaita),
-    ("breezeLight", ThemeKind::BreezeLight),
-    ("softLight", ThemeKind::SoftLight),
-];
-
-pub(super) const DARK_THEME_OPTIONS: &[(&str, ThemeKind)] = &[
-    ("nodalia", ThemeKind::Nodalia),
-    ("proMedium", ThemeKind::ProMedium),
-    ("pro", ThemeKind::Pro),
-    ("studio", ThemeKind::Studio),
-    ("solarizedDark", ThemeKind::SolarizedDark),
-    ("adwaitaDark", ThemeKind::AdwaitaDark),
-    ("breezeDark", ThemeKind::BreezeDark),
-    ("softDark", ThemeKind::SoftDark),
-];
-
-pub(super) fn favorite_theme_groups(favorites: &[SavedTheme]) -> (Vec<ThemeKind>, Vec<ThemeKind>) {
-    let group = |options: &[(&str, ThemeKind)]| {
-        options.iter().filter_map(|(id, kind)| SavedTheme::parse(id).filter(|theme| favorites.contains(theme)).map(|_| *kind)).collect()
-    };
-    (group(LIGHT_THEME_OPTIONS), group(DARK_THEME_OPTIONS))
-}
-
-/// Right-click menu on the top-right appearance button. A plain click still cycles modes.
-pub(crate) fn appearance_context_menu(app: &mut LienzoApp, ui: &mut egui::Ui) {
-    if ui.button(tl!("Appearance Settings…")).clicked() {
-        open_preferences(app, "interface");
-        ui.close();
-    }
-    let (light, dark) = favorite_theme_groups(&app.session.prefs().interface.favorite_themes);
-    let has_light = !light.is_empty();
-    if !light.is_empty() || !dark.is_empty() {
-        ui.separator();
-    }
-    for kind in light {
-        if ui.selectable_label(app.ui.theme == kind, tl!(kind.label())).clicked() {
-            app.set_theme(ui.ctx(), kind);
-            ui.close();
-        }
-    }
-    if has_light && !dark.is_empty() {
-        ui.separator();
-    }
-    for kind in dark {
-        if ui.selectable_label(app.ui.theme == kind, tl!(kind.label())).clicked() {
-            app.set_theme(ui.ctx(), kind);
-            ui.close();
-        }
-    }
-}
-
 pub(super) fn system_theme(app: &LienzoApp, ctx: &egui::Context) -> Option<egui::Theme> {
     app.services.system_theme.as_ref().and_then(|read| read(ctx)).or_else(|| ctx.system_theme())
 }
@@ -200,99 +148,26 @@ pub(crate) fn sync_appearance(app: &mut LienzoApp, ctx: &egui::Context) {
     }
 }
 
-/// One theme as a Color Theme swatch: its panel colour under a chrome strip with an accent dot,
-/// outlined when chosen. The name is the tooltip and the accessible label. A star badge on its
-/// corner adds the theme to (or removes it from) the favourites listed by the appearance
-/// button's menu; it shows while the swatch is hovered, and stays for a favourite.
-fn theme_swatch(ui: &mut egui::Ui, kind: ThemeKind, id: &str, selected: &mut String, favorites: &mut Vec<SavedTheme>) {
-    const BADGE: f32 = 7.0;
-    let t = Tokens::get(ui.ctx());
-    let p = Tokens::for_kind(kind);
-    let label = tl!(&choice_label(id)).to_string();
-    let on = selected.as_str() == id;
-    let (rect, resp) = ui.allocate_exact_size(vec2(30.0, 26.0), Sense::click());
-    let painter = ui.painter();
-    let inner = rect.shrink(3.0);
-    painter.rect_filled(inner, 2.0, p.dock);
-    painter.rect_filled(egui::Rect::from_min_size(inner.min, vec2(inner.width(), 5.0)), 0.0, p.chrome);
-    painter.circle_filled(inner.right_bottom() - vec2(6.0, 6.0), 2.5, p.accent);
-    let stroke = if on {
-        egui::Stroke::new(2.0, t.accent)
-    } else if resp.hovered() {
-        egui::Stroke::new(1.0, t.text_dim)
-    } else {
-        egui::Stroke::new(1.0, t.card_border)
-    };
-    painter.rect_stroke(rect.shrink(1.0), 3.0, stroke, egui::StrokeKind::Inside);
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::RadioButton, true, on, &label));
-    if resp.on_hover_text(&label).clicked() {
-        *selected = id.to_string();
-    }
-    let Some(theme) = SavedTheme::parse(id) else { return };
-    let favorite = favorites.contains(&theme);
-    let center = rect.right_top() + vec2(-3.0, 3.0);
-    let badge = egui::Rect::from_center_size(center, vec2(BADGE * 2.0, BADGE * 2.0));
-    if !(favorite || ui.rect_contains_pointer(rect.union(badge))) {
-        return;
-    }
-    ui.painter().circle(center, BADGE, t.card, egui::Stroke::new(1.0, t.card_border));
-    let (icon, tint) = if favorite { ("star-filled", t.accent) } else { ("star", t.text_dim) };
-    let action = if favorite { tl!("Remove from favorites") } else { tl!("Add to favorites") };
-    // Interact and paint without allocating: a widget placed at `badge` would grow the row by the
-    // 4 px the badge overhangs the swatch, re-centring the swatches after this one whenever the
-    // pointer arrives, and oscillating when that moves the swatch out from under it.
-    let response = ui.interact(badge, ui.scope_id().with((id, "favorite")), Sense::click()).on_hover_text(action);
-    crate::icons::paint(ui, badge, icon, 10.0, tint);
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, format!("{action}: {label}")));
-    if response.clicked() {
-        if favorite {
-            favorites.retain(|saved| *saved != theme);
-        } else {
-            favorites.push(theme);
-        }
-    }
-}
-
-/// A grid row of theme swatches, marked Active when the appearance mode shows this family.
-fn theme_row(ui: &mut egui::Ui, title: &str, active: bool, selected: &mut String, favorites: &mut Vec<SavedTheme>, options: &[(&str, ThemeKind)]) {
-    let t = Tokens::get(ui.ctx());
-    ui.label(RichText::new(tl!(title)).color(t.text_dim));
-    ui.horizontal(|ui| {
-        // Room for the favourite star badges on the swatch corners.
-        ui.spacing_mut().item_spacing.x = 6.0;
-        for (id, kind) in options {
-            theme_swatch(ui, *kind, id, selected, favorites);
-        }
-        if active {
-            ui.add_space(6.0);
-            ui.label(RichText::new(tl!("Active")).color(t.accent_text).small());
-        }
-    });
-    ui.end_row();
-}
-
-/// Which of the Appearance rows drawn by `appearance_rows` a search shows.
+/// Whether the Appearance Mode row shows for a search. Light and dark are the only choices: the
+/// interface is always Nodalia's, so there are no theme swatches to pick from.
 #[derive(Clone, Copy)]
 pub(super) struct AppearanceRows {
     mode: bool,
-    light: bool,
-    dark: bool,
 }
 
 impl AppearanceRows {
     /// `query` is lowercased; empty shows every row.
     pub(super) fn matching(query: &str) -> Self {
-        let shown = |key: &str| query.is_empty() || preference_matches("interface", key, query);
-        Self { mode: shown("appearanceMode"), light: shown("lightTheme"), dark: shown("darkTheme") }
+        Self { mode: query.is_empty() || preference_matches("interface", "appearanceMode", query) }
     }
 
     pub(super) fn any(self) -> bool {
-        self.mode || self.light || self.dark
+        self.mode
     }
 }
 
-/// Appearance Mode and the light and dark Color Theme swatches, as rows of the Appearance grid.
-pub(super) fn appearance_rows(ui: &mut egui::Ui, obj: &mut Map<String, Value>, system: Option<egui::Theme>, rows: AppearanceRows) {
+/// Appearance Mode, as a row of the Appearance grid.
+pub(super) fn appearance_rows(ui: &mut egui::Ui, obj: &mut Map<String, Value>, rows: AppearanceRows) {
     let t = Tokens::get(ui.ctx());
     let mut mode = obj.get("appearanceMode").and_then(Value::as_str).unwrap_or("auto").to_string();
     if rows.mode {
@@ -302,18 +177,5 @@ pub(super) fn appearance_rows(ui: &mut egui::Ui, obj: &mut Map<String, Value>, s
         crate::widgets::dropdown(ui, "appearance-mode", tl!("Appearance Mode"), &mut mode, &pairs, 220.0);
         ui.end_row();
     }
-    let light_active = mode == "light" || (mode == "auto" && system == Some(egui::Theme::Light));
     obj.insert("appearanceMode".into(), json!(mode));
-    let mut light = obj.get("lightTheme").and_then(Value::as_str).unwrap_or("studioLight").to_string();
-    let mut dark = obj.get("darkTheme").and_then(Value::as_str).unwrap_or("proMedium").to_string();
-    let mut favorites: Vec<SavedTheme> = obj.get("favoriteThemes").cloned().and_then(|v| serde_json::from_value(v).ok()).unwrap_or_default();
-    if rows.light {
-        theme_row(ui, "Light Theme", light_active, &mut light, &mut favorites, LIGHT_THEME_OPTIONS);
-    }
-    if rows.dark {
-        theme_row(ui, "Dark Theme", !light_active, &mut dark, &mut favorites, DARK_THEME_OPTIONS);
-    }
-    obj.insert("lightTheme".into(), json!(light));
-    obj.insert("darkTheme".into(), json!(dark));
-    obj.insert("favoriteThemes".into(), json!(favorites));
 }

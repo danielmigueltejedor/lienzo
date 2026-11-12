@@ -694,15 +694,26 @@ pub(super) fn color_chips(app: &mut LienzoApp, ui: &mut egui::Ui, two_columns: b
         // swap_arrow.rs owns its geometry and the pixel-level render regression test.
         crate::swap_arrow::paint(p, sr.min, ink(&s));
     }
-    // Default Colors: a small black chip over a small white one.
+    // Default Colors: a small black chip over a small white one (round dots under the round chips).
     if let (Some(dr), Some(d)) = (dr, d.as_ref()) {
         let small = 7.0;
         let (b, w) = (Rect::from_min_size(dr.min + vec2(1.0, 1.0), vec2(small, small)), Rect::from_min_size(dr.min + vec2(5.0, 5.0), vec2(small, small)));
-        p.rect_filled(w, 1.0, Color32::WHITE);
-        p.rect_stroke(w, 1.0, Stroke::new(1.0, ink(d)), StrokeKind::Inside);
-        p.rect_filled(b.expand(1.0), 1.5, t.chrome);
-        p.rect_filled(b, 1.0, Color32::BLACK);
-        p.rect_stroke(b, 1.0, Stroke::new(1.0, ink(d)), StrokeKind::Inside);
+        if studio {
+            if d.hovered() {
+                p.circle_filled(dr.center(), CHIP_ICON / 2.0 + 3.0, t.hover);
+            }
+            p.circle_filled(w.center(), small / 2.0, Color32::WHITE);
+            p.circle_stroke(w.center(), small / 2.0 - 0.5, Stroke::new(1.0, ink(d)));
+            p.circle_filled(b.center(), small / 2.0 + 1.0, t.chrome);
+            p.circle_filled(b.center(), small / 2.0, Color32::BLACK);
+            p.circle_stroke(b.center(), small / 2.0 - 0.5, Stroke::new(1.0, ink(d)));
+        } else {
+            p.rect_filled(w, 1.0, Color32::WHITE);
+            p.rect_stroke(w, 1.0, Stroke::new(1.0, ink(d)), StrokeKind::Inside);
+            p.rect_filled(b.expand(1.0), 1.5, t.chrome);
+            p.rect_filled(b, 1.0, Color32::BLACK);
+            p.rect_stroke(b, 1.0, Stroke::new(1.0, ink(d)), StrokeKind::Inside);
+        }
     }
     if let Some(d) = &d {
         d.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Default Foreground and Background Colors (D)")));

@@ -45,6 +45,26 @@ const PLACE_AFTER: &[(&str, &str)] = &[
     ("filter.other.colorToAlpha", "filter.other.offset"),
 ];
 
+/// Lienzo has one design language, Nodalia's, in light and dark. Window › Theme offers those and
+/// Sync with system; the older styles stay runnable by id for scripts (they resolve to Nodalia, in
+/// the mode they belong to) but are not listed. Unit tests keep the dense Pro look their geometry
+/// was written against, so they see the whole list.
+fn one_design_language(items: &mut Vec<MenuItem>) {
+    if cfg!(test) {
+        return;
+    }
+    items.retain(|i| i.id.strip_prefix("window.theme.").is_none_or(|name| matches!(name, "toggle" | "system" | "nodalia" | "nodaliaLight")));
+    for item in items.iter_mut() {
+        let (label, path_tail) = match item.id.as_str() {
+            "window.theme.nodalia" => ("Dark", "Theme"),
+            "window.theme.nodaliaLight" => ("Light", "Theme"),
+            _ => continue,
+        };
+        item.label = label.into();
+        item.path = vec!["Window".into(), path_tail.into()];
+    }
+}
+
 pub fn menu_items(app: &LienzoApp) -> Vec<MenuItem> {
     // 1) Photoshop's full menu tree, in Photoshop order; live where we implement the command.
     let known = is_live;
@@ -101,6 +121,7 @@ pub fn menu_items(app: &LienzoApp) -> Vec<MenuItem> {
         }
     }
     crate::plugin_ui::insert_menu_items(app, &mut items);
+    one_design_language(&mut items);
     if let Some(mask) = app.session.active().and_then(|s| s.active_layer.and_then(|id| s.doc.layer(id))).and_then(|l| l.mask.as_ref())
         && let Some(item) = items.iter_mut().find(|i| i.id == "layer.layerMask.enabled")
     {
