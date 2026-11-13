@@ -361,7 +361,7 @@ impl LienzoApp {
                 panels::dock_area(self, ui);
             } else {
                 let t = theme::Tokens::get(&ctx);
-                let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
+                let backdrop = workspace_backdrop(&t, chrome, home, prefs_ui::pasteboard_color(self));
                 let shown = egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                     canvas::document_area(self, ui);
                 });
@@ -437,5 +437,18 @@ impl LienzoApp {
             ctx.set_cursor_icon(egui::CursorIcon::Wait);
         }
         true
+    }
+}
+
+/// The fill behind the document area of a full-window workspace. The Home screen holds no
+/// document, so it has no pasteboard: in the Nodalia themes it is an island like the others, not
+/// the sunken grey a canvas gets (a grey pane inside a light frame). Full Screen Mode is black.
+pub(crate) fn workspace_backdrop(t: &theme::Tokens, chrome: bool, home: bool, pasteboard: Option<egui::Color32>) -> egui::Color32 {
+    if !chrome {
+        egui::Color32::BLACK
+    } else if home && t.islands() {
+        t.pane()
+    } else {
+        pasteboard.unwrap_or(t.canvas)
     }
 }
