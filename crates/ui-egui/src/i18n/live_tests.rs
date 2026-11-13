@@ -96,14 +96,16 @@ fn azerbaijani_draw_after_switching_and_restore_after_restart() {
 fn azerbaijani_preferences_draw_terms_and_glyphs() {
     let code = "az";
     let interface = "İnterfeys";
-    let light = "Açıq mövzu";
     with_language(Lang::EN, || {
         let mut h = harness();
         h.state_mut().run("prefs.set", json!({"path": "interface.language", "value": code})).expect("choose language");
         crate::prefs_ui::open_preferences(h.state_mut(), "interface");
         h.run_steps(4);
         let text = drawn_text(&h);
-        for expected in [interface, light, tr(lang(code), "UI font size"), tr(lang(code), "UI scale")] {
+        // Nodalia's interface has no theme swatches, so only assert terms that the current
+        // Preferences page actually draws. The full Azerbaijani alphabet below still checks the
+        // bundled UI font independently of which controls are visible.
+        for expected in [interface, tr(lang(code), "UI font size"), tr(lang(code), "UI scale")] {
             assert!(text.iter().any(|text| text == expected), "{code}: missing {expected:?}");
             h.ctx.fonts_mut(|fonts| {
                 for c in expected.chars().chain("ƏəĞğIıİiÖöŞşÜüÇç".chars()).filter(|c| c.is_alphabetic()) {
