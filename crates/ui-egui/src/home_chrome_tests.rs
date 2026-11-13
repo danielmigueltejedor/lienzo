@@ -92,11 +92,12 @@ fn tab_in_full_screen_does_not_bring_the_chrome_back_over_home() {
 #[test]
 fn home_is_a_light_island_in_the_light_nodalia_theme() {
     let t = crate::theme::Tokens::for_kind(ThemeKind::NodaliaLight);
-    let pasteboard = Some(egui::Color32::from_rgb(1, 2, 3));
+    let user_pasteboard = egui::Color32::from_rgb(1, 2, 3);
+    let pasteboard = Some(user_pasteboard);
     let home = crate::app::frame::workspace_backdrop(&t, true, true, pasteboard);
     assert_eq!(home, t.chrome, "Home is the island colour, not the sunken canvas grey, and ignores the pasteboard");
     assert_ne!(home, t.canvas);
-    assert_eq!(crate::app::frame::workspace_backdrop(&t, true, false, pasteboard), pasteboard.unwrap(), "a document keeps its pasteboard");
+    assert_eq!(crate::app::frame::workspace_backdrop(&t, true, false, pasteboard), user_pasteboard, "a document keeps its pasteboard");
     assert_eq!(crate::app::frame::workspace_backdrop(&t, false, true, pasteboard), egui::Color32::BLACK, "Full Screen Mode stays black");
     let pro = crate::theme::Tokens::for_kind(ThemeKind::Pro);
     assert_eq!(crate::app::frame::workspace_backdrop(&pro, true, true, None), pro.canvas, "other themes are unchanged");
