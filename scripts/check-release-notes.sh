@@ -35,7 +35,9 @@ fi
 # The first two non-blank lines, read without `mapfile`: the macOS runners ship bash 3.2.
 first=""
 second=""
-while IFS= read -r line; do
+# Windows runners check out with CRLF, so the carriage return is dropped too.
+while IFS= read -r line || [[ -n "$line" ]]; do
+  line="${line%$'\r'}"
   [[ -z "${line//[[:space:]]/}" ]] && continue
   if [[ -z "$first" ]]; then first="$line"; else second="$line"; break; fi
 done < "$file"
