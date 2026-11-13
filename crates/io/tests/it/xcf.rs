@@ -281,7 +281,7 @@ fn modes_map_to_photoshops_and_the_rest_warn() {
 fn xcf_cannot_be_written_and_says_so() {
     let d = open("layers-8bit.xcf").document;
     let e = export(&d, "out.xcf", &ExportOptions::default()).err().map(|e| e.to_string()).unwrap_or_default();
-    assert!(e.contains("pcraft"), "{e}");
+    assert!(e.contains(".lienzo"), "{e}");
 }
 
 #[test]
