@@ -54,6 +54,10 @@ pub struct DockStyle {
     /// Corner radius of a floating window's fill and outline (0 = square). The window's
     /// contents must leave the corners alone: give `tab_background` no colour there.
     pub floating_radius: f32,
+    /// Corner radius of a group in a dock column (0 = square). A rounded group is a card of its
+    /// own, filled with `background`, and the column paints nothing behind it, so the gaps between
+    /// the groups show what is under the dock. `tab_background` must leave the corners alone.
+    pub dock_radius: f32,
     /// Painted over a native floating window while [`DockArea::input_blocked`] is on.
     pub blocked_dim: Color32,
     /// Height of a floating window's title bar.
@@ -207,6 +211,7 @@ impl DockStyle {
             floating_background: visuals.window_fill,
             floating_stroke: visuals.window_stroke,
             floating_radius: 0.0,
+            dock_radius: 0.0,
             blocked_dim: visuals.panel_fill.gamma_multiply(0.6),
             title_height: super::chrome::TITLE_HEIGHT,
             edge_band: 28.0,
@@ -292,6 +297,7 @@ impl DockStyle {
             self.min_tab_width,
             self.floating_stroke.width,
             self.floating_radius,
+            self.dock_radius,
             self.title_height,
             self.edge_band,
             self.side_zone_fraction,
@@ -1362,6 +1368,7 @@ impl<'a, P: Clone + Eq + Hash + Debug + Send + Sync + 'static> DockArea<'a, P> {
             targets: Vec::new(),
             dock_targets: Vec::new(),
             dock_groups: Vec::new(),
+            dock_frame: None,
             column_scroll: HashMap::new(),
             owned_interactions: Vec::new(),
             output: DockOutput::default(),

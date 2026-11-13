@@ -379,6 +379,19 @@ fn nodalia_is_the_shipping_default_with_lienzo_islands() {
 }
 
 #[test]
+fn nodalia_dark_is_lifted_off_black_and_light_is_ndls_own() {
+    let lum = |c: Color32| u32::from(c.r()) + u32::from(c.g()) + u32::from(c.b());
+    let ndl_dark = nodalia_theme::Mode::Dark.palette_with(LIENZO);
+    let dark = Tokens::for_kind(ThemeKind::Nodalia);
+    assert!(lum(dark.canvas) > lum(ndl(ndl_dark.surface_sunken)) + 60, "the canvas is no longer near black");
+    assert!(lum(dark.frame()) > lum(ndl(ndl_dark.surface_window)), "the window frame is lifted");
+    assert!(lum(dark.canvas) > lum(dark.chrome), "the canvas stays a step above the islands");
+    let ndl_light = nodalia_theme::Mode::Light.palette_with(LIENZO);
+    let light = Tokens::for_kind(ThemeKind::NodaliaLight);
+    assert_eq!((light.canvas, light.chrome), (ndl(ndl_light.surface_sunken), ndl(ndl_light.surface_panel)));
+}
+
+#[test]
 fn nodalia_title_bar_has_the_main_menu_instead_of_the_mark() {
     crate::app::NODALIA_IN_TESTS.with(|n| n.set(true));
     let mut app = crate::LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
