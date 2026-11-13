@@ -50,6 +50,8 @@ fn harness(ppp: f32) -> Option<Harness> {
             started_in.store(true, Ordering::SeqCst);
             LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
