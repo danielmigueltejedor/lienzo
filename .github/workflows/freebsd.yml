@@ -29,12 +29,10 @@ permissions:
 
 jobs:
   freebsd:
-    # Intentionally tracked at @main (not SHA-pinned) so org-wide CI improvements, security fixes, and build optimizations propagate without PR churn across all craftapp repos.
-    uses: storytold/craft-common-actions/.github/workflows/freebsd.yml@main
+    uses: getnodalia/foundation/.github/workflows/freebsd.yml@d6efe3bb22fa5abe72352082f2e11ca2e037f970 # foundation main
     with:
-      craft-fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
-      cargo-build-extra-args: "--features heif"
+      fonts-repository: getnodalia/foundation
+      fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
       # The VM's software Vulkan driver crashes (SIGSEGV) when several tests set up a device at
       # once, so lienzo-gpu's tests run one at a time, like ui-egui's integration tests.
-      custom-test-command: "CARGO_PROFILE_DEV_DEBUG=0 cargo test --workspace --locked --features heif --exclude lienzo-ui-egui --exclude lienzo-gpu && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-gpu --locked -- --test-threads=1 && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --lib && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --doc && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --test '*' -- --test-threads=1"
-      run-package-check: true
+      command: "cargo build --workspace --locked --features heif && CARGO_PROFILE_DEV_DEBUG=0 cargo test --workspace --locked --features heif --exclude lienzo-ui-egui --exclude lienzo-gpu && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-gpu --locked -- --test-threads=1 && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --lib && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --doc && CARGO_PROFILE_DEV_DEBUG=0 cargo test -p lienzo-ui-egui --locked --test '*' -- --test-threads=1"
