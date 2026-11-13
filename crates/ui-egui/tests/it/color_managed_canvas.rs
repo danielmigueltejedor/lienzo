@@ -20,6 +20,8 @@ fn render(profile: &str, rgb: [f32; 3], reopen: bool) -> Option<([u8; 3], [u8; 3
         egui_kittest::Harness::builder().with_size(egui::vec2(1000.0, 700.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(move |cc| {
             LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 ft.store(lienzo_gpu::Compositor::preferred_acc_format(&rs.adapter) == eframe::wgpu::TextureFormat::Rgba32Float, Ordering::SeqCst);
                 *observer_out.lock().expect("GPU observer lock") = Some(lienzo_ui_egui::gpu_canvas::GpuCanvas::new(rs));

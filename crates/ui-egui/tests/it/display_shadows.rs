@@ -159,6 +159,8 @@ fn gpu_display_shadows_match_independent_icc_reference_at_all_depths() {
             move |cc| {
                 LienzoApp::setup_context(&cc.egui_ctx, Default::default());
                 let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+                // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+                app.ui.panels.properties = false;
                 app.set_wgpu(cc.wgpu_render_state.as_ref().expect("render state").clone());
                 app.session.color.set_displays(Ok(vec![Display {
                     id: 1,

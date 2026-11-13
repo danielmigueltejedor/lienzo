@@ -22,6 +22,8 @@ fn all_registered_languages_render_camera_raw_and_switch_without_resetting_view_
         let mut h = builder.build_eframe(move |cc| {
             LienzoApp::setup_context(&cc.egui_ctx, ThemeKind::Pro);
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             app.run("file.new", json!({"width":64,"height":48})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
             app.run("edit.fill", json!({"color":"#80ff00"})).unwrap();

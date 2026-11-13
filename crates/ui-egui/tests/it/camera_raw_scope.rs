@@ -26,6 +26,8 @@ fn fixture_render(theme: ThemeKind, gpu: bool) -> Harness<'static, LienzoApp> {
     let mut h = builder.build_eframe(move |cc| {
         LienzoApp::setup_context(&cc.egui_ctx, theme);
         let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+        // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+        app.ui.panels.properties = false;
         app.set_theme(&cc.egui_ctx, theme);
         app.run("file.new", json!({"width":64,"height":48})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
@@ -153,6 +155,8 @@ fn exact_clipping_rgb_lab_capped_samplers_and_reversible_tone_controls() {
         for depth in [8, 16, 32] {
             let ctx = egui::Context::default();
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             app.run("file.new", json!({"width":16,"height":8,"mode":mode,"depth":depth})).unwrap();
             app.run("layer.new.layer", json!({})).unwrap();
             app.run("edit.fill", json!({"color":"#808080"})).unwrap();
@@ -203,6 +207,8 @@ fn exact_clipping_rgb_lab_capped_samplers_and_reversible_tone_controls() {
 fn lab_readouts_respect_embedded_rgb_profile() {
     let ctx = egui::Context::default();
     let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+    // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+    app.ui.panels.properties = false;
     app.run("file.new", json!({"width":4,"height":4})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color":"#ff0000"})).unwrap();
@@ -323,6 +329,8 @@ fn real_shortcuts_triangles_menu_and_scope_preferences_roundtrip() {
 fn selected_region_scope_and_preview_share_the_engine_selection_boundary() {
     let ctx = egui::Context::default();
     let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+    // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+    app.ui.panels.properties = false;
     app.run("file.new", json!({"width":16,"height":8})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color":"#808080"})).unwrap();
@@ -430,6 +438,8 @@ fn both_clipping_warnings_leave_unclipped_preview_pixels_visible_on_gpu() {
     let mut h = Harness::builder().with_step_dt(1.0 / 60.0).with_size(vec2(800.0, 600.0)).wgpu().build_eframe(|cc| {
         LienzoApp::setup_context(&cc.egui_ctx, ThemeKind::Pro);
         let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+        // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+        app.ui.panels.properties = false;
         app.set_theme(&cc.egui_ctx, ThemeKind::Pro);
         app.run("file.new", json!({"width":16,"height":16})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();

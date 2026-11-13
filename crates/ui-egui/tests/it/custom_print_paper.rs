@@ -6,6 +6,8 @@ use serde_json::{Map, Value, json};
 
 fn app() -> (LienzoApp, u64) {
     let mut app = LienzoApp::new(lienzo_engine::Session::new(), lienzo_ui_egui::Services::default());
+    // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+    app.ui.panels.properties = false;
     // Print lists this printer and does not ask the spooler.
     app.session.printer_source = Some(std::sync::Arc::new(|| {
         vec![craft_print::Printer { name: "Test native printer".into(), default: true, two_sided: None, description: String::new() }]
