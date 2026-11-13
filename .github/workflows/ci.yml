@@ -151,7 +151,7 @@ jobs:
   # The Linux gate. Its rust-cache entry is the one `test (without heif)` restores.
   gate:
     if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
-    uses: getnodalia/foundation/.github/workflows/rust-gate.yml@9178a270c5e577a822c5523d21b56efdd89fc1e1 # foundation main
+    uses: getnodalia/foundation/.github/workflows/rust-gate.yml@976581262c95c0d95c0184149c0e1ba55485ccb3 # foundation main
     with:
       # egui/winit/rfd.
       packages: >-
