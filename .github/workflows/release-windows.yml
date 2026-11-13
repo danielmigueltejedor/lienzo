@@ -8,9 +8,9 @@ name: Release Windows
 # they run ("More info" > "Run anyway"). Set the WINDOWS_CERTIFICATE or AZURE_* secrets that
 # packaging/windows/sign.ps1 reads to sign them.
 #
-# To release: set [workspace.package] version in Cargo.toml, merge, then run this workflow with
-# tag=vX.Y.Z. It reuses the draft release (or creates one) and adds the Windows files. Check them,
-# then publish the draft. Without a tag it only uploads workflow artifacts.
+# "Release from nodalia" (release-auto.yml) runs this with the tag when a version and its notes
+# land on nodalia, and publishes the release once every platform is attached. Run it by hand with
+# tag=vX.Y.Z to rebuild a release's files; without a tag it only uploads workflow artifacts.
 
 on:
   workflow_dispatch:
@@ -19,6 +19,13 @@ on:
         description: "Release tag to attach the packages to, e.g. v0.1.0 (empty: artifacts only)"
         required: false
         default: ""
+  # release-auto.yml, once a version with its notes lands on nodalia.
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to attach the packages to"
+        type: string
+        required: true
 
 permissions:
   contents: read
