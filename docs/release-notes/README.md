@@ -8,8 +8,11 @@ text of the GitHub release, so people reading the release page see exactly this 
 - Bumping `version` in `[workspace.package]` of `Cargo.toml` needs `docs/release-notes/vX.Y.Z.md`
   in the same pull request, or the **Release notes are written** check fails
   (`scripts/check-release-notes.sh`, also run by the release workflows before building anything).
-- A release is created from this file. When a file here changes on `nodalia`, the **Release notes**
-  workflow copies it into the release of the same tag. It can also be run by hand with a tag.
+- Merging the version bump releases it: **Release from nodalia** (`release-auto.yml`) tags the
+  merge, creates the release with this file as its text, builds the Linux, macOS and Windows
+  packages and publishes the release once all of them are attached. Nobody pushes a tag by hand.
+- When a file here changes later on `nodalia`, the **Release notes** workflow copies it into the
+  release of the same tag. It can also be run by hand with a tag.
 - No generated lists ("What's Changed", "Full Changelog"), no placeholders, no mentions of forks,
   upstream or other products' names.
 

@@ -3,9 +3,9 @@ name: Release Linux
 # Builds Lienzo's Linux packages (AppImage, .deb, .rpm, .tar.gz), starts the AppImage on clean
 # distributions, and only then attaches the files to a GitHub release.
 #
-# To release: set [workspace.package] version in Cargo.toml, merge, then run this workflow with
-# tag=vX.Y.Z. It creates the release as a draft (or reuses an existing one) and attaches the files.
-# Check them, then publish the draft. Without a tag it only uploads workflow artifacts.
+# "Release from nodalia" (release-auto.yml) runs this with the tag when a version and its notes
+# land on nodalia, and publishes the release once every platform is attached. Run it by hand with
+# tag=vX.Y.Z to rebuild a release's files; without a tag it only uploads workflow artifacts.
 
 on:
   workflow_dispatch:
@@ -14,6 +14,13 @@ on:
         description: "Release tag to attach the packages to, e.g. v0.1.0 (empty: artifacts only)"
         required: false
         default: ""
+  # release-auto.yml, once a version with its notes lands on nodalia.
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to attach the packages to"
+        type: string
+        required: true
 
 permissions:
   contents: read

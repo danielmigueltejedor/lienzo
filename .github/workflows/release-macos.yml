@@ -7,9 +7,9 @@ name: Release macOS
 # is opened (right-click > Open). Set MACOS_SIGN_IDENTITY and the APPLE_* secrets to sign and
 # notarize it; packaging/macos/package.sh does the rest.
 #
-# To release: set [workspace.package] version in Cargo.toml, merge, then run this workflow with
-# tag=vX.Y.Z. It reuses the draft release that Release Linux created (or creates one) and adds the
-# macOS files. Check them, then publish the draft. Without a tag it only uploads workflow artifacts.
+# "Release from nodalia" (release-auto.yml) runs this with the tag when a version and its notes
+# land on nodalia, and publishes the release once every platform is attached. Run it by hand with
+# tag=vX.Y.Z to rebuild a release's files; without a tag it only uploads workflow artifacts.
 
 on:
   # Also on every change to the app, like the other Nodalia apps' macOS builds: artifacts only.
@@ -29,6 +29,13 @@ on:
         description: "Release tag to attach the packages to, e.g. v0.1.0 (empty: artifacts only)"
         required: false
         default: ""
+  # release-auto.yml, once a version with its notes lands on nodalia.
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to attach the packages to"
+        type: string
+        required: true
 
 permissions:
   contents: read
