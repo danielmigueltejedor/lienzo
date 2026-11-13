@@ -240,10 +240,14 @@ fn rail_widths(pro: bool) -> (f32, f32) {
 /// Narrow icon rail, unless an embedding app hides it: shows, expands or collapses panel groups.
 fn rail(app: &mut LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     let (rw, _) = rail_widths(t.pro);
+    // In Nodalia the rail is an island of its own, a gap from the dock on its canvas side.
+    let toward_canvas = if crate::direction::is_rtl() { crate::theme::Gap::Right } else { crate::theme::Gap::Left };
+    let (frame, gap) = crate::theme::island(t, t.chrome, egui::Margin::symmetric(4, 8), toward_canvas);
     crate::direction::end_panel("rail")
         .resizable(false)
-        .exact_size(rw)
-        .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin::symmetric(4, 8)))
+        .show_separator_line(!t.islands())
+        .exact_size(rw + gap)
+        .frame(frame)
         .show(ui, |ui| rail_body(app, ui, t));
 }
 
@@ -255,7 +259,9 @@ fn rail_body(app: &mut LienzoApp, ui: &mut egui::Ui, t: &Tokens) {
     // The separator is on the canvas side, inside the rail's inset.
     let r = ui.max_rect();
     let x = if crate::direction::is_rtl() { r.right() } else { r.left() };
-    ui.painter().line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.0, t.separator));
+    if !t.islands() {
+        ui.painter().line_segment([pos2(x, r.top()), pos2(x, r.bottom())], Stroke::new(1.0, t.separator));
+    }
     ui.spacing_mut().item_spacing.y = 4.0;
     use crate::dock::Group;
     let entries: [(&str, &str, Group); 6] = [

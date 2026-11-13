@@ -108,6 +108,9 @@ pub(super) struct Renderer<'a, P> {
     pub(super) dock_targets: Vec<crate::docking::targets::DockDrop<P>>,
     /// [D] The open groups of dock columns, whose body zones stack or make columns.
     pub(super) dock_groups: Vec<dock::DockGroup<P>>,
+    /// The rect of the rounded dock group being drawn ([`crate::docking::DockStyle::dock_radius`]),
+    /// so its body's fill follows the card's corners. `None` outside one.
+    pub(super) dock_frame: Option<Rect>,
     /// [D] The scroll offset of each dock column that scrolls this frame, by its first panel.
     pub(super) column_scroll: HashMap<P, f32>,
     pub(super) owned_interactions: Vec<Id>,
@@ -433,9 +436,15 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
     /// The corners of a panel body that sit on the corners of a floating window with rounded
     /// corners ([`DockStyle::floating_radius`]), so the body's fill follows the window's shape.
     fn floating_corners(&self, rect: Rect) -> egui::CornerRadius {
-        let radius = self.style.floating_radius.clamp(0.0, 255.0).round() as u8;
-        let Some((_, frame)) = self.tree.as_ref().filter(|_| radius > 0) else { return egui::CornerRadius::ZERO };
+        let (radius, frame) = if let Some(frame) = self.dock_frame {
+            (self.style.dock_radius.clamp(0.0, 255.0).round() as u8, frame)
+        } else {
+            let radius = self.style.floating_radius.clamp(0.0, 255.0).round() as u8;
+            let Some((_, frame)) = self.tree.as_ref().filter(|_| radius > 0) else { return egui::CornerRadius::ZERO };
+            (radius, *frame)
+        };
         let at = |a: egui::Pos2, b: egui::Pos2| if (a - b).abs().max_elem() < 1.0 { radius } else { 0 };
+        let frame = &frame;
         egui::CornerRadius {
             nw: at(rect.left_top(), frame.left_top()),
             ne: at(rect.right_top(), frame.right_top()),

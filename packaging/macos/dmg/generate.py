@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate background.tiff and dmg-layout.DS_Store for the macOS DMG window (see README.md here).
 
-Needs resvg on PATH and:
+Needs:
     pip install 'pillow>=12' ds_store==1.3.3 mac_alias==2.2.3
 
 Runs on any OS, no Mac needed. Both outputs come from this script alone, so they carry nothing
@@ -12,10 +12,7 @@ from the machine that made them: no local paths, user or disk names, dates or vo
 
 import datetime
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
 
 from ds_store import DSStore
 from mac_alias import Alias, TargetInfo, VolumeInfo
@@ -27,23 +24,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VOLUME = "Lienzo"
 WIDTH, HEIGHT = 660, 400  # window content, pt; the background's 1x size
 TITLE_BAR = 32
-ICON_SIZE = 128
-PALETTE = 16  # colours in background.tiff
-ICONS = {"Lienzo.app": (326, 205), "Applications": (574, 205)}
+ICON_SIZE = 112
+PALETTE = 48  # colours in background.tiff
+# Either side of the arrow in the white card (x 240-652 pt), on its centre line.
+ICONS = {"Lienzo.app": (307, 205), "Applications": (587, 205)}
 # A fixed date for the alias and the colour profile. Finder never matches it against the image
 # (each build is a new volume): it finds the background by volume name and path.
 FIXED_DATE = datetime.datetime(2026, 10, 8, tzinfo=datetime.timezone.utc)
 
 
-def render(svg, width, out):
-    # The SVG's text is already outlined and no fonts are loaded, so every machine draws the
-    # same pixels.
-    subprocess.run(
-        ["resvg", "--skip-system-fonts", "-w", str(width), svg, out],
-        check=True,
-    )
-    with Image.open(out) as im:
-        return im.convert("RGB")
+def render(png, width):
+    """The background at `width` px: the 2x artwork (1320 x 800) as drawn, or scaled down for 1x."""
+    with Image.open(png) as im:
+        im = im.convert("RGB")
+        if im.width != WIDTH * 2 or im.height != HEIGHT * 2:
+            sys.exit(f"error: {png} must be {WIDTH * 2} x {HEIGHT * 2} px (the 2x size)")
+        if width != im.width:
+            im = im.resize((width, width * HEIGHT // WIDTH), Image.Resampling.LANCZOS)
+        return im
 
 
 def quantize(im):
@@ -61,12 +59,9 @@ def srgb_profile():
     return bytes(icc)
 
 
-def write_tiff(svg, out):
+def write_tiff(png, out):
     """1x (72 dpi) and 2x (144 dpi) in one TIFF, as `tiffutil -cathidpicheck` writes them."""
-    with tempfile.TemporaryDirectory() as tmp:
-        one, two = (
-            quantize(render(svg, WIDTH * s, os.path.join(tmp, f"{s}x.png"))) for s in (1, 2)
-        )
+    one, two = (quantize(render(png, WIDTH * s)) for s in (1, 2))
     two.encoderinfo = {"dpi": (144, 144)}  # the rest as the first page
     # Opaque 16-colour palette, Deflate: the artwork is three inks plus antialiasing, and a palette
     # keeps the file under ~90 KB (RGB was ~200 KB; repository assets must stay small).
@@ -148,9 +143,7 @@ def write_ds_store(out):
 
 
 def main():
-    if not shutil.which("resvg"):
-        sys.exit("error: resvg not found (brew install resvg / cargo install resvg --locked)")
-    write_tiff(os.path.join(HERE, "background.svg"), os.path.join(HERE, "background.tiff"))
+    write_tiff(os.path.join(HERE, "background.png"), os.path.join(HERE, "background.tiff"))
     write_ds_store(os.path.join(HERE, "dmg-layout.DS_Store"))
 
 

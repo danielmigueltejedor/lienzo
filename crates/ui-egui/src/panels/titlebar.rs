@@ -446,7 +446,7 @@ fn paint_round(ui: &Ui, t: &Tokens, s: &CaptionStyle, c: Caption, maximized: boo
 /// its 24 pt grid with 2 pt strokes on whole pixels, all scaled by `k` (1 for the window's own
 /// 28 pt buttons, smaller for a dialog's close button).
 fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2, (hovered, pressed): (bool, bool), k: f32) {
-    let p = if t.dark() { nodalia_theme::Mode::Dark } else { nodalia_theme::Mode::Light }.palette_with(crate::theme::LIENZO);
+    let p = crate::theme::palette(if t.dark() { nodalia_theme::Mode::Dark } else { nodalia_theme::Mode::Light });
     let c32 = crate::theme::ndl;
     let ppp = ui.ctx().pixels_per_point();
     let centre = pos2((centre.x * ppp).round() / ppp, (centre.y * ppp).round() / ppp);

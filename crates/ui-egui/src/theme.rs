@@ -887,8 +887,8 @@ impl Tokens {
     /// The window frame the islands stand on; the chrome colour in the other themes.
     pub fn frame(&self) -> Color32 {
         match self.kind {
-            ThemeKind::Nodalia => ndl(nodalia_theme::Mode::Dark.palette_with(LIENZO).surface_window),
-            ThemeKind::NodaliaLight => ndl(nodalia_theme::Mode::Light.palette_with(LIENZO).surface_window),
+            ThemeKind::Nodalia => ndl(palette(nodalia_theme::Mode::Dark).surface_window),
+            ThemeKind::NodaliaLight => ndl(palette(nodalia_theme::Mode::Light).surface_window),
             _ => self.chrome,
         }
     }
@@ -967,10 +967,36 @@ pub(crate) fn ndl(c: nodalia_theme::Rgba) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
 }
 
-/// Nodalia's tokens for one mode, with Lienzo's accent. Every colour comes from the NDL palette:
+/// Nodalia's palette for one mode with Lienzo's accent. The dark surfaces are lifted a step: NDL's
+/// own are near black (the window frame is 11/12/16), too dark to judge an image against or to tell
+/// the islands apart, and the canvas, which NDL sinks below its panels, is lifted further so a
+/// dark image stands out from it. The light palette is NDL's as it is.
+pub(crate) fn palette(mode: nodalia_theme::Mode) -> nodalia_theme::Palette {
+    let mut p = mode.palette_with(LIENZO);
+    if mode.is_dark() {
+        let lift = |c: nodalia_theme::Rgba, k: f32| {
+            let up = |v: u8| (v as f32 + (255.0 - v as f32) * k).round() as u8;
+            nodalia_theme::Rgba::new(up(c.r), up(c.g), up(c.b), c.a)
+        };
+        p.surface_window = lift(p.surface_window, 0.10);
+        p.surface_panel = lift(p.surface_panel, 0.11);
+        p.surface_raised = lift(p.surface_raised, 0.11);
+        p.surface_overlay = lift(p.surface_overlay, 0.11);
+        p.surface_sunken = lift(p.surface_sunken, 0.19);
+        p.control_bg = lift(p.control_bg, 0.11);
+        p.control_bg_hover = lift(p.control_bg_hover, 0.11);
+        p.control_bg_pressed = lift(p.control_bg_pressed, 0.11);
+        p.control_field_bg = lift(p.control_field_bg, 0.08);
+        p.border_subtle = lift(p.border_subtle, 0.11);
+        p.text_tertiary = lift(p.text_tertiary, 0.10);
+    }
+    p
+}
+
+/// Nodalia's tokens for one mode, with Lienzo's accent. Every colour comes from [`palette`]:
 /// islands are `surface.panel`, the frame between them `surface.window`, controls `control.*`.
 fn nodalia_tokens(kind: ThemeKind, mode: nodalia_theme::Mode) -> Tokens {
-    let p = mode.palette_with(LIENZO);
+    let p = palette(mode);
     let dark = mode.is_dark();
     Tokens {
         kind,

@@ -292,7 +292,7 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
             self.dock_targets.push(DockDrop { target: DockTarget::NewDock { side }, band, line, outer: true });
             return;
         }
-        if usable(rect) {
+        if usable(rect) && self.style.dock_radius <= 0.0 {
             ui.painter().rect_filled(rect, 0.0, self.style.background);
         }
         let DockColumns { bounds, natural, widths, rects } = self.dock_columns(side, columns, rect);
@@ -472,7 +472,7 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
             self.iconic_column(ui, column, body, edge);
         }
         if column.iconic || !usable(body) {
-            ui.painter().rect_stroke(rect, 0.0, self.style.border, StrokeKind::Inside);
+            self.column_outline(ui, rect);
             return;
         }
         let total: f32 = heights.iter().sum();
@@ -502,7 +502,14 @@ impl<P: Clone + Eq + Hash + Debug + Send + Sync + 'static> Renderer<'_, P> {
                 *tab = tab.intersect(body);
             }
         }
-        ui.painter().rect_stroke(rect, 0.0, self.style.border, StrokeKind::Inside);
+        self.column_outline(ui, rect);
+    }
+
+    /// A column's outline: none when its groups are rounded cards, which carry their own.
+    fn column_outline(&self, ui: &Ui, rect: Rect) {
+        if self.style.dock_radius <= 0.0 {
+            ui.painter().rect_stroke(rect, 0.0, self.style.border, StrokeKind::Inside);
+        }
     }
 
     /// Groups top to bottom in `area` (the scrolled content when the column scrolls), their
