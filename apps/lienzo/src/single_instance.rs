@@ -312,10 +312,12 @@ impl Shared {
 
 /// Become the running instance under `dir` or hand `paths` (absolute) to the one that is.
 pub fn claim(dir: &Path, paths: &[String]) -> Launch {
-    claim_with(dir, paths, TIMING)
+    let replacing = std::env::var(nodalia_update::RELAUNCH_FROM).ok().and_then(|pid| pid.trim().parse().ok());
+    claim_in_replacing(dir, paths, TIMING, &transport(), replacing)
 }
 
 /// [`claim`] with explicit timeouts, over the transport this process would use ([`transport`]).
+#[cfg(test)]
 pub fn claim_with(dir: &Path, paths: &[String], timing: Timing) -> Launch {
     claim_in(dir, paths, timing, &transport())
 }
@@ -323,7 +325,15 @@ pub fn claim_with(dir: &Path, paths: &[String], timing: Timing) -> Launch {
 /// [`claim`] over `transport`. Until `timing.handoff` runs out, each round tries the lock (free
 /// once a quitting or crashed primary is gone) and then the running primary, wherever
 /// `instance.json` says it listens.
+#[cfg(test)]
 pub fn claim_in(dir: &Path, paths: &[String], timing: Timing, transport: &Transport) -> Launch {
+    claim_in_replacing(dir, paths, timing, transport, None)
+}
+
+/// [`claim_in`] for the copy an in-app update started in place of process `replacing`. That
+/// process is quitting to let it run, so handing the paths to it would leave nothing open: this
+/// launch waits for its lock instead (a primary that isn't `replacing` still takes the paths).
+pub fn claim_in_replacing(dir: &Path, paths: &[String], timing: Timing, transport: &Transport, replacing: Option<u32>) -> Launch {
     if let Err(e) = std::fs::create_dir_all(dir) {
         return Launch::Standalone(format!("{}: {e}", dir.display()));
     }
@@ -345,7 +355,9 @@ pub fn claim_in(dir: &Path, paths: &[String], timing: Timing, transport: &Transp
             Err(std::fs::TryLockError::WouldBlock) => {}
             Err(std::fs::TryLockError::Error(e)) => return Launch::Standalone(format!("{}: {e}", lock_path.display())),
         }
-        if let Some((endpoint, token)) = read_info(dir) {
+        if replacing.is_some() && read_pid(dir) == replacing {
+            last = "the version this update replaces is still quitting".to_string();
+        } else if let Some((endpoint, token)) = read_info(dir) {
             match send(&endpoint, &token, paths, deadline) {
                 Ok(()) => return Launch::Forwarded,
                 Err(e) => last = e,
@@ -572,6 +584,11 @@ fn write_info(dir: &Path, endpoint: &Endpoint, token: &str) -> Result<(), String
         let _ = std::fs::remove_file(&tmp);
         format!("{}: {e}", path.display())
     })
+}
+
+fn read_pid(dir: &Path) -> Option<u32> {
+    let v: Value = serde_json::from_slice(&std::fs::read(dir.join(INFO_FILE)).ok()?).ok()?;
+    u32::try_from(v.get("pid")?.as_u64()?).ok()
 }
 
 fn read_info(dir: &Path) -> Option<(Endpoint, String)> {
