@@ -122,7 +122,7 @@ fn bundled_fonts_cover_latin() {
     let l = e.layout(&point("Hello, Wörld! 0123", 12.0), 72.0);
     assert_eq!(l.glyphs.len(), "Hello, Wörld! 0123".chars().count());
     assert!(l.glyphs.iter().all(|g| g.id != 0), "no .notdef");
-    assert_eq!(e.fonts.faces("Inter").len(), 3);
+    assert_eq!(e.fonts.faces("Inter").len(), 4);
 }
 
 #[test]

@@ -151,8 +151,7 @@ jobs:
   # The Linux gate. Its rust-cache entry is the one `test (without heif)` restores.
   gate:
     if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
-    # Tracks @main so suite-wide CI fixes reach every app without a PR in each repository.
-    uses: storytold/craft-common-actions/.github/workflows/gate.yml@main
+    uses: getnodalia/foundation/.github/workflows/rust-gate.yml@9178a270c5e577a822c5523d21b56efdd89fc1e1 # foundation main
     with:
       # egui/winit/rfd.
       packages: >-
@@ -160,9 +159,8 @@ jobs:
         libgtk-3-dev mesa-vulkan-drivers libvulkan1
       # The tests build with the optional craft-fonts input (crates/text/build.rs), so the
       # Japanese font tests that skip without it run. Same commit as release.yml.
-      craft-fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
-      # Cargo.toml's dev profile already keeps line tables only.
-      dev-debug: ""
+      fonts-repository: getnodalia/foundation
+      fonts-ref: b076417b5880bd4154bd22f00695b1d28c6bea83
       env: |
         LIENZO_FULL_SWEEP=${{ inputs.full_sweep && '1' || '0' }}
         LIENZO_NO_PRINT=1
@@ -295,10 +293,10 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux build dependencies
-        uses: storytold/craft-common-actions/actions/install-apt-packages@main
-        with:
-          packages: >-
-            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+        run: |
+          sudo apt-get update -q
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
             libgtk-3-dev
 
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
@@ -467,10 +465,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Linux build dependencies
-        uses: storytold/craft-common-actions/actions/install-apt-packages@main
-        with:
-          packages: >-
-            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+        run: |
+          sudo apt-get update -q
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
             libgtk-3-dev
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -497,10 +495,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Linux build dependencies
-        uses: storytold/craft-common-actions/actions/install-apt-packages@main
-        with:
-          packages: >-
-            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+        run: |
+          sudo apt-get update -q
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
             libgtk-3-dev
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -576,11 +574,11 @@ jobs:
     env:
       RAYON_NUM_THREADS: "4"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           path: after
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ inputs.brush_tip_base }}
@@ -608,7 +606,7 @@ jobs:
               done
             done
           done
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: brush-tip-performance
@@ -626,22 +624,21 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Pin baseline to the merge base with origin/main
+      - name: Pin baseline to the merge base with origin/nodalia
         id: baseline
         run: |
-          git remote add upstream https://github.com/storytold/photocraft.git
-          git fetch --no-tags upstream main
-          base=$(git merge-base HEAD upstream/main)
+          git fetch --no-tags origin nodalia
+          base=$(git merge-base HEAD origin/nodalia)
           echo "sha=$base" >> "$GITHUB_OUTPUT"
           git worktree add --detach "$RUNNER_TEMP/lienzo-baseline" "$base"
           mkdir -p "$RUNNER_TEMP/lienzo-baseline/crates/engine/examples"
           cp crates/engine/examples/bench_dry_mixer.rs "$RUNNER_TEMP/lienzo-baseline/crates/engine/examples/bench_dry_mixer.rs"
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - name: Install Linux build dependencies
-        uses: storytold/craft-common-actions/actions/install-apt-packages@main
-        with:
-          packages: >-
-            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
+        run: |
+          sudo apt-get update -q
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev \
             libgtk-3-dev
       - name: Benchmark baseline and candidate on this runner
         run: |

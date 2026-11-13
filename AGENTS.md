@@ -1,61 +1,21 @@
-<!-- craft-house-rules:start core source=dde09ea31e2e457f5b4653a6e76f7cdf55944bdf sha256=540e6cea75d12d0710c3dca89658328e81e508ecef102446ca5bb95b7c0b92bb -->
-## House rules
+# Lienzo: instructions for agents
 
-These apply in every Craft repository. A later rule may be stricter, not weaker. The source is `standards/house-rules-core.md` in `storytold/craft-contrib`. Propose changes there, not in a copy.
+<!-- Nodalia template: https://github.com/getnodalia/foundation/blob/main/standards/agents.md
+     General rules (engineering, CI, security, release, NDL) live in getnodalia/foundation and are
+     not repeated here. This file holds only what is particular to this repository. -->
 
-1. **A person is accountable.** Whoever runs an agent answers for what it opens and for its review comments.
-2. **Check, then claim.** Before writing code, read the issue comments, search pull requests for `#N` and the keywords, and check recent commits on `main`. Comment on the issue first. Release a claim you will not finish.
-3. **Verify, don't guess.** Open a definition before using it. Confirm the cause in the code, even when someone names a location.
-4. **Keep fixes narrow and tested.** Fix what the issue describes, where the bug is. Add a test that fails without the fix.
-5. **Review the diff before opening a pull request.** Identifiers exist as used, the test fails without the fix, nothing unrelated changed, and the description is true.
-6. **Look for a better pull request.** If another fixes the same thing, close yours when it is better or equal, and say why.
-7. **Report only what ran.** Say what you tested and what you could not run. Without a local build or test, say so and rely on CI before marking ready.
-8. **`main` changes through a pull request.** Do not push to it. Branch protection enforces this. There is no exception.
-9. **Stop and ask only about** licensing outside the allowlist, publishing, releases, a new remote, secrets, spending money, destructive git, and anything else hard to undo. Otherwise keep working. `plan/` is a gitignored notebook, not rules. Without it, do not ask for it and do not stop.
-10. **Keep secrets and personal details out** of the repository, logs and requests.
-11. **CI stays shared.** Workflows call `storytold/craft-common-actions`. Do not change CI in a feature or fix pull request. If CI cannot cover a change, open an issue there.
-12. **Guards say why.** A check that looks removable says what it prevents. Read that before changing it.
-13. **Instructions must be readable by everyone.** No notes about one machine, and no links to files a reader cannot open. `craftrules` is retired. Do not link to it.
-14. **Keep pull requests moving.** Concurrent pull requests are fine; unanswered actionable feedback is not. Respond in 7 days, a reminder at 14, closure eligible at 30, from when an actionable request waits on the author. Suggestions and unconfirmed bot findings do not start the clock. A fix, explanation or agreed plan resets it; unrelated activity does not. Waiting on a reviewer or maintainer pauses it and does not count against the author. A maintainer decides closure; it is never automatic. Reuse search results, do not poll, and stop at a rate limit.
-15. **No agent attribution.** A pull request does not say an agent wrote it. A repository rule may not require that.
-<!-- craft-house-rules:end -->
-<!-- craft-house-rules:start rust source=dde09ea31e2e457f5b4653a6e76f7cdf55944bdf sha256=387e0ccb4b49e567f60951d7d6fff7305054c89f43ad812b9993dc7c38528013 -->
-## Rust Craft repositories
+Engineering rules for every Nodalia repository: [getnodalia/foundation](https://github.com/getnodalia/foundation)
+([engineering](https://github.com/getnodalia/foundation/blob/main/standards/engineering.md),
+[CI](https://github.com/getnodalia/foundation/blob/main/standards/ci.md),
+[security](https://github.com/getnodalia/foundation/blob/main/standards/security.md),
+[release](https://github.com/getnodalia/foundation/blob/main/standards/release.md),
+[NDL](https://github.com/getnodalia/foundation/blob/main/standards/ndl.md)).
 
-These apply to native Craft apps and to shared Rust libraries. Select them by repository type. A repository that merely contains some Rust does not take this block. Rules later in a repository's file may be stricter, but not weaker. The source is `standards/house-rules-rust.md` in [storytold/craft-contrib](https://github.com/storytold/craft-contrib).
+## What this is
 
-1. **Never crash.** Non-test code does not panic and has no `unsafe`, except where the repository file names an exception. Return errors, treat input as hostile, and bound recursion and allocations. New production crate roots copy the `deny` attribute from an existing crate: `clippy::unwrap_used`, `clippy::expect_used`, `clippy::panic`, `clippy::unimplemented`, `clippy::todo`, `clippy::unreachable`. Every crash fix comes with a test that panicked before the fix.
-2. **Clean room.** Learn from observed behaviour and public specifications. Do not copy another product's code, assets, strings or artwork. Check a dependency's licence before adding it.
-3. **Assets and fonts.** Every asset is original or suitably licensed, and is recorded in `ATTRIBUTION.md` in the same change. Font files live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts), not in the app repository.
-4. **Rust only for native Craft apps.** No handwritten JavaScript or TypeScript, and no Tauri, Electron or webview shell, in those apps. Shared tooling follows its documented technical scope and maintainer-approved exceptions. Craft PR Review's existing Tauri and TypeScript UI is one such exception. It does not relax this rule for native apps. Preserve any existing web build.
-5. **Time goes through `chrono`.** Do not hand-roll calendar conversion. For dates beyond what `chrono` can represent, follow [standards/time.md](https://github.com/storytold/craft-contrib/blob/main/standards/time.md).
-6. **Contributor credits.** Add or edit only your own person's entry in `contributors/people.toml`, and only after asking them. Never guess a name or hand-edit `contributors.json`.
+Lienzo is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **Lienzo** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names keep their existing lowercase forms until they are renamed on purpose (they are what saved settings, files and the upstream merges rely on): crates (`lienzo-*`), binaries, file names, ids (`dev.danielmiguelt.Lienzo`). Shared Rust components come from [getnodalia/foundation](https://github.com/getnodalia/foundation) (its `vendor/*` branches) and are pinned by immutable git revision. UI libraries stay at L6. The goal is 1:1 Photoshop parity (same menus, shortcuts, behaviour and file fidelity) with better performance, and every feature drivable by agents. Read this file first, then `docs/`.
 
-## Licence allowlist
-
-Dependencies and assets use SPDX identifiers. An expression is allowed when every identifier is in this list. A repository may name a shorter list. It may not add an identifier here by editing its own copy of these rules.
-
-- `ISC`
-- `MIT`
-- `BSD-2-Clause`
-- `BSD-3-Clause`
-- `Apache-2.0`
-- `OFL-1.1`
-- `Ubuntu-font-1.0`
-- `Bitstream-Vera`
-- `CC0-1.0`
-- `CC-BY-4.0`
-- `CC-BY-SA-4.0`
-- `LicenseRef-Public-Domain`
-
-`LicenseRef-Storyteller-Trademark` is not in this list. It covers Storyteller brand marks only, where a repository already says so.
-<!-- craft-house-rules:end -->
-
-# AGENTS.md: guide for AI agents and contributors
-
-Lienzo is an open-source, native, Photoshop-comparable image editor written in **Rust only** (no JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk + wasm-bindgen). Never add Tauri (or any webview/JS UI framework) as a dependency, build step or packaging target. The product name is always written **Lienzo** in user-facing text: UI, window titles, About, installers, release names, docs prose. Machine names keep their existing lowercase forms until they are renamed on purpose (they are what saved settings, files and the upstream merges rely on): crates (`lienzo-*`), binaries, file names, ids (`dev.danielmiguelt.Lienzo`). Shared Rust components live in [storytold/craft-libs](https://github.com/storytold/craft-libs) and are pinned by immutable git revision. UI libraries stay at L6. The goal is 1:1 Photoshop parity (same menus, shortcuts, behaviour and file fidelity) with better performance, and every feature drivable by agents. Read this file first, then `docs/`.
-
-## 1. Orientation (5 minutes)
+## Orientation (5 minutes)
 
 | Read | Why |
 |---|---|
@@ -74,7 +34,7 @@ Lienzo is an open-source, native, Photoshop-comparable image editor written in *
 | `crates/<name>/README.md` (where present) | Public API of that crate |
 | [photocraft-corpus](https://github.com/storytold/photocraft-corpus) + `docs/development.md` › Test corpora | Real-file test oracles (our Photoshop-authored PSDs and GIMP-authored XCFs); with psd-tools, ag-psd and PngSuite fetched into `corpus/` by `cargo xtask corpus --all` at the pins in `xtask/src/corpus_pins.rs` |
 
-## 2. Workspace map
+## Architecture
 
 ```text
 crates/
@@ -98,7 +58,7 @@ xtask/                       cargo xtask layers | wasm | ci | stats | corpus | t
 
 **Layering is enforced** by `cargo xtask layers`. A crate may depend only on lower layers. `psd`, `codecs` and `cms` depend on nothing in the workspace. Nothing below `ui-egui` may use egui, eframe, winit or rfd. A new crate must be registered in `xtask/src/layers.rs`.
 
-## 3. Golden rules
+## Rules
 
 ### Never crash (outranks feature work)
 
@@ -115,7 +75,7 @@ People trust Lienzo with their work, and a crash loses it. A malformed file, a b
 
 1. **Everything is a command.** New user-visible behaviour = a command in the engine (`crates/engine/src/*_cmds.rs`, registered in `commands.rs`) with id, label, menu path, shortcut, params doc, `enabled` and `run`, plus tests. The UI, CLI, control channel and MCP all dispatch commands by id. Use the **exact id from `crates/ui-egui/src/menu_catalog.rs`** and the menu item goes live automatically. Only pure view/window state (zoom, panels, screen mode) belongs to the shell (`menus.rs` `UI_COMMANDS`).
 2. **No format or colour assumptions.** Bit depth (8/16/32f) and colour model (RGB/Gray/CMYK/Lab…) are runtime data. Never introduce a `u8`-only pixel path in public APIs. Never assume sRGB: colour conversions go through `lienzo-cms` (`Transform`, `transform::cached`). Test at several depths.
-3. **Clean-room.** We studied Photoshop and other proprietary editors for *behaviour and look only*. Never copy their code, shaders, profiles or assets. Implement from public specs (Adobe PSD spec, ICC, ISO 32000 blend modes, papers) and observation. Third-party assets must be permissively licensed, keep their license file next to them, and get a row in `ATTRIBUTION.md` (path, title, author, source, license) in the same change; so do original assets. **Never commit font files:** fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts). Lienzo uses it through the optional build input `CRAFT_FONTS_DIR=<craft-fonts checkout>` (read by `crates/text/build.rs`, exposed as `lienzo_text::CRAFT_FONTS`; empty without it, and everything must still work). Build with it: `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo build`; details in `docs/development.md` › Fonts.
+3. **Clean-room.** We studied Photoshop and other proprietary editors for *behaviour and look only*. Never copy their code, shaders, profiles or assets. Implement from public specs (Adobe PSD spec, ICC, ISO 32000 blend modes, papers) and observation. Third-party assets must be permissively licensed, keep their license file next to them, and get a row in `ATTRIBUTION.md` (path, title, author, source, license) in the same change; so do original assets. **Never commit font files:** fonts live in the `vendor/craft-fonts/main` branch of [getnodalia/foundation](https://github.com/getnodalia/foundation). Lienzo uses it through the optional build input `CRAFT_FONTS_DIR=<checkout of that branch>` (read by `crates/text/build.rs`, exposed as `lienzo_text::CRAFT_FONTS`; empty without it, and everything must still work). Build with it: `CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo build`; details in `docs/development.md` › Fonts.
 4. **Tests are the gate.** Every change comes with tests. Format crates use round-trip, synthetic-generator, oracle and fuzz tests. Keep the PSD corpus results and the parity floor (`crates/ui-egui/src/parity.rs`) from regressing.
 5. **The UI is thin and data-driven.** UI state lives in `ui-egui/src/state.rs` (serde), so the control channel can read and drive it. Colours and radii come from `theme::Tokens`, never hard-coded.
 6. **Verify UI changes visually.** Render offscreen with `cargo run -p lienzo-ui-egui --example snapshot` (no window, no focus stealing), or launch with `--control` and take `ui.screenshot`. Look at the PNG. Demo images must be public-domain art, never personal photos. When fetching assets, never put a person's name, email or other personal details in requests (User-Agent, headers, URLs); use a generic `Lienzo-dev` User-Agent.
@@ -124,25 +84,7 @@ People trust Lienzo with their work, and a crash loses it. A malformed file, a b
 
 9. **Never panic on input** (see *Never crash* above). A command's `run` closure and anything it calls must return `Err`, never panic, for *any* params or document state: validate params, check bounds before indexing or dividing, and reject absurd sizes before allocating. The `panic_hunt` integration test fuzzes every command with adversarial params and must stay green.
 
-## 4. Picking work
-
-Priorities: important infrastructure first, then low-hanging parity, then the long tail.
-
-0. **Read `ROADMAP.md`, then `docs/gaps.md`.** `docs/target-app-parity.md` says, dimension by
-   dimension, where Lienzo is lacking; `docs/gaps.md` ranks the work. `docs/parity-checklist.md`
-   (menu wiring) is not a measure of behaviour. When your work moves a number or closes a gap,
-   update the parity doc and gap entry it belongs to, with the date, and bump their status line
-   and revision history.
-1. **Check `docs/scorecard.md`** before picking work: each area's `missing` and `partial` rows,
-   the performance scenarios that are over budget or not measurable yet, and the count of
-   settings that do nothing. Its numbers are measured; prefer them to estimates.
-2. `docs/roadmap.md` → **Current focus**.
-3. `cargo xtask parity` → `docs/parity-checklist.md` lists every missing menu item, grouped by menu. Low-hanging fruit is usually a missing command whose algorithm already exists in `algo`, `paint`, `vector` or `text`.
-4. `log/devlog.md` → the "Still open" bullets of recent entries.
-
-When parity rises, raise `FLOOR` in `crates/ui-egui/src/parity.rs` (never lower it).
-
-## 5. Before you finish a task
+## Build and test (before you finish a task)
 
 ```sh
 cargo test -p <crates you touched>
@@ -167,7 +109,25 @@ Commands must **never panic** on bad input (Rule 9): every `run` closure and the
 
 Then append a terse entry to `log/devlog.md` (what landed, numbers, what's still open). Sessions can end abruptly (crashes, context limits), so the dev log plus a green tree is how the next agent picks up. Keep the tree building at every step.
 
-## 6. Parallel agents
+## Picking work
+
+Priorities: important infrastructure first, then low-hanging parity, then the long tail.
+
+0. **Read `ROADMAP.md`, then `docs/gaps.md`.** `docs/target-app-parity.md` says, dimension by
+   dimension, where Lienzo is lacking; `docs/gaps.md` ranks the work. `docs/parity-checklist.md`
+   (menu wiring) is not a measure of behaviour. When your work moves a number or closes a gap,
+   update the parity doc and gap entry it belongs to, with the date, and bump their status line
+   and revision history.
+1. **Check `docs/scorecard.md`** before picking work: each area's `missing` and `partial` rows,
+   the performance scenarios that are over budget or not measurable yet, and the count of
+   settings that do nothing. Its numbers are measured; prefer them to estimates.
+2. `docs/roadmap.md` → **Current focus**.
+3. `cargo xtask parity` → `docs/parity-checklist.md` lists every missing menu item, grouped by menu. Low-hanging fruit is usually a missing command whose algorithm already exists in `algo`, `paint`, `vector` or `text`.
+4. `log/devlog.md` → the "Still open" bullets of recent entries.
+
+When parity rises, raise `FLOOR` in `crates/ui-egui/src/parity.rs` (never lower it).
+
+## Parallel agents
 
 - Use your own target dir (`CARGO_TARGET_DIR=target/agent-<name>`) to avoid the Cargo build lock, and edit only the files you own. Shared files (`engine/src/lib.rs`, the `v.extend(...)` list in `engine/src/commands.rs`, `ui-egui/src/menus.rs`, `state.rs`) get small, surgical edits; re-read before editing.
 - Put new commands in a **new module** (`engine/src/<area>_cmds.rs` with a `specs()` function) rather than growing a shared file.
@@ -175,8 +135,7 @@ Then append a terse entry to `log/devlog.md` (what landed, numbers, what's still
 - Keep every `Cargo.toml` valid at all times: the `crates/*` glob means one broken manifest breaks everyone's build. **Create or rewrite manifests atomically**: write to a temp file outside `crates/`, then `mv` it into place.
 - Disk space: each target dir is about 10 GB. Delete `target/agent-*` dirs of finished agents.
 
-## 7. Where things are tracked
-
+## Where things are tracked
 
 - `docs/roadmap.md`: milestones M0–M12, status and the current focus.
 - `ROADMAP.md`, `docs/target-app-parity.md`, `docs/gaps.md` and the `docs/*-parity.md` checklists: where we stand against Photoshop.
@@ -186,14 +145,24 @@ Then append a terse entry to `log/devlog.md` (what landed, numbers, what's still
 - `plan/` is an optional gitignored notebook (research, parity notes, estimates). Do not ask for it and do not stop when it is absent.
 - `log/` (local, gitignored): the dev log.
 
-## 8. Keeping the native format complete
+## Keeping the native format complete
 
 `lienzo-format` deliberately fails to compile when a `lienzo-doc` struct gains a field, so
 nothing is silently dropped from `.pcraft` saves. When you add a doc field, add it to
 `crates/format/src/manifest.rs` and `convert.rs` with `#[serde(default)]` so older files still load.
 If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown PSD blocks verbatim.
 
-## CI workflows
-- Lienzo is its own project and owns its CI. Workflows in `.github/workflows/` may call shared workflows or run their own jobs; the release workflows (`release-linux.yml`, `release-macos.yml`, `release-windows.yml`) package Lienzo's own installers and run their jobs here because no shared workflow builds them.
-- Keep CI changes in their own PR rather than inside a feature or fix PR, unless the change cannot work without them.
-- Don't duplicate a job a shared workflow already runs; prefer calling the shared workflow when it does what is needed.
+## Release
+
+`docs/releasing.md` is the procedure: `cargo xtask version`, then the `release` branch. The
+installers come from Lienzo's own workflows, `release-linux.yml`, `release-macos.yml` (DMG on a
+standard macOS runner) and `release-windows.yml`; `release.yml` still calls the inherited shared
+release workflow and is listed in `NODALIA_MIGRATION.md`. A maintainer reviews the draft release
+and publishes it.
+
+## CI
+
+Lienzo owns its CI. The gate, FreeBSD, Nix, packaging-lint and AGENTS.md checks call
+getnodalia/foundation's reusable workflows pinned by commit; the release and test jobs run here.
+Keep CI changes in their own PR unless a change cannot work without them, and pin every action to
+a commit SHA.
