@@ -102,8 +102,9 @@ fn row(h: &mut Harness) -> Vec<i32> {
     // where the first full-resolution composite of this 5 MP document can take longer; the
     // submitted work still finishes, so wait for it again instead of failing.
     let img = (0..3).find_map(|_| h.render().ok()).expect("render");
+    // 200 px: the Nodalia Levels dialog, centred in the window, starts past it.
     let (x0, y) = (canvas.min.x as u32 + 20, canvas.min.y as u32 + 40);
-    (x0..x0 + 300)
+    (x0..x0 + 200)
         .map(|x| {
             let p = img.get_pixel(x, y).0;
             (i32::from(p[0]) * 3 + i32::from(p[1]) * 6 + i32::from(p[2])) / 10
