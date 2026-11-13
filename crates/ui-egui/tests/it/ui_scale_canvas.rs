@@ -95,6 +95,9 @@ fn assert_document_size_is_physical(gpu: bool) {
             app.run("prefs.set", json!({"values": {"interface.uiScale": ui_scale}})).expect("ui scale");
             app.run("file.new", json!({"width": DOC, "height": DOC, "background": "white"})).expect("new");
             app.run("edit.fill", json!({"color": "#000000"})).expect("fill");
+            // Nodalia floats the Properties card over the canvas's top right, where it covers the
+            // right part of the document at 200%: hide it, so only the canvas is measured.
+            app.ui.panels.properties = false;
             app.sync_views();
         }
         h.run_steps(6);
