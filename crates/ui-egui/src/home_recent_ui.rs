@@ -265,8 +265,8 @@ fn load_thumbnail_image_bounded(path: &str, file_len: u64) -> Option<ColorImage>
         ..Default::default()
     };
 
-    // 2. If .pcraft, read the embedded thumbnail PNG
-    if ext.eq_ignore_ascii_case("pcraft") {
+    // 2. If a native document (.lienzo, or the older .pcraft), read the embedded thumbnail PNG
+    if lienzo_format::is_native_extension(ext) {
         if std_path.is_dir() {
             let thumb_path = std_path.join("thumb.png");
             if let Ok(thumb_meta) = std::fs::metadata(&thumb_path)

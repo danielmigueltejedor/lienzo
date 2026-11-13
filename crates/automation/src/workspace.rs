@@ -231,7 +231,7 @@ impl Drop for TempRemoval<'_> {
 fn written_kind(name: &str) -> bool {
     let Some((_, ext)) = name.rsplit_once('.') else { return false };
     let ext = ext.to_ascii_lowercase();
-    ["psd", "psb", "ora", "pdf", lienzo_format::EXTENSION].contains(&ext.as_str()) || lienzo_codecs::from_extension(&ext).is_some()
+    (["psd", "psb", "ora", "pdf"].contains(&ext.as_str()) || lienzo_format::is_native_extension(&ext)) || lienzo_codecs::from_extension(&ext).is_some()
 }
 
 /// Whether the file at `relative` starts like an image Lienzo reads (PSD/PSB or a codec's

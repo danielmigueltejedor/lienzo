@@ -248,6 +248,24 @@ fn synthetic_pcraft_roundtrip_keeps_everything() {
     assert!(matches!(import("broken.pcraft", b"not a native bundle"), Err(lienzo_io::IoError::Pcraft(_))));
 }
 
+/// Lienzo's own `.lienzo` extension writes the native document, and a document saved under the
+/// older `.pcraft` name opens the same way: same bytes, either name, any case.
+#[test]
+fn native_documents_save_as_lienzo_and_still_open_as_pcraft() {
+    let d = synthetic(SampleType::U8);
+    let saved = export(&d, "art.lienzo", &ExportOptions::default()).unwrap().bytes;
+    assert!(lienzo_format::is_pcraft(&saved), "a .lienzo save is the native bundle");
+    for name in ["art.lienzo", "ART.LIENZO", "art.pcraft", "dir/art.Pcraft"] {
+        let back = import(name, &saved).unwrap().document;
+        assert_eq!(back.layer_count(), d.layer_count(), "{name}");
+        assert_eq!(back.artboards().len(), 2, "{name}");
+    }
+    // The older name still saves a native document; only new saves are offered as .lienzo.
+    assert!(lienzo_format::is_pcraft(&export(&d, "art.pcraft", &ExportOptions::default()).unwrap().bytes));
+    assert!(matches!(import("broken.lienzo", b"not a native bundle"), Err(lienzo_io::IoError::Pcraft(_))));
+    assert_eq!(lienzo_io::import_preflight("x.lienzo", b"PK\x03\x04"), lienzo_io::ImportPreflight::Unbounded);
+}
+
 /// A layer at (4, 4) whose preserved `shmd` block offsets it by `(dx, 0)` in comp 1, plus the
 /// matching resource 1065: what a PSD with that comp data imports to before decoding comps.
 fn doc_with_raw_comp_offset(dx: i32) -> Document {

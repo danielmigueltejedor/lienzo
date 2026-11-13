@@ -131,7 +131,7 @@ pub struct ExportSettings {
     /// File Compatibility; see [`LienzoApp::save_settings`]).
     pub psd_maximize_compatibility: bool,
     /// `.pcraft`: also write the full-size composite (Preferences › File Handling › Save Full-Size
-    /// Composite in .pcraft Files; see [`LienzoApp::save_settings`]). Off by default.
+    /// Composite in .lienzo Files; see [`LienzoApp::save_settings`]). Off by default.
     pub pcraft_full_composite: bool,
     /// Embed the document's ICC profile when the format supports it. On for Save As and, unless
     /// Export As turns it off, for export.

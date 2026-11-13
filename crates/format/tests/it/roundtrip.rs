@@ -1091,3 +1091,23 @@ fn arrow_document_is_backward_compatible() {
     let loaded = load_from_bytes(&bytes).unwrap();
     assert_eq!(loaded, doc);
 }
+
+/// New documents are named `.lienzo`; `.pcraft`, the name before Lienzo had its own, is still
+/// recognised as a native document. Neither name changes the bytes.
+#[test]
+fn native_extension_is_lienzo_and_pcraft_still_counts() {
+    assert_eq!(EXTENSION, "lienzo");
+    assert_eq!(LEGACY_EXTENSION, "pcraft");
+    for ext in ["lienzo", "LIENZO", "pcraft", "PCraft"] {
+        assert!(is_native_extension(ext), "{ext}");
+    }
+    for ext in ["psd", "lienz", "", "pcraft.png"] {
+        assert!(!is_native_extension(ext), "{ext}");
+    }
+    for name in ["art.lienzo", "dir/art.LIENZO", "C:\\pics\\old.pcraft"] {
+        assert!(has_native_extension(name), "{name}");
+    }
+    for name in ["lienzo", ".lienzo", "dir.lienzo/art", "art.lienzo.png", "art.psd"] {
+        assert!(!has_native_extension(name), "{name}");
+    }
+}

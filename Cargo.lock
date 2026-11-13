@@ -4020,7 +4020,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "arboard",
  "async-io",
@@ -4075,7 +4075,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-affinity"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -4085,7 +4085,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-algo"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "criterion",
  "lienzo-color",
@@ -4100,7 +4100,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-automation"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "base64 0.23.1",
  "cap-std",
@@ -4131,7 +4131,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-cli"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4157,7 +4157,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-cms"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "moxcms",
  "rayon",
@@ -4165,7 +4165,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-codecs"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "craft-jpeg",
  "exr",
@@ -4189,7 +4189,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-color"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-cms",
  "serde",
@@ -4197,7 +4197,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-compose"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "criterion",
  "lienzo-cms",
@@ -4213,7 +4213,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-doc"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-color",
  "lienzo-geom",
@@ -4224,7 +4224,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-engine"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "base64 0.22.1",
  "blake3",
@@ -4267,7 +4267,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-format"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "blake3",
  "craft-pcraft-format",
@@ -4291,14 +4291,14 @@ dependencies = [
 
 [[package]]
 name = "lienzo-geom"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "lienzo-gpu"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bytemuck",
  "half",
@@ -4319,14 +4319,14 @@ dependencies = [
 
 [[package]]
 name = "lienzo-heif"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "heic-rs",
 ]
 
 [[package]]
 name = "lienzo-io"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "blake3",
  "craft-docpath",
@@ -4366,18 +4366,18 @@ dependencies = [
 
 [[package]]
 name = "lienzo-ipp"
-version = "0.3.2"
+version = "0.3.3"
 
 [[package]]
 name = "lienzo-ops"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-doc",
 ]
 
 [[package]]
 name = "lienzo-paint"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-cms",
  "lienzo-color",
@@ -4391,7 +4391,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-plugins"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-color",
  "lienzo-geom",
@@ -4407,7 +4407,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-psd"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "encoding_rs",
  "flate2",
@@ -4419,7 +4419,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-raster"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "crc32fast",
  "lienzo-color",
@@ -4435,7 +4435,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-raw"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "flate2",
  "image",
@@ -4450,7 +4450,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-tablet"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "block2 0.6.2",
  "log",
@@ -4465,7 +4465,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-testkit"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "memory-stats",
  "serde_json",
@@ -4473,7 +4473,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-text"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "flate2",
  "lienzo-color",
@@ -4488,7 +4488,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-ui-egui"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-vector"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "lienzo-color",
  "lienzo-doc",
@@ -4547,7 +4547,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-web"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "eframe",
  "egui",
@@ -4570,7 +4570,7 @@ dependencies = [
 
 [[package]]
 name = "lienzo-web-boot"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "flate2",
  "js-sys",
@@ -9696,7 +9696,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "chrono",
  "serde",

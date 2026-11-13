@@ -154,7 +154,7 @@ pub fn commit_child(s: &mut Session, index: usize) -> Result<bool> {
                 SmartSource::Linked { .. } => child.name.as_str(),
             };
             let stem = name.rsplit_once('.').map_or(name, |(stem, _)| stem);
-            sm.source = SmartSource::Embedded { file_name: format!("{stem}.pcraft"), bytes: bytes.clone() };
+            sm.source = SmartSource::Embedded { file_name: format!("{stem}.{}", lienzo_format::EXTENSION), bytes: bytes.clone() };
             detach_psd(doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?);
             refresh_or_fail(doc, id)?;
         }

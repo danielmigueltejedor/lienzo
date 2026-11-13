@@ -390,7 +390,7 @@ fn load_frames(path: &str, fmt: lienzo_color::PixelFormat, opts: &lienzo_io::Imp
     let is_img = |f: &std::path::Path| {
         matches!(
             f.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()).as_deref(),
-            Some("png" | "jpg" | "jpeg" | "tif" | "tiff" | "webp" | "bmp" | "gif" | "tga" | "exr" | "pcraft" | "psd")
+            Some("png" | "jpg" | "jpeg" | "tif" | "tiff" | "webp" | "bmp" | "gif" | "tga" | "exr" | "lienzo" | "pcraft" | "psd")
         )
     };
     let files: Vec<std::path::PathBuf> = if p.is_dir() {

@@ -433,7 +433,7 @@ pub struct ExportOptions {
     /// [`PsdExportOptions::read_linked_files`]). On by default; automation turns it off.
     pub read_linked_files: bool,
     /// `.pcraft`: request the flattened document at its canvas size as `composite/full.png`
-    /// (Preferences › File Handling › Save Full-Size Composite in .pcraft Files). The save may
+    /// (Preferences › File Handling › Save Full-Size Composite in .lienzo Files). The save may
     /// omit it; check the manifest's `full_composite` member ([`lienzo_format::read_full_composite`]
     /// reads it). Off by default.
     pub pcraft_full_composite: bool,
@@ -525,7 +525,7 @@ pub enum ImportPreflight {
 ///
 /// The order matches [`import_stages`]; keep the two in step.
 pub fn import_preflight(name: &str, bytes: &[u8]) -> ImportPreflight {
-    if has_extension(name, lienzo_format::EXTENSION) || lienzo_format::is_pcraft(bytes) {
+    if lienzo_format::has_native_extension(name) || lienzo_format::is_pcraft(bytes) {
         return ImportPreflight::Unbounded;
     }
     if is_psd(bytes) {
@@ -843,7 +843,7 @@ pub fn import_file_for_open_verified(
     // the identity from it after parsing, and never from a path that may point elsewhere now.
     let watch = source.file().try_clone().map_err(read_failed)?;
     let mut magic = [0u8; 4];
-    let psd = !has_extension(name, lienzo_format::EXTENSION) && lienzo_psd::ReadAt::read_at(&source, 0, &mut magic).is_ok() && is_psd(&magic);
+    let psd = !lienzo_format::has_native_extension(name) && lienzo_psd::ReadAt::read_at(&source, 0, &mut magic).is_ok() && is_psd(&magic);
     let result = if psd {
         import_source_with_options(name, lienzo_psd::Source::new(source), ctl, opts)
     } else {
@@ -855,7 +855,7 @@ pub fn import_file_for_open_verified(
         // A flat scanline EXR is decoded block by block straight into tiles; other EXR
         // layouts, and EXR headers the band decoder refuses, are read whole below.
         let mut streamed = None;
-        if !has_extension(name, lienzo_format::EXTENSION) && lienzo_codecs::detect(&magic) == Some(lienzo_codecs::Format::OpenExr) {
+        if !lienzo_format::has_native_extension(name) && lienzo_codecs::detect(&magic) == Some(lienzo_codecs::Format::OpenExr) {
             let before = lienzo_raster::spill::read_error_generation();
             if let Some(mut result) = exr_native::import(&mut file, ctl)? {
                 // A rewrite in place while the blocks were read must not become the document.
@@ -951,7 +951,7 @@ pub(crate) enum Route {
 /// Which importer takes the file `name` holding `bytes`. The checks run in this order.
 pub(crate) fn route(name: &str, bytes: &[u8]) -> Route {
     // A declared native extension must reach its loader so malformed bundles retain format errors.
-    if has_extension(name, lienzo_format::EXTENSION) || lienzo_format::is_pcraft(bytes) {
+    if lienzo_format::has_native_extension(name) || lienzo_format::is_pcraft(bytes) {
         return Route::Pcraft;
     }
     // Magic first: an Affinity file renamed .psd is still Affinity (#5258 corpus
@@ -1053,7 +1053,7 @@ fn has_format_signature(name: &str, bytes: &[u8]) -> bool {
         || has_extension(name, "pdn")
         || bytes.starts_with(b"PDN3")
         || lienzo_format::is_pcraft(bytes)
-        || has_extension(name, lienzo_format::EXTENSION)
+        || lienzo_format::has_native_extension(name)
 }
 
 fn extension(name_or_ext: &str) -> String {
@@ -1182,17 +1182,17 @@ fn export_stages_with_renderer(
 ) -> Result<EncodedExport, IoError> {
     let ext = extension(name_or_ext);
     if ext == "pdn" {
-        return Err(IoError::Unsupported("PDN is import-only; save as .pcraft to preserve all layers and blend modes".into()));
+        return Err(IoError::Unsupported("PDN is import-only; save as .lienzo to preserve all layers and blend modes".into()));
     }
     if affinity::EXTENSIONS.contains(&ext.as_str()) {
-        return Err(IoError::Unsupported("Affinity export is not implemented; save a new PSD, PNG or .pcraft copy".into()));
+        return Err(IoError::Unsupported("Affinity export is not implemented; save a new PSD, PNG or .lienzo copy".into()));
     }
     if kra::EXTENSIONS.contains(&ext.as_str()) {
-        return Err(IoError::Unsupported("Krita files are import-only; save as .ora to open the layers in Krita, or .pcraft to keep everything".into()));
+        return Err(IoError::Unsupported("Krita files are import-only; save as .ora to open the layers in Krita, or .lienzo to keep everything".into()));
     }
     if ext == "xcf" {
         return Err(IoError::Unsupported(
-            "XCF is GIMP's own format and Lienzo only opens it; save as .pcraft to keep the layers, or export a flat image".into(),
+            "XCF is GIMP's own format and Lienzo only opens it; save as .lienzo to keep the layers, or export a flat image".into(),
         ));
     }
     if ext == "ora" {
@@ -1211,7 +1211,7 @@ fn export_stages_with_renderer(
         }
         return Ok(res.into());
     }
-    if ext == lienzo_format::EXTENSION {
+    if lienzo_format::is_native_extension(&ext) {
         let doc = named_for_file(doc, name_or_ext);
         let thumbnail = Some(lienzo_compose::thumbnail(doc.as_ref(), 256));
         ctl.check().map_err(|_| IoError::Cancelled)?;

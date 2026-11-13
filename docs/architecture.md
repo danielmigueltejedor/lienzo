@@ -409,7 +409,7 @@ psd/src/
 
 ## 9. Native file format (`lienzo-format`)
 
-- **Format:** a `.pcraft` file is a zip (store mode) or directory bundle.
+- **Format:** a `.lienzo` file (the `.pcraft` bundle under Lienzo's own extension; `.pcraft` files still open) is a zip (store mode) or directory bundle.
   - `manifest.json`: a versioned document tree with serde, including `format_version` and migrations.
   - `tiles/<blake3>.zst`: content-addressed tiles, zstd-compressed.
   - `thumb.png` and `composite/` mips for quick look and previews.

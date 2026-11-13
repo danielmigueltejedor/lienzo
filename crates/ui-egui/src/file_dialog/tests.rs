@@ -33,11 +33,31 @@ fn pdn_save_requests_a_native_copy_without_overwriting_the_source() {
     let ctx = egui::Context::default();
     menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
-    assert!(matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "/pics/layers.pcraft"));
-    answer(&open, Some(FileDialogAnswer::SaveTo("/pics/layers.pcraft".into())));
+    assert!(matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "/pics/layers.lienzo"));
+    answer(&open, Some(FileDialogAnswer::SaveTo("/pics/layers.lienzo".into())));
     app.poll_file_dialog(&ctx, None);
-    assert_eq!(*written.borrow(), ["/pics/layers.pcraft"]);
-    assert_eq!(app.session.active().unwrap().path.as_deref(), Some("/pics/layers.pcraft"));
+    assert_eq!(*written.borrow(), ["/pics/layers.lienzo"]);
+    assert_eq!(app.session.active().unwrap().path.as_deref(), Some("/pics/layers.lienzo"));
+}
+
+/// A document saved before Lienzo had its own extension: File › Save writes it back where it
+/// is, under its old name, and Save As offers it as `.lienzo`.
+#[test]
+fn a_pcraft_document_saves_in_place_and_save_as_offers_lienzo() {
+    let (mut app, open, written) = app();
+    app.session.active_mut().unwrap().path = Some("/pics/old.pcraft".into());
+    let ctx = egui::Context::default();
+    menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
+    app.poll_file_dialog(&ctx, None);
+    assert!(open.borrow().is_empty(), "File › Save asks nothing");
+    assert_eq!(*written.borrow(), ["/pics/old.pcraft"]);
+    menus::invoke(&mut app, &ctx, "file.saveAs", json!({})).unwrap();
+    app.poll_file_dialog(&ctx, None);
+    assert!(
+        matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "/pics/old.lienzo"),
+        "{:?}",
+        open.borrow().first().map(|(r, _)| r.clone())
+    );
 }
 
 /// A real flat JPEG import, optionally edited to contain another layer. A filename without a
@@ -1045,13 +1065,13 @@ fn export_contents_suggests_the_contents_file_name() {
     menus::invoke(&mut app, &ctx, "layer.smartObjects.exportContents", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
     assert!(
-        matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "Layer 1.pcraft"),
+        matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "Layer 1.lienzo"),
         "{:?}",
         open.borrow().first().map(|(r, _)| r.clone())
     );
-    answer(&open, Some(FileDialogAnswer::SaveTo("/out/contents.pcraft".into())));
+    answer(&open, Some(FileDialogAnswer::SaveTo("/out/contents.lienzo".into())));
     app.poll_file_dialog(&ctx, None);
-    assert_eq!(*written.borrow(), ["/out/contents.pcraft"]);
+    assert_eq!(*written.borrow(), ["/out/contents.lienzo"]);
 }
 
 #[test]

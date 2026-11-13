@@ -101,7 +101,7 @@ modules:
       - install -Dm644 share/applications/dev.danielmiguelt.Lienzo.desktop /app/share/applications/dev.danielmiguelt.Lienzo.desktop
       # Flatpak only exports icons named after the app ID, so the sandbox keeps the Craft icon name.
       - sed -i "s/^Icon=.*/Icon=dev.danielmiguelt.Lienzo/" /app/share/applications/dev.danielmiguelt.Lienzo.desktop
-      # .pcraft, .psb and .qoi; the runtime's shared-mime-info already knows PSD and the rest.
+      # .lienzo (and the older .pcraft), .psb and .qoi; the runtime's shared-mime-info already knows PSD and the rest.
       - install -Dm644 share/mime/packages/dev.danielmiguelt.Lienzo.xml /app/share/mime/packages/dev.danielmiguelt.Lienzo.xml
       # Already has the release's version and date substituted by package.sh.
       - install -Dm644 share/metainfo/dev.danielmiguelt.Lienzo.metainfo.xml /app/share/metainfo/dev.danielmiguelt.Lienzo.metainfo.xml

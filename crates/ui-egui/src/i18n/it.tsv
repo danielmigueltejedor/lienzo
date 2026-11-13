@@ -4337,7 +4337,7 @@ navigator	Zoom	Zoom
 	Chisel Soft	Cesello morbido
 	Open color-less EXR as ACEScg	Apri gli EXR senza spazio colore come ACEScg
 	Do not append "copy" to filename when saving a copy	Non aggiungere "copy" al nome del file quando si salva una copia
-	Save Full-Size Composite in .pcraft Files	Salva l'immagine composita a dimensione piena nei file .pcraft
+	Save Full-Size Composite in .lienzo Files	Salva l'immagine composita a dimensione piena nei file .lienzo
 	Adobe-rgb-compat	Adobe RGB (compatibile)
 	Arc Lower	Arco inferiore
 	Arc Upper	Arco superiore

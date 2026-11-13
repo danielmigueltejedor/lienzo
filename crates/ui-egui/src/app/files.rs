@@ -229,17 +229,20 @@ impl LienzoApp {
         let ext = st.path.as_deref().and_then(|p| std::path::Path::new(p).extension()).map(|e| e.to_string_lossy().to_ascii_lowercase());
         // An OpenRaster file only when it holds the whole document (#3806): else PSD is offered.
         let holds_ora = st.path.as_deref().is_some_and(|p| lienzo_engine::file_cmds::holds_at(&st.doc, p));
+        // A document saved before Lienzo had its own extension is offered as .lienzo.
+        let legacy = ext.as_deref() == Some(lienzo_format::LEGACY_EXTENSION);
         let writable = ext.is_some_and(|e| {
             matches!(e.as_str(), lienzo_format::EXTENSION | "psd" | "psb" | "tif" | "tiff")
                 || (e == "ora" && holds_ora)
                 || (flat && lienzo_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
         });
         let suggested = match &st.path {
+            Some(p) if legacy => std::path::Path::new(p).with_extension(lienzo_format::EXTENSION).to_string_lossy().into_owned(),
             Some(p) if writable => p.clone(),
             p => {
                 let source = p.as_deref().unwrap_or(&st.doc.name);
                 let ext = match lienzo_engine::file_cmds::extension(source).as_deref() {
-                    Some("pdn") => "pcraft",
+                    Some("pdn") => lienzo_format::EXTENSION,
                     Some("kra" | "krz") => "ora",
                     _ => "psd",
                 };
@@ -455,7 +458,7 @@ impl LienzoApp {
                     && lienzo_engine::file_cmds::extension(p).is_some_and(|e| lienzo_codecs::from_extension(&e).is_some_and(|f| f.caps().write))
             };
             let path = st.path.clone().filter(|p| lienzo_engine::file_cmds::holds_at(&st.doc, p) || flat_own(p)).ok_or(
-                "Save writes back only to the document's own PSD, PSB, .pcraft or OpenRaster file (OpenRaster only when it holds everything), or to its own flat file while the document is a single plain layer",
+                "Save writes back only to the document's own PSD, PSB, .lienzo (or older .pcraft) or OpenRaster file (OpenRaster only when it holds everything), or to its own flat file while the document is a single plain layer",
             )?;
             return self.save_in_place(path, choices);
         }
@@ -477,7 +480,7 @@ impl LienzoApp {
     /// What a save writes by default under the preferences: File Handling › Image Previews
     /// decides whether a PSD/PSB gets its thumbnail, and Maximize PSD and PSB File Compatibility
     /// whether it gets its real merged image. Ask When Saving has no dialog here yet, so it saves
-    /// both, as Photoshop's checkboxes start on. Save Full-Size Composite in .pcraft Files decides
+    /// both, as Photoshop's checkboxes start on. Save Full-Size Composite in .lienzo Files decides
     /// whether a `.pcraft` save also writes `composite/full.png`. A JPEG or WebP is written the way the active
     /// document's file was (its JPEG quality, a WebP lossy at its quality or lossless), as
     /// Photoshop's Save and Save As options start there.
@@ -767,7 +770,7 @@ impl LienzoApp {
             let state = self.session.active().ok_or("no document")?;
             // As File › Save: without `path` only a layered file is written back (#416).
             path.or_else(|| state.path.clone().filter(|p| lienzo_engine::file_cmds::holds_at(&state.doc, p))).ok_or(
-                "pass `path`: a save without one writes back only to the document's own PSD, PSB, .pcraft or OpenRaster file, and to OpenRaster only when it holds everything (adjustment layers, styles and masks don't fit)",
+                "pass `path`: a save without one writes back only to the document's own PSD, PSB, .lienzo (or older .pcraft) or OpenRaster file, and to OpenRaster only when it holds everything (adjustment layers, styles and masks don't fit)",
             )?
         };
         let reply = |path: &str, warnings: &[String]| json!({"path": path, "warnings": warnings});

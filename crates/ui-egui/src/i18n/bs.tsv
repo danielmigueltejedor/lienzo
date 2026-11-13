@@ -4596,7 +4596,7 @@ cameraRaw	White Balance: As Shot	Balans bijele: kako je snimljeno
 	{set} from {file} replaced the one from {earlier}	Skup {set} iz {file} zamijenio je skup iz {earlier}
 @plural	{n} file could not be loaded: {errors}|{n} files could not be loaded: {errors}	Nije moguće učitati {n} datoteku: {errors}|Nije moguće učitati {n} datoteke: {errors}|Nije moguće učitati {n} datoteka: {errors}
 	Memory usage percent	Postotak upotrebe memorije
-	Save Full-Size Composite in .pcraft Files	Sačuvaj složenu sliku pune veličine u .pcraft datotekama
+	Save Full-Size Composite in .lienzo Files	Sačuvaj složenu sliku pune veličine u .lienzo datotekama
 	Scratch Size Limit (MB, 0 = No Limit)	Ograničenje veličine radnog diska (MB, 0 = bez ograničenja)
 smartSvg	Choose executable…	Odaberi izvršnu datoteku…
 smartSvg	Choose the application used to edit this SVG:	Odaberite aplikaciju za uređivanje ovog SVG-a:

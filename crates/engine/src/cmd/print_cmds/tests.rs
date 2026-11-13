@@ -546,8 +546,8 @@ fn package_copies_links_and_relinks() {
     for p in [r["folder"].as_str().unwrap(), docp, r["links"][0].as_str().unwrap()] {
         assert!(!p.contains('\\'), "{p}");
     }
-    assert!(docp.ends_with("Print Me/Print Me.pcraft"));
-    let back = lienzo_io::import("Print Me.pcraft", &std::fs::read(docp).unwrap()).unwrap().document;
+    assert!(docp.ends_with("Print Me/Print Me.lienzo"), "{docp}");
+    let back = lienzo_io::import("Print Me.lienzo", &std::fs::read(docp).unwrap()).unwrap().document;
     let linked: Vec<String> = back
         .walk()
         .iter()
@@ -1460,7 +1460,7 @@ fn package_of_a_document_named_after_a_windows_device_is_written() {
     let r = s.execute("file.package", json!({"dir": format!("{dir}/pkg")})).unwrap();
     assert_eq!(r["folder"].as_str().unwrap(), format!("{dir}/pkg/nul_"));
     let document = r["document"].as_str().unwrap();
-    assert!(document.ends_with("pkg/nul_/nul_.pcraft"), "{document}");
+    assert!(document.ends_with("pkg/nul_/nul_.lienzo"), "{document}");
     assert!(std::path::Path::new(document).is_file());
 }
 

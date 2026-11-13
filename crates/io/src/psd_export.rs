@@ -369,7 +369,7 @@ impl Ex<'_> {
             for mode in modes.into_iter().flatten() {
                 if !mode.has_psd_equivalent() {
                     self.warnings.push(format!(
-                        "layer \"{}\", {}: {} has no PSD equivalent and was written as Normal; save as .pcraft to preserve it",
+                        "layer \"{}\", {}: {} has no PSD equivalent and was written as Normal; save as .lienzo to preserve it",
                         l.name,
                         effect.label(),
                         mode.label()
@@ -396,7 +396,7 @@ impl Ex<'_> {
         }
         if !l.blend.has_psd_equivalent() {
             self.warnings.push(format!(
-                "layer \"{}\": {} has no PSD equivalent and was written as Normal; save as .pcraft to preserve it",
+                "layer \"{}\": {} has no PSD equivalent and was written as Normal; save as .lienzo to preserve it",
                 l.name,
                 l.blend.label()
             ));

@@ -77,3 +77,22 @@ to = "lienzo"
 [[replace]]
 from = "PHOTOCRAFT"
 to = "LIENZO"
+
+# Native documents are saved as `.lienzo`; `.pcraft` (upstream's name, which still opens) stays in
+# code that recognises older files. Only the wording people read names the new extension, so the
+# sync renames these phrases and the preference's translation key keeps matching its catalogs.
+[[replace]]
+from = "Composite in .pcraft Files"
+to = "Composite in .lienzo Files"
+
+[[replace]]
+from = "save as .pcraft to"
+to = "save as .lienzo to"
+
+[[replace]]
+from = "PNG or .pcraft copy"
+to = "PNG or .lienzo copy"
+
+[[replace]]
+from = "or .pcraft to keep everything"
+to = "or .lienzo to keep everything"

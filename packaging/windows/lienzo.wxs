@@ -72,8 +72,12 @@
           <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Lienzo" Description="Lienzo image editor" WorkingDirectory="INSTALLFOLDER" Advertise="yes" Icon="LienzoIcon.exe" IconIndex="0" />
         </File>
 
-        <!-- .pcraft: Lienzo's own format; Lienzo is its default app. -->
+        <!-- .lienzo: Lienzo's own format; Lienzo is its default app. .pcraft is what documents were
+             saved as before Lienzo had an extension of its own, so it still opens here. -->
         <ProgId Id="Lienzo.Document" Description="Lienzo Document" Icon="LienzoExe" IconIndex="0">
+          <Extension Id="lienzo" ContentType="application/x-lienzo">
+            <Verb Id="open" Command="Open" TargetFile="LienzoExe" Argument="&quot;%1&quot;" />
+          </Extension>
           <Extension Id="pcraft" ContentType="application/x-lienzo">
             <Verb Id="open" Command="Open" TargetFile="LienzoExe" Argument="&quot;%1&quot;" />
           </Extension>
@@ -107,6 +111,7 @@
         <!-- "Open with" app list and the Run dialog (Win+R "lienzo"). -->
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe" Name="FriendlyAppName" Value="Lienzo" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\shell\open\command" Value="&quot;[#LienzoExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".lienzo" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".pcraft" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".psd" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".psb" Value="" Type="string" />
