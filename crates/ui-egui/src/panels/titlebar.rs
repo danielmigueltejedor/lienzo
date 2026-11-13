@@ -500,9 +500,19 @@ pub(crate) fn ndl_close_button(ui: &mut Ui, rect: Rect, id: Id) -> bool {
     let t = Tokens::get(ui.ctx());
     let resp = ui.interact(rect, id, Sense::click());
     let pressed = resp.is_pointer_button_down_on() && resp.hovered();
-    paint_nodalia(ui, &t, Caption::Close, false, rect.center(), (resp.hovered(), pressed), rect.height() / 28.0);
+    // The disc fills `rect` and its antialiased rim falls just outside it. A dialog puts the box
+    // flush with its content's right edge, which is where egui clips, so the rim and a sliver of
+    // the disc were cut off: let the button draw over its own box plus that rim.
+    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+    child.set_clip_rect(ui.clip_rect().union(close_paint_rect(rect)));
+    paint_nodalia(&child, &t, Caption::Close, false, rect.center(), (resp.hovered(), pressed), rect.height() / 28.0);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Close")));
     resp.clicked()
+}
+
+/// Where a close button in `rect` paints: the disc plus its antialiased rim.
+pub(crate) fn close_paint_rect(rect: Rect) -> Rect {
+    rect.expand(2.0)
 }
 
 /// `icon` from the theme at `px` device pixels, uploaded once per theme and size; `None` (also

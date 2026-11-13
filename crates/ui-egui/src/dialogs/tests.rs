@@ -641,3 +641,44 @@ fn file_info_keeps_multiline_metadata_on_confirm_and_reopen() {
         assert_eq!(app.ui.dialog_mut(id).unwrap().fields[key], "First line\nSecond line");
     }
 }
+
+/// In the Nodalia look the close box is the round window-button disc, flush with the dialog's
+/// right edge. Preferences and the other resizable dialogs clipped its top and right side, so the
+/// disc looked cut off: the whole disc must lie inside what it is clipped to.
+#[test]
+fn the_nodalia_close_disc_is_drawn_whole() {
+    use egui_kittest::kittest::Queryable;
+    if !CLOSE_BOX {
+        return;
+    }
+    for (command, label) in
+        [("edit.preferences.general", "Preferences"), ("edit.keyboardShortcuts", "Keyboard Shortcuts"), ("filter.blur.gaussianBlur", "Gaussian Blur")]
+    {
+        let mut app = LienzoApp::new(lienzo_engine::Session::new(), crate::Services::default());
+        app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app| show(app, ui.ctx()), app);
+        LienzoApp::setup_context(&h.ctx, crate::theme::ThemeKind::NodaliaLight);
+        let ctx = h.ctx.clone();
+        if command.starts_with("edit.") {
+            crate::prefs_ui::invoke(h.state_mut(), &ctx, command, &json!({})).unwrap().unwrap();
+        } else {
+            open_command_dialog(h.state_mut(), command, label);
+        }
+        h.run_steps(4);
+        let x = h.get_by_label("Close").rect();
+        let discs: Vec<_> = h
+            .output()
+            .shapes
+            .iter()
+            .filter_map(|c| match &c.shape {
+                egui::Shape::Circle(s) if (s.center - x.center()).length() < 1.0 && s.radius > 8.0 => Some((s.center, s.radius, c.clip_rect)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(discs.len(), 1, "{label}: one close disc at the ×: {discs:?}");
+        for (centre, radius, clip) in discs {
+            let disc = egui::Rect::from_center_size(centre, egui::vec2(2.0 * radius, 2.0 * radius)).expand(1.0);
+            assert!(clip.contains_rect(disc), "{label}: the disc {disc:?} is clipped by {clip:?}");
+        }
+    }
+}
