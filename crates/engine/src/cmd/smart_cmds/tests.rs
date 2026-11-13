@@ -847,10 +847,13 @@ fn export_replace_and_linked_contents() {
     let mut s = session(8);
     paint(&mut s);
     convert(&mut s);
-    let out = dir.join("contents.pcraft");
-    let r = s.execute("layer.smartObjects.exportContents", json!({"path": out.to_str().unwrap()})).unwrap();
-    assert!(lienzo_format::is_pcraft(&std::fs::read(&out).unwrap()));
-    assert_eq!(r["converted"], false);
+    // Either name of the native document takes the contents as they are.
+    for name in ["contents.lienzo", "contents.pcraft"] {
+        let out = dir.join(name);
+        let r = s.execute("layer.smartObjects.exportContents", json!({"path": out.to_str().unwrap()})).unwrap();
+        assert!(lienzo_format::is_pcraft(&std::fs::read(&out).unwrap()), "{name}");
+        assert_eq!(r["converted"], false, "{name}");
+    }
     // Another extension exports the contents in that format.
     for (ext, magic) in [("png", &b"\x89PNG"[..]), ("jpeg", &b"\xFF\xD8\xFF"[..]), ("psd", &b"8BPS"[..])] {
         let other = dir.join(format!("contents.{ext}"));

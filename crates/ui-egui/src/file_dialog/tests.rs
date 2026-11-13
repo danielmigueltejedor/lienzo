@@ -114,7 +114,7 @@ fn save_dialog_preserves_flat_and_existing_layered_format_defaults() {
         ("/pics/My image.JPEG", false),
         ("/pics/My image.PSD", true),
         ("/pics/My image.psb", true),
-        ("/pics/My image.pcraft", true),
+        ("/pics/My image.Lienzo", true),
         ("/pics/My image.TIF", true),
         ("/pics/My image.tiff", true),
     ] {

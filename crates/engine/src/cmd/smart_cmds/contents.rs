@@ -81,7 +81,7 @@ pub fn contents_of(doc: &Document, id: LayerId) -> Result<(String, Arc<Vec<u8>>)
 }
 
 /// Writes the smart object's file as it is. To a path with another extension (a `.png` for
-/// `.psb` or `.pcraft` contents) the contents are opened and exported in that format instead.
+/// `.psb` or `.lienzo` contents) the contents are opened and exported in that format instead.
 pub(super) fn export_contents(s: &mut Session, p: &Value) -> Result<Value> {
     let path = path_param("layer.smartObjects.exportContents", p)?;
     let id = layer_param(s, p)?;
@@ -91,6 +91,8 @@ pub(super) fn export_contents(s: &mut Session, p: &Value) -> Result<Value> {
         e.map(|e| match e.as_str() {
             "jpeg" => "jpg".to_string(),
             "tiff" => "tif".to_string(),
+            // Both names of the native document are the same bytes.
+            _ if lienzo_format::is_native_extension(&e) => lienzo_format::EXTENSION.to_string(),
             _ => e,
         })
     };

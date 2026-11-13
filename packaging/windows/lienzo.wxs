@@ -78,9 +78,9 @@
           <Extension Id="lienzo" ContentType="application/x-lienzo">
             <Verb Id="open" Command="Open" TargetFile="LienzoExe" Argument="&quot;%1&quot;" />
           </Extension>
-          <Extension Id="pcraft" ContentType="application/x-lienzo">
-            <Verb Id="open" Command="Open" TargetFile="LienzoExe" Argument="&quot;%1&quot;" />
-          </Extension>
+          <!-- Shares the ProgId's open verb and the MIME type's database entry, which name .lienzo:
+               a second Verb or ContentType would write the same registry keys twice. -->
+          <Extension Id="pcraft" />
         </ProgId>
         <!-- PSD/PSB and images: offered under "Open with", never forced as the default. -->
         <ProgId Id="Lienzo.PhotoshopDocument" Description="PSD Document" Icon="LienzoExe" IconIndex="0" />
