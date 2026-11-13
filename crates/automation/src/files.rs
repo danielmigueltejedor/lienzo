@@ -23,7 +23,7 @@ pub fn open_bytes(name: &str, bytes: &[u8]) -> Result<Opened, AutomationError> {
 
 /// Decode a document that was read through a filesystem capability with custom import options.
 pub fn open_bytes_with_options(name: &str, bytes: &[u8], opts: &lienzo_io::ImportOptions) -> Result<Opened, AutomationError> {
-    if Path::new(name).extension().is_some_and(|extension| extension.eq_ignore_ascii_case(lienzo_format::EXTENSION)) {
+    if lienzo_format::has_native_extension(name) {
         let document = lienzo_format::load_from_bytes(bytes)?;
         return Ok(Opened { warnings: lienzo_io::open_warnings(&document), document, source_read_only: false });
     }
@@ -145,14 +145,14 @@ pub fn save_with_renderer_keeping(
         .map(|f| f.trim_start_matches('.').to_ascii_lowercase())
         .or_else(|| path.extension().map(|e| e.to_string_lossy().to_ascii_lowercase()))
         .ok_or_else(|| AutomationError::BadRequest(format!("cannot tell the format of `{}`; pass a format", path.display())))?;
-    if ext == lienzo_format::EXTENSION {
+    if lienzo_format::is_native_extension(&ext) {
         let named = named_for_output(doc, &path.to_string_lossy());
         let mut local = PcraftWriter::new();
         let w = writer.unwrap_or(&mut local);
         w.save_path(&named, path, &native_options(&named, opts)?)?;
         let mut warnings = Vec::new();
         if let Some(r) = renderer {
-            warnings.push("native .pcraft format uses CPU compositor for previews".into());
+            warnings.push("native .lienzo format uses CPU compositor for previews".into());
             warnings.extend(r.drain_diagnostics());
         }
         return Ok(warnings);
@@ -191,14 +191,14 @@ pub fn save_bytes_with_renderer(
         .map(|format| format.trim_start_matches('.').to_ascii_lowercase())
         .or_else(|| Path::new(name).extension().map(|extension| extension.to_string_lossy().to_ascii_lowercase()))
         .ok_or_else(|| AutomationError::BadRequest(format!("cannot tell the format of `{name}`; pass a format")))?;
-    if ext == lienzo_format::EXTENSION {
+    if lienzo_format::is_native_extension(&ext) {
         let named = named_for_output(doc, name);
         // Encode before draining: if the options check or the encode fails, the queued
         // diagnostics stay with the renderer for the caller to report alongside the error.
         let bytes = lienzo_format::save_to_bytes(&named, &native_options(&named, opts)?)?;
         let mut warnings = Vec::new();
         if let Some(r) = renderer {
-            warnings.push("native .pcraft format uses CPU compositor for previews".into());
+            warnings.push("native .lienzo format uses CPU compositor for previews".into());
             warnings.extend(r.drain_diagnostics());
         }
         return Ok((bytes, warnings));

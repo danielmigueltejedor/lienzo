@@ -13,7 +13,7 @@ const COMPOSITE_BYTES_PER_PX: u64 = 16;
 
 /// Formats that keep the layers: their model is built from the layer pixels, not a composite.
 fn keeps_layers(ext: &str) -> bool {
-    matches!(ext, "psd" | "psb" | "pcraft" | "ora" | "kra" | "xcf")
+    matches!(ext, "psd" | "psb" | "lienzo" | "pcraft" | "ora" | "kra" | "xcf")
 }
 
 /// Formats whose writer fills a composite of the canvas: every flat format, and OpenRaster for

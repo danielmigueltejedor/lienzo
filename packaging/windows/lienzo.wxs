@@ -72,11 +72,15 @@
           <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Lienzo" Description="Lienzo image editor" WorkingDirectory="INSTALLFOLDER" Advertise="yes" Icon="LienzoIcon.exe" IconIndex="0" />
         </File>
 
-        <!-- .pcraft: Lienzo's own format; Lienzo is its default app. -->
+        <!-- .lienzo: Lienzo's own format; Lienzo is its default app. .pcraft is what documents were
+             saved as before Lienzo had an extension of its own, so it still opens here. -->
         <ProgId Id="Lienzo.Document" Description="Lienzo Document" Icon="LienzoExe" IconIndex="0">
-          <Extension Id="pcraft" ContentType="application/x-lienzo">
+          <Extension Id="lienzo" ContentType="application/x-lienzo">
             <Verb Id="open" Command="Open" TargetFile="LienzoExe" Argument="&quot;%1&quot;" />
           </Extension>
+          <!-- Shares the ProgId's open verb and the MIME type's database entry, which name .lienzo:
+               a second Verb or ContentType would write the same registry keys twice. -->
+          <Extension Id="pcraft" />
         </ProgId>
         <!-- PSD/PSB and images: offered under "Open with", never forced as the default. -->
         <ProgId Id="Lienzo.PhotoshopDocument" Description="PSD Document" Icon="LienzoExe" IconIndex="0" />
@@ -107,6 +111,7 @@
         <!-- "Open with" app list and the Run dialog (Win+R "lienzo"). -->
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe" Name="FriendlyAppName" Value="Lienzo" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\shell\open\command" Value="&quot;[#LienzoExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".lienzo" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".pcraft" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".psd" Value="" Type="string" />
         <RegistryValue Root="HKMU" Key="Software\Classes\Applications\lienzo.exe\SupportedTypes" Name=".psb" Value="" Type="string" />

@@ -82,14 +82,16 @@ fn the_picked_file_type_gives_the_name_its_extension() {
         // (the PSD type untouched, or PNG picked and .jpg typed).
         ("/pics/art.png", opened, &psd, "/pics/art.png"),
         ("/pics/art.jpg", opened, &png, "/pics/art.jpg"),
+        ("/pics/art.lienzo", opened, &png, "/pics/art.lienzo"),
+        // The native format's older extension still writes a native document, so it is kept too.
         ("/pics/art.pcraft", opened, &png, "/pics/art.pcraft"),
         // Already the type's: kept, including its other extensions.
         ("/pics/art.png", opened, &png, "/pics/art.png"),
         ("/pics/art.PNG", opened, &png, "/pics/art.PNG"),
         ("/pics/big.psb", opened, &psd, "/pics/big.psb"),
-        // The dialog opened on a .pcraft: that is the extension the type replaces.
-        ("/pics/art.pcraft", Some("art.pcraft"), &png, "/pics/art.png"),
-        ("/pics/art.psd", Some("art.pcraft"), &png, "/pics/art.psd"),
+        // The dialog opened on a .lienzo: that is the extension the type replaces.
+        ("/pics/art.lienzo", Some("art.lienzo"), &png, "/pics/art.png"),
+        ("/pics/art.psd", Some("art.lienzo"), &png, "/pics/art.psd"),
     ];
     for (typed, opened, chosen, want) in cases {
         assert_eq!(with_chosen_type(Path::new(typed), opened, chosen), PathBuf::from(want), "{typed} (opened {opened:?})");
@@ -271,7 +273,7 @@ fn every_save_dialog_leads_with_its_own_extension() {
     // Save As, Save a Copy.
     // Files in a format Save As can't write, like .dng, should suggest .psd instead.
     let _ = invoke(&mut app, "file.saveAs");
-    for name in ["cat.pcraft", "cat.jpeg", "cat.gif", "cat.bmp", "cat.dng"] {
+    for name in ["cat.lienzo", "cat.pcraft", "cat.jpeg", "cat.gif", "cat.bmp", "cat.dng"] {
         app.session.active_mut().unwrap().path = Some(name.into());
         let _ = invoke(&mut app, "file.saveAs");
     }
@@ -298,7 +300,7 @@ fn every_save_dialog_leads_with_its_own_extension() {
     // The extension each save above should suggest, in order.
     let want = [
         "psd",                            // Save As untitled
-        "pcraft jpeg gif bmp psd",        // Save As opened .pcraft .jpeg .gif .bmp .dng
+        "lienzo lienzo jpeg gif bmp psd", // Save As opened .lienzo .pcraft .jpeg .gif .bmp .dng
         "psd",                            // Save a Copy
         "png jpg webp tif tga",           // Export As
         "png jpg gif webp",               // Quick Export
@@ -318,7 +320,7 @@ fn every_save_dialog_leads_with_its_own_extension() {
 #[test]
 fn save_as_offers_only_writable_formats_including_ico() {
     // Layered formats, and PDF, are written by `lienzo-io`, not a codec.
-    let layered = ["psd", "psb", "pcraft", "ora", "pdf"];
+    let layered = ["psd", "psb", "lienzo", "ora", "pdf"];
     for (name, exts) in SAVE_FILTERS {
         for ext in exts.iter().filter(|e| !layered.contains(e)) {
             let format = lienzo_codecs::from_extension(ext).unwrap_or_else(|| panic!("{name}: .{ext} is no known format"));
@@ -384,7 +386,7 @@ fn the_windows_save_dialog_gets_a_bare_name_so_the_type_picks_the_extension() {
     for (suggested, name, first) in [
         ("/pics/image.psd", "image", "psd"),
         ("/pics/image.psb", "image", "psb"),
-        ("/pics/image.pcraft", "image", "pcraft"),
+        ("/pics/image.lienzo", "image", "lienzo"),
         ("/pics/sky.fit", "sky", "fit"),
         ("cat.jpeg", "cat", "jpeg"),
         ("swatches.aco", "swatches", "aco"),

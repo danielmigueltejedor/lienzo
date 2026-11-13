@@ -1861,7 +1861,7 @@ fn maximize_compatibility_preference_controls_the_psd_merged_image() {
     }
 }
 
-/// Preferences › File Handling › Save Full-Size Composite in .pcraft Files decides whether a
+/// Preferences › File Handling › Save Full-Size Composite in .lienzo Files decides whether a
 /// `.pcraft` save writes `composite/full.png` (off by default); a command's
 /// `"pcraftFullComposite"` overrides it.
 #[test]
@@ -3217,7 +3217,7 @@ fn guide_layouts() {
 
 #[test]
 fn only_layered_files_save_in_place() {
-    for path in ["a.psd", "dir/a.PSB", r"C:\w\a.pcraft", "my.dir/a.psd", "a.ora", "dir/A.ORA"] {
+    for path in ["a.psd", "dir/a.PSB", r"C:\w\a.pcraft", "dir/a.lienzo", "A.LIENZO", "my.dir/a.psd", "a.ora", "dir/A.ORA"] {
         assert!(saves_in_place(path), "{path}");
     }
     // Flat formats, no extension, a dotted folder with an extensionless file, a dot file.

@@ -69,7 +69,10 @@ jobs:
         working-directory: dist
         run: |
           set -euo pipefail
-          sums="$(ls SHA256SUMS* 2>/dev/null | head -n 1)"
+          sums=""
+          for f in SHA256SUMS*; do
+            if [[ -e "$f" ]]; then sums="$f"; break; fi
+          done
           [[ -n "$sums" ]] && sha256sum -c "$sums"
           have="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')"
           added=0

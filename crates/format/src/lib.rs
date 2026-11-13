@@ -50,20 +50,37 @@ pub use manifest::{FORMAT_VERSION, Manifest};
 pub use read::{read_file, read_file_limited};
 pub use store::{ByteSource, DEFAULT_REVERIFY_BUDGET, PcraftWriter, SaveStats, read_entry};
 
-/// File extension of the native format.
-pub use craft_pcraft_format::EXTENSION;
+/// File extension Lienzo saves its native documents with.
+///
+/// The bytes are the shared `.pcraft` bundle, unchanged: only the name on disk is Lienzo's own.
+pub const EXTENSION: &str = "lienzo";
+
+/// The extension native documents had before Lienzo had one of its own (upstream's). Such files
+/// still open, by name and by content; nothing new is saved with it.
+pub const LEGACY_EXTENSION: &str = craft_pcraft_format::EXTENSION;
+
+/// `true` for an extension (without the dot, any case) that names a native document: Lienzo's
+/// own or the older one.
+pub fn is_native_extension(ext: &str) -> bool {
+    ext.eq_ignore_ascii_case(EXTENSION) || ext.eq_ignore_ascii_case(LEGACY_EXTENSION)
+}
+
+/// `true` when a file name or path ends in a native document's extension.
+pub fn has_native_extension(name: &str) -> bool {
+    name.rsplit(['/', '\\']).next().and_then(|name| name.rsplit_once('.')).is_some_and(|(stem, ext)| !stem.is_empty() && is_native_extension(ext))
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum FormatError {
-    #[error("corrupt .pcraft bundle: {0}")]
+    #[error("corrupt Lienzo document: {0}")]
     Corrupt(String),
-    #[error("unsupported .pcraft feature: {0}")]
+    #[error("unsupported Lienzo document feature: {0}")]
     Unsupported(String),
     #[error("bundle written by a newer version (format {found}, this build reads up to {supported})")]
     TooNew { found: u32, supported: u32 },
     #[error("limit exceeded: {0}")]
     LimitExceeded(String),
-    #[error("`{path}` is NaN or infinite, which a .pcraft manifest cannot hold; reset that value and save again")]
+    #[error("`{path}` is NaN or infinite, which a Lienzo document cannot hold; reset that value and save again")]
     NonFinite { path: String },
     #[error("I/O: {0}")]
     Io(#[from] std::io::Error),

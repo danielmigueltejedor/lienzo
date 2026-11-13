@@ -63,7 +63,7 @@ pub(super) fn humanize(key: &str) -> String {
         return "Do not append \"copy\" to filename when saving a copy".into();
     }
     if key == "pcraftFullComposite" {
-        return "Save Full-Size Composite in .pcraft Files".into();
+        return "Save Full-Size Composite in .lienzo Files".into();
     }
     // Plug-ins: Photoshop's wording (#9392).
     if key == "generatorEnabled" {

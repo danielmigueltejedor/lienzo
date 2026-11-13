@@ -42,7 +42,7 @@ pub(crate) struct SaveOpts {
     /// File Compatibility).
     pub psd_maximize_compatibility: bool,
     /// `.pcraft`: request the full-size composite (`"pcraftFullComposite"`; unset, Preferences ›
-    /// File Handling › Save Full-Size Composite in .pcraft Files, off by default). The save may
+    /// File Handling › Save Full-Size Composite in .lienzo Files, off by default). The save may
     /// omit it; check the manifest's `full_composite` member.
     pub pcraft_full_composite: bool,
 }

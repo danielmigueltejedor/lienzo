@@ -165,6 +165,12 @@
     [
       "-1",
       "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
+      ".lienzo",
+      ""
+    ],
+    [
+      "-1",
+      "Software\\Classes\\Applications\\lienzo.exe\\SupportedTypes",
       ".pcraft",
       ""
     ],

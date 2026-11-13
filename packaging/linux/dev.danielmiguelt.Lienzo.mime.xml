@@ -5,6 +5,8 @@
   <mime-type type="application/x-lienzo">
     <comment>Lienzo document</comment>
     <icon name="dev.danielmiguelt.Lienzo"/>
+    <glob pattern="*.lienzo"/>
+    <!-- Documents saved before Lienzo had an extension of its own. -->
     <glob pattern="*.pcraft"/>
   </mime-type>
   <mime-type type="image/x-psb">

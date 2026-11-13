@@ -246,7 +246,7 @@ fn maximize_compatibility_preference_reaches_the_exporter() {
     }
 }
 
-/// Preferences › File Handling › Save Full-Size Composite in .pcraft Files reaches the exporter
+/// Preferences › File Handling › Save Full-Size Composite in .lienzo Files reaches the exporter
 /// of Save As, Save and automation saves, and is off by default.
 #[test]
 fn full_composite_preference_reaches_the_exporter() {

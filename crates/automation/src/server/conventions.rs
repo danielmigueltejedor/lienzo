@@ -9,7 +9,7 @@ use rmcp::service::RequestContext;
 
 const DOCUMENT: &str = "lienzo://document";
 const COMMANDS: &str = "lienzo://commands";
-const INSTRUCTIONS: &str = "Lienzo image editor. Start with doc_new/doc_open, discover ids and parameter docs with command_list, edit with command_run or command_batch (one history step per command). Inspect with doc_inspect and render_preview; doc_save writes native .pcraft or exports by extension. File paths are relative to the read/write roots granted at launch. ui_inspect/ui_screenshot and other ui_* tools require bridge mode. Read lienzo://document and lienzo://commands for live JSON state.";
+const INSTRUCTIONS: &str = "Lienzo image editor. Start with doc_new/doc_open, discover ids and parameter docs with command_list, edit with command_run or command_batch (one history step per command). Inspect with doc_inspect and render_preview; doc_save writes native .lienzo or exports by extension. File paths are relative to the read/write roots granted at launch. ui_inspect/ui_screenshot and other ui_* tools require bridge mode. Read lienzo://document and lienzo://commands for live JSON state.";
 
 fn annotated(mut tool: Tool) -> Tool {
     let words = tool.name.replace('_', " ");

@@ -221,7 +221,7 @@ fn missing_external_service_keeps_internal_edit_and_save_back() {
     let st = app.session.active().unwrap();
     let LayerContent::Smart(smart) = &st.doc.layer(layer).unwrap().content else { panic!("smart") };
     let SmartSource::Embedded { file_name, bytes } = &smart.source else { panic!("embedded") };
-    assert!(file_name.ends_with(".pcraft"));
+    assert!(file_name.ends_with(".lienzo"), "{file_name}");
     assert_ne!(&**bytes, SVG.as_bytes());
     assert_eq!(smart.cache.as_ref().unwrap().rgba(32, 32), [0.0, 1.0, 0.0, 1.0]);
     assert_eq!(st.history.past_len(), history + 1);

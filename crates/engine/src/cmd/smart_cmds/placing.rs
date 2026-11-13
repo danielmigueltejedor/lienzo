@@ -223,7 +223,7 @@ pub fn layer_to_smart(doc: &Document, l: &Layer) -> Result<Layer> {
 /// same as the layers inside a pass-through group). The smart layer is visible, opaque and Normal.
 pub fn layers_to_smart(doc: &Document, name: &str, layers: Vec<Layer>) -> Result<Layer> {
     let canvas = doc.bounds();
-    let mut sub = Document::new(format!("{name}.pcraft"), doc.size, doc.mode, doc.depth);
+    let mut sub = Document::new(format!("{name}.{}", lienzo_format::EXTENSION), doc.size, doc.mode, doc.depth);
     sub.resolution_dpi = doc.resolution_dpi;
     sub.icc_profile = doc.icc_profile.clone();
     sub.global_light = doc.global_light;
