@@ -38,6 +38,8 @@ fn harness() -> Option<Harness> {
         egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 640.0)).with_max_steps(64).wgpu().build_eframe(|cc| {
             LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -146,7 +148,9 @@ fn editing_a_crop_frame_shows_the_pixels_past_the_canvas() {
     let [r, b, w, past] = shown(&h, &img);
     assert!(tinted(r, 0), "hidden red: {r:?}");
     assert!(tinted(b, 2), "hidden blue: {b:?}");
-    assert!(w.iter().all(|&c| c > 90 && c < 200) && w[0] == w[1] && w[1] == w[2] && w != was[2], "hidden white, dimmed: {w:?}");
+    // Grey within a few levels: the Nodalia shield is faintly blue.
+    let spread = w.iter().max().unwrap_or(&0) - w.iter().min().unwrap_or(&0);
+    assert!(w.iter().all(|&c| c > 90 && c < 200) && spread <= 4 && w != was[2], "hidden white, dimmed: {w:?}");
     assert_eq!(past, was[3], "past every layer and the frame: the pasteboard");
     // Inside the frame nothing changed.
     assert_eq!(at(&h, &img, [150.0, 30.0]), at(&h, &before, [150.0, 30.0]));

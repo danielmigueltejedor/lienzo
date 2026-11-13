@@ -41,7 +41,7 @@ for working in layers, with no account and no cloud. It runs on Linux, macOS and
 </p>
 
 > [!IMPORTANT]
-> **Lienzo is at an early stage.** Version 0.3.4 is out for Linux, macOS and Windows:
+> **Lienzo is at an early stage.** Version 0.3.5 is out for Linux, macOS and Windows:
 > [download it from the releases page](https://github.com/getnodalia/lienzo/releases/latest)
 > (AppImage, .deb, .rpm and .tar.gz; a DMG; a Windows installer and portable zip).
 

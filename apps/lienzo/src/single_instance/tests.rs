@@ -365,3 +365,48 @@ fn an_environment_override_counts_as_a_process_option() {
     let reason = skip_reason(&LaunchContext { launch_options: &with(&[("LIENZO_PRESENT_MODE", "novsync")]), ..base });
     assert!(reason.as_deref().is_some_and(|r| r.contains("--present-mode")), "{reason:?}");
 }
+
+/// An in-app update starts the new version while the old one is still the primary, then the old
+/// one quits. Handed to it, the new version's launch would be swallowed by the process on its way
+/// out and leave nothing open; it waits for the lock instead.
+#[test]
+fn an_updated_copy_waits_for_the_version_it_replaces() {
+    let dir = temp_dir("relaunch");
+    let primary = primary(&dir);
+    let mut ui = primary.connect(&egui::Context::default());
+    let (d, transport) = (dir.clone(), transport());
+    let me = Some(std::process::id());
+    let relaunch = std::thread::spawn(move || claim_in_replacing(&d, &[], FAST, &transport, me));
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(drain_for(&mut ui, Duration::from_millis(200)).is_empty(), "the quitting version is not handed the launch");
+    assert!(!relaunch.is_finished(), "the new version waits for the lock");
+    primary.shutdown();
+    drop(primary);
+    assert!(matches!(relaunch.join().unwrap(), Launch::Primary(_)), "the new version becomes the primary");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A primary that isn't the version being replaced still takes the paths.
+#[test]
+fn an_updated_copy_still_hands_over_to_another_instance() {
+    let dir = temp_dir("relaunch-other");
+    let primary = primary(&dir);
+    let mut ui = primary.connect(&egui::Context::default());
+    let (d, transport) = (dir.clone(), transport());
+    let other = Some(std::process::id().wrapping_add(1));
+    let relaunch = std::thread::spawn(move || claim_in_replacing(&d, &["a.psd".into()], TIMING, &transport, other));
+    assert_eq!(drain(&mut ui, 1), vec![OsEvent::Open(vec!["a.psd".to_string()])]);
+    assert!(matches!(relaunch.join().unwrap(), Launch::Forwarded));
+    drop(primary);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn drain_for(ui: &mut OsEventsFn, wait: Duration) -> Vec<OsEvent> {
+    let mut got = Vec::new();
+    let deadline = Instant::now() + wait;
+    while Instant::now() < deadline {
+        got.extend(ui());
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    got
+}

@@ -68,8 +68,10 @@ pub(crate) fn tick(app: &mut LienzoApp, ctx: &egui::Context) {
     if app.session.updates.check.is_some() && app.session.prefs().general.automatically_check_updates {
         app.updates_rt.updater.check_at_start(ctx);
     }
-    app.updates_rt.updater.poll();
+    // An install that finishes here (no window open) says so through `poll`, and its exit counts.
+    let action = app.updates_rt.updater.poll();
     mirror(app);
+    act(app, ctx, action);
 }
 
 /// The engine's update state follows the updater's, so `ui.inspect`, the CLI and MCP see the same.
@@ -99,12 +101,17 @@ pub(crate) fn show(_app: &mut LienzoApp, _ctx: &egui::Context) {}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn show(app: &mut LienzoApp, ctx: &egui::Context) {
-    use nodalia_update::egui::Action;
     let language = nodalia_update::Language::from_code(crate::i18n::current().code());
     // An update installs, and a downloaded one restarts the app, only while nothing is unsaved.
     let safe_to_close = !app.has_unsaved_work();
     let action = app.updates_rt.updater.show(ctx, language, safe_to_close);
     mirror(app);
+    act(app, ctx, action);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn act(app: &mut LienzoApp, ctx: &egui::Context, action: nodalia_update::egui::Action) {
+    use nodalia_update::egui::Action;
     match action {
         Action::None => {}
         Action::OpenUrl(url) => {

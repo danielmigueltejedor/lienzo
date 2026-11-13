@@ -189,6 +189,8 @@ fn screen(doc: Document, setup: &[(&str, serde_json::Value)], name: &str) -> Opt
             .build_eframe(move |cc| {
                 LienzoApp::setup_context(&cc.egui_ctx, Default::default());
                 let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+                // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+                app.ui.panels.properties = false;
                 if let Some(rs) = cc.wgpu_render_state.as_ref() {
                     ok2.store(gpu_canvas::supports_f16_canvas(&rs.adapter) && std::env::var("LIENZO_CANVAS_F16").as_deref() != Ok("0"), Ordering::SeqCst);
                     app.set_wgpu(rs.clone());

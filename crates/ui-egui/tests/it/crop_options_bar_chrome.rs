@@ -15,6 +15,8 @@ fn app() -> App {
     Harness::builder().with_size(egui::vec2(1440.0, 320.0)).with_max_steps(64).with_accessibility_check(false).build_eframe(|cc| {
         LienzoApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+        // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+        app.ui.panels.properties = false;
         // The accessibility queries below use English labels.
         app.session.prefs.edit(|p| p.interface.language = "en".into());
         app.run("file.new", json!({"name": "crop bar", "width": 800, "height": 600})).expect("new document");
