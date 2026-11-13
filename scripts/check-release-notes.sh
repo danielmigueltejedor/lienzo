@@ -32,9 +32,13 @@ if [[ ! -f "$file" ]]; then
 fi
 
 # Summary: a Spanish line, then the same in English in italics.
-mapfile -t lines < <(grep -v '^[[:space:]]*$' "$file")
-first="${lines[0]:-}"
-second="${lines[1]:-}"
+# The first two non-blank lines, read without `mapfile`: the macOS runners ship bash 3.2.
+first=""
+second=""
+while IFS= read -r line; do
+  [[ -z "${line//[[:space:]]/}" ]] && continue
+  if [[ -z "$first" ]]; then first="$line"; else second="$line"; break; fi
+done < "$file"
 [[ -n "$first" && "$first" != \#* && "$first" != \>* && "$first" != -* ]] \
   || problem "The first line must be a one-sentence summary in Spanish."
 [[ "$second" =~ ^\*.+\*$ ]] \
