@@ -1,0 +1,2 @@
+# The release-notes check reads these line by line on every runner, Windows included.
+docs/release-notes/*.md text eol=lf
