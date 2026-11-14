@@ -872,6 +872,22 @@ impl Tokens {
         matches!(self.kind, ThemeKind::Nodalia | ThemeKind::NodaliaLight)
     }
 
+    /// In Nodalia, the creator suite's shared parts (`nodalia_theme::creator`) in Lienzo's palette
+    /// and faces, so Lienzo and Pluma draw the workspace selector, dialog buttons, Home rail and
+    /// Preferences navigation with the same code. `None` in the other themes.
+    pub fn creator(&self) -> Option<nodalia_theme::creator::Look> {
+        let mode = match self.kind {
+            ThemeKind::Nodalia => nodalia_theme::Mode::Dark,
+            ThemeKind::NodaliaLight => nodalia_theme::Mode::Light,
+            _ => return None,
+        };
+        Some(
+            nodalia_theme::creator::Look::new(palette(mode))
+                .strong_family(egui::FontFamily::Name("semibold".into()))
+                .medium_family(egui::FontFamily::Name("medium".into())),
+        )
+    }
+
     /// The fill of a pane of a full-window workspace (a tool strip, an options bar, a properties
     /// panel): in Nodalia an island's panel colour on the window frame, elsewhere the dock's.
     pub fn pane(&self) -> Color32 {
@@ -925,8 +941,8 @@ pub fn island(t: &Tokens, fill: Color32, inner: egui::Margin, gap: Gap) -> (egui
 /// contents, a frame-coloured ring outside a rounded `rect` covers their square corners.
 pub fn round_island_corners(ui: &egui::Ui, rect: egui::Rect) {
     let t = Tokens::get(ui.ctx());
-    if t.islands() {
-        round_corners(ui.painter(), rect, ISLAND_RADIUS, t.frame());
+    if let Some(look) = t.creator() {
+        nodalia_theme::creator::round_island_corners(ui.painter(), &look, rect);
     }
 }
 

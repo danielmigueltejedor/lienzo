@@ -112,7 +112,10 @@ pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
                     let room = ui.available_width();
                     let icons_shown: u8 = u8::from(room >= WORKSPACE_MIN + ICON_SLOT);
                     let ws_width = (room - f32::from(icons_shown) * ICON_SLOT - 6.0).clamp(WORKSPACE_MIN, 130.0);
-                    if room >= WORKSPACE_MIN && widgets::dropdown(ui, "workspace", tl!("Workspace"), &mut ws, &opts, ws_width) {
+                    if let (Some(look), true) = (t.creator(), room >= WORKSPACE_MIN) {
+                        // Nodalia: the creator suite's workspace selector, the same code as Pluma's.
+                        workspace_selector(app, ui, &look, &options, ws_width);
+                    } else if room >= WORKSPACE_MIN && widgets::dropdown(ui, "workspace", tl!("Workspace"), &mut ws, &opts, ws_width) {
                         app.ui.workspace = ws;
                         crate::menus::apply_workspace(app);
                     }
@@ -148,6 +151,39 @@ pub fn title_bar(app: &mut LienzoApp, ui: &mut egui::Ui) {
     crate::zoom_field::set_title_bar_rect(ui.ctx(), bar.response.rect);
     if custom {
         crate::titlebar::caption_buttons(app, ui, bar.response.rect);
+    }
+}
+
+/// The creator suite's workspace selector: the presets, the saved workspaces after a line, then
+/// Reset, New Workspace… and Delete Workspace… (Window › Workspace).
+fn workspace_selector(app: &mut LienzoApp, ui: &mut egui::Ui, look: &nodalia_theme::creator::Look, options: &[(String, String)], width: f32) {
+    const PRESETS: usize = 6;
+    const ACTIONS: [(&str, &str); 3] = [
+        ("Reset Workspace", "window.workspace.resetWorkspace"),
+        ("New Workspace…", "window.workspace.newWorkspace"),
+        ("Delete Workspace…", "window.workspace.deleteWorkspace"),
+    ];
+    let names: Vec<&str> = options.iter().map(|(_, l)| l.as_str()).collect();
+    let current = options.iter().find(|(k, _)| *k == app.ui.workspace).map_or(app.ui.workspace.as_str(), |(_, l)| l.as_str()).to_string();
+    let deletable = !app.session.prefs().workspaces.is_empty();
+    let actions: Vec<&str> = ACTIONS.iter().filter(|(_, id)| deletable || *id != "window.workspace.deleteWorkspace").map(|(l, _)| tl!(l)).collect();
+    match nodalia_theme::creator::workspace_selector(ui, look, "workspace", &current, &names, PRESETS.min(names.len()), &actions, width) {
+        Some(nodalia_theme::creator::WorkspacePick::Workspace(i)) => {
+            if let Some((key, _)) = options.get(i) {
+                app.ui.workspace = key.clone();
+                crate::menus::apply_workspace(app);
+            }
+        }
+        Some(nodalia_theme::creator::WorkspacePick::Action(i)) => {
+            let ids: Vec<&str> = ACTIONS.iter().map(|(_, id)| *id).filter(|id| deletable || *id != "window.workspace.deleteWorkspace").collect();
+            if let Some(id) = ids.get(i) {
+                let ctx = ui.ctx().clone();
+                if let Err(e) = crate::menus::invoke(app, &ctx, id, serde_json::json!({})) {
+                    app.ui.status = e;
+                }
+            }
+        }
+        None => {}
     }
 }
 

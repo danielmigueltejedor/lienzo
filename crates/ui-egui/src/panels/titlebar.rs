@@ -498,6 +498,9 @@ fn paint_nodalia(ui: &Ui, t: &Tokens, c: Caption, maximized: bool, centre: Pos2,
 /// `rect`. Says whether it was clicked.
 pub(crate) fn ndl_close_button(ui: &mut Ui, rect: Rect, id: Id) -> bool {
     let t = Tokens::get(ui.ctx());
+    if let Some(look) = t.creator() {
+        return nodalia_theme::creator::close_button(ui, &look, rect, id);
+    }
     let resp = ui.interact(rect, id, Sense::click());
     let pressed = resp.is_pointer_button_down_on() && resp.hovered();
     // The disc fills `rect` and its antialiased rim falls just outside it. A dialog puts the box

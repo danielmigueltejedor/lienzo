@@ -39,9 +39,14 @@ fn rect_id() -> Id {
 
 /// Paint the mark into `r` (square).
 pub fn paint_mark(ui: &Ui, r: Rect) {
+    paint_mark_on(ui.painter(), r);
+}
+
+/// [`paint_mark`] with a painter (the creator suite's Home screen hands one over).
+pub fn paint_mark_on(painter: &egui::Painter, r: Rect) {
     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-    ui.painter().image(texture(ui.ctx()).id(), r, uv, Color32::WHITE);
-    ui.ctx().data_mut(|d| d.insert_temp(rect_id(), r));
+    painter.image(texture(painter.ctx()).id(), r, uv, Color32::WHITE);
+    painter.ctx().data_mut(|d| d.insert_temp(rect_id(), r));
 }
 
 /// The rect the mark was last painted into.
