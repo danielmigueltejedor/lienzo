@@ -1,11 +1,11 @@
 name: CI
 
-# Quality gates for every push to main and every pull request. The Linux gate runs through the
+# Quality gates for every push to nodalia or main and every pull request. The Linux gate runs through the
 # suite's shared gate workflow in craft-common-actions (`cargo xtask ci`); the Windows legs, the
 # test variant and the corpus, web and fuzz jobs are Lienzo's own.
 on:
   push:
-    branches: [main]
+    branches: [nodalia, main]
   pull_request:
     # `labeled` so that adding `full-ci` to an open PR starts a run with Windows in it.
     types: [opened, synchronize, reopened, labeled]
@@ -216,18 +216,18 @@ jobs:
         with:
           components: clippy
 
-      # Only main saves caches; PRs restore main's, so the repo's 10 GB cache budget keeps main's.
+      # Only the default branch saves caches; PRs restore its caches, so the repo's 10 GB cache budget keeps main's.
       # A failing test still saves: the cache holds compiled dependencies, not test results.
       # Both legs share one key (same dependencies); the integration leg saves it, because it also
       # runs Clippy and so leaves Clippy's dependency metadata in it.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' && matrix.part == 'integration' }}
+          save-if: ${{ github.ref_name == github.event.repository.default_branch && matrix.part == 'integration' }}
           cache-on-failure: true
 
       # sccache caches the workspace crates' compiled libraries, which rust-cache leaves out:
-      # warm, each Windows leg built 4.5 min faster. Like rust-cache, only main writes (PRs read
-      # main's entries); a full set is ~90 MB, so it barely touches the 10 GB budget (#2688).
+      # warm, each Windows leg built 4.5 min faster. Like rust-cache, only the default branch writes (PRs read
+      # its entries); a full set is ~90 MB, so it barely touches the 10 GB budget (#2688).
       # Test executables can't be cached, so a PR still links its tests.
       - name: Install sccache
         uses: Mozilla-Actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
@@ -236,11 +236,11 @@ jobs:
 
       - name: Use sccache
         env:
-          MAIN: ${{ github.ref == 'refs/heads/main' }}
+          ON_DEFAULT_BRANCH: ${{ github.ref_name == github.event.repository.default_branch }}
         run: |
           echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
-          if [ "$MAIN" != true ]; then echo "SCCACHE_GHA_RW_MODE=READ_ONLY" >> "$GITHUB_ENV"; fi
+          if [ "$ON_DEFAULT_BRANCH" != true ]; then echo "SCCACHE_GHA_RW_MODE=READ_ONLY" >> "$GITHUB_ENV"; fi
         shell: bash
 
       - name: Clippy
@@ -339,7 +339,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: corpus
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref_name == github.event.repository.default_branch }}
           cache-on-failure: true
       - name: Restore test corpora
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -371,7 +371,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: ci-web
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref_name == github.event.repository.default_branch }}
           cache-on-failure: true
       - name: Install trunk
         run: |

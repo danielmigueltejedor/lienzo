@@ -6,7 +6,9 @@ Lienzo processes complex document and image formats and exposes CLI, JSON contro
 
 Please give the repository maintainers a reasonable opportunity to investigate and coordinate a fix before publishing exploitable details, proof-of-concept code, or weaponized files.
 
-This repository does not currently document a dedicated private security email or private reporting channel. Contact the repository maintainers through the repository owner/maintainer channels already listed in the project, provide only a minimal non-exploitable summary in public, and ask for an appropriate private transfer method before sharing sensitive details. Do not open a public issue containing a working exploit, secret, sensitive crash dump, or malicious attachment.
+Use [GitHub private vulnerability reporting](https://github.com/getnodalia/lienzo/security/advisories/new).
+If the form is unavailable, contact a repository maintainer and ask for a private channel before
+sharing technical details or attachments.
 
 If no private channel can be established, withhold weaponized material and report the smallest safe description that allows maintainers to make contact.
 
