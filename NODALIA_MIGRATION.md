@@ -43,12 +43,12 @@ getnodalia/foundation (vendored crates, fonts, reusable workflows); getnodalia/n
 ## Risks and priorities
 
 1. The red gate hides new regressions: fix the GPU canvas tests first.
-2. Release still partly runs inherited workflows.
+2. `windows-arm64.yml` still runs an inherited workflow.
 
 ## Recommended order
 
 1. Make the Linux gate and Windows tests green on `nodalia`.
-2. Decide on `release.yml` and replace `windows-arm64.yml`.
+2. Replace `windows-arm64.yml`.
 3. Mirror photocraft-corpus into Foundation and repoint the pins.
 
 ## What the first agent should do

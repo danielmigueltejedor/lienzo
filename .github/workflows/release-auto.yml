@@ -71,6 +71,6 @@ jobs:
     needs: [tag, linux, macos, windows]
     permissions:
       contents: write
-    uses: getnodalia/foundation/.github/workflows/release-publish.yml@8ac8b1d9def48c9d33bf762d920afaf5cbfefd75 # foundation 2026-11-13
+    uses: getnodalia/foundation/.github/workflows/release-publish.yml@7964f20499fbbe78c855fee7e90d182aff4aae89 # foundation 2026-11-13
     with:
       tag: ${{ needs.tag.outputs.tag }}

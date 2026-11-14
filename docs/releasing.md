@@ -1,9 +1,11 @@
 # Releasing Lienzo
 
-Every push to the `release` branch runs `.github/workflows/release.yml`. The workflow builds
-signed installers for macOS, Windows, Linux and the web, plus a FreeBSD tarball, then creates
-or updates a **draft** GitHub Release named `Lienzo v<version>`. Nobody sees a draft until a
-maintainer publishes it.
+A release starts when a version bump and its hand-written notes are merged into `nodalia`.
+`.github/workflows/release-auto.yml` calls Foundation's `release-tag` workflow, which tags the
+merge commit and drafts the GitHub Release `Lienzo <version>` with the notes as its body; then
+`release-linux.yml`, `release-macos.yml` and `release-windows.yml` build, test and attach their
+packages, and Foundation's `release-publish` publishes the draft once all of them passed. Nobody
+pushes a tag or edits a release by hand. A failed platform leaves the release a draft.
 
 User-facing names say **Lienzo**. Files, binaries and ids stay lowercase (`lienzo-<version>-<platform>-<arch>.<ext>`, `dev.danielmiguelt.Lienzo`).
 
@@ -33,30 +35,19 @@ changes are required: publishing a newer stable GitHub Release makes it discover
    cargo xtask version set 0.2.0       # or 0.2.0-rc.1; updates Cargo.toml and Cargo.lock
    ```
 
-   Commit the change (`Cargo.toml` + `Cargo.lock`) through the normal review flow.
-2. **Merge `main` into `release`** (or fast-forward it) and push. The workflow starts by itself.
-3. **Wait for the draft.** After about 30 to 45 minutes (notarization is the slow part), the
-   Releases page has a draft `Lienzo v0.2.0`, tagged `v0.2.0` on the pushed commit, with
-   every artifact and `SHA256SUMS.txt`. The notes are generated from the merged PRs.
-4. **Check it.** Download an installer or two and look at the job summaries. Any
-   `::warning::` there means a signing secret was missing and that artifact is unsigned.
-5. **Add the scorecard deltas** to the draft's notes: what moved in
-   [`docs/scorecard.md`](scorecard.md) since the previous release. Compare the summary table
-   and the performance table of both tags (`git diff v<previous> v<this> -- docs/scorecard.md`)
-   and list each area's done / partial / missing change, the scenarios that newly meet their
-   budget or got slower, corpus floors raised, and the change in settings that do nothing.
-   Quote numbers with the baseline's machine and load average.
-6. **Publish** the draft in the GitHub UI. Publishing creates the `v0.2.0` tag. Versions with a
-   pre-release suffix (`-rc.1`) are marked as pre-releases.
+2. **Write the notes** in `docs/release-notes/vX.Y.Z.md` (format: that folder's README) in the
+   same pull request. The required check *Release notes are written*
+   (`.github/workflows/release-notes.yml`, `scripts/check-release-notes.sh`) fails a pull request
+   that bumps the version without complete notes.
+3. **Merge it.** `release-auto.yml` tags the merge, builds every platform and publishes the
+   release. To fix the text later, merge a change to the notes file: `release-notes.yml` copies
+   it into the release.
+4. **A platform failed?** The release stays a draft. Land the fix, then run *Actions → Release
+   from nodalia → Run workflow* with `retag-draft`: the draft's tag moves to the fixed commit and
+   every platform builds again. A published release keeps its tag.
 
-Pushing to `release` again before you publish rebuilds the same draft and replaces its assets.
-After the draft is published, the workflow refuses to touch that version again, so bump it first.
-
-**Test runs:** *Actions → Release → Run workflow* runs the whole pipeline by hand. The optional
-`version` input (such as `0.2.0-rc.1`) overrides `Cargo.toml` for that run only. The jobs apply
-it with `cargo xtask version set` before building, so the binaries report it too. The run still
-needs the `release` environment, which only the `release` branch can use, so pick that branch
-in the dialog.
+Each packaging workflow can also be run by hand with a tag to rebuild that release's files, or
+without one to upload workflow artifacts only.
 
 ## What gets built
 
