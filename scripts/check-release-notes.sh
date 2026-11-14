@@ -1,18 +1,67 @@
 #!/usr/bin/env bash
 # Fails unless the release notes of a version are written by hand and complete.
 #
-# Usage: scripts/check-release-notes.sh [vX.Y.Z]
-# Without an argument it checks the version in [workspace.package] of Cargo.toml.
+# Usage:
+#   scripts/check-release-notes.sh             the version in Cargo.toml (a -dev version passes)
+#   scripts/check-release-notes.sh vX.Y.Z      that version's notes
+#   scripts/check-release-notes.sh --changed BASE
+#       what a pull request or push changed since commit BASE: the new version when the change
+#       bumps it to a release version, and every notes file it adds or edits. This is the check
+#       the "Release notes are written" job runs.
 #
 # Why: a release must never go out with GitHub's generated list or a one-line stub. The notes of
 # every version live in docs/release-notes/vX.Y.Z.md, in the format described in that folder's
-# README, and the release workflows publish that file as the release body.
+# README, and Foundation's release-tag workflow publishes that file as the release body.
 set -euo pipefail
 
+# The packages' file prefix, as named in the downloads table (APP-X.Y.Z-…).
+app=lienzo
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+self="$root/scripts/check-release-notes.sh"
+
+# Reads [workspace.package] version (or [package] version) from a Cargo.toml on stdin.
+cargo_version() {
+  awk '
+    /^\[/ { sec = $0; next }
+    $1 == "version" && (sec == "[workspace.package]" || sec == "[package]") {
+      v = $0; sub(/^[^=]*=[[:space:]]*"/, "", v); sub(/".*$/, "", v)
+      if (sec == "[workspace.package]") { print v; found = 1; exit }
+      if (pkg == "") pkg = v
+    }
+    END { if (!found && pkg != "") print pkg }'
+}
+
+if [[ "${1:-}" == "--changed" ]]; then
+  base="${2:?--changed needs the base commit}"
+  head_version="$(cargo_version <"$root/Cargo.toml")"
+  base_version="$(git -C "$root" show "$base:Cargo.toml" 2>/dev/null | cargo_version || true)"
+  tags=()
+  if [[ -n "$head_version" && "$head_version" != "$base_version" && "$head_version" != *-dev* ]]; then
+    tags+=("v$head_version")
+  fi
+  while IFS= read -r changed; do
+    [[ -n "$changed" ]] && tags+=("$changed")
+  done < <(git -C "$root" diff --name-only --diff-filter=AM "$base" HEAD -- docs/release-notes \
+    | sed -n 's#^docs/release-notes/\(v[0-9][^/]*\)\.md$#\1#p')
+  if [[ "${#tags[@]}" -eq 0 ]]; then
+    echo "✓ No version bump and no notes changed: nothing to check."
+    exit 0
+  fi
+  status=0
+  for tag in $(printf '%s\n' "${tags[@]}" | sort -u); do
+    "$self" "$tag" || status=1
+  done
+  exit "$status"
+fi
+
 tag="${1:-}"
 if [[ -z "$tag" ]]; then
-  version="$(awk '/^\[workspace\.package\]/{p=1;next} /^\[/{p=0} p && /^version[[:space:]]*=/{gsub(/[" ]/,"",$0); sub(/^version=/,"",$0); print; exit}' "$root/Cargo.toml")"
+  version="$(cargo_version <"$root/Cargo.toml")"
+  if [[ "$version" == *-dev* ]]; then
+    echo "✓ Version $version is a development version: no notes needed."
+    exit 0
+  fi
   tag="v$version"
 fi
 if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
@@ -65,9 +114,9 @@ section_bullets() { # heading-regex
   || problem "'### What's new' (or '### What's in it') needs at least one bullet."
 
 # The downloads table names the real files of this version.
-downloads="$(awk '/^## Descargas/{on=1;next} on{print}' "$file")"
-grep -q "lienzo-$version-" <<<"$downloads" \
-  || problem "The downloads section must name the files of this version (lienzo-$version-…)."
+downloads="$(awk '/^## Descargas/{on=1;next} on && /^## /{exit} on{print}' "$file")"
+grep -q "$app-$version-" <<<"$downloads" \
+  || problem "The downloads section must name the files of this version ($app-$version-…)."
 grep -q 'SHA256SUMS' <<<"$downloads" \
   || problem "The downloads section must mention the SHA256SUMS files."
 

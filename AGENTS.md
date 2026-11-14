@@ -141,7 +141,7 @@ When parity rises, raise `FLOOR` in `crates/ui-egui/src/parity.rs` (never lower 
 - `ROADMAP.md`, `docs/target-app-parity.md`, `docs/gaps.md` and the `docs/*-parity.md` checklists: where we stand against Photoshop.
 - `docs/parity-checklist.md`: generated Photoshop menu coverage.
 - `docs/scorecard.md`: generated scorecard (sources: `scorecard/*.toml`, `perf/budgets.toml`, `perf/baseline.json`, corpus floors, prefs audit).
-- `docs/releasing.md`: cutting a release (`cargo xtask version`, the `release` branch), signing secrets, packaging scripts in `packaging/`.
+- `docs/releasing.md`: cutting a release (`cargo xtask version`, notes in `docs/release-notes/`, merge), signing secrets, packaging scripts in `packaging/`.
 - `plan/` is an optional gitignored notebook (research, parity notes, estimates). Do not ask for it and do not stop when it is absent.
 - `log/` (local, gitignored): the dev log.
 
@@ -154,11 +154,11 @@ If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown P
 
 ## Release
 
-`docs/releasing.md` is the procedure: `cargo xtask version`, then the `release` branch. The
-installers come from Lienzo's own workflows, `release-linux.yml`, `release-macos.yml` (DMG on a
-standard macOS runner) and `release-windows.yml`; `release.yml` still calls the inherited shared
-release workflow and is listed in `NODALIA_MIGRATION.md`. A maintainer reviews the draft release
-and publishes it.
+`docs/releasing.md` is the procedure: bump the version with `cargo xtask version` and add
+`docs/release-notes/vX.Y.Z.md` in the same pull request, then merge it. `release-auto.yml` tags it
+through Foundation's `release-tag`, builds the packages with Lienzo's own workflows,
+`release-linux.yml`, `release-macos.yml` (DMG on a standard macOS runner) and
+`release-windows.yml`, and publishes the release. Nobody pushes tags by hand.
 
 ## CI
 
