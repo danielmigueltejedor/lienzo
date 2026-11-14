@@ -33,7 +33,7 @@ lienzo-codecs = { workspace = true }
 # Reading embedded thumbnail resources (1036/1033) for recent files in Home screen.
 lienzo-psd = { workspace = true }
 egui = { workspace = true }
-nodalia-theme = { workspace = true }
+nodalia-theme = { workspace = true, features = ["creator"] }
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 eframe = { workspace = true, features = ["wgpu", "accesskit", "clipboard"] }
 serde = { workspace = true }

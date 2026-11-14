@@ -3,6 +3,11 @@ use super::{LienzoApp, Rect, Sense};
 
 pub(super) fn start_screen(app: &mut LienzoApp, ui: &mut egui::Ui) {
     let area = ui.available_rect_before_wrap();
+    if let Some(look) = crate::theme::Tokens::get(ui.ctx()).creator() {
+        // Nodalia: the creator suite's Home, the same screen as Pluma's.
+        creator_home(app, ui, &look, area);
+        return;
+    }
     paint_dots(ui, area, app.session.prefs().interface.show_canvas_dots);
     open_on_double_click(app, ui, area);
 
@@ -51,11 +56,7 @@ fn render_start_actions_row(app: &mut LienzoApp, ui: &mut egui::Ui, avail_w: f32
 
     ui.horizontal(|ui| {
         // [ New file ]
-        let new_label = tl!("New file");
-        let (new_rect, new_resp) = ui.allocate_exact_size(egui::vec2(btn_w, 32.0), Sense::click());
-        new_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, new_label));
-        let new_resp = new_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-        paint_new_button(ui, &t, new_rect, new_label, new_resp.hovered());
+        let new_resp = new_file_button(ui, &t, btn_w);
         if new_resp.clicked() {
             let fields = app.new_document_fields();
             app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
@@ -64,15 +65,7 @@ fn render_start_actions_row(app: &mut LienzoApp, ui: &mut egui::Ui, avail_w: f32
         ui.add_space(8.0);
 
         // [ Open… ]
-        let open_label = tl!("Open…");
-        let (open_rect, open_resp) = ui.allocate_exact_size(egui::vec2(btn_w, 32.0), Sense::click());
-        open_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, open_label));
-        let open_resp = open_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-        if open_resp.hovered() {
-            ui.painter().rect_filled(open_rect, 4.0, t.hover);
-        }
-        ui.painter().rect_stroke(open_rect, 4.0, egui::Stroke::new(1.0, t.separator), egui::StrokeKind::Inside);
-        ui.painter().text(open_rect.center(), egui::Align2::CENTER_CENTER, open_label, crate::theme::semibold(13.0), t.text);
+        let open_resp = open_button(ui, &t, btn_w, 32.0);
         if open_resp.clicked() {
             let _ = app.open_dialog_file();
         }
@@ -85,11 +78,7 @@ fn render_start_rail(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32) {
     ui.add_space(8.0);
 
     // 1. [ New file ] button
-    let new_label = tl!("New file");
-    let (new_rect, new_resp) = ui.allocate_exact_size(egui::vec2(rail_w.min(130.0), 32.0), Sense::click());
-    new_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, new_label));
-    let new_resp = new_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-    paint_new_button(ui, &t, new_rect, new_label, new_resp.hovered());
+    let new_resp = new_file_button(ui, &t, rail_w.min(130.0));
     if new_resp.clicked() {
         let fields = app.new_document_fields();
         app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
@@ -98,15 +87,7 @@ fn render_start_rail(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32) {
     ui.add_space(8.0);
 
     // 2. [ Open… ] button
-    let open_label = tl!("Open…");
-    let (open_rect, open_resp) = ui.allocate_exact_size(egui::vec2(rail_w.min(130.0), 30.0), Sense::click());
-    open_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, open_label));
-    let open_resp = open_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-    if open_resp.hovered() {
-        ui.painter().rect_filled(open_rect, 4.0, t.hover);
-    }
-    ui.painter().rect_stroke(open_rect, 4.0, egui::Stroke::new(1.0, t.separator), egui::StrokeKind::Inside);
-    ui.painter().text(open_rect.center(), egui::Align2::CENTER_CENTER, open_label, crate::theme::semibold(13.0), t.text);
+    let open_resp = open_button(ui, &t, rail_w.min(130.0), 30.0);
     if open_resp.clicked() {
         let _ = app.open_dialog_file();
     }
@@ -121,7 +102,15 @@ fn render_start_rail(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32) {
     ui.add_space(14.0);
 
     // 3. "Home" Nav Item (Selected)
-    let (home_rect, home_resp) = ui.allocate_exact_size(egui::vec2(rail_w, 32.0), Sense::click());
+    let look = t.creator();
+    let (home_rect, home_resp) = match &look {
+        // Nodalia: the creator suite's Home rail, the same code as Pluma's.
+        Some(look) => {
+            let r = nodalia_theme::creator::home_row(ui, look, "home", tl!("Home"), true);
+            (r.rect, r)
+        }
+        None => ui.allocate_exact_size(egui::vec2(rail_w, 32.0), Sense::click()),
+    };
     home_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Home")));
     // Home hides the tab strip and options bar, so this entry is the way back to the open
     // documents (with none open there is nothing behind Home).
@@ -130,46 +119,50 @@ fn render_start_rail(app: &mut LienzoApp, ui: &mut egui::Ui, rail_w: f32) {
     } else if home_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
         app.ui.chrome.home = None;
     }
-    // Nodalia marks the active row by inverting it; the other themes keep a thin accent bar.
-    let home_ink = if t.islands() {
-        ui.painter().rect_filled(home_rect, t.radius, t.primary_bg);
-        t.primary_text
-    } else {
+    // The other themes keep a thin accent bar beside the active row.
+    if look.is_none() {
         let active_bar = Rect::from_min_size(egui::pos2(home_rect.left(), home_rect.center().y - 7.0), egui::vec2(1.5, 14.0));
         ui.painter().rect_filled(active_bar, 1.0, t.accent);
-        t.text
-    };
-    let house_box = Rect::from_center_size(egui::pos2(home_rect.left() + 20.0, home_rect.center().y), egui::vec2(16.0, 16.0));
-    crate::icons::paint(ui, house_box, "house", 16.0, home_ink);
-    ui.painter().text(
-        egui::pos2(home_rect.left() + 34.0, home_rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        tl!("Home"),
-        crate::theme::semibold(13.5),
-        home_ink,
-    );
+        let house_box = Rect::from_center_size(egui::pos2(home_rect.left() + 20.0, home_rect.center().y), egui::vec2(16.0, 16.0));
+        crate::icons::paint(ui, house_box, "house", 16.0, t.text);
+        ui.painter().text(
+            egui::pos2(home_rect.left() + 34.0, home_rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            tl!("Home"),
+            crate::theme::semibold(13.5),
+            t.text,
+        );
+    }
 
     ui.add_space(4.0);
 
     // 4. "Learn" Nav Item
-    let (learn_rect, learn_resp) = ui.allocate_exact_size(egui::vec2(rail_w, 32.0), Sense::click());
-    let learn_resp = learn_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
-    learn_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Learn")));
-    if learn_resp.hovered() {
-        ui.painter().rect_filled(learn_rect, 4.0, t.hover);
-    }
-    let learn_color = if learn_resp.hovered() { t.text } else { t.text_dim };
-    let sparkle_box = Rect::from_center_size(egui::pos2(learn_rect.left() + 20.0, learn_rect.center().y), egui::vec2(16.0, 16.0));
-    crate::icons::paint(ui, sparkle_box, "sparkles", 16.0, learn_color);
-    ui.painter().text(
-        egui::pos2(learn_rect.left() + 34.0, learn_rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        tl!("Learn"),
-        crate::theme::semibold(13.5),
-        learn_color,
-    );
-    if learn_resp.clicked() {
-        crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+    if let Some(look) = &look {
+        let learn = nodalia_theme::creator::home_row(ui, look, "sparkle", tl!("Learn"), false);
+        learn.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Learn")));
+        if learn.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+            crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+        }
+    } else {
+        let (learn_rect, learn_resp) = ui.allocate_exact_size(egui::vec2(rail_w, 32.0), Sense::click());
+        let learn_resp = learn_resp.on_hover_cursor(egui::CursorIcon::PointingHand);
+        learn_resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Learn")));
+        if learn_resp.hovered() {
+            ui.painter().rect_filled(learn_rect, 4.0, t.hover);
+        }
+        let learn_color = if learn_resp.hovered() { t.text } else { t.text_dim };
+        let sparkle_box = Rect::from_center_size(egui::pos2(learn_rect.left() + 20.0, learn_rect.center().y), egui::vec2(16.0, 16.0));
+        crate::icons::paint(ui, sparkle_box, "sparkles", 16.0, learn_color);
+        ui.painter().text(
+            egui::pos2(learn_rect.left() + 34.0, learn_rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            tl!("Learn"),
+            crate::theme::semibold(13.5),
+            learn_color,
+        );
+        if learn_resp.clicked() {
+            crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+        }
     }
 
     // 5. Bottom pinned community links
@@ -300,4 +293,113 @@ fn paint_new_button(ui: &egui::Ui, t: &crate::theme::Tokens, rect: Rect, label: 
     };
     ui.painter().rect_filled(rect, radius, bg);
     ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, crate::theme::semibold(13.0), ink);
+}
+
+/// New file: the creator suite's primary button in Nodalia (the same code as Pluma's), the
+/// painted pill elsewhere.
+fn new_file_button(ui: &mut egui::Ui, t: &crate::theme::Tokens, width: f32) -> egui::Response {
+    let label = tl!("New file");
+    if let Some(look) = t.creator() {
+        return nodalia_theme::creator::primary_button_min(ui, &look, label, true, width).on_hover_cursor(egui::CursorIcon::PointingHand);
+    }
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand);
+    paint_new_button(ui, t, rect, label, resp.hovered());
+    resp
+}
+
+/// Open…: the creator suite's secondary button in Nodalia, an outlined button elsewhere.
+fn open_button(ui: &mut egui::Ui, t: &crate::theme::Tokens, width: f32, height: f32) -> egui::Response {
+    let label = tl!("Open…");
+    if let Some(look) = t.creator() {
+        return nodalia_theme::creator::secondary_button_min(ui, &look, label, true, width).on_hover_cursor(egui::CursorIcon::PointingHand);
+    }
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(width, height), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand);
+    if resp.hovered() {
+        ui.painter().rect_filled(rect, 4.0, t.hover);
+    }
+    ui.painter().rect_stroke(rect, 4.0, egui::Stroke::new(1.0, t.separator), egui::StrokeKind::Inside);
+    ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, label, crate::theme::semibold(13.0), t.text);
+    resp
+}
+
+/// The creator suite's Home (`nodalia_theme::creator::home`), drawn with the same code as Pluma's:
+/// the rail, Lienzo's mark and name, and Recent Files with their thumbnails.
+fn creator_home(app: &mut LienzoApp, ui: &mut egui::Ui, look: &nodalia_theme::creator::Look, area: Rect) {
+    use crate::home_recent_ui::{RecentAction, act, get_or_load_thumbnail};
+    use nodalia_theme::creator::home;
+    open_on_double_click(app, ui, area);
+    let show_recent = app.session.prefs().interface.show_home_recent_files;
+    let paths: Vec<String> =
+        if cfg!(target_arch = "wasm32") || !show_recent { Vec::new() } else { app.ui.recent_files.iter().take(HOME_RECENT).cloned().collect() };
+    let names: Vec<(String, String)> = paths
+        .iter()
+        .map(|path| {
+            let folder = std::path::Path::new(path).parent().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default();
+            (crate::file_open::display_name(path), folder)
+        })
+        .collect();
+    let links = [
+        home::Link { icon: "globe", label: tl!("Website"), url: crate::links::APP_PAGE },
+        home::Link { icon: "code", label: tl!("GitHub"), url: crate::links::GITHUB },
+    ];
+    let rail = home::Rail { new_file: tl!("New file"), open: tl!("Open…"), home: tl!("Home"), learn: Some(tl!("Learn")), links: &links };
+    let labels = home::RecentLabels {
+        heading: tl!("Recent Files"),
+        grid: tl!("Grid view"),
+        list: tl!("List view"),
+        remove: tl!("Remove from Recent"),
+        clear: tl!("Clear Recent Files"),
+        no_folder: tl!("On your computer"),
+        drop: &start_screen_drop_hint(app),
+        drop_icon: "image",
+    };
+    let mark = |p: &egui::Painter, r: Rect| crate::panels::brand::paint_mark_on(p, r);
+    let mut recent_pick = None;
+    let picked = home::view(ui, look, area, "Lienzo", &mark, &rail, |ui| {
+        let textures: Vec<_> = paths.iter().map(|p| get_or_load_thumbnail(app, ui.ctx(), p)).collect();
+        let list: Vec<home::Recent> = paths
+            .iter()
+            .zip(&names)
+            .zip(&textures)
+            .map(|((path, (name, folder)), tex)| home::Recent { name, folder, path, thumb: tex.as_ref().map(|t| (t.id(), t.size_vec2())) })
+            .collect();
+        let mut grid = app.ui.chrome.home_recent_grid;
+        recent_pick = home::recents(ui, look, &labels, &list, &mut grid);
+        app.ui.chrome.home_recent_grid = grid;
+    });
+    match picked {
+        Some(home::Pick::NewFile) => {
+            let fields = app.new_document_fields();
+            app.ui.open_dialog(crate::state::DialogKind::NewDocument, fields);
+        }
+        Some(home::Pick::Open) => {
+            let _ = app.open_dialog_file();
+        }
+        // Home hides the tab strip, so this row is the way back to the open documents.
+        Some(home::Pick::Home) if !app.session.documents().is_empty() => app.ui.chrome.home = None,
+        Some(home::Pick::Learn) => {
+            crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+        }
+        Some(home::Pick::Link(i)) => {
+            if let Some(link) = links.get(i) {
+                crate::links::open(app, ui.ctx(), link.url);
+            }
+        }
+        _ => {}
+    }
+    let path = |i: usize| paths.get(i).cloned();
+    let action = match recent_pick {
+        Some(home::RecentPick::Open(i)) => path(i).map(RecentAction::Open),
+        Some(home::RecentPick::Remove(i)) => path(i).map(RecentAction::Remove),
+        Some(home::RecentPick::Clear) => Some(RecentAction::Clear),
+        Some(home::RecentPick::OpenDialog) => Some(RecentAction::OpenDialog),
+        None => None,
+    };
+    if let Some(action) = action {
+        act(app, action);
+    }
 }

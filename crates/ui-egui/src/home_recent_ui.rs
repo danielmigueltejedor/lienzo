@@ -861,6 +861,13 @@ pub(crate) fn show_home_recent(app: &mut LienzoApp, ui: &mut Ui, recent: &[Strin
     }
 
     if let Some(action) = action_to_take {
+        act(app, action);
+    }
+}
+
+/// Carry out what was picked among the recent files.
+pub(crate) fn act(app: &mut LienzoApp, action: RecentAction) {
+    {
         match action {
             RecentAction::Open(path) => {
                 if let Err(e) = app.open_path(&path) {

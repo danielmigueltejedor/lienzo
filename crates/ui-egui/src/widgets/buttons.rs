@@ -164,6 +164,20 @@ fn button_impl(ui: &mut Ui, label: &str, min_width: f32, bg: Color32, fg: Color3
 /// [`button_impl`] with an explicit `height` (`None`: the theme's button height).
 fn button_impl_h(ui: &mut Ui, label: &str, min_width: f32, height: Option<f32>, bg: Color32, fg: Color32, primary: bool) -> Response {
     let t = Tokens::get(ui.ctx());
+    // Nodalia: the creator suite's buttons, the same code as Pluma's.
+    if let (Some(look), None) = (t.creator(), height) {
+        let text = tl!(label);
+        let enabled = ui.is_enabled();
+        let resp = if primary {
+            nodalia_theme::creator::primary_button_min(ui, &look, text, enabled, min_width)
+        } else {
+            nodalia_theme::creator::secondary_button_min(ui, &look, text, enabled, min_width)
+        };
+        if resp.has_focus() {
+            ui.painter().rect_stroke(resp.rect.expand(2.0), t.radius_sm + 2.0, Stroke::new(2.0, t.accent), StrokeKind::Outside);
+        }
+        return resp;
+    }
     let (galley, size) = button_layout(ui, label, min_width, height, fg);
     let h = size.y;
     let (rect, resp) = ui.allocate_exact_size(size, Sense::click());

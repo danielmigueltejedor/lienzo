@@ -201,6 +201,13 @@ fn prefs_body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
             for &(id, title) in &found {
                 let sel = section == id;
                 let empty = !has_visible_fields(&values, id);
+                if let Some(look) = t.creator() {
+                    // Nodalia: the creator suite's Preferences navigation, as Pluma's.
+                    if nodalia_theme::creator::nav_row(ui, &look, tl!(title), sel, empty).clicked() {
+                        section = id.to_string();
+                    }
+                    continue;
+                }
                 let (rect, resp) = ui.allocate_exact_size(vec2(170.0, 22.0), Sense::click());
                 if sel {
                     ui.painter().rect_filled(rect, t.radius_sm, t.row_selected);
