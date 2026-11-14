@@ -1,18 +1,70 @@
 #!/usr/bin/env bash
 # Fails unless the release notes of a version are written by hand and complete.
 #
-# Usage: scripts/check-release-notes.sh [vX.Y.Z]
-# Without an argument it checks the version in [workspace.package] of Cargo.toml.
+# Usage:
+#   scripts/check-release-notes.sh             the version in the manifest (a -dev version passes)
+#   scripts/check-release-notes.sh vX.Y.Z      that version's notes
+#   scripts/check-release-notes.sh --changed BASE
+#       what a pull request or push changed since commit BASE: the new version when the change
+#       bumps it to a release version, and every notes file it adds or edits. This is the check
+#       the "Release notes are written" job runs.
 #
 # Why: a release must never go out with GitHub's generated list or a one-line stub. The notes of
 # every version live in docs/release-notes/vX.Y.Z.md, in the format described in that folder's
-# README, and the release workflows publish that file as the release body.
+# README, and Foundation's release-tag workflow publishes that file as the release body.
 set -euo pipefail
 
+# What differs between apps: the packages' file prefix, as named in the downloads table
+# (APP-X.Y.Z-…), and the file that holds the version, read from stdin by read_version.
+app=lienzo
+manifest=Cargo.toml
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+self="$root/scripts/check-release-notes.sh"
+
+# [workspace.package] version, or [package] version, of a Cargo.toml.
+read_version() {
+  awk '
+    /^\[/ { sec = $0; next }
+    $1 == "version" && (sec == "[workspace.package]" || sec == "[package]") {
+      v = $0; sub(/^[^=]*=[[:space:]]*"/, "", v); sub(/".*$/, "", v)
+      if (sec == "[workspace.package]") { print v; found = 1; exit }
+      if (pkg == "") pkg = v
+    }
+    END { if (!found && pkg != "") print pkg }'
+}
+
+if [[ "${1:-}" == "--changed" ]]; then
+  base="${2:?--changed needs the base commit}"
+  head_version="$(read_version <"$root/$manifest")"
+  base_version="$(git -C "$root" show "$base:$manifest" 2>/dev/null | read_version || true)"
+  tags=()
+  if [[ -n "$head_version" && "$head_version" != "$base_version" && "$head_version" != *-dev* ]]; then
+    tags+=("v$head_version")
+  fi
+  while IFS= read -r changed; do
+    [[ -n "$changed" ]] && tags+=("$changed")
+  # Whole-tree diff, so a notes file that only moved here counts as renamed, not added.
+  done < <(git -C "$root" diff --name-only -M --diff-filter=AM "$base" HEAD \
+    | sed -n 's#^docs/release-notes/\(v[0-9][^/]*\)\.md$#\1#p')
+  if [[ "${#tags[@]}" -eq 0 ]]; then
+    echo "✓ No version bump and no notes changed: nothing to check."
+    exit 0
+  fi
+  status=0
+  for tag in $(printf '%s\n' "${tags[@]}" | sort -u); do
+    "$self" "$tag" || status=1
+  done
+  exit "$status"
+fi
+
 tag="${1:-}"
 if [[ -z "$tag" ]]; then
-  version="$(awk '/^\[workspace\.package\]/{p=1;next} /^\[/{p=0} p && /^version[[:space:]]*=/{gsub(/[" ]/,"",$0); sub(/^version=/,"",$0); print; exit}' "$root/Cargo.toml")"
+  version="$(read_version <"$root/$manifest")"
+  if [[ "$version" == *-dev* ]]; then
+    echo "✓ Version $version is a development version: no notes needed."
+    exit 0
+  fi
   tag="v$version"
 fi
 if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
@@ -46,11 +98,12 @@ done < "$file"
 [[ "$second" =~ ^\*.+\*$ ]] \
   || problem "The second line must be the English summary, in italics (*...*)."
 
-for heading in '## Español' '## English' '## Descargas · Downloads'; do
-  grep -qxF "$heading" "$file" || problem "Missing the heading '$heading'."
+# Headings may be bold (## **Español**): older update windows look for that form.
+for heading in 'Español' 'English' 'Descargas · Downloads'; do
+  grep -qxE "## (\*\*)?$heading(\*\*)?" "$file" || problem "Missing the heading '## $heading'."
 done
 
-# Each language needs a What's new section with real bullets.
+# Each language needs a What's new (or, for a fix-only release, Fixes) section with real bullets.
 section_bullets() { # heading-regex
   awk -v re="$1" '
     $0 ~ re {on=1; next}
@@ -59,20 +112,20 @@ section_bullets() { # heading-regex
     END {print n+0}' "$file"
 }
 # (A first release says "Qué incluye" / "What's in it" instead.)
-[[ "$(section_bullets '^### (Novedades|Qué incluye)')" -ge 1 ]] \
-  || problem "'### Novedades' (or '### Qué incluye') needs at least one bullet."
-[[ "$(section_bullets "^### (What's new|What's in it)")" -ge 1 ]] \
-  || problem "'### What's new' (or '### What's in it') needs at least one bullet."
+[[ "$(section_bullets '^### (Novedades|Qué incluye|Correcciones)')" -ge 1 ]] \
+  || problem "'### Novedades' (or '### Qué incluye', '### Correcciones') needs at least one bullet."
+[[ "$(section_bullets "^### (What's new|What's in it|Fixes)")" -ge 1 ]] \
+  || problem "'### What's new' (or '### What's in it', '### Fixes') needs at least one bullet."
 
 # The downloads table names the real files of this version.
-downloads="$(awk '/^## Descargas/{on=1;next} on{print}' "$file")"
-grep -q "lienzo-$version-" <<<"$downloads" \
-  || problem "The downloads section must name the files of this version (lienzo-$version-…)."
-grep -q 'SHA256SUMS' <<<"$downloads" \
-  || problem "The downloads section must mention the SHA256SUMS files."
+downloads="$(awk '/^## (\*\*)?Descargas/{on=1;next} on && /^## /{exit} on{print}' "$file")"
+grep -q "$app-$version-" <<<"$downloads" \
+  || problem "The downloads section must name the files of this version ($app-$version-…)."
+grep -qE 'SHA256SUMS|\.sha256|SHA-256' <<<"$downloads" \
+  || problem "The downloads section must mention the checksum files (SHA256SUMS or .sha256)."
 
 # Never raw generated notes, stubs or leftovers.
-if grep -inE "what's changed|full changelog|generated by|lorem ipsum" "$file" >/dev/null \
+if grep -inE "^#+ what's changed|^\*\*full changelog\*\*:|generated by|lorem ipsum" "$file" >/dev/null \
   || grep -nE '\b(TODO|TBD)\b' "$file" >/dev/null; then
   problem "Contains generated text or a placeholder."
 fi

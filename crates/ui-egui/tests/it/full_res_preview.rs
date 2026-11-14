@@ -24,6 +24,8 @@ fn harness() -> Option<Harness> {
         egui_kittest::Harness::builder().with_size(egui::vec2(1100.0, 760.0)).with_pixels_per_point(1.0).with_max_steps(64).wgpu().build_eframe(|cc| {
             LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -100,8 +102,9 @@ fn row(h: &mut Harness) -> Vec<i32> {
     // where the first full-resolution composite of this 5 MP document can take longer; the
     // submitted work still finishes, so wait for it again instead of failing.
     let img = (0..3).find_map(|_| h.render().ok()).expect("render");
+    // 200 px: the Nodalia Levels dialog, centred in the window, starts past it.
     let (x0, y) = (canvas.min.x as u32 + 20, canvas.min.y as u32 + 40);
-    (x0..x0 + 300)
+    (x0..x0 + 200)
         .map(|x| {
             let p = img.get_pixel(x, y).0;
             (i32::from(p[0]) * 3 + i32::from(p[1]) * 6 + i32::from(p[2])) / 10

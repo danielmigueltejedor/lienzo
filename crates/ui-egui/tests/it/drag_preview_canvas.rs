@@ -46,6 +46,8 @@ fn harness(ppp: f32) -> Option<Harness> {
         egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 640.0)).with_pixels_per_point(ppp).with_max_steps(64).wgpu().build_eframe(|cc| {
             LienzoApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = LienzoApp::new(lienzo_engine::Session::new(), Default::default());
+            // Nodalia floats the Properties card over the canvas: keep the canvas under test clear.
+            app.ui.panels.properties = false;
             if let Some(rs) = cc.wgpu_render_state.as_ref() {
                 app.set_wgpu(rs.clone());
             }
@@ -266,7 +268,8 @@ fn lasso_and_crop_previews_show_while_dragging() {
             img.luma(p.x as i64, p.y as i64).unwrap_or(0)
         };
         assert!(px(200.0, 150.0) > 240, "inside the crop frame stays as is");
-        assert!(px(50.0, 40.0) < 180 && px(350.0, 260.0) < 180, "outside the crop frame is dimmed mid-drag");
+        // Under 200: the Nodalia shield leaves white at about 182, the Pro one darker.
+        assert!(px(50.0, 40.0) < 200 && px(350.0, 260.0) < 200, "outside the crop frame is dimmed mid-drag");
         button(&mut h, 300.0, 220.0, false);
         h.run_steps(2);
     }
